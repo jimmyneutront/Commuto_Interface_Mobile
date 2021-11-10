@@ -8,8 +8,8 @@ import com.commuto.interfacemobile.db.PublicKey
 /**
  * The Database Service Class.
  *
- * This is responsible for storing data, serving it to Local Services upon request, and accepting Local Services'
- * requests to add and remove data from storage.
+ * This is responsible for storing data, serving it to Local Services upon request, and accepting
+ * Local Services' requests to add and remove data from storage.
  *
  * @property databaseDriverFactory the DatabaseDriverFactory used to obtain a platform-specific
  * driver that DBService will use to interact with the database.
@@ -51,7 +51,8 @@ class DBService(databaseDriverFactory: DatabaseDriverFactory) {
     }
 
     /**
-     * Retrieves the persistently stored key pair associated with the given interface id, or null if not present.
+     * Retrieves the persistently stored key pair associated with the given interface id, or returns
+     * null if not present.
      *
      * @param interfaceId the interface id of the keypair as a byte array encoded to a hexadecimal String
      *
@@ -96,7 +97,8 @@ class DBService(databaseDriverFactory: DatabaseDriverFactory) {
     }
 
     /**
-     * Retrieves the persistently stored public key associated with the given interface id, or null if not present
+     * Retrieves the persistently stored public key associated with the given interface id, or returns
+     * null if not present
      *
      * @param interfaceId the interface id of the public key as a byte array encoded to a hexadecimal String
      *

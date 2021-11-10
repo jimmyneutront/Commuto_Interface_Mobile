@@ -46,6 +46,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation("com.squareup.sqldelight:android-driver:$sqlDelightVersion")
+                implementation("org.bouncycastle:bcprov-jdk15on:1.69")
             }
         }
         val androidTest by getting {
