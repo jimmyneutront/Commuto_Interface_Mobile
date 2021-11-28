@@ -7,6 +7,7 @@
 //
 
 import XCTest
+@testable import iosApp
 
 /**
  * Prints keys in B64 String format for compatibility testing, and tests the re-creation of key objects given keys in
@@ -83,5 +84,27 @@ class XPlatCryptoCompatibility: XCTestCase {
         print("Restored Private Key:")
         print(privateKey)
     }
-
+    
+    func testEncryptAndDecryptData() throws {
+        /*
+        let dbDriverFactory = DatabaseDriverFactory()
+        let dbService = DBService(databaseDriverFactory: dbDriverFactory)
+        let kmService = KMService(dbService: dbService)
+        let keypair = try kmService.generateKeyPair(storeResult: false)
+        let pubKey = keypair.1.0
+        let privKey = keypair.1.1
+         */
+        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let publicKey = SecKeyCopyPublicKey(privateKey)!
+        let message: NSData = NSData(base64Encoded: "test", options: [])!
+        let encryptedMessageData = try encryptWithPublicKey(pubKey: publicKey, clearData: message as Data)!
+        let decryptedMessageData = try decryptWithPrivateKey(privKey: privateKey, cipherData: encryptedMessageData)!
+        let restoredMessage = (decryptedMessageData as NSData).base64EncodedString(options: [])
+        print(restoredMessage)
+    }
+    
 }

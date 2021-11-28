@@ -19,7 +19,7 @@ class DBService(databaseDriverFactory: DatabaseDriverFactory) {
     //TODO: Localize error strings
     /**
      * Creates all necessary tables for proper operation.
-     * No-op on mobile
+     * No-op on Android
      */
     fun createTables() {
     }
@@ -56,7 +56,7 @@ class DBService(databaseDriverFactory: DatabaseDriverFactory) {
      *
      * @param interfaceId the interface id of the keypair as a byte array encoded to a hexadecimal String
      *
-     * @return KeyPair object (defined in com.commuto.interfacedesktop.db) if key pair is found
+     * @return KeyPair object if key pair is found
      * @return null if key pair is not found
      * @throws IllegalStateException if multiple key pairs are found for a given interface id, or if the interface id
      * returned from the database query does not match the interface id passed to getKeyPair
@@ -102,7 +102,7 @@ class DBService(databaseDriverFactory: DatabaseDriverFactory) {
      *
      * @param interfaceId the interface id of the public key as a byte array encoded to a hexadecimal String
      *
-     * @return PublicKey object (definded in com.commuto.interfacedesktop.db) if public key is found
+     * @return PublicKey object if public key is found
      * @return null if public key is not found
      * @throws IllegalStateException if multiple public keys are found for a given interface id, or if the interface id
      * returned from the database query does not match the interface id passed to getPublicKey

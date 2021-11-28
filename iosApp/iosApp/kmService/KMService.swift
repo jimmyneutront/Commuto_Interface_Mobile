@@ -8,7 +8,6 @@
 import CryptoKit
 import Foundation
 import Security
-import shared
 
 /**
  * The Key Manager Service Class.
@@ -18,9 +17,9 @@ import shared
  * -Parameter: dbService the Database Service used to store and retrieve data
  */
 class KMService {
-    
-    //var driver = DatabaseDriverFactory()
-    var dbService: DBService //= DBService(databaseDriverFactory: DatabaseDriverFactory())
+    /*
+    //TODO: dedicated KeyPair and PublicKey class class
+    var dbService: DBService
     init(dbService: DBService) {
         self.dbService = dbService
     }
@@ -153,6 +152,5 @@ class KMService {
         }
         let interfaceIdBytes = NSData(bytes: interfaceIdByteArray, length: interfaceIdByteArray.count)
         return interfaceIdBytes
-    }
-    
+    }*/
 }
