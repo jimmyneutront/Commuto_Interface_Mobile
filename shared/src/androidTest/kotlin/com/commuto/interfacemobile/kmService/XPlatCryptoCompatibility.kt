@@ -4,10 +4,9 @@ import android.util.Base64
 import androidx.test.core.app.ApplicationProvider
 import com.commuto.interfacemobile.db.DatabaseDriverFactory
 import com.commuto.interfacemobile.dbService.DBService
-import java.security.KeyPair
+import com.commuto.interfacemobile.kmService.kmTypes.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.util.*
 import kotlin.test.Test
 
 /**
@@ -27,13 +26,13 @@ class XPlatCryptoCompatibility {
      */
     @Test
     fun testGenB64RSAKeys() {
-        val keyPairAndId: Pair<ByteArray, KeyPair> = kmService.generateKeyPair(storeResult = false)
+        val keyPair: KeyPair = kmService.generateKeyPair(storeResult = false)
         println("Public Key B64:")
         println(Base64.encodeToString(kmService
-            .pubKeyToPkcs1Bytes(keyPairAndId.second.public), Base64.DEFAULT))
+            .pubKeyToPkcs1Bytes(keyPair.keyPair.public), Base64.DEFAULT))
         println("Private Key B64:")
         println(Base64.encodeToString(kmService
-            .privKeyToPkcs1Bytes(keyPairAndId.second.private), Base64.DEFAULT))
+            .privKeyToPkcs1Bytes(keyPair.keyPair.private), Base64.DEFAULT))
     }
 
     /**
