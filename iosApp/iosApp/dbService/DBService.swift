@@ -2,7 +2,7 @@
 //  DBService.swift
 //  iosApp
 //
-//  Created by James Telzrow on 11/27/21.
+//  Created by jimmyt on 11/27/21.
 //  Copyright © 2021 orgName. All rights reserved.
 //
 
@@ -50,8 +50,6 @@ class DBService {
     func connectToDb() throws {
         db = try Connection(.inMemory)
     }
-    
-    //TODO: Update all store funcs to check for unique values
     
     /**
      * Persistently stores a key pair associated with an interface id.

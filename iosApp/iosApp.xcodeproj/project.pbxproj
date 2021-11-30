@@ -14,6 +14,8 @@
 		6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97D2753F9B100D85654 /* DBKeyPair.swift */; };
 		6D91C9812753FA2900D85654 /* DBPublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9802753FA2900D85654 /* DBPublicKey.swift */; };
 		6D91C9832753FBD900D85654 /* DBServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9822753FBD900D85654 /* DBServiceTest.swift */; };
+		6D91C9862754329B00D85654 /* KeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9852754329A00D85654 /* KeyPair.swift */; };
+		6D91C988275432E300D85654 /* PublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C987275432E300D85654 /* PublicKey.swift */; };
 		6D9ABCBD2736399F0034AE01 /* KMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9ABCBC2736399F0034AE01 /* KMService.swift */; };
 		6DC323D4273A2F1300936686 /* KMServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DC323D3273A2F1300936686 /* KMServiceTest.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
@@ -39,6 +41,8 @@
 		6D91C97D2753F9B100D85654 /* DBKeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBKeyPair.swift; sourceTree = "<group>"; };
 		6D91C9802753FA2900D85654 /* DBPublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBPublicKey.swift; sourceTree = "<group>"; };
 		6D91C9822753FBD900D85654 /* DBServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBServiceTest.swift; sourceTree = "<group>"; };
+		6D91C9852754329A00D85654 /* KeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPair.swift; sourceTree = "<group>"; };
+		6D91C987275432E300D85654 /* PublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKey.swift; sourceTree = "<group>"; };
 		6D9ABCBC2736399F0034AE01 /* KMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMService.swift; sourceTree = "<group>"; };
 		6DC323CA273A2EB200936686 /* iosAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6DC323D3273A2F1300936686 /* KMServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMServiceTest.swift; sourceTree = "<group>"; };
@@ -86,9 +90,19 @@
 			path = dbTypes;
 			sourceTree = "<group>";
 		};
+		6D91C9842754327900D85654 /* kmTypes */ = {
+			isa = PBXGroup;
+			children = (
+				6D91C9852754329A00D85654 /* KeyPair.swift */,
+				6D91C987275432E300D85654 /* PublicKey.swift */,
+			);
+			path = kmTypes;
+			sourceTree = "<group>";
+		};
 		6D9ABCBB273639750034AE01 /* kmService */ = {
 			isa = PBXGroup;
 			children = (
+				6D91C9842754327900D85654 /* kmTypes */,
 				6D9ABCBC2736399F0034AE01 /* KMService.swift */,
 				6D32506A2751C34A000352BE /* KMUtils.swift */,
 			);
@@ -311,7 +325,9 @@
 				6D32506B2751C34A000352BE /* KMUtils.swift in Sources */,
 				6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */,
 				6D9ABCBD2736399F0034AE01 /* KMService.swift in Sources */,
+				6D91C9862754329B00D85654 /* KeyPair.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				6D91C988275432E300D85654 /* PublicKey.swift in Sources */,
 				6D91C9812753FA2900D85654 /* DBPublicKey.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

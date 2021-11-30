@@ -2,7 +2,7 @@
 //  XPlatCryptoCompatibility.swift
 //  iosAppTests
 //
-//  Created by James Telzrow on 11/10/21.
+//  Created by jimmyt on 11/10/21.
 //  Copyright © 2021 orgName. All rights reserved.
 //
 
