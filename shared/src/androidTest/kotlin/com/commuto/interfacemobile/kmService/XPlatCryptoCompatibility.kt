@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.commuto.interfacemobile.db.DatabaseDriverFactory
 import com.commuto.interfacemobile.dbService.DBService
 import com.commuto.interfacemobile.kmService.kmTypes.KeyPair
+import java.nio.charset.Charset
+import java.security.KeyPair as JavaSecKeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import kotlin.test.Test
@@ -18,6 +20,49 @@ class XPlatCryptoCompatibility {
     private var driver = DatabaseDriverFactory(ApplicationProvider.getApplicationContext())
     private var dbService = DBService(driver)
     private val kmService = KMService(dbService)
+
+    /**
+     * Prints keys according to KMService's specification in B64 format, as well as an original
+     * message string and the encrypted message, also in B64 format, for cross platform
+     * compatibility testing
+     */
+    @Test
+    fun testPrintEncryptedMessage() {
+        val keyPair: KeyPair = kmService.generateKeyPair(storeResult = false)
+        println("Public Key B64:")
+        println(Base64.encodeToString(kmService
+            .pubKeyToPkcs1Bytes(keyPair.keyPair.public), Base64.DEFAULT))
+        println("Private Key B64:")
+        println(Base64.encodeToString(kmService
+            .privKeyToPkcs1Bytes(keyPair.keyPair.private), Base64.DEFAULT))
+        val originalMessage = "test"
+        println("Original Message:\n" + originalMessage)
+        println("Encrypted Message:")
+        println(Base64.encodeToString(keyPair.encrypt(originalMessage
+            .toByteArray(Charset.forName("UTF-16"))), Base64.DEFAULT))
+    }
+
+    /**
+     * Uses the given public and private key strings to restore a KeyPair object and decrypt the
+     * given message, ensuring it matches the original message.
+     */
+    @Test
+    fun testDecryptMessage() {
+        val originalMessage = "test"
+        val pubKeyB64 = "MIIBCgKCAQEA6nRs5aMeFg2TIxbhH6MMh946mZ35sP5d27J+Fm1ha1IZlz9+Z7Knw7FOJ827BhLLcaeHCSI3/opnWc1TKPD6exArNZQsJLSWXJeLfBOm/zseKJyCr9PHahhQYBD3X6HfuZYqzUV4B/BZSu5cJbcvgqTsSbnR7tlRscwW32m1l/jWixLrsmE3zBg0SWBDtZ8ouOMJJ5ZSS6MXJeQUfzyrEIhc8cABpI8MFsVL82UYPdXxGvQ86AUnNMnEDGWtGvUvYqzcWCuLNpcSkx5y9+VKdnC7zevLJbuj0fyjjBadAkMc6jNcgeaGJSsWxbtKC11CawMWPuXuckzIRsAJUYFnhQIDAQAB"
+        val privKeyB64 = "MIIEogIBAAKCAQEA6nRs5aMeFg2TIxbhH6MMh946mZ35sP5d27J+Fm1ha1IZlz9+Z7Knw7FOJ827BhLLcaeHCSI3/opnWc1TKPD6exArNZQsJLSWXJeLfBOm/zseKJyCr9PHahhQYBD3X6HfuZYqzUV4B/BZSu5cJbcvgqTsSbnR7tlRscwW32m1l/jWixLrsmE3zBg0SWBDtZ8ouOMJJ5ZSS6MXJeQUfzyrEIhc8cABpI8MFsVL82UYPdXxGvQ86AUnNMnEDGWtGvUvYqzcWCuLNpcSkx5y9+VKdnC7zevLJbuj0fyjjBadAkMc6jNcgeaGJSsWxbtKC11CawMWPuXuckzIRsAJUYFnhQIDAQABAoIBAA9uB5pU/J58w2LzDHBUVEy0eFH9UVOPvgC+3mjz8bjKKlh89iugGJs6q0HX2o0zsJ4Y0CcupcA+VBRsfKKsZKkI30sd/AoTX3TrB/lBDYPCcdbq4U1DMwkdXgbLKbiVEuqoF8YyzPY6yr7xcRuN/YC2gWgjDvj45j/nsQFVjT0EeWednEDhqPlo1FWMFrH0woLOTRVRhzemlrMxsxhFxc/Tvr4kJtnmacOT9+am82Fn5eOelg+Dafms6G6z+8r/EQmaiLUeXwzQYinQWpLL5jEbVEbRz4fZhBXaz++D8uK9lzF/N1Quv31V5OtHLtBAGe17OibarP9bPwLbg2knilkCgYEA9R8cYI8E6umr2TEyCUNxfpFv1XkdyTTZNv0H/ZIRh5qUVg84r/VCUguPaIq4nbmOngskgpaiwx1kYGAmJCabHV3L20yEztLAOtltBQFoTodaz6Apkws4gyharg7dQ1Z75RqZTfdHSiKZwO0Ihu4EkTEPTdY6/+wzZnt31Kzf2O0CgYEA9Nwgfra6QHw1AN5QkfYUxHqRKuPWrJoYwupwl3g+VGW7NfbrCOS/VcezdBzIgvuz5AOIEQxkNPf61kjKS6/t+/V2XE76qGV5tQ5B0Mdgm8eViAT6IoTNl2YPFZhgJizEMJ5ybGWC2Q+8hnPOBmvh1u+pQ/mG8nWGXAF9qHVE7fkCgYBUbmjp4ZmCCQcGgumHQ1HelN3+m/9khO2lATc1YpDjMp2RnyCZi1NSy2SUT+QTgAzd51ymFpjtuDwQ7k10+k9HqD1Fxm+ghftsyePBa6CwG/NtvO9VFPJcSxQhDEGupiV63tSbhGdr48suJvde8rFkCZAJ8ZbU/FkgHbtC6GEaaQKBgB2z7kUwyVs1NgDK9x8dqNtEuwNm7A24C7TpV4soTPdT9+fN8ij8BrHTLdOyAijRe7r3KrRWunkqc8U2w0N3LflYh2kfM4zl8mOiPR2kcfWzulHruKQjVAU/nijSeSdoWsxDDEJV9g96tzXgKmfhAl5eaDwUsugKlafnjmS3BQuRAoGAZp6D6LIndvr6t4025GgepDYXjcFU/irPHi6WR3LOimJouQHIB56gWRxEVmiS4/k02GmgZIpAtEpHEHcz6svCzgI8ZKzk5+P91wqNpO8TfS1O2Nl9RO+/zBxIAnbkf6TxCbo5JhVtClWCFLIXOqzE7baQOi4aMjXk1rzOQNeu9vQ="
+        val encryptedMessageB64 = "test"
+        val pubKey: PublicKey = kmService
+            .pubKeyFromPkcs1Bytes(Base64.decode(pubKeyB64, Base64.DEFAULT))
+        val privKey: PrivateKey = kmService
+            .privKeyFromPkcs1Bytes(Base64.decode(privKeyB64, Base64.DEFAULT))
+        val javaSecKeyPair = JavaSecKeyPair(pubKey, privKey)
+        val keyPair = KeyPair(javaSecKeyPair)
+        val encryptedMessageBytes = Base64.decode(encryptedMessageB64, Base64.DEFAULT)
+        val decryptedMessageBytes = keyPair.decrypt(encryptedMessageBytes)
+        val decryptedMessage = String(decryptedMessageBytes, Charset.forName("UTF-16"))
+        assert(originalMessage.equals(decryptedMessage))
+    }
 
     /**
      * Prints keys according to KMService's specification in B64 format, so that they can be pasted into
