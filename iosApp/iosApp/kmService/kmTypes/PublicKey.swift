@@ -37,8 +37,12 @@ struct PublicKey {
         let interfaceIdBytes = NSData(bytes: interfaceIdByteArray, length: interfaceIdByteArray.count)
         self.interfaceId = interfaceIdBytes
     }
-    
-    func encryptWithPublicKey(clearData: Data) throws -> Data? {
+    /**
+     Encrypt the passed data using this PublicKey's RSA public key, using OEAP SHA-256 padding.
+     - Parameter clearData: the data to be encrypted
+     - Returns Data: the encrypted data
+     */
+    func encrypt(clearData: Data) throws -> Data {
         let algorithm: SecKeyAlgorithm = .rsaEncryptionOAEPSHA256
         var error: Unmanaged<CFError>?
         guard let cipherData = SecKeyCreateEncryptedData(publicKey, algorithm, clearData as CFData, &error) as Data? else {

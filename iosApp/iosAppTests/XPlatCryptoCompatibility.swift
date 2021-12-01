@@ -22,17 +22,63 @@ class XPlatCryptoCompatibility: XCTestCase {
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+    
+    /**
+     * Prints keys according to KMService's specification in B64 format, as well as an original
+     * message string and the encrypted message, also in B64 format, for cross platform
+     * compatibility testing
+     */
+    func testprintEncryptedMessage() throws {
+        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
         }
+        let publicKey = SecKeyCopyPublicKey(privateKey)!
+        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(publicKey, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        guard let privKeyBytes = SecKeyCopyExternalRepresentation(privateKey, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let pubKeyB64Str = (pubKeyBytes as NSData).base64EncodedString(options: [])
+        let privKeyB64Str = (privKeyBytes as NSData).base64EncodedString(options: [])
+        print("Public Key B64:")
+        print(pubKeyB64Str)
+        print("Private Key B64:")
+        print(privKeyB64Str)
+        let keyPair = try KeyPair(publicKey: publicKey, privateKey: privateKey)
+        let originalMessage = "test"
+        print("Original Message:\n" + originalMessage)
+        print("Encrypted Message:")
+        print((try keyPair.encrypt(clearData: originalMessage.data(using: .utf16)!) as NSData).base64EncodedString(options: []))
+    }
+    
+    /**
+     * Uses the given public and private key strings to restore a KeyPair object and decrypt the
+     * given message, ensuring it matches the original message.
+     */
+    func testdecryptMessage() throws {
+        let originalMessage = "test"
+        let pubKey = "MIIBCgKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQAB"
+        let privKey = "MIIEogIBAAKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQABAoIBACWe/ZLfS4DG144x0lUNedhUPsuvXzl5NAj8DBXtcQ6TkZ51VN8TgsHrQ2WKwkKdVnZAzPnkEMxy/0oj5xG8tBL43RM/tXFUsUHJhpe3G9Xb7JprG/3T2aEZP/Sviy16QvvFWJWtZHq1knOIy3Fy/lGTJM/ymVciJpc0TGGtccDyeQDBxaoQrr1r4Q9q5CMED/kEXq5KNLmzbfB1WInQZJ7wQhtyyAJiXJxKIeR3hVGR1dfBJGSbIIgYA5sYv8HPnXrorU7XEgDWLkILjSNgCvaGOgC5B4sgTB1pmwPQ173ee3gbn+PCai6saU9lciXeCteQp9YRBBWfwl+DDy5oGsUCgYEA0TB+kXbUgFyatxI46LLYRFGYTHgOPZz6Reu2ZKRaVNWC75NHyFTQdLSxvYLnQTnKGmjLapCTUwapiEAB50tLSko/uVcf4bG44EhCfL4S8hmfS3uCczokhhBjR/tZxnamXb/T1Wn2X06QsPSYQQmZB7EoQ6G0u/K792YgGn/qh+cCgYEAweUWInTK5nIAGyA/k0v0BNOefNTvfgV25wfR6nvXM3SJamHUTuO8wZntekD/epd4EewTP57rEb9kCzwdQnMkAaT1ejr7pQE4RFAZcL86o2C998QS0k25fw5xUhRiOIxSMqK7RLkAlRsThel+6BzHQ+jHxB06te3yyIjxnqP576UCgYA7tvAqbhVzHvw7TkRYiNUbi39CNPM7u1fmJcdHK3NtzBU4dn6DPVLUPdCPHJMPF4QNzeRjYynrBXfXoQ3qDKBNcKyIJ8q+DpGL1JTGLywRWCcU0QkIA4zxiDQPFD0oXi5XjK7XuQvPYQoEuY3M4wSAIZ4w0DRbgosNsGVxqxoz+QKBgClYh3LLguTHFHy0ULpBLQTGd3pZEcTGt4cmZL3isI4ZYKAdwl8cMwj5oOk76P6kRAdWVvhvE+NR86xtojOkR95N5catwzF5ZB01E2e2b3OdUoT9+6F6z35nfwSoshUq3vBLQTGzXYtuHaillNk8IcW6YrbQIM/gsK/Qe+1/O/G9AoGAYJhKegiRuasxY7ig1viAdYmhnCbtKhOa6qsq4cvI4avDL+Qfcgq6E8V5xgUsPsl2QUGz4DkBDw+E0D1Z4uT60y2TTTPbK7xmDs7KZy6Tvb+UKQNYlxL++DKbjFvxz6VJg17btqid8sP+LMhT3oqfRSakyGS74Bn3NBpLUeonYkQ="
+        let encryptedMessageB64 = "i3zw3naNKR6wOzThW6ET1yikx9amrg+UbuxFslVhd7bSCZpEZVmu5MAk3H6fvWf3ckvS/IgCne1jLb0MiZ3u7UI8blyKxlaK3VmA1JcEUu9SDB9I9ye8YbvdJrS8weffGtqtNH/gK7roHyey/Pd/bMXPkAKhkjoPG9wx/6ZAHFtn3Kt+brq+3m4uoKcwDzuYKoQFuyjFFmu6iwrJ6vir+i9v8FhfadgKmG7ggugT06ZYC/c55qeM51hZ9tPbCKEOQ6NEtlZ6iT6BQY9aBse+N4OFLx6xqd6nS/pA3AzDMc9FOAdmemelCv33hbUzquPz6WDc4iupREfvxUi6+8Wg6g=="
+        let pubKeyBytes: NSData = NSData(base64Encoded: pubKey, options: [])!
+        let privKeyBytes: NSData = NSData(base64Encoded: privKey, options: [])!
+        var keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let publicKey = SecKeyCreateWithData(pubKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        keyOpts[kSecAttrKeyClass as String] = kSecAttrKeyClassPrivate
+        guard let privateKey = SecKeyCreateWithData(privKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let keyPair = try KeyPair(publicKey: publicKey, privateKey: privateKey)
+        let encryptedMessageBytes = NSData(base64Encoded: encryptedMessageB64, options: [])! as Data
+        let decryptedMessageBytes = try keyPair.decrypt(cipherData: encryptedMessageBytes)
+        let decryptedMessage = String(bytes: decryptedMessageBytes, encoding: .utf16)
+        XCTAssertEqual(originalMessage, decryptedMessage)
     }
     
     /**
@@ -83,28 +129,6 @@ class XPlatCryptoCompatibility: XCTestCase {
         print(publicKey)
         print("Restored Private Key:")
         print(privateKey)
-    }
-    
-    func testEncryptAndDecryptData() throws {
-        /*
-        let dbDriverFactory = DatabaseDriverFactory()
-        let dbService = DBService(databaseDriverFactory: dbDriverFactory)
-        let kmService = KMService(dbService: dbService)
-        let keypair = try kmService.generateKeyPair(storeResult: false)
-        let pubKey = keypair.1.0
-        let privKey = keypair.1.1
-         */
-        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
-        var error: Unmanaged<CFError>?
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let publicKey = SecKeyCopyPublicKey(privateKey)!
-        let message: NSData = NSData(base64Encoded: "test", options: [])!
-        let encryptedMessageData = try encryptWithPublicKey(pubKey: publicKey, clearData: message as Data)!
-        let decryptedMessageData = try decryptWithPrivateKey(privKey: privateKey, cipherData: encryptedMessageData)!
-        let restoredMessage = (decryptedMessageData as NSData).base64EncodedString(options: [])
-        print(restoredMessage)
     }
     
 }

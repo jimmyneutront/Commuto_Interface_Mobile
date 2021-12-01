@@ -12,8 +12,6 @@ import XCTest
 
 class KMServiceTest: XCTestCase {
     
-    //TODO: Make these tests work
-    
     let dbService: DBService = DBService()
     var kmService: KMService?
      

@@ -41,6 +41,11 @@ struct KeyPair {
         self.interfaceId = interfaceIdBytes
     }
     
+    /**
+     Encrypt the passed data using this KeyPair's RSA public key, using OEAP SHA-256 padding.
+     - Parameter clearData: the data to be encrypted
+     - Returns Data: the encrypted data
+     */
     func encrypt(clearData: Data) throws -> Data {
         let algorithm: SecKeyAlgorithm = .rsaEncryptionOAEPSHA256
         var error: Unmanaged<CFError>?
@@ -50,6 +55,11 @@ struct KeyPair {
         return cipherData
     }
 
+    /**
+     Decrypt the passed data using this KeyPair's RSA private key, using OEAP SHA-256 padding.
+     - Parameter cipherData: the data to be decrypted
+     - Returns Data: the decrypted data
+     */
     func decrypt(cipherData: Data) throws -> Data {
         let algorithm: SecKeyAlgorithm = .rsaEncryptionOAEPSHA256
         var error: Unmanaged<CFError>?
