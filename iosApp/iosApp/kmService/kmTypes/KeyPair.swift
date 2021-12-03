@@ -42,6 +42,39 @@ struct KeyPair {
     }
     
     /**
+     * Create a signature from the passed ByteArray using this KeyPair's private key
+     *
+     * - Parameter data: the data to be signed
+     * - Returns Data: the signature
+     */
+    func sign(data: Data) throws -> Data {
+        let algorithm: SecKeyAlgorithm = .rsaSignatureMessagePKCS1v15SHA256
+        var error: Unmanaged<CFError>?
+        guard let signature = SecKeyCreateSignature(privateKey, algorithm, data as CFData, &error) as Data? else {
+            throw error!.takeRetainedValue() as Error
+        }
+        return signature
+    }
+    
+    /**
+     * Verifies a signature using this KeyPair's public key
+     *
+     * - Parameter signedData: the data that was signed
+     * - Parameter signature: the signature
+     *
+     * - Returns Boolean: indicating the success of the verification
+     */
+    func verifySignature(signedData: Data, signature: Data) throws -> Bool {
+        let algorithm: SecKeyAlgorithm = .rsaSignatureMessagePKCS1v15SHA256
+        var error: Unmanaged<CFError>?
+        let success = SecKeyVerifySignature(publicKey, algorithm, signedData as CFData, signature as CFData, &error)
+        if !success {
+            throw error!.takeRetainedValue() as Error
+        }
+        return success
+    }
+    
+    /**
      Encrypt the passed data using this KeyPair's RSA public key, using OEAP SHA-256 padding.
      - Parameter clearData: the data to be encrypted
      - Returns Data: the encrypted data

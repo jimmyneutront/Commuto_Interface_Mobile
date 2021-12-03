@@ -2,7 +2,7 @@
 //  KMServiceUtilsTest.swift
 //  iosAppTests
 //
-//  Created by James Telzrow on 11/30/21.
+//  Created by jimmyt on 11/30/21.
 //  Copyright © 2021 orgName. All rights reserved.
 //
 
@@ -24,7 +24,13 @@ class KMServiceUtilsTest: XCTestCase {
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
-
+    
+    func testSignatureUtils() throws {
+        let keyPair = try kmService!.generateKeyPair()
+        let signature = try keyPair.sign(data: "test".data(using: .utf16)!)
+        XCTAssert(try keyPair.verifySignature(signedData: "test".data(using: .utf16)!, signature: signature))
+    }
+    
     func testAsymmetricEncryption() throws {
         let keyPair = try kmService!.generateKeyPair()
         let originalString = "test"

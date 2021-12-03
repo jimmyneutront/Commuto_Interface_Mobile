@@ -37,6 +37,25 @@ struct PublicKey {
         let interfaceIdBytes = NSData(bytes: interfaceIdByteArray, length: interfaceIdByteArray.count)
         self.interfaceId = interfaceIdBytes
     }
+    
+    /**
+     * Verifies a signature using this KeyPair's public key
+     *
+     * - Parameter signedData: the data that was signed
+     * - Parameter signature: the signature
+     *
+     * - Returns Boolean: indicating the success of the verification
+     */
+    func verifySignature(signedData: Data, signature: Data) throws -> Bool {
+        let algorithm: SecKeyAlgorithm = .rsaSignatureMessagePKCS1v15SHA256
+        var error: Unmanaged<CFError>?
+        let success = SecKeyVerifySignature(publicKey, algorithm, signedData as CFData, signature as CFData, &error)
+        if !success {
+            throw error!.takeRetainedValue() as Error
+        }
+        return success
+    }
+    
     /**
      Encrypt the passed data using this PublicKey's RSA public key, using OEAP SHA-256 padding.
      - Parameter clearData: the data to be encrypted

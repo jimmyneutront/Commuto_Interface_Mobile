@@ -22,13 +22,53 @@ class XPlatCryptoCompatibility: XCTestCase {
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
+    /**
+     Prints a signature, original message and public key in Base64 format
+     */
+    func testPrintSignature() throws {
+        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let publicKey = SecKeyCopyPublicKey(privateKey)!
+        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(publicKey, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let keyPair = try KeyPair(publicKey: publicKey, privateKey: privateKey)
+        let pubKeyB64Str = (pubKeyBytes as NSData).base64EncodedString(options: [])
+        print("Signed data B64:\n" + ("test".data(using: .utf16)! as NSData).base64EncodedString(options: []))
+        print("Public Key B64:")
+        print(pubKeyB64Str)
+        let signature = try keyPair.sign(data: "test".data(using: .utf16)!)
+        print("Signature:\n" + (signature as NSData).base64EncodedString(options: []))
+    }
     
+    /**
+     Verifies a signature using an original message and public key, all given in Base64 format
+     */
+    func testVerifySignature() throws {
+        let signedData = NSData(base64Encoded: "/v8AdABlAHMAdA==", options: [])!
+        let pubKey = "MIIBCgKCAQEAl2vTBu5c29Pu5Zoz5QZpdY3tu1zSO+5pZfJ2HxT3ZDzwWkaiKh4oWonnvdJ+K2tjaglw5S8UMED8bYRbpDWjfw9k1VIJHXsKoXp2aLHvYtyAHFG3AN1IiWFKUbeXbeP/vQRLuzycJpNmA1NKstVWr1amXU1f4fEnCvNcPbllLVYYxvBbwoBYybB0tpeSiP9mHP1r1YK5sA4ZAogbijMsYx2+mT46Q8Z307qRTJKQgiUGf8Gx3PP9vq5CVwtB8HCGjDMuIaV4FlZo5OQ9sg8P4fWHljWvtjWqpRp7NPqmCQ0xd77gXPqCWOPAS5VWGVDQkEf+uGOTxtBucbshpdj0/wIDAQAB"
+        let signatureB64 = "MB+58AIF5RcMMJdWOY4XMzzGaZ+y0NA8hxaIiYgQjpzVvPAL7t3ljscJqXynYcbGIFc+Pr+nzoLq9eU7zPeZAtmxVWvEyv2NSxG+W1BR5/vIOVfSYDVa5DBNU1CnY54JqXZegayhgD/lxGBMfiOMJkXJZzI9Z3uiAWmD71gfiNpRjt+9JSCWWkfp2nQoke/ItHSNxShOCZaaJkvU6PjW38xAQAG6kHRvVu3DnLiVXgjiz7AeLaRMSXhSizNfJZnMCmnU+60wUYeIXwJ5qF2ZoWf5Kfo2S/elHyJgwts+3MBZY3m+Emg38auDVAm7C+MchG+LAwzW5ZqvCFsg6wYI3A=="
+        let pubKeyBytes: NSData = NSData(base64Encoded: pubKey, options: [])!
+        let keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let publicKey = SecKeyCreateWithData(pubKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let wrappedPubKey = try PublicKey(publicKey: publicKey)
+        let signature = NSData(base64Encoded: signatureB64, options: [])!
+        XCTAssert(try wrappedPubKey.verifySignature(signedData: signedData as Data, signature: signature as Data))
+    }
+    
+    //TODO: Check that the names of these two functions match on other platforms
     /**
      * Prints keys according to KMService's specification in B64 format, as well as an original
      * message string and the encrypted message, also in B64 format, for cross platform
      * compatibility testing
      */
-    func testprintEncryptedMessage() throws {
+    func testPrintEncryptedMessage() throws {
         let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
         var error: Unmanaged<CFError>?
         guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
@@ -58,7 +98,7 @@ class XPlatCryptoCompatibility: XCTestCase {
      * Uses the given public and private key strings to restore a KeyPair object and decrypt the
      * given message, ensuring it matches the original message.
      */
-    func testdecryptMessage() throws {
+    func testDecryptMessage() throws {
         let originalMessage = "test"
         let pubKey = "MIIBCgKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQAB"
         let privKey = "MIIEogIBAAKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQABAoIBACWe/ZLfS4DG144x0lUNedhUPsuvXzl5NAj8DBXtcQ6TkZ51VN8TgsHrQ2WKwkKdVnZAzPnkEMxy/0oj5xG8tBL43RM/tXFUsUHJhpe3G9Xb7JprG/3T2aEZP/Sviy16QvvFWJWtZHq1knOIy3Fy/lGTJM/ymVciJpc0TGGtccDyeQDBxaoQrr1r4Q9q5CMED/kEXq5KNLmzbfB1WInQZJ7wQhtyyAJiXJxKIeR3hVGR1dfBJGSbIIgYA5sYv8HPnXrorU7XEgDWLkILjSNgCvaGOgC5B4sgTB1pmwPQ173ee3gbn+PCai6saU9lciXeCteQp9YRBBWfwl+DDy5oGsUCgYEA0TB+kXbUgFyatxI46LLYRFGYTHgOPZz6Reu2ZKRaVNWC75NHyFTQdLSxvYLnQTnKGmjLapCTUwapiEAB50tLSko/uVcf4bG44EhCfL4S8hmfS3uCczokhhBjR/tZxnamXb/T1Wn2X06QsPSYQQmZB7EoQ6G0u/K792YgGn/qh+cCgYEAweUWInTK5nIAGyA/k0v0BNOefNTvfgV25wfR6nvXM3SJamHUTuO8wZntekD/epd4EewTP57rEb9kCzwdQnMkAaT1ejr7pQE4RFAZcL86o2C998QS0k25fw5xUhRiOIxSMqK7RLkAlRsThel+6BzHQ+jHxB06te3yyIjxnqP576UCgYA7tvAqbhVzHvw7TkRYiNUbi39CNPM7u1fmJcdHK3NtzBU4dn6DPVLUPdCPHJMPF4QNzeRjYynrBXfXoQ3qDKBNcKyIJ8q+DpGL1JTGLywRWCcU0QkIA4zxiDQPFD0oXi5XjK7XuQvPYQoEuY3M4wSAIZ4w0DRbgosNsGVxqxoz+QKBgClYh3LLguTHFHy0ULpBLQTGd3pZEcTGt4cmZL3isI4ZYKAdwl8cMwj5oOk76P6kRAdWVvhvE+NR86xtojOkR95N5catwzF5ZB01E2e2b3OdUoT9+6F6z35nfwSoshUq3vBLQTGzXYtuHaillNk8IcW6YrbQIM/gsK/Qe+1/O/G9AoGAYJhKegiRuasxY7ig1viAdYmhnCbtKhOa6qsq4cvI4avDL+Qfcgq6E8V5xgUsPsl2QUGz4DkBDw+E0D1Z4uT60y2TTTPbK7xmDs7KZy6Tvb+UKQNYlxL++DKbjFvxz6VJg17btqid8sP+LMhT3oqfRSakyGS74Bn3NBpLUeonYkQ="
