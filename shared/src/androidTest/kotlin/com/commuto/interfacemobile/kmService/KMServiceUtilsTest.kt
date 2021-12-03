@@ -22,6 +22,14 @@ internal class KMServiceUtilsTest {
     }
 
     @Test
+    fun testSignatureUtils() {
+        val keyPair: KeyPair = kmService.generateKeyPair(storeResult = false)
+        val charset = Charset.forName("UTF-16")
+        val signature = keyPair.sign("test".toByteArray(charset))
+        assert(keyPair.verifySignature("test".toByteArray(charset), signature))
+    }
+
+    @Test
     fun testAsymmetricEncryption() {
         val keyPair: KeyPair = kmService.generateKeyPair(storeResult = false)
         val charset = Charset.forName("UTF-16")
