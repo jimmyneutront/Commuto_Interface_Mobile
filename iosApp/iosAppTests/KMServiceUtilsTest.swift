@@ -25,6 +25,12 @@ class KMServiceUtilsTest: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
+    func testSymmetricEncryption() throws {
+        let key = try newSymmetricKey()
+        let encryptedData = try key.encrypt(data: "test".data(using: .utf16)!)
+        XCTAssertEqual("test".data(using: .utf16)!, try key.decrypt(data: encryptedData))
+    }
+    
     func testSignatureUtils() throws {
         let keyPair = try kmService!.generateKeyPair()
         let signature = try keyPair.sign(data: "test".data(using: .utf16)!)

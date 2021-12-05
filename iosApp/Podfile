@@ -2,7 +2,8 @@ target 'iosApp' do
   use_frameworks!
   platform :ios, '14.1'
   #pod 'shared', :path => '../shared'
+  pod 'CryptoSwift'
+  #pod 'MatrixSDK'
   pod 'SQLite.swift'
-  pod 'MatrixSDK'
   pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git'
 end

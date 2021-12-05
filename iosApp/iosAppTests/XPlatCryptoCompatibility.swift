@@ -22,6 +22,33 @@ class XPlatCryptoCompatibility: XCTestCase {
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
+    
+    /**
+     * Prints a key, encrypted data, and an initialization vector in B64 format
+     */
+    func testPrintSymmetricallyEncryptedMsg() throws {
+        let key = try newSymmetricKey()
+        print("Key B64\n" + (key.keyData as NSData).base64EncodedString(options: []))
+        let encryptedData = try key.encrypt(data: "test".data(using: .utf8)!)
+        print("Encrypted Data B64:\n" + (encryptedData.encryptedData as NSData).base64EncodedString(options: []))
+        print("Initialization Vector B64:\n" + (encryptedData.initializationVectorData as NSData).base64EncodedString(options: []))
+    }
+    
+    /**
+     * Decrypts encrypted data given a key, encrypted data, and an initialization vector, all in B64 format.
+     */
+    func testSymmetricDecryption() {
+        let keyB64 = "y//mnBE2EMNqSEWRpEfPALsGPTBcisR8c93nG8jQOJc="
+        let encryptedDataB64 = "bmaludYyzyu9TkJOGCTrmA=="
+        let initializationVectorB64 = "AA/dVbNmRFreOmQyYCBuog=="
+        let keyData = NSData(base64Encoded: keyB64, options: [])!
+        let encryptedData = NSData(base64Encoded: encryptedDataB64, options: [])!
+        let initializationVector = NSData(base64Encoded: initializationVectorB64, options: [])!
+        let key = SymmetricKey(key: keyData as Data)
+        let symmEncryptedData = SymmetricallyEncryptedData(data: encryptedData as Data, iv: initializationVector as Data)
+        XCTAssertEqual("test".data(using: .utf8), try key.decrypt(data: symmEncryptedData))
+    }
+    
     /**
      Prints a signature, original message and public key in Base64 format
      */
@@ -62,7 +89,6 @@ class XPlatCryptoCompatibility: XCTestCase {
         XCTAssert(try wrappedPubKey.verifySignature(signedData: signedData as Data, signature: signature as Data))
     }
     
-    //TODO: Check that the names of these two functions match on other platforms
     /**
      * Prints keys according to KMService's specification in B64 format, as well as an original
      * message string and the encrypted message, also in B64 format, for cross platform

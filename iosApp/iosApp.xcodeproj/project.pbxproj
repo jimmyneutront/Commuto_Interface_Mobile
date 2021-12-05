@@ -8,8 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
+		6D2682A92756D630008EC6F4 /* KMServiceUtilsTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */; };
 		6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */; };
 		6D32506B2751C34A000352BE /* KMUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D32506A2751C34A000352BE /* KMUtils.swift */; };
+		6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */; };
 		6D91C97B27533EBB00D85654 /* DBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97A27533EBB00D85654 /* DBService.swift */; };
 		6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97D2753F9B100D85654 /* DBKeyPair.swift */; };
 		6D91C9812753FA2900D85654 /* DBPublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9802753FA2900D85654 /* DBPublicKey.swift */; };
@@ -35,8 +37,10 @@
 /* Begin PBXFileReference section */
 		2152FB032600AC8F00CF470E /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
 		656268B7E2EEC2821F248E8D /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
+		6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMServiceUtilsTest.swift; sourceTree = "<group>"; };
 		6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPlatCryptoCompatibility.swift; sourceTree = "<group>"; };
 		6D32506A2751C34A000352BE /* KMUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMUtils.swift; sourceTree = "<group>"; };
+		6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymmetricKey.swift; sourceTree = "<group>"; };
 		6D91C97A27533EBB00D85654 /* DBService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBService.swift; sourceTree = "<group>"; };
 		6D91C97D2753F9B100D85654 /* DBKeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBKeyPair.swift; sourceTree = "<group>"; };
 		6D91C9802753FA2900D85654 /* DBPublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBPublicKey.swift; sourceTree = "<group>"; };
@@ -95,6 +99,7 @@
 			children = (
 				6D91C9852754329A00D85654 /* KeyPair.swift */,
 				6D91C987275432E300D85654 /* PublicKey.swift */,
+				6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */,
 			);
 			path = kmTypes;
 			sourceTree = "<group>";
@@ -112,6 +117,7 @@
 		6DC323CB273A2EB200936686 /* iosAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */,
 				6D91C9822753FBD900D85654 /* DBServiceTest.swift */,
 				6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */,
 				6DC323D3273A2F1300936686 /* KMServiceTest.swift */,
@@ -311,6 +317,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6D91C9832753FBD900D85654 /* DBServiceTest.swift in Sources */,
+				6D2682A92756D630008EC6F4 /* KMServiceUtilsTest.swift in Sources */,
 				6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */,
 				6DC323D4273A2F1300936686 /* KMServiceTest.swift in Sources */,
 			);
@@ -329,6 +336,7 @@
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
 				6D91C988275432E300D85654 /* PublicKey.swift in Sources */,
 				6D91C9812753FA2900D85654 /* DBPublicKey.swift in Sources */,
+				6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
