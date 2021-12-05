@@ -4,12 +4,12 @@ import android.util.Base64
 import androidx.test.core.app.ApplicationProvider
 import com.commuto.interfacemobile.db.DatabaseDriverFactory
 import com.commuto.interfacemobile.dbService.DBService
-import com.commuto.interfacemobile.kmService.kmTypes.KeyPair
-import com.commuto.interfacemobile.kmService.kmTypes.PublicKey
+import com.commuto.interfacemobile.kmService.kmTypes.*
 import java.nio.charset.Charset
 import java.security.KeyPair as JavaSecKeyPair
 import java.security.PrivateKey
 import java.security.PublicKey as JavaSecPubKey
+import java.util.Arrays
 import kotlin.test.Test
 
 /**
@@ -21,6 +21,34 @@ class XPlatCryptoCompatibility {
     private var driver = DatabaseDriverFactory(ApplicationProvider.getApplicationContext())
     private var dbService = DBService(driver)
     private val kmService = KMService(dbService)
+
+    /**
+     * Prints a key, encrypted data, and an initialization vector in B64 format
+     */
+    @Test
+    fun testPrintSymmetricallyEncryptedMsg() {
+        val key = newSymmetricKey()
+        println("Key B64:\n" + Base64.encodeToString(key.keyBytes, Base64.DEFAULT))
+        val encryptedData: SymmetricallyEncryptedData = key.encrypt("test".toByteArray())
+        println("Encrypted Data B64:\n" + Base64.encodeToString(encryptedData.encryptedData, Base64.DEFAULT))
+        println("Initialization Vector B64:\n" + Base64.encodeToString(encryptedData.initializationVector, Base64.DEFAULT))
+    }
+
+    /**
+     * Decrypts encrypted data given a key, encrypted data, and an initialization vector, all in B64 format.
+     */
+    @Test
+    fun testSymmetricDecryption() {
+        val keyB64 = "9u0BOAMTiKXHV0BAX1snHZsy9fOmfkDIQ9sIGwTiYDE="
+        val encryptedDataB64 = "yS1fv7cQpuxwUEX8YgXuMw=="
+        val initializationVectorB64 = "nsz76c4yhx/boD1c4KnbYw=="
+        val keyData = Base64.decode(keyB64, Base64.DEFAULT)
+        val encryptedData = Base64.decode(encryptedDataB64, Base64.DEFAULT)
+        val initializationVector = Base64.decode(initializationVectorB64, Base64.DEFAULT)
+        val key = SymmetricKey(keyData)
+        val symmEncryptedData = SymmetricallyEncryptedData(encryptedData, initializationVector)
+        assert(Arrays.equals("test".toByteArray(), key.decrypt(symmEncryptedData)))
+    }
 
     /**
      * Prints a signature, original message and public key in Base64 format
