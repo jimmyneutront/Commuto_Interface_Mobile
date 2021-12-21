@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
+		4F8789F3512F18FFD1850BF4 /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6DA7C2D2275D51D8003D243C /* Pods_iosApp.framework */; };
 		6D2682A92756D630008EC6F4 /* KMServiceUtilsTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */; };
 		6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */; };
 		6D32506B2751C34A000352BE /* KMUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D32506A2751C34A000352BE /* KMUtils.swift */; };
@@ -19,9 +20,11 @@
 		6D91C9862754329B00D85654 /* KeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9852754329A00D85654 /* KeyPair.swift */; };
 		6D91C988275432E300D85654 /* PublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C987275432E300D85654 /* PublicKey.swift */; };
 		6D9ABCBD2736399F0034AE01 /* KMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9ABCBC2736399F0034AE01 /* KMService.swift */; };
+		6DA7C2BD275D4DB2003D243C /* CommutoCoreInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA7C2BC275D4DB2003D243C /* CommutoCoreInteraction.swift */; };
 		6DC323D4273A2F1300936686 /* KMServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DC323D3273A2F1300936686 /* KMServiceTest.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
 		A74CC1FA560543056929AB7C /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1CE17097383C0FF0210E9FC /* Pods_iosApp.framework */; };
+		FA50B53E2E0B47C565329148 /* Pods_iosApp_iosAppTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 041B0533F03A5BF9932C5E31 /* Pods_iosApp_iosAppTests.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,7 +38,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		041B0533F03A5BF9932C5E31 /* Pods_iosApp_iosAppTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp_iosAppTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		2152FB032600AC8F00CF470E /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
+		48FFEFE01F028BA4CDA5D550 /* Pods-iosApp-iosAppTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp-iosAppTests.debug.xcconfig"; path = "Target Support Files/Pods-iosApp-iosAppTests/Pods-iosApp-iosAppTests.debug.xcconfig"; sourceTree = "<group>"; };
 		656268B7E2EEC2821F248E8D /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
 		6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMServiceUtilsTest.swift; sourceTree = "<group>"; };
 		6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPlatCryptoCompatibility.swift; sourceTree = "<group>"; };
@@ -48,12 +53,29 @@
 		6D91C9852754329A00D85654 /* KeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPair.swift; sourceTree = "<group>"; };
 		6D91C987275432E300D85654 /* PublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKey.swift; sourceTree = "<group>"; };
 		6D9ABCBC2736399F0034AE01 /* KMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMService.swift; sourceTree = "<group>"; };
+		6DA7C2BC275D4DB2003D243C /* CommutoCoreInteraction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommutoCoreInteraction.swift; sourceTree = "<group>"; };
+		6DA7C2BE275D51C2003D243C /* BigInt.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BigInt.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2C0275D51C2003D243C /* CryptoSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CryptoSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2C2275D51C2003D243C /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2C4275D51C2003D243C /* PromiseKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PromiseKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2C6275D51C2003D243C /* secp256k1.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = secp256k1.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2C8275D51C2003D243C /* SQLite.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SQLite.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2CA275D51C2003D243C /* Starscream.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Starscream.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2CC275D51C2003D243C /* web3swift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = web3swift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2CE275D51D8003D243C /* BigInt.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BigInt.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2D0275D51D8003D243C /* CryptoSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CryptoSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2D2275D51D8003D243C /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2D4275D51D8003D243C /* PromiseKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PromiseKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2D6275D51D8003D243C /* secp256k1.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = secp256k1.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2D8275D51D8003D243C /* SQLite.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SQLite.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DA7C2DA275D51D8003D243C /* Starscream.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Starscream.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6DC323CA273A2EB200936686 /* iosAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iosAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6DC323D3273A2F1300936686 /* KMServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMServiceTest.swift; sourceTree = "<group>"; };
 		7555FF7B242A565900829871 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7555FF82242A565900829871 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		94610D5C04D87807F7517C8C /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
+		CDA0D69D24626A32E23F89E6 /* Pods-iosApp-iosAppTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp-iosAppTests.release.xcconfig"; path = "Target Support Files/Pods-iosApp-iosAppTests/Pods-iosApp-iosAppTests.release.xcconfig"; sourceTree = "<group>"; };
 		F1CE17097383C0FF0210E9FC /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -63,6 +85,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A74CC1FA560543056929AB7C /* Pods_iosApp.framework in Frameworks */,
+				4F8789F3512F18FFD1850BF4 /* Pods_iosApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,6 +93,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA50B53E2E0B47C565329148 /* Pods_iosApp_iosAppTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +141,7 @@
 		6DC323CB273A2EB200936686 /* iosAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				6DA7C2BC275D4DB2003D243C /* CommutoCoreInteraction.swift */,
 				6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */,
 				6D91C9822753FBD900D85654 /* DBServiceTest.swift */,
 				6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */,
@@ -162,6 +187,8 @@
 			children = (
 				94610D5C04D87807F7517C8C /* Pods-iosApp.debug.xcconfig */,
 				656268B7E2EEC2821F248E8D /* Pods-iosApp.release.xcconfig */,
+				48FFEFE01F028BA4CDA5D550 /* Pods-iosApp-iosAppTests.debug.xcconfig */,
+				CDA0D69D24626A32E23F89E6 /* Pods-iosApp-iosAppTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -169,7 +196,23 @@
 		E33D290FF3959EA01112DC82 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				6DA7C2CE275D51D8003D243C /* BigInt.framework */,
+				6DA7C2D0275D51D8003D243C /* CryptoSwift.framework */,
+				6DA7C2D2275D51D8003D243C /* Pods_iosApp.framework */,
+				6DA7C2D4275D51D8003D243C /* PromiseKit.framework */,
+				6DA7C2D6275D51D8003D243C /* secp256k1.framework */,
+				6DA7C2D8275D51D8003D243C /* SQLite.framework */,
+				6DA7C2DA275D51D8003D243C /* Starscream.framework */,
+				6DA7C2BE275D51C2003D243C /* BigInt.framework */,
+				6DA7C2C0275D51C2003D243C /* CryptoSwift.framework */,
+				6DA7C2C2275D51C2003D243C /* Pods_iosApp.framework */,
+				6DA7C2C4275D51C2003D243C /* PromiseKit.framework */,
+				6DA7C2C6275D51C2003D243C /* secp256k1.framework */,
+				6DA7C2C8275D51C2003D243C /* SQLite.framework */,
+				6DA7C2CA275D51C2003D243C /* Starscream.framework */,
+				6DA7C2CC275D51C2003D243C /* web3swift.framework */,
 				F1CE17097383C0FF0210E9FC /* Pods_iosApp.framework */,
+				041B0533F03A5BF9932C5E31 /* Pods_iosApp_iosAppTests.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -181,9 +224,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6DC323D2273A2EB200936686 /* Build configuration list for PBXNativeTarget "iosAppTests" */;
 			buildPhases = (
+				EB4494378B72AF5196FE76D1 /* [CP] Check Pods Manifest.lock */,
 				6DC323C6273A2EB200936686 /* Sources */,
 				6DC323C8273A2EB200936686 /* Resources */,
 				6DC323C7273A2EB200936686 /* Frameworks */,
+				8307851FC64A8F417BA7AA9C /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -287,6 +332,23 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		8307851FC64A8F417BA7AA9C /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iosApp-iosAppTests/Pods-iosApp-iosAppTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iosApp-iosAppTests/Pods-iosApp-iosAppTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-iosApp-iosAppTests/Pods-iosApp-iosAppTests-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		8AEDCE9F4978FCCBAB0C703B /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -309,6 +371,28 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		EB4494378B72AF5196FE76D1 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-iosApp-iosAppTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -319,6 +403,7 @@
 				6D91C9832753FBD900D85654 /* DBServiceTest.swift in Sources */,
 				6D2682A92756D630008EC6F4 /* KMServiceUtilsTest.swift in Sources */,
 				6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */,
+				6DA7C2BD275D4DB2003D243C /* CommutoCoreInteraction.swift in Sources */,
 				6DC323D4273A2F1300936686 /* KMServiceTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -353,12 +438,15 @@
 /* Begin XCBuildConfiguration section */
 		6DC323D0273A2EB200936686 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 48FFEFE01F028BA4CDA5D550 /* Pods-iosApp-iosAppTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_BITCODE = NO;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -378,11 +466,14 @@
 		};
 		6DC323D1273A2EB200936686 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CDA0D69D24626A32E23F89E6 /* Pods-iosApp-iosAppTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_BITCODE = NO;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -437,6 +528,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_TESTING_SEARCH_PATHS = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -498,6 +590,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTING_SEARCH_PATHS = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;

@@ -5,5 +5,7 @@ target 'iosApp' do
   pod 'CryptoSwift'
   #pod 'MatrixSDK'
   pod 'SQLite.swift'
-  pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git'
+  #pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git'
+  pod 'web3swift', :git => 'https://github.com/skywinder/web3swift.git', :branch => 'develop'
+  target :iosAppTests
 end
