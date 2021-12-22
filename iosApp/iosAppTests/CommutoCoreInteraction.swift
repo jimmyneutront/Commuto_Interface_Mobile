@@ -118,29 +118,38 @@ class CommutoCoreInteraction: XCTestCase {
         
         //Establish connection to Ethereum node
         let endpoint = "http://192.168.1.12:8545"
-        let web3 = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+        var web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
         let keystoreManager = KeystoreManager([keystore_one])
-        web3.addKeystoreManager(keystoreManager)
+        web3Instance.addKeystoreManager(keystoreManager)
         let walletAddress = EthereumAddress(address_one)!
         
         //Setup CommutoSwap contract interface
         let commutoContractAddress = EthereumAddress("0x5FC8d32690cc91D4c39d9d3abcBD16989F875707")!
         let commutoSwapABI = #"[{"inputs": [{"internalType": "address", "name": "_serviceFeePool", "type": "address"}, {"internalType": "address", "name": "_daiAddress", "type": "address"}, {"internalType": "address", "name": "_usdcAddress", "type": "address"}, {"internalType": "address", "name": "_busdAddress", "type": "address"}, {"internalType": "address", "name": "_usdtAddress", "type": "address"}], "stateMutability": "nonpayable", "type": "constructor"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "BuyerClosed", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "offerID", "type": "bytes16"}], "name": "OfferCanceled", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "offerID", "type": "bytes16"}, {"indexed": false, "internalType": "bytes", "name": "interfaceId", "type": "bytes"}], "name": "OfferOpened", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "offerID", "type": "bytes16"}, {"indexed": false, "internalType": "bytes", "name": "takerInterfaceId", "type": "bytes"}], "name": "OfferTaken", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "PaymentReceived", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "PaymentSent", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "offerID", "type": "bytes16"}], "name": "PriceChanged", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "SellerClosed", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": false, "internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "SwapFilled", "type": "event"}, {"inputs": [], "name": "busdAddress", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "offerID", "type": "bytes16"}], "name": "cancelOffer", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "closeSwap", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [], "name": "daiAddress", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "offerID", "type": "bytes16"}, {"components": [{"internalType": "bool", "name": "isCreated", "type": "bool"}, {"internalType": "bool", "name": "isTaken", "type": "bool"}, {"internalType": "address", "name": "maker", "type": "address"}, {"internalType": "bytes", "name": "interfaceId", "type": "bytes"}, {"internalType": "address", "name": "stablecoin", "type": "address"}, {"internalType": "uint256", "name": "amountLowerBound", "type": "uint256"}, {"internalType": "uint256", "name": "amountUpperBound", "type": "uint256"}, {"internalType": "uint256", "name": "securityDepositAmount", "type": "uint256"}, {"internalType": "enum CommutoSwap.SwapDirection", "name": "direction", "type": "uint8"}, {"internalType": "bytes", "name": "price", "type": "bytes"}, {"internalType": "bytes[]", "name": "settlementMethods", "type": "bytes[]"}, {"internalType": "uint256", "name": "protocolVersion", "type": "uint256"}, {"internalType": "bytes32", "name": "extraData", "type": "bytes32"}], "internalType": "struct CommutoSwap.Offer", "name": "editedOffer", "type": "tuple"}, {"internalType": "bool", "name": "editPrice", "type": "bool"}, {"internalType": "bool", "name": "editSettlementMethods", "type": "bool"}], "name": "editOffer", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "fillSwap", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "offerID", "type": "bytes16"}], "name": "getOffer", "outputs": [{"components": [{"internalType": "bool", "name": "isCreated", "type": "bool"}, {"internalType": "bool", "name": "isTaken", "type": "bool"}, {"internalType": "address", "name": "maker", "type": "address"}, {"internalType": "bytes", "name": "interfaceId", "type": "bytes"}, {"internalType": "address", "name": "stablecoin", "type": "address"}, {"internalType": "uint256", "name": "amountLowerBound", "type": "uint256"}, {"internalType": "uint256", "name": "amountUpperBound", "type": "uint256"}, {"internalType": "uint256", "name": "securityDepositAmount", "type": "uint256"}, {"internalType": "enum CommutoSwap.SwapDirection", "name": "direction", "type": "uint8"}, {"internalType": "bytes", "name": "price", "type": "bytes"}, {"internalType": "bytes[]", "name": "settlementMethods", "type": "bytes[]"}, {"internalType": "uint256", "name": "protocolVersion", "type": "uint256"}, {"internalType": "bytes32", "name": "extraData", "type": "bytes32"}], "internalType": "struct CommutoSwap.Offer", "name": "", "type": "tuple"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "getSupportedSettlementMethods", "outputs": [{"internalType": "bytes[]", "name": "", "type": "bytes[]"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "getSupportedStablecoins", "outputs": [{"internalType": "address[]", "name": "", "type": "address[]"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "getSwap", "outputs": [{"components": [{"internalType": "bool", "name": "isCreated", "type": "bool"}, {"internalType": "bool", "name": "requiresFill", "type": "bool"}, {"internalType": "address", "name": "maker", "type": "address"}, {"internalType": "bytes", "name": "makerInterfaceId", "type": "bytes"}, {"internalType": "address", "name": "taker", "type": "address"}, {"internalType": "bytes", "name": "takerInterfaceId", "type": "bytes"}, {"internalType": "address", "name": "stablecoin", "type": "address"}, {"internalType": "uint256", "name": "amountLowerBound", "type": "uint256"}, {"internalType": "uint256", "name": "amountUpperBound", "type": "uint256"}, {"internalType": "uint256", "name": "securityDepositAmount", "type": "uint256"}, {"internalType": "uint256", "name": "takenSwapAmount", "type": "uint256"}, {"internalType": "uint256", "name": "serviceFeeAmount", "type": "uint256"}, {"internalType": "enum CommutoSwap.SwapDirection", "name": "direction", "type": "uint8"}, {"internalType": "bytes", "name": "price", "type": "bytes"}, {"internalType": "bytes", "name": "settlementMethod", "type": "bytes"}, {"internalType": "uint256", "name": "protocolVersion", "type": "uint256"}, {"internalType": "bytes32", "name": "makerExtraData", "type": "bytes32"}, {"internalType": "bytes32", "name": "takerExtraData", "type": "bytes32"}, {"internalType": "bool", "name": "isPaymentSent", "type": "bool"}, {"internalType": "bool", "name": "isPaymentReceived", "type": "bool"}, {"internalType": "bool", "name": "hasBuyerClosed", "type": "bool"}, {"internalType": "bool", "name": "hasSellerClosed", "type": "bool"}], "internalType": "struct CommutoSwap.Swap", "name": "", "type": "tuple"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "offerID", "type": "bytes16"}, {"components": [{"internalType": "bool", "name": "isCreated", "type": "bool"}, {"internalType": "bool", "name": "isTaken", "type": "bool"}, {"internalType": "address", "name": "maker", "type": "address"}, {"internalType": "bytes", "name": "interfaceId", "type": "bytes"}, {"internalType": "address", "name": "stablecoin", "type": "address"}, {"internalType": "uint256", "name": "amountLowerBound", "type": "uint256"}, {"internalType": "uint256", "name": "amountUpperBound", "type": "uint256"}, {"internalType": "uint256", "name": "securityDepositAmount", "type": "uint256"}, {"internalType": "enum CommutoSwap.SwapDirection", "name": "direction", "type": "uint8"}, {"internalType": "bytes", "name": "price", "type": "bytes"}, {"internalType": "bytes[]", "name": "settlementMethods", "type": "bytes[]"}, {"internalType": "uint256", "name": "protocolVersion", "type": "uint256"}, {"internalType": "bytes32", "name": "extraData", "type": "bytes32"}], "internalType": "struct CommutoSwap.Offer", "name": "newOffer", "type": "tuple"}], "name": "openOffer", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [], "name": "owner", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "protocolVersion", "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "reportPaymentReceived", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "swapID", "type": "bytes16"}], "name": "reportPaymentSent", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [], "name": "serviceFeePool", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "bytes", "name": "settlementMethod", "type": "bytes"}, {"internalType": "bool", "name": "support", "type": "bool"}], "name": "setSettlementMethodSupport", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "address", "name": "stablecoin", "type": "address"}, {"internalType": "bool", "name": "support", "type": "bool"}], "name": "setStablecoinSupport", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes16", "name": "offerID", "type": "bytes16"}, {"components": [{"internalType": "bool", "name": "isCreated", "type": "bool"}, {"internalType": "bool", "name": "requiresFill", "type": "bool"}, {"internalType": "address", "name": "maker", "type": "address"}, {"internalType": "bytes", "name": "makerInterfaceId", "type": "bytes"}, {"internalType": "address", "name": "taker", "type": "address"}, {"internalType": "bytes", "name": "takerInterfaceId", "type": "bytes"}, {"internalType": "address", "name": "stablecoin", "type": "address"}, {"internalType": "uint256", "name": "amountLowerBound", "type": "uint256"}, {"internalType": "uint256", "name": "amountUpperBound", "type": "uint256"}, {"internalType": "uint256", "name": "securityDepositAmount", "type": "uint256"}, {"internalType": "uint256", "name": "takenSwapAmount", "type": "uint256"}, {"internalType": "uint256", "name": "serviceFeeAmount", "type": "uint256"}, {"internalType": "enum CommutoSwap.SwapDirection", "name": "direction", "type": "uint8"}, {"internalType": "bytes", "name": "price", "type": "bytes"}, {"internalType": "bytes", "name": "settlementMethod", "type": "bytes"}, {"internalType": "uint256", "name": "protocolVersion", "type": "uint256"}, {"internalType": "bytes32", "name": "makerExtraData", "type": "bytes32"}, {"internalType": "bytes32", "name": "takerExtraData", "type": "bytes32"}, {"internalType": "bool", "name": "isPaymentSent", "type": "bool"}, {"internalType": "bool", "name": "isPaymentReceived", "type": "bool"}, {"internalType": "bool", "name": "hasBuyerClosed", "type": "bool"}, {"internalType": "bool", "name": "hasSellerClosed", "type": "bool"}], "internalType": "struct CommutoSwap.Swap", "name": "newSwap", "type": "tuple"}], "name": "takeOffer", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [], "name": "usdcAddress", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}, {"inputs": [], "name": "usdtAddress", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function"}]"#
-        let commutoSwapContract = web3.contract(commutoSwapABI, at: commutoContractAddress, abiVersion: 2)!
+        let commutoSwapContract = web3Instance.contract(commutoSwapABI, at: commutoContractAddress, abiVersion: 2)!
         
         //Don't parse any blocks earlier than that with this block number looking for events emitted by Commuto, because there won't be any
-        var lastParsedBlockNumber = try! web3.eth.getBlockNumber()
+        var lastParsedBlockNumber = try! web3Instance.eth.getBlockNumber()
         
         //Setup dummy Dai contract interface
         let dummyDaiContractAddress = EthereumAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3")!
-        let dummyDaiContract = web3.contract(Web3.Utils.erc20ABI, at: dummyDaiContractAddress, abiVersion: 2)!
+        let dummyDaiContract = web3Instance.contract(Web3.Utils.erc20ABI, at: dummyDaiContractAddress, abiVersion: 2)!
         var options = TransactionOptions.defaultOptions
         options.from = walletAddress
         options.gasPrice = .manual(BigUInt(875000000))
         options.gasLimit = .manual(BigUInt(30000000))
         
+        //Get initial Dai Balance
+        var method = "balanceOf"
+        var readTx = dummyDaiContract.read(
+            method,
+            parameters: [walletAddress] as [AnyObject],
+            transactionOptions: options
+        )!
+        let initialDaiBalance = try! readTx.call()["0"] as! BigUInt
+        
         //Approve transfer to open offer
-        var method = "approve"
+        method = "approve"
         var value: BigUInt = 11
         var writeTx = dummyDaiContract.write(
             method,
@@ -185,7 +194,7 @@ class CommutoCoreInteraction: XCTestCase {
         //Wait for openOffer transaction to be confirmed (ideally wait more than one block, but implement this later)
         var openOfferTxConfirmed = false
         while openOfferTxConfirmed == false {
-            if try web3.eth.getTransactionDetails(result.hash).blockNumber != nil {
+            if try web3Instance.eth.getTransactionDetails(result.hash).blockNumber != nil {
                 openOfferTxConfirmed = true
             }
         }
@@ -200,22 +209,31 @@ class CommutoCoreInteraction: XCTestCase {
         var eventLog: EventLog?
         while isOfferTaken == false {
             var eventParserResults: [EventParserResultProtocol]? = []
-            if try! web3.eth.getBlockNumber() > lastParsedBlockNumber {
-                eventParserResults = try eventParser!.parseBlockByNumber(UInt64(lastParsedBlockNumber + 1))
-                if eventParserResults != nil && (eventParserResults?.count)! > 0 {
-                    //Parse receipt and event log of tx that took offer
-                    //TODO: this^
-                    txReceipt = eventParserResults![0].transactionReceipt
-                    eventLog = eventParserResults![0].eventLog
-                    isOfferTaken = true
+            do {
+                if try web3Instance.eth.getBlockNumber() > lastParsedBlockNumber {
+                    eventParserResults = try eventParser!.parseBlockByNumber(UInt64(lastParsedBlockNumber + 1))
+                    if eventParserResults != nil && (eventParserResults?.count)! > 0 {
+                        //Parse receipt and event log of tx that took offer
+                        //TODO: this^
+                        txReceipt = eventParserResults![0].transactionReceipt
+                        eventLog = eventParserResults![0].eventLog
+                        isOfferTaken = true
+                    }
+                    lastParsedBlockNumber += 1
                 }
-                lastParsedBlockNumber += 1
+                if isOfferTaken == false {
+                    sleep(UInt32(5.0))
+                }
+            } catch {
+                web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+                web3Instance.addKeystoreManager(keystoreManager)
             }
+            
         }
         
         //Get the newly taken swap
         method = "getSwap"
-        let readTx = commutoSwapContract.read(
+        readTx = commutoSwapContract.read(
             method,
             parameters: [offerIdArray] as [AnyObject],
             transactionOptions: options
@@ -238,14 +256,68 @@ class CommutoCoreInteraction: XCTestCase {
         result = try! writeTx.send()
         
         //Fill the newly taken swap
+        method = "fillSwap"
+        writeTx = commutoSwapContract.write(
+            method,
+            parameters: [offerIdArray] as [AnyObject],
+            transactionOptions: options
+        )!
+        result = try! writeTx.send()
         
         //Start listening for PaymentSent event
+        var isPaymentSent = false
+        eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: [[offerIdArray],])
+        eventParser = commutoSwapContract.createEventParser("PaymentSent", filter: eventFilter)
+        while isPaymentSent == false {
+            var eventParserResults: [EventParserResultProtocol]? = []
+            do {
+                if try web3Instance.eth.getBlockNumber() > lastParsedBlockNumber {
+                    eventParserResults = try eventParser!.parseBlockByNumber(UInt64(lastParsedBlockNumber + 1))
+                    if eventParserResults != nil && (eventParserResults?.count)! > 0 {
+                        //Parse receipt and event log of tx that sent payment
+                        //TODO: this^
+                        txReceipt = eventParserResults![0].transactionReceipt
+                        eventLog = eventParserResults![0].eventLog
+                        isPaymentSent = true
+                    }
+                    lastParsedBlockNumber += 1
+                }
+                if isPaymentSent == false {
+                    sleep(UInt32(5.0))
+                }
+            } catch {
+                web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+                web3Instance.addKeystoreManager(keystoreManager)
+            }
+        }
         
         //Confirm payment received
+        method = "reportPaymentReceived"
+        writeTx = commutoSwapContract.write(
+            method,
+            parameters: [offerIdArray] as [AnyObject],
+            transactionOptions: options
+        )!
+        result = try! writeTx.send()
         
         //close swap
+        method = "closeSwap"
+        writeTx = commutoSwapContract.write(
+            method,
+            parameters: [offerIdArray] as [AnyObject],
+            transactionOptions: options
+        )!
+        result = try! writeTx.send()
         
-        //confirm that swap
+        //check that balance has changed by proper amount
+        method = "balanceOf"
+        readTx = dummyDaiContract.read(
+            method,
+            parameters: [walletAddress] as [AnyObject],
+            transactionOptions: options
+        )!
+        let finalDaiBalance = try! readTx.call()["0"] as! BigUInt
+        XCTAssertEqual(initialDaiBalance, finalDaiBalance + BigUInt.init(101))
     }
 
     func testExample() throws {
