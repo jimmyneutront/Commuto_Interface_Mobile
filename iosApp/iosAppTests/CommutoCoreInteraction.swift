@@ -107,8 +107,8 @@ class CommutoCoreInteraction: XCTestCase {
     //TODO: Use non-blocking eth function calls
     func testSwapProcess() throws {
         //Specify swap direction and participant roles
-        let direction = SwapDirection.sell
-        let role = ParticipantRole.maker
+        let direction = SwapDirection.buy
+        let role = ParticipantRole.taker
         
         //Restore Hardhat account #1
         let password_one = "web3swift"
@@ -120,7 +120,7 @@ class CommutoCoreInteraction: XCTestCase {
         let address_one = keystore_one.addresses!.first!.address
         
         //Establish connection to Ethereum node
-        let endpoint = "http://192.168.1.12:8545"
+        let endpoint = "http://192.168.0.195:8545"
         var web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
         let keystoreManager = KeystoreManager([keystore_one])
         web3Instance.addKeystoreManager(keystoreManager)
@@ -132,7 +132,7 @@ class CommutoCoreInteraction: XCTestCase {
         let commutoSwapContract = web3Instance.contract(commutoSwapABI, at: commutoContractAddress, abiVersion: 2)!
         
         //Don't parse any blocks earlier than that with this block number looking for events emitted by Commuto, because there won't be any
-        var lastParsedBlockNumber = try! web3Instance.eth.getBlockNumber()
+        var lastParsedBlockNumber = BigUInt(0)//try! web3Instance.eth.getBlockNumber()
         
         //Setup dummy Dai contract interface
         let dummyDaiContractAddress = EthereumAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3")!
@@ -151,25 +151,29 @@ class CommutoCoreInteraction: XCTestCase {
         )!
         let initialDaiBalance = try! readTx.call()["0"] as! BigUInt
         
-        //Approve transfer to open offer
-        method = "approve"
-        var value: BigUInt = 11
-        var writeTx = dummyDaiContract.write(
-            method,
-            parameters: [commutoContractAddress, value] as [AnyObject],
-            extraData: Data(),
-            transactionOptions: options
-        )!
-        var result = try! writeTx.send()
-        
+        var value: BigUInt = 0
+        var writeTx: WriteTransaction? = nil
+        var result: TransactionSendingResult? = nil
         var offerIdArray: Data?
         var txReceipt: TransactionReceipt?
         var eventLog: EventLog?
         var eventFilter: EventFilter?
         var eventParser: EventParserProtocol?
+        var swap: [String : Any]?
         
         if role == .maker {
-            //Open Swap Offer as Seller
+            //Approve transfer to open offer
+            method = "approve"
+            value = 11
+            writeTx = dummyDaiContract.write(
+                method,
+                parameters: [commutoContractAddress, value] as [AnyObject],
+                extraData: Data(),
+                transactionOptions: options
+            )!
+            result = try! writeTx!.send()
+            
+            //Open swap Offer
             let extraDataDigest = SHA256.hash(data: Array("A bunch of extra data in here".utf8))
             var extraDataByteArray = [UInt8]()
             for byte: UInt8 in extraDataDigest.makeIterator() {
@@ -178,40 +182,44 @@ class CommutoCoreInteraction: XCTestCase {
             let extraDataBytes = NSData(bytes: extraDataByteArray, length: extraDataByteArray.count)
             let offerIdUUID = UUID().uuid
             offerIdArray = Data(fromArray: [offerIdUUID.0, offerIdUUID.1, offerIdUUID.2, offerIdUUID.3, offerIdUUID.4, offerIdUUID.5, offerIdUUID.6, offerIdUUID.7, offerIdUUID.8, offerIdUUID.9, offerIdUUID.10, offerIdUUID.11, offerIdUUID.12, offerIdUUID.13, offerIdUUID.14, offerIdUUID.15])
-            let makerAsSellerOffer = [
+            var offer = [
                 true, //isCreated
                 false, //isTaken,
                 walletAddress, //maker
-                Array("an interface Id here".utf8),
+                Array("maker's interface Id here".utf8),
                 dummyDaiContractAddress, //stablecoin
                 100, //amountLowerBound
                 100, //amountUpperBound
                 10, //securityDepositAmount
-                1, //direction
+                2, //direction
                 Array("a price here".utf8), //price
                 [Array("USD-SWIFT".utf8)], //settlementMethods
                 1, //protocolVersion
                 extraDataBytes, //extraData
             ] as [Any]
+            if direction == .sell {
+                offer[8] = 1
+            } else if direction == .buy {
+                offer[8] = 0
+            }
             method = "openOffer"
             writeTx = commutoSwapContract.write(
                 method,
-                parameters: [offerIdArray, makerAsSellerOffer] as [AnyObject],
+                parameters: [offerIdArray!, offer] as [AnyObject],
                 transactionOptions: options
             )!
-            result = try! writeTx.send()
+            result = try! writeTx!.send()
             
             //Wait for openOffer transaction to be confirmed (ideally wait more than one block, but implement this later)
             var openOfferTxConfirmed = false
             while openOfferTxConfirmed == false {
-                if try web3Instance.eth.getTransactionDetails(result.hash).blockNumber != nil {
+                if try web3Instance.eth.getTransactionDetails(result!.hash).blockNumber != nil {
                     openOfferTxConfirmed = true
                 }
             }
             
-            //Check for offer to be taken
+            //Wait for offer to be taken
             var isOfferTaken = false
-            
             //Find events that specify our offer as the one taken, don't worry about interface Id for now
             eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: [[offerIdArray!],])
             eventParser = commutoSwapContract.createEventParser("OfferTaken", filter: eventFilter)
@@ -233,35 +241,131 @@ class CommutoCoreInteraction: XCTestCase {
                         sleep(UInt32(1.0))
                     }
                 } catch {
+                    //TODO: Only catch connection loss exceptions here
                     web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
                     web3Instance.addKeystoreManager(keystoreManager)
                 }
             }
             
-            if direction == .sell {
-                //Get the newly taken swap
-                method = "getSwap"
-                readTx = commutoSwapContract.read(
-                    method,
-                    parameters: [offerIdArray!] as [AnyObject],
-                    transactionOptions: options
-                )!
-                let swap: [String : Any] = try! readTx.call()
-                
+            //Get the newly taken swap
+            method = "getSwap"
+            readTx = commutoSwapContract.read(
+                method,
+                parameters: [offerIdArray!] as [AnyObject],
+                transactionOptions: options
+            )!
+            swap = try! readTx.call()
+            let swapData = swap!["0"] as! [AnyObject]
+            
+        } else if role == .taker {
+            //Listen for new offers
+            /*
+            Note: As of now, this will try to take the first OfferOpened event that it finds, even if the offer is closed
+            or there exists more than one open offer
+             */
+            var foundOpenOffer = false
+            eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: nil)
+            eventParser = commutoSwapContract.createEventParser("OfferOpened", filter: eventFilter)
+            while foundOpenOffer == false {
+                var eventParserResults: [EventParserResultProtocol]? = []
+                do {
+                    if try web3Instance.eth.getBlockNumber() > lastParsedBlockNumber {
+                        eventParserResults = try eventParser!.parseBlockByNumber(UInt64(lastParsedBlockNumber + 1))
+                        if eventParserResults != nil && (eventParserResults?.count)! > 0 {
+                            //TODO: Parse receipt and event log of tx that opened offer
+                            txReceipt = eventParserResults![0].transactionReceipt
+                            eventLog = eventParserResults![0].eventLog
+                            offerIdArray = eventParserResults![0].decodedResult["offerID"]! as! Data
+                            foundOpenOffer = true
+                        }
+                        lastParsedBlockNumber += 1
+                    }
+                    if foundOpenOffer == false {
+                        sleep(UInt32(1.0))
+                    }
+                } catch {
+                    //TODO: Only catch connection loss exceptions here
+                    web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+                    web3Instance.addKeystoreManager(keystoreManager)
+                }
+            }
+            
+            //Get new offer
+            method = "getOffer"
+            readTx = commutoSwapContract.read(
+                method,
+                parameters: [offerIdArray!] as [AnyObject],
+                transactionOptions: options
+            )!
+            let offer: [String : Any] = try! readTx.call()
+            let offerData = offer["0"] as! [AnyObject]
+            
+            //Create allowance to take offer
+            method = "approve"
+            if direction == .buy {
+                value = 111
+            } else if direction == .sell {
+                value = 11
+            }
+            writeTx = dummyDaiContract.write(
+                method,
+                parameters: [commutoContractAddress, value] as [AnyObject],
+                transactionOptions: options
+            )!
+            result = try! writeTx!.send()
+            
+            //Create swap object and take offer
+            let extraDataDigest = SHA256.hash(data: Array("A bunch of extra data in here".utf8))
+            var extraDataByteArray = [UInt8]()
+            for byte: UInt8 in extraDataDigest.makeIterator() {
+                extraDataByteArray.append(byte)
+            }
+            let extraDataBytes = NSData(bytes: extraDataByteArray, length: extraDataByteArray.count)
+            let preparedSwap: [Any] = [
+                false, //isCreated
+                false, //requiresFill
+                offerData[2], //maker
+                offerData[3], //makerInterfaceId
+                walletAddress, //taker
+                Array("taker's interface Id here".utf8), //takerInterfaceId
+                offerData[4], //stablecoin
+                offerData[5], //amountLowerBound
+                offerData[6], //amountUpperBound
+                offerData[7], //securityDepositAmount
+                100, //takenSwapAmount
+                1, //securityDepositAmount
+                offerData[8], //direction
+                offerData[9], //price
+                (offerData[10] as! Array)[0], //settlementMethod
+                1, //protocolVersion
+                offerData[12], //makerExtraData
+                extraDataBytes, //takerExtraData
+                false, //isPaymentSent
+                false, //isPaymentReceived
+                false, //hasBuyerClosed
+                false //hasSellerClosed
+            ]
+            method = "takeOffer"
+            writeTx = commutoSwapContract.write(
+                method,
+                parameters: [offerIdArray!, preparedSwap] as [AnyObject],
+                transactionOptions: options
+            )!
+            result = try! writeTx!.send()
+            
+        }
+        
+        if direction == .sell {
+            if role == .maker {
                 //Create allowance to fill newly taken swap
-                options = TransactionOptions.defaultOptions
-                options.from = walletAddress
-                options.gasPrice = .manual(BigUInt(875000000))
-                options.gasLimit = .manual(BigUInt(30000000))
                 method = "approve"
                 value = 100
                 writeTx = dummyDaiContract.write(
                     method,
                     parameters: [commutoContractAddress, value] as [AnyObject],
-                    extraData: Data(),
                     transactionOptions: options
                 )!
-                result = try! writeTx.send()
+                result = try! writeTx!.send()
                 
                 //Fill the newly taken swap
                 method = "fillSwap"
@@ -270,11 +374,77 @@ class CommutoCoreInteraction: XCTestCase {
                     parameters: [offerIdArray!] as [AnyObject],
                     transactionOptions: options
                 )!
-                result = try! writeTx.send()
+                result = try! writeTx!.send()
+            } else if role == .taker {
+                //Start listening for SwapFilled event
+                /*
+                 Note: As of now, this will try to take the first SwapFilled event that it finds
+                 */
+                var isSwapFilled = false
+                eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: [[offerIdArray!],])
+                eventParser = commutoSwapContract.createEventParser("SwapFilled", filter: eventFilter)
+                while isSwapFilled == false {
+                    var eventParserResults: [EventParserResultProtocol]? = []
+                    do {
+                        if try web3Instance.eth.getBlockNumber() > lastParsedBlockNumber {
+                            eventParserResults = try eventParser!.parseBlockByNumber(UInt64(lastParsedBlockNumber + 1))
+                            if eventParserResults != nil && (eventParserResults?.count)! > 0 {
+                                //TODO: Parse receipt and event log of tx that opened offer
+                                txReceipt = eventParserResults![0].transactionReceipt
+                                eventLog = eventParserResults![0].eventLog
+                                isSwapFilled = true
+                            }
+                            lastParsedBlockNumber += 1
+                        }
+                        if isSwapFilled == false {
+                            sleep(UInt32(1.0))
+                        }
+                    } catch {
+                        //TODO: Only catch connection loss exceptions here
+                        web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+                        web3Instance.addKeystoreManager(keystoreManager)
+                    }
+                }
             }
         }
         
-        if direction == .sell {
+        if (direction == .buy && role == .maker) || (direction == .sell && role == .taker) {
+            //Report payment sent
+            method = "reportPaymentSent"
+            writeTx = commutoSwapContract.write(
+                method,
+                parameters: [offerIdArray!] as [AnyObject],
+                transactionOptions: options
+            )!
+            result = try! writeTx!.send()
+            
+            //Start listening for PaymentReceived event
+            var isPaymentReceived = false
+            eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: [[offerIdArray!],])
+            eventParser = commutoSwapContract.createEventParser("PaymentReceived", filter: eventFilter)
+            while isPaymentReceived == false {
+                var eventParserResults: [EventParserResultProtocol]? = []
+                do {
+                    if try web3Instance.eth.getBlockNumber() > lastParsedBlockNumber {
+                        eventParserResults = try eventParser!.parseBlockByNumber(UInt64(lastParsedBlockNumber + 1))
+                        if eventParserResults != nil && (eventParserResults?.count)! > 0 {
+                            //TODO: Parse receipt and event log of tx that reported payment received
+                            txReceipt = eventParserResults![0].transactionReceipt
+                            eventLog = eventParserResults![0].eventLog
+                            isPaymentReceived = true
+                        }
+                        lastParsedBlockNumber += 1
+                    }
+                    if isPaymentReceived == false {
+                        sleep(UInt32(1.0))
+                    }
+                } catch {
+                    //TODO: Only catch connection loss exceptions here
+                    web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+                    web3Instance.addKeystoreManager(keystoreManager)
+                }
+            }
+        } else if (direction == .sell && role == .maker) || (direction == .buy && role == .taker) {
             //Start listening for PaymentSent event
             var isPaymentSent = false
             eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: [[offerIdArray!],])
@@ -285,8 +455,7 @@ class CommutoCoreInteraction: XCTestCase {
                     if try web3Instance.eth.getBlockNumber() > lastParsedBlockNumber {
                         eventParserResults = try eventParser!.parseBlockByNumber(UInt64(lastParsedBlockNumber + 1))
                         if eventParserResults != nil && (eventParserResults?.count)! > 0 {
-                            //Parse receipt and event log of tx that sent payment
-                            //TODO: this^
+                            //TODO: Parse receipt and event log of tx that reported payment sent
                             txReceipt = eventParserResults![0].transactionReceipt
                             eventLog = eventParserResults![0].eventLog
                             isPaymentSent = true
@@ -297,19 +466,20 @@ class CommutoCoreInteraction: XCTestCase {
                         sleep(UInt32(1.0))
                     }
                 } catch {
+                    //TODO: Only catch connection loss exceptions here
                     web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
                     web3Instance.addKeystoreManager(keystoreManager)
                 }
             }
             
-            //Confirm payment received
+            //Report payment received
             method = "reportPaymentReceived"
             writeTx = commutoSwapContract.write(
                 method,
                 parameters: [offerIdArray!] as [AnyObject],
                 transactionOptions: options
             )!
-            result = try! writeTx.send()
+            result = try! writeTx!.send()
         }
         
         //close swap
@@ -319,7 +489,7 @@ class CommutoCoreInteraction: XCTestCase {
             parameters: [offerIdArray!] as [AnyObject],
             transactionOptions: options
         )!
-        result = try! writeTx.send()
+        result = try! writeTx!.send()
         
         //check that balance has changed by proper amount
         method = "balanceOf"
@@ -330,7 +500,9 @@ class CommutoCoreInteraction: XCTestCase {
         )!
         let finalDaiBalance = try! readTx.call()["0"] as! BigUInt
         
-        if direction == .sell {
+        if (direction == .buy && role == .maker) || (direction == .sell && role == .taker) {
+            XCTAssertEqual(initialDaiBalance + BigUInt.init(99), finalDaiBalance)
+        } else if (direction == .sell && role == .maker) || (direction == .buy && role == .taker) {
             XCTAssertEqual(initialDaiBalance, finalDaiBalance + BigUInt.init(101))
         }
     }
