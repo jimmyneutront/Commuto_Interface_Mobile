@@ -11,6 +11,7 @@ import XCTest
 @testable import BigInt
 @testable import iosApp
 @testable import Pods_iosApp
+@testable import PromiseKit
 @testable import web3swift
 import CryptoKit
 
@@ -107,7 +108,7 @@ class CommutoCoreInteraction: XCTestCase {
     //TODO: Use non-blocking eth function calls
     func testSwapProcess() throws {
         //Specify swap direction and participant roles
-        let direction = SwapDirection.buy
+        let direction = SwapDirection.sell
         let role = ParticipantRole.taker
         
         //Restore Hardhat account #1
@@ -139,10 +140,13 @@ class CommutoCoreInteraction: XCTestCase {
         let dummyDaiContract = web3Instance.contract(Web3.Utils.erc20ABI, at: dummyDaiContractAddress, abiVersion: 2)!
         var options = TransactionOptions.defaultOptions
         options.from = walletAddress
-        options.gasPrice = .manual(BigUInt(875000000))
-        options.gasLimit = .manual(BigUInt(30000000))
+        let gasPrice = BigUInt(875000000)
+        let gasLimit = BigUInt(30000000)
+        options.gasPrice = .manual(gasPrice)
+        options.gasLimit = .manual(gasLimit)
         
         //Get initial Dai Balance
+        var txHash: Data? = nil
         var method = "balanceOf"
         var readTx = dummyDaiContract.read(
             method,
@@ -153,7 +157,7 @@ class CommutoCoreInteraction: XCTestCase {
         
         var value: BigUInt = 0
         var writeTx: WriteTransaction? = nil
-        var result: TransactionSendingResult? = nil
+        var promise: Promise<TransactionSendingResult>? = nil
         var offerIdArray: Data?
         var txReceipt: TransactionReceipt?
         var eventLog: EventLog?
@@ -171,7 +175,26 @@ class CommutoCoreInteraction: XCTestCase {
                 extraData: Data(),
                 transactionOptions: options
             )!
-            result = try! writeTx!.send()
+            writeTx!.transaction.gasPrice = gasPrice
+            writeTx!.transaction.gasLimit = gasLimit
+            writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+            try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+            txHash = writeTx!.transaction.hash
+            promise = writeTx!.sendPromise()
+            var approvalTxConfirmed = false
+            while !approvalTxConfirmed {
+                do {
+                    if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                        approvalTxConfirmed = true
+                    }
+                } catch Web3Error.nodeError(desc: let desc) {
+                    if desc == "Invalid value from Ethereum node" {
+                        sleep(UInt32(1.0))
+                    } else {
+                        throw Web3Error.nodeError(desc: desc)
+                    }
+                }
+            }
             
             //Open swap Offer
             let extraDataDigest = SHA256.hash(data: Array("A bunch of extra data in here".utf8))
@@ -208,13 +231,24 @@ class CommutoCoreInteraction: XCTestCase {
                 parameters: [offerIdArray!, offer] as [AnyObject],
                 transactionOptions: options
             )!
-            result = try! writeTx!.send()
-            
-            //Wait for openOffer transaction to be confirmed (ideally wait more than one block, but implement this later)
+            writeTx!.transaction.gasPrice = gasPrice
+            writeTx!.transaction.gasLimit = gasLimit
+            writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+            try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+            txHash = writeTx!.transaction.hash
+            promise = writeTx!.sendPromise()
             var openOfferTxConfirmed = false
             while openOfferTxConfirmed == false {
-                if try web3Instance.eth.getTransactionDetails(result!.hash).blockNumber != nil {
-                    openOfferTxConfirmed = true
+                do {
+                    if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                        openOfferTxConfirmed = true
+                    }
+                } catch Web3Error.nodeError(desc: let desc) {
+                    if desc == "Invalid value from Ethereum node" {
+                        sleep(UInt32(1.0))
+                    } else {
+                        throw Web3Error.nodeError(desc: desc)
+                    }
                 }
             }
             
@@ -312,7 +346,26 @@ class CommutoCoreInteraction: XCTestCase {
                 parameters: [commutoContractAddress, value] as [AnyObject],
                 transactionOptions: options
             )!
-            result = try! writeTx!.send()
+            writeTx!.transaction.gasPrice = gasPrice
+            writeTx!.transaction.gasLimit = gasLimit
+            writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+            try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+            txHash = writeTx!.transaction.hash
+            promise = writeTx!.sendPromise()
+            var approvalTxConfirmed = false
+            while !approvalTxConfirmed {
+                do {
+                    if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                        approvalTxConfirmed = true
+                    }
+                } catch Web3Error.nodeError(desc: let desc) {
+                    if desc == "Invalid value from Ethereum node" {
+                        sleep(UInt32(1.0))
+                    } else {
+                        throw Web3Error.nodeError(desc: desc)
+                    }
+                }
+            }
             
             //Create swap object and take offer
             let extraDataDigest = SHA256.hash(data: Array("A bunch of extra data in here".utf8))
@@ -351,7 +404,26 @@ class CommutoCoreInteraction: XCTestCase {
                 parameters: [offerIdArray!, preparedSwap] as [AnyObject],
                 transactionOptions: options
             )!
-            result = try! writeTx!.send()
+            writeTx!.transaction.gasPrice = gasPrice
+            writeTx!.transaction.gasLimit = gasLimit
+            writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+            try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+            txHash = writeTx!.transaction.hash
+            promise = writeTx!.sendPromise()
+            var takeOfferTxConfirmed = false
+            while !takeOfferTxConfirmed {
+                do {
+                    if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                        takeOfferTxConfirmed = true
+                    }
+                } catch Web3Error.nodeError(desc: let desc) {
+                    if desc == "Invalid value from Ethereum node" {
+                        sleep(UInt32(1.0))
+                    } else {
+                        throw Web3Error.nodeError(desc: desc)
+                    }
+                }
+            }
             
         }
         
@@ -365,7 +437,26 @@ class CommutoCoreInteraction: XCTestCase {
                     parameters: [commutoContractAddress, value] as [AnyObject],
                     transactionOptions: options
                 )!
-                result = try! writeTx!.send()
+                writeTx!.transaction.gasPrice = gasPrice
+                writeTx!.transaction.gasLimit = gasLimit
+                writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+                try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+                txHash = writeTx!.transaction.hash
+                promise = writeTx!.sendPromise()
+                var approvalTxConfirmed = false
+                while !approvalTxConfirmed {
+                    do {
+                        if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                            approvalTxConfirmed = true
+                        }
+                    } catch Web3Error.nodeError(desc: let desc) {
+                        if desc == "Invalid value from Ethereum node" {
+                            sleep(UInt32(1.0))
+                        } else {
+                            throw Web3Error.nodeError(desc: desc)
+                        }
+                    }
+                }
                 
                 //Fill the newly taken swap
                 method = "fillSwap"
@@ -374,7 +465,26 @@ class CommutoCoreInteraction: XCTestCase {
                     parameters: [offerIdArray!] as [AnyObject],
                     transactionOptions: options
                 )!
-                result = try! writeTx!.send()
+                writeTx!.transaction.gasPrice = gasPrice
+                writeTx!.transaction.gasLimit = gasLimit
+                writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+                try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+                txHash = writeTx!.transaction.hash
+                promise = writeTx!.sendPromise()
+                var fillSwapTxConfirmed = false
+                while !fillSwapTxConfirmed {
+                    do {
+                        if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                            fillSwapTxConfirmed = true
+                        }
+                    } catch Web3Error.nodeError(desc: let desc) {
+                        if desc == "Invalid value from Ethereum node" {
+                            sleep(UInt32(1.0))
+                        } else {
+                            throw Web3Error.nodeError(desc: desc)
+                        }
+                    }
+                }
             } else if role == .taker {
                 //Start listening for SwapFilled event
                 /*
@@ -416,7 +526,26 @@ class CommutoCoreInteraction: XCTestCase {
                 parameters: [offerIdArray!] as [AnyObject],
                 transactionOptions: options
             )!
-            result = try! writeTx!.send()
+            writeTx!.transaction.gasPrice = gasPrice
+            writeTx!.transaction.gasLimit = gasLimit
+            writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+            try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+            txHash = writeTx!.transaction.hash
+            promise = writeTx!.sendPromise()
+            var repPaySntTxConfirmed = false
+            while !repPaySntTxConfirmed {
+                do {
+                    if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                        repPaySntTxConfirmed = true
+                    }
+                } catch Web3Error.nodeError(desc: let desc) {
+                    if desc == "Invalid value from Ethereum node" {
+                        sleep(UInt32(1.0))
+                    } else {
+                        throw Web3Error.nodeError(desc: desc)
+                    }
+                }
+            }
             
             //Start listening for PaymentReceived event
             var isPaymentReceived = false
@@ -479,7 +608,26 @@ class CommutoCoreInteraction: XCTestCase {
                 parameters: [offerIdArray!] as [AnyObject],
                 transactionOptions: options
             )!
-            result = try! writeTx!.send()
+            writeTx!.transaction.gasPrice = gasPrice
+            writeTx!.transaction.gasLimit = gasLimit
+            writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+            try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+            txHash = writeTx!.transaction.hash
+            promise = writeTx!.sendPromise()
+            var repPayRcvdTxConfirmed = false
+            while !repPayRcvdTxConfirmed {
+                do {
+                    if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                        repPayRcvdTxConfirmed = true
+                    }
+                } catch Web3Error.nodeError(desc: let desc) {
+                    if desc == "Invalid value from Ethereum node" {
+                        sleep(UInt32(1.0))
+                    } else {
+                        throw Web3Error.nodeError(desc: desc)
+                    }
+                }
+            }
         }
         
         //close swap
@@ -489,7 +637,26 @@ class CommutoCoreInteraction: XCTestCase {
             parameters: [offerIdArray!] as [AnyObject],
             transactionOptions: options
         )!
-        result = try! writeTx!.send()
+        writeTx!.transaction.gasPrice = gasPrice
+        writeTx!.transaction.gasLimit = gasLimit
+        writeTx!.transaction.nonce = try web3Instance.eth.getTransactionCount(address: walletAddress)
+        try! Web3Signer.signTX(transaction: &writeTx!.transaction, keystore: keystore_one, account: walletAddress, password: password_one)
+        txHash = writeTx!.transaction.hash
+        promise = writeTx!.sendPromise()
+        var closeSwapTxConfirmed = false
+        while !closeSwapTxConfirmed {
+            do {
+                if try web3Instance.eth.getTransactionDetails(txHash!).blockNumber != nil {
+                    closeSwapTxConfirmed = true
+                }
+            } catch Web3Error.nodeError(desc: let desc) {
+                if desc == "Invalid value from Ethereum node" {
+                    sleep(UInt32(1.0))
+                } else {
+                    throw Web3Error.nodeError(desc: desc)
+                }
+            }
+        }
         
         //check that balance has changed by proper amount
         method = "balanceOf"
