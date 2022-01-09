@@ -105,7 +105,6 @@ class CommutoCoreInteraction: XCTestCase {
         case taker
     }
     
-    //TODO: Use non-blocking eth function calls
     func testSwapProcess() throws {
         //Specify swap direction and participant roles
         let direction = SwapDirection.sell

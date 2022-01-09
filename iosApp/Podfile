@@ -3,9 +3,8 @@ target 'iosApp' do
   platform :ios, '14.1'
   #pod 'shared', :path => '../shared'
   pod 'CryptoSwift'
-  #pod 'MatrixSDK'
+  pod 'MatrixSDK/SwiftSupport'
   pod 'SQLite.swift'
-  #pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git'
-  pod 'web3swift', :git => 'https://github.com/skywinder/web3swift.git', :branch => 'develop'
+  pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git', :branch => 'develop'
   target :iosAppTests
 end
