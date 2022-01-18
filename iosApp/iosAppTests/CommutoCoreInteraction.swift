@@ -657,6 +657,161 @@ class CommutoCoreInteraction: XCTestCase {
             XCTAssertEqual(initialDaiBalance, finalDaiBalance + BigUInt.init(101))
         }
     }
+    
+    //TODO: Implement me on JVM+Android
+    func createPublicKeyAnnouncement(keyPair: KeyPair, offerId: Data) throws -> String {
+        //Create message NSDictionary
+        var message = [
+            "sender": keyPair.interfaceId.base64EncodedString(),
+            "msgType": "pka",
+            "payload": nil,
+            "signature": nil,
+        ]
+        
+        //Create Base64-encoded string of public key in PKCS#1 bytes
+        var error: Unmanaged<CFError>?
+        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let pubKeyString = (pubKeyBytes as Data).base64EncodedString()
+        
+        //Create Base-64 encoded string of offer id
+        let offerIdString = offerId.base64EncodedString()
+        
+        //Create payload NSDictionary
+        let payload = [
+            "pubKey": pubKeyString,
+            "offerId": offerIdString,
+        ]
+        
+        //Create payload UTF-8 bytes and their Base-64 encoded string
+        let payloadUTF8Bytes = try JSONSerialization.data(withJSONObject: payload)
+        let payloadString = payloadUTF8Bytes.base64EncodedString()
+        
+        //Set "payload" field of message
+        message["payload"] = payloadString
+        
+        //Create signature of payload
+        let payloadDataDigest = SHA256.hash(data: payloadUTF8Bytes)
+        var payloadDataHashByteArray = [UInt8]()
+        for byte: UInt8 in payloadDataDigest.makeIterator() {
+            payloadDataHashByteArray.append(byte)
+        }
+        var payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+        let signature = try keyPair.sign(data: payloadDataHash)
+        
+        //Set "signature" field of message
+        message["signature"] = signature.base64EncodedString()
+        
+        //Prepare and return message string
+        let messageString = String(decoding: try JSONSerialization.data(withJSONObject: message), as: UTF8.self)
+        return messageString
+    }
+    
+    //TODO: Implement me on JVM+Android
+    func parsePublicKeyAnnouncement(messageString: String, makerInterfaceId: Data, offerId: Data) throws -> iosApp.PublicKey? {
+        //Restore message NSDictionary
+        guard let messageData = messageString.data(using: String.Encoding.utf8) else {
+            return nil
+        }
+        guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
+            return nil
+        }
+        
+        //Ensure that the message is a Public Key Announcement message
+        guard let messageType = message["msgType"] as? String else {
+            return nil
+        }
+        guard messageType == "pka" else {
+            return nil
+        }
+        
+        //Ensure that the sender is the maker
+        guard let senderInterfaceIdString = message["sender"] as? String, let senderInterfaceId = Data(base64Encoded: senderInterfaceIdString) else {
+            return nil
+        }
+        guard makerInterfaceId == senderInterfaceId else {
+            return nil
+        }
+        
+        //Restore payload NSDictionary
+        guard let payloadString = message["payload"] as? String, let payloadData = Data(base64Encoded: payloadString) else {
+            return nil
+        }
+        guard let payload = try JSONSerialization.jsonObject(with: payloadData) as? NSDictionary else {
+            return nil
+        }
+        
+        //Ensure that the offer id in the PKA matches the offer in question
+        guard let messageOfferIdString = payload["offerId"] as? String, let messageOfferId = Data(base64Encoded: messageOfferIdString) else {
+            return nil
+        }
+        guard messageOfferId == offerId else {
+            return nil
+        }
+        
+        //Re-create maker's public key
+        guard let pubKeyString = payload["pubKey"] as? String, let pubKeyBytes = NSData(base64Encoded: pubKeyString) else {
+            return nil
+        }
+        let keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let publicSecKey = SecKeyCreateWithData(pubKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        guard let publicKey = try? PublicKey(publicKey: publicSecKey) else {
+            return nil
+        }
+        
+        //Create hash of payload
+        let payloadDataDigest = SHA256.hash(data: payloadData)
+        var payloadDataHashByteArray = [UInt8]()
+        for byte: UInt8 in payloadDataDigest.makeIterator() {
+            payloadDataHashByteArray.append(byte)
+        }
+        let payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+        
+        //Verify signature
+        guard let signatureString = message["signature"] as? String, let signature = Data(base64Encoded: signatureString) else {
+            return nil
+        }
+        if try publicKey.verifySignature(signedData: payloadDataHash, signature: signature) {
+            return publicKey
+        } else {
+            return nil
+        }
+    }
+    
+    func testPKAParsing() throws {
+        //Restore the maker's public key
+        let pubKey = "MIIBCgKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQAB"
+        let privKey = "MIIEogIBAAKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQABAoIBACWe/ZLfS4DG144x0lUNedhUPsuvXzl5NAj8DBXtcQ6TkZ51VN8TgsHrQ2WKwkKdVnZAzPnkEMxy/0oj5xG8tBL43RM/tXFUsUHJhpe3G9Xb7JprG/3T2aEZP/Sviy16QvvFWJWtZHq1knOIy3Fy/lGTJM/ymVciJpc0TGGtccDyeQDBxaoQrr1r4Q9q5CMED/kEXq5KNLmzbfB1WInQZJ7wQhtyyAJiXJxKIeR3hVGR1dfBJGSbIIgYA5sYv8HPnXrorU7XEgDWLkILjSNgCvaGOgC5B4sgTB1pmwPQ173ee3gbn+PCai6saU9lciXeCteQp9YRBBWfwl+DDy5oGsUCgYEA0TB+kXbUgFyatxI46LLYRFGYTHgOPZz6Reu2ZKRaVNWC75NHyFTQdLSxvYLnQTnKGmjLapCTUwapiEAB50tLSko/uVcf4bG44EhCfL4S8hmfS3uCczokhhBjR/tZxnamXb/T1Wn2X06QsPSYQQmZB7EoQ6G0u/K792YgGn/qh+cCgYEAweUWInTK5nIAGyA/k0v0BNOefNTvfgV25wfR6nvXM3SJamHUTuO8wZntekD/epd4EewTP57rEb9kCzwdQnMkAaT1ejr7pQE4RFAZcL86o2C998QS0k25fw5xUhRiOIxSMqK7RLkAlRsThel+6BzHQ+jHxB06te3yyIjxnqP576UCgYA7tvAqbhVzHvw7TkRYiNUbi39CNPM7u1fmJcdHK3NtzBU4dn6DPVLUPdCPHJMPF4QNzeRjYynrBXfXoQ3qDKBNcKyIJ8q+DpGL1JTGLywRWCcU0QkIA4zxiDQPFD0oXi5XjK7XuQvPYQoEuY3M4wSAIZ4w0DRbgosNsGVxqxoz+QKBgClYh3LLguTHFHy0ULpBLQTGd3pZEcTGt4cmZL3isI4ZYKAdwl8cMwj5oOk76P6kRAdWVvhvE+NR86xtojOkR95N5catwzF5ZB01E2e2b3OdUoT9+6F6z35nfwSoshUq3vBLQTGzXYtuHaillNk8IcW6YrbQIM/gsK/Qe+1/O/G9AoGAYJhKegiRuasxY7ig1viAdYmhnCbtKhOa6qsq4cvI4avDL+Qfcgq6E8V5xgUsPsl2QUGz4DkBDw+E0D1Z4uT60y2TTTPbK7xmDs7KZy6Tvb+UKQNYlxL++DKbjFvxz6VJg17btqid8sP+LMhT3oqfRSakyGS74Bn3NBpLUeonYkQ="
+        let pubKeyBytes: NSData = NSData(base64Encoded: pubKey, options: [])!
+        let privKeyBytes: NSData = NSData(base64Encoded: privKey, options: [])!
+        var keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let publicKey = SecKeyCreateWithData(pubKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        keyOpts[kSecAttrKeyClass as String] = kSecAttrKeyClassPrivate
+        guard let privateKey = SecKeyCreateWithData(privKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        let keyPair = try KeyPair(publicKey: publicKey, privateKey: privateKey)
+        
+        //Restore offer id
+        let offerId = Data(base64Encoded: "9tGMGTr0SbuySqE0QOsAMQ==")!
+        
+        //Create Public Key Announcement message string
+        let pkaMessageString = try! createPublicKeyAnnouncement(keyPair: keyPair, offerId: offerId)
+        
+        //Attempt to parse Public Key Announcement message string
+        let restoredPublicKey = try parsePublicKeyAnnouncement(messageString: pkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
+        
+        //Check that original and restored interface ids (and thus keys) are identical
+        XCTAssert(keyPair.interfaceId == restoredPublicKey!.interfaceId)
+        
+    }
 
     func testExample() throws {
         // This is an example of a functional test case.
