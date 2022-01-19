@@ -9,6 +9,8 @@
 import CryptoKit
 import Foundation
 
+//TODO: interfaceId should be Data, not NSData
+
 /**
  * The KeyPair struct is a wrapper around the SecKey class, with support for Commuto Interface IDs.
  * The wrapped keys shall be a 2048-bit RSA private key and its corresponding public key. interfaceId

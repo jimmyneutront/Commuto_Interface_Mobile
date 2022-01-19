@@ -10,6 +10,7 @@ import XCTest
 
 @testable import BigInt
 @testable import iosApp
+@testable import MatrixSDK
 @testable import Pods_iosApp
 @testable import PromiseKit
 @testable import web3swift
@@ -23,6 +24,21 @@ class CommutoCoreInteraction: XCTestCase {
 
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
+    }
+    
+    func testJSONUtils() throws {
+        //Prepare this interface's payment method details JSON string
+        let ownPaymentDetailsDict: [[String : Any]] = [
+            [
+                "USD-SWIFT" : [
+                    "Beneficiary": "Bob Roberts",
+                    "Account": "293649254057",
+                    "BIC": "BOBROB38"
+                ]
+            ]
+        ]
+        let ownPaymentDetails = String(decoding: try JSONSerialization.data(withJSONObject: ownPaymentDetailsDict), as: UTF8.self)
+        print(ownPaymentDetails)
     }
     
     func testTransferEth() {
@@ -107,8 +123,8 @@ class CommutoCoreInteraction: XCTestCase {
     
     func testSwapProcess() throws {
         //Specify swap direction and participant roles
-        let direction = SwapDirection.sell
-        let role = ParticipantRole.taker
+        let direction = SwapDirection.buy
+        let role = ParticipantRole.maker
         
         //Restore Hardhat account #1
         let password_one = "web3swift"
@@ -120,7 +136,7 @@ class CommutoCoreInteraction: XCTestCase {
         let address_one = keystore_one.addresses!.first!.address
         
         //Establish connection to Ethereum node
-        let endpoint = "http://192.168.1.12:8545"
+        let endpoint = "http://192.168.0.195:8545"
         var web3Instance = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
         let keystoreManager = KeystoreManager([keystore_one])
         web3Instance.addKeystoreManager(keystoreManager)
@@ -144,6 +160,30 @@ class CommutoCoreInteraction: XCTestCase {
         options.gasPrice = .manual(gasPrice)
         options.gasLimit = .manual(gasLimit)
         
+        //Setup DBService and KMService
+        let dbService: DBService = DBService()
+        let kmService: KMService = KMService(dbService: dbService)
+        try dbService.connectToDb()
+        try dbService.createTables()
+        
+        //Create key pair
+        let keyPair = try kmService.generateKeyPair()
+        
+        //Setup mxSession
+        let setupExpectation = XCTestExpectation(description: "Setup matrix session")
+        let credentials = MXCredentials(homeServer: "http://matrix.org", userId: "@jimmyt:matrix.org",
+                                        accessToken: "")
+        let mxRestClient = MXRestClient(credentials: credentials, unrecognizedCertificateHandler: nil)
+        let mxSession = MXSession(matrixRestClient: mxRestClient)!
+        //Launch mxSession: it will first make an initial sync with the homeserver
+        mxSession.start { response in
+            guard response.isSuccess else { return }
+
+            // mxSession is ready to be used
+            setupExpectation.fulfill()
+        }
+        wait(for: [setupExpectation], timeout: 60.0)
+        
         //Get initial Dai Balance
         var txHash: Data? = nil
         var method = "balanceOf"
@@ -163,6 +203,18 @@ class CommutoCoreInteraction: XCTestCase {
         var eventFilter: EventFilter?
         var eventParser: EventParserProtocol?
         var swap: [String : Any]?
+        
+        //Prepare this interface's payment method details JSON string
+        let ownPaymentDetailsDict: [String : Any] = [
+            "paymentDetails": [
+                "USD-SWIFT" : [
+                    "Beneficiary": "Bob Roberts",
+                    "Account": "293649254057",
+                    "BIC": "BOBROB38"
+                ]
+            ]
+        ]
+        let ownPaymentDetails = try JSONSerialization.data(withJSONObject: ownPaymentDetailsDict)
         
         if role == .maker {
             //Approve transfer to open offer
@@ -195,14 +247,14 @@ class CommutoCoreInteraction: XCTestCase {
                 }
             }
             
-            //Open swap Offer
+            //Prepare swap Offer
             let offerIdUUID = UUID().uuid
             offerIdArray = Data(fromArray: [offerIdUUID.0, offerIdUUID.1, offerIdUUID.2, offerIdUUID.3, offerIdUUID.4, offerIdUUID.5, offerIdUUID.6, offerIdUUID.7, offerIdUUID.8, offerIdUUID.9, offerIdUUID.10, offerIdUUID.11, offerIdUUID.12, offerIdUUID.13, offerIdUUID.14, offerIdUUID.15])
             var offer = [
                 true, //isCreated
                 false, //isTaken,
                 walletAddress, //maker
-                Array("maker's interface Id here".utf8),
+                [UInt8](keyPair.interfaceId), //interfaceId
                 dummyDaiContractAddress, //stablecoin
                 100, //amountLowerBound
                 100, //amountUpperBound
@@ -217,6 +269,8 @@ class CommutoCoreInteraction: XCTestCase {
             } else if direction == .buy {
                 offer[8] = 0
             }
+            
+            //Open swap Offer
             method = "openOffer"
             writeTx = commutoSwapContract.write(
                 method,
@@ -244,11 +298,45 @@ class CommutoCoreInteraction: XCTestCase {
                 }
             }
             
+            //TODO: Prepare public key announcement message (this one doesn't work)
+            var error: Unmanaged<CFError>?
+            guard let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error) else {
+                throw error!.takeRetainedValue() as Error
+            }
+            var publicKeyAnnouncementDict: [String: Any] = [
+                "sender": keyPair.interfaceId.base64EncodedString(),
+                "msgType":"pka",
+                "payload": [
+                    "pubKey": (pubKeyBytes as NSData).base64EncodedString(),
+                    "offerId": offerIdArray!.base64EncodedString()
+                ],
+                "signature": ""
+            ]
+            var payloadData = try JSONSerialization.data(withJSONObject: publicKeyAnnouncementDict["payload"])
+            var payloadDataDigest = SHA256.hash(data: payloadData)
+            var payloadDataHashByteArray = [UInt8]()
+            for byte: UInt8 in payloadDataDigest.makeIterator() {
+                payloadDataHashByteArray.append(byte)
+            }
+            var payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+            publicKeyAnnouncementDict["signature"] = try! keyPair.sign(data: payloadDataHash).base64EncodedString()
+            let publicKeyAnnouncement = String(decoding: try JSONSerialization.data(withJSONObject: publicKeyAnnouncementDict), as: UTF8.self)
+            
+            //Send PKA message to CIN Matrix Room
+            let sendPKAExpectation = XCTestExpectation(description: "Send PKA to Commuto Interface Network Test Room")
+            mxRestClient.sendTextMessage(toRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", text: publicKeyAnnouncement) { (response) in
+                if case .success(let eventId) = response {
+                    sendPKAExpectation.fulfill()
+                }
+            }
+            wait(for: [sendPKAExpectation], timeout: 60.0)
+            
             //Wait for offer to be taken
             var isOfferTaken = false
             //Find events that specify our offer as the one taken, don't worry about interface Id for now
             eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: [[offerIdArray!],])
             eventParser = commutoSwapContract.createEventParser("OfferTaken", filter: eventFilter)
+            var takerInterfaceId: Data? = nil
             while isOfferTaken == false {
                 var eventParserResults: [EventParserResultProtocol]? = []
                 do {
@@ -259,6 +347,7 @@ class CommutoCoreInteraction: XCTestCase {
                             //TODO: this^
                             txReceipt = eventParserResults![0].transactionReceipt
                             eventLog = eventParserResults![0].eventLog
+                            takerInterfaceId = eventParserResults![0].decodedResult["takerInterfaceId"] as! Data
                             isOfferTaken = true
                         }
                         lastParsedBlockNumber += 1
@@ -272,6 +361,39 @@ class CommutoCoreInteraction: XCTestCase {
                     web3Instance.addKeystoreManager(keystoreManager)
                 }
             }
+            
+            //TODO: Listen to CIN Matrix Room for taker's TakerInfo message, and handle it
+            
+            //TODO: Save taker's public key locally
+            
+            //TODO Prepare maker info message (this doesn't work)
+            //TODO: Encrypt encryptedKey and encryptedIV with maker's public key
+            let makerInfoMessageKey = try! newSymmetricKey()
+            let symetricallyEncryptedPayload = try! makerInfoMessageKey.encrypt(data: ownPaymentDetails)
+            payloadDataDigest = SHA256.hash(data: symetricallyEncryptedPayload.encryptedData)
+            payloadDataHashByteArray = [UInt8]()
+            for byte: UInt8 in payloadDataDigest.makeIterator() {
+                payloadDataHashByteArray.append(byte)
+            }
+            payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+            var makerInfoMessageDict: [String: Any] = [
+                "sender": keyPair.interfaceId.base64EncodedString(),
+                "recipient": takerInterfaceId?.base64EncodedString(),
+                "encryptedKey": "",
+                "encryptedIV": "",
+                "payload": symetricallyEncryptedPayload.encryptedData.base64EncodedString(),
+                "signature": try! keyPair.sign(data: payloadDataHash).base64EncodedString()
+            ]
+            let makerInfoMessage = String(decoding: try JSONSerialization.data(withJSONObject: makerInfoMessageDict), as: UTF8.self)
+            
+            //Send maker info message to CIN Matrix Room
+            let sendMakerInfoExpectation = XCTestExpectation(description: "Send maker info to Commuto Interface Network Test Room")
+            mxRestClient.sendTextMessage(toRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", text: makerInfoMessage) { (response) in
+                if case .success(let eventId) = response {
+                    sendMakerInfoExpectation.fulfill()
+                }
+            }
+            wait(for: [sendMakerInfoExpectation], timeout: 60.0)
             
             //Get the newly taken swap
             method = "getSwap"
@@ -315,6 +437,10 @@ class CommutoCoreInteraction: XCTestCase {
                     web3Instance.addKeystoreManager(keystoreManager)
                 }
             }
+            
+            //TODO: Listen for maker's PKA message in CIN Matrix room and handle it
+            
+            //TODO: Save maker's public key locally
             
             //Get new offer
             method = "getOffer"
@@ -366,7 +492,7 @@ class CommutoCoreInteraction: XCTestCase {
                 offerData[2], //maker
                 offerData[3], //makerInterfaceId
                 walletAddress, //taker
-                Array("taker's interface Id here".utf8), //takerInterfaceId
+                [UInt8](keyPair.interfaceId), //takerInterfaceId
                 offerData[4], //stablecoin
                 offerData[5], //amountLowerBound
                 offerData[6], //amountUpperBound
@@ -408,6 +534,50 @@ class CommutoCoreInteraction: XCTestCase {
                     }
                 }
             }
+            
+            //Prepare taker info message
+            //TODO: Encrypt encryptedKey and encryptedIV with taker's public key
+            var error: Unmanaged<CFError>?
+            guard let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error) else {
+                throw error!.takeRetainedValue() as Error
+            }
+            let takerInfoMessageKey = try! newSymmetricKey()
+            let takerInfoPayloadDict: [String: Any] = [
+                "msgType": "takerInfo",
+                "pubKey": (pubKeyBytes as NSData).base64EncodedString(),
+                "swapId": offerIdArray!.base64EncodedString(),
+                "paymentDetails": ownPaymentDetailsDict["paymentDetails"]
+            ]
+            let takerInfoPayload = try JSONSerialization.data(withJSONObject: takerInfoPayloadDict)
+            let symetricallyEncryptedPayload = try! takerInfoMessageKey.encrypt(data: takerInfoPayload)
+            var payloadDataDigest = SHA256.hash(data: symetricallyEncryptedPayload.encryptedData)
+            var payloadDataHashByteArray = [UInt8]()
+            for byte: UInt8 in payloadDataDigest.makeIterator() {
+                payloadDataHashByteArray.append(byte)
+            }
+            var payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+            var takerInfoMessageDict: [String: Any] = [
+                "sender": keyPair.interfaceId.base64EncodedString(),
+                "recipient": offerData[3].base64EncodedString(),
+                "encryptedKey": "",
+                "encryptedIV": "",
+                "payload": symetricallyEncryptedPayload.encryptedData.base64EncodedString(),
+                "signature": try! keyPair.sign(data: payloadDataHash).base64EncodedString()
+            ]
+            let takerInfoMessage = String(decoding: try JSONSerialization.data(withJSONObject: takerInfoMessageDict), as: UTF8.self)
+            
+            //Send taker info message to CIN Matrix room
+            let sendTakerInfoExpectation = XCTestExpectation(description: "Send taker info to Commuto Interface Network Test Room")
+            mxRestClient.sendTextMessage(toRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", text: takerInfoMessage) { (response) in
+                if case .success(let eventId) = response {
+                    sendTakerInfoExpectation.fulfill()
+                }
+            }
+            wait(for: [sendTakerInfoExpectation], timeout: 60.0)
+            
+            //TODO: Listen to CIN for maker's info message
+            
+            //TODO: Store maker's payment information locally
             
         }
         
@@ -658,7 +828,6 @@ class CommutoCoreInteraction: XCTestCase {
         }
     }
     
-    //TODO: Implement me on JVM+Android
     func createPublicKeyAnnouncement(keyPair: KeyPair, offerId: Data) throws -> String {
         //Create message NSDictionary
         var message = [
@@ -675,7 +844,7 @@ class CommutoCoreInteraction: XCTestCase {
         }
         let pubKeyString = (pubKeyBytes as Data).base64EncodedString()
         
-        //Create Base-64 encoded string of offer id
+        //Create Base-64 encoded string of offer idV
         let offerIdString = offerId.base64EncodedString()
         
         //Create payload NSDictionary
@@ -708,7 +877,6 @@ class CommutoCoreInteraction: XCTestCase {
         return messageString
     }
     
-    //TODO: Implement me on JVM+Android
     func parsePublicKeyAnnouncement(messageString: String, makerInterfaceId: Data, offerId: Data) throws -> iosApp.PublicKey? {
         //Restore message NSDictionary
         guard let messageData = messageString.data(using: String.Encoding.utf8) else {
@@ -803,13 +971,20 @@ class CommutoCoreInteraction: XCTestCase {
         let offerId = Data(base64Encoded: "9tGMGTr0SbuySqE0QOsAMQ==")!
         
         //Create Public Key Announcement message string
-        let pkaMessageString = try! createPublicKeyAnnouncement(keyPair: keyPair, offerId: offerId)
+        let swiftPkaMessageString = try! createPublicKeyAnnouncement(keyPair: keyPair, offerId: offerId)
         
-        //Attempt to parse Public Key Announcement message string
-        let restoredPublicKey = try parsePublicKeyAnnouncement(messageString: pkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
+        //A Public Key Announcement message string generated by JVM code
+        let jvmPkaMessageString = #"{"sender":"gXE4i2ZrzX+QK5AdNalVTpU1tJoIA9sEMca6uRfiRSE=","msgType":"pka","payload":"eyJwdWJLZXkiOiJNSUlCQ2dLQ0FRRUFubkRCNHpWMmxsRXd3TEh3N2M5MzRlVjd0NjlPbTUyZHBMY3VjdFh0T3RqR3NhS3lPQVY5NmVnbXhYNitDK01wdEZTVDN5WDR3TzZxSzMvTlN1T0hXQlhJSGtoUUdaRWRUSE9uNEhFOWhIZHcyYXhKMEY5R1FLWmVUOHQ4a3crNTgrbitubGJRVWFGSFV3NWl5cGwzV2lJMUs3RW40WFYyZWdmWEdrOXVqRWxNcVhaTy9lRnVuM2VBTSthc1QxZzdvL2syeXNPcFk1WCtzcWVzTHNKMGd6YUdINGpmRFZ1V2lmUzVZaGRnRktrQmkxaTNVMXRmUGRjM3NONTN1TkNQRWh4amp1T3VZSDVJM1dJOVZ6anBKZXpZb1Nsd3pJNGhZTk9qWTBjV3paTTlrcWVVdDkzS3pUcHZYNEZlUWlnVDlVTzIwY3MyM001TmJJVzRxN2xBNHdJREFRQUIiLCJvZmZlcklkIjoiOXRHTUdUcjBTYnV5U3FFMFFPc0FNUT09In0=","signature":"ZdIOEtAJGnyKjx468ddxdGGcxchfbuPYq25fSkZda33EZm/vapHaht3oQci/pOSiPnPCN08MTFsxodwRJFdxr1900lHPIyLuRT0KoDJMwhOseC+tcyB3FCUvpmNUYqWfMasAtBGqsYnbWOVXn6Fct8DYe9T394LbcfnO0YHvL0x2wmjiCC/viJMgeGr+/v8FGpmxqtfuTH0oJ5VTpNrLMSrCMMYpHlaPDPpSVDQrRpeqibm+ir+KXVbzgrga1LJimUEqk5UoGzFZGIROatutvLerV2nWiwf3RCb6Nfop7ZTAHyIDkA+zOoKd00XhjUpvG2/5AJhMr4nINVK8DWwKbA=="}"#
+        
+        //Attempt to parse Public Key Announcement message string generated by Swift code
+        let restoredSwiftPublicKey = try! parsePublicKeyAnnouncement(messageString: swiftPkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
+        
+        //Attempt to parse Public Key Announcement message string generated by JVM code
+        let restoredJvmPublicKey = try! parsePublicKeyAnnouncement(messageString: jvmPkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
         
         //Check that original and restored interface ids (and thus keys) are identical
-        XCTAssert(keyPair.interfaceId == restoredPublicKey!.interfaceId)
+        XCTAssert(keyPair.interfaceId == restoredSwiftPublicKey!.interfaceId)
+        XCTAssert(keyPair.interfaceId == restoredJvmPublicKey!.interfaceId)
         
     }
 
