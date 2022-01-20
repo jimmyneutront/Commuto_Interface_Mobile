@@ -9,7 +9,7 @@
 import CryptoKit
 import Foundation
 
-//TODO: interfaceId should be Data, not NSData
+//TODO: static method to re-create public and private key from raw bytes
 
 /**
  * The KeyPair struct is a wrapper around the SecKey class, with support for Commuto Interface IDs.
@@ -18,7 +18,7 @@ import Foundation
  */
 struct KeyPair {
     
-    let interfaceId: NSData
+    let interfaceId: Data
     let publicKey: SecKey
     let privateKey: SecKey
     /**
@@ -39,7 +39,7 @@ struct KeyPair {
         for byte: UInt8 in interfaceIdDigest.makeIterator() {
             interfaceIdByteArray.append(byte)
         }
-        let interfaceIdBytes = NSData(bytes: interfaceIdByteArray, length: interfaceIdByteArray.count)
+        let interfaceIdBytes = Data(bytes: interfaceIdByteArray, count: interfaceIdByteArray.count)
         self.interfaceId = interfaceIdBytes
     }
     

@@ -10,7 +10,7 @@ import CryptoKit
 import Foundation
 
 //TODO: static method to re-create public key from raw bytes
-//TODO: interfaceId should be Data, not NSData
+
 /**
  * The PublicKey class is a wrapper around the SecKey class, with support for Commuto Interface IDs.
  * The wrapped public key shall be that corresponding to a 2048-bit RSA private key key, and interfaceId
@@ -18,7 +18,7 @@ import Foundation
  */
 struct PublicKey {
     
-    let interfaceId: NSData
+    let interfaceId: Data
     let publicKey: SecKey
     
     /**
@@ -36,7 +36,7 @@ struct PublicKey {
         for byte: UInt8 in interfaceIdDigest.makeIterator() {
             interfaceIdByteArray.append(byte)
         }
-        let interfaceIdBytes = NSData(bytes: interfaceIdByteArray, length: interfaceIdByteArray.count)
+        let interfaceIdBytes = Data(bytes: interfaceIdByteArray, count: interfaceIdByteArray.count)
         self.interfaceId = interfaceIdBytes
     }
     

@@ -69,8 +69,8 @@ class KMService {
      * SHA-256 hash of the PKCS#1 encoded byte representation of the public key.
      * -Returns: nil if no key pair is found with the given interface id
      */
-    func getKeyPair(interfaceId: NSData) throws -> KeyPair? {
-        let interfaceIdB64Str = interfaceId.base64EncodedString(options: [])
+    func getKeyPair(interfaceId: Data) throws -> KeyPair? {
+        let interfaceIdB64Str = interfaceId.base64EncodedString()
         let dbKeyPair: DBKeyPair? = try dbService.getKeyPair(interfaceId: interfaceIdB64Str)
         if dbKeyPair != nil {
             let pubKeyBytes: NSData = NSData(base64Encoded: dbKeyPair!.publicKey, options: [])!
@@ -118,8 +118,8 @@ class KMService {
      * key's interface id, which is a SHA-256 hash of its PKCS#1 byte encoded representation.
      * -Returns: nil if no public key is found with the given interface id
      */
-    func getPublicKey(interfaceId: NSData) throws -> PublicKey? {
-        let interfaceIdB64Str = interfaceId.base64EncodedString(options: [])
+    func getPublicKey(interfaceId: Data) throws -> PublicKey? {
+        let interfaceIdB64Str = interfaceId.base64EncodedString()
         let dbPubKey: DBPublicKey? = try dbService.getPublicKey(interfaceId: interfaceIdB64Str)
         if dbPubKey != nil {
             let pubKeyBytes: NSData = NSData(base64Encoded: dbPubKey!.publicKey, options: [])!
