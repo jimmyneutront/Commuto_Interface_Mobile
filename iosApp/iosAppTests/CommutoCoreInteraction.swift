@@ -838,11 +838,7 @@ class CommutoCoreInteraction: XCTestCase {
         ]
         
         //Create Base64-encoded string of public key in PKCS#1 bytes
-        var error: Unmanaged<CFError>?
-        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let pubKeyString = (pubKeyBytes as Data).base64EncodedString()
+        let pubKeyString = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
         
         //Create Base-64 encoded string of offer idV
         let offerIdString = offerId.base64EncodedString()
@@ -866,7 +862,7 @@ class CommutoCoreInteraction: XCTestCase {
         for byte: UInt8 in payloadDataDigest.makeIterator() {
             payloadDataHashByteArray.append(byte)
         }
-        var payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+        let payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
         let signature = try keyPair.sign(data: payloadDataHash)
         
         //Set "signature" field of message
@@ -919,15 +915,10 @@ class CommutoCoreInteraction: XCTestCase {
         }
         
         //Re-create maker's public key
-        guard let pubKeyString = payload["pubKey"] as? String, let pubKeyBytes = NSData(base64Encoded: pubKeyString) else {
+        guard let pubKeyString = payload["pubKey"] as? String, let pubKeyBytes = Data(base64Encoded: pubKeyString) else {
             return nil
         }
-        let keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
-        var error: Unmanaged<CFError>?
-        guard let publicSecKey = SecKeyCreateWithData(pubKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        guard let publicKey = try? PublicKey(publicKey: publicSecKey) else {
+        guard let publicKey = try? PublicKey(publicKeyBytes: pubKeyBytes) else {
             return nil
         }
         
@@ -954,18 +945,9 @@ class CommutoCoreInteraction: XCTestCase {
         //Restore the maker's public key
         let pubKey = "MIIBCgKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQAB"
         let privKey = "MIIEogIBAAKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQABAoIBACWe/ZLfS4DG144x0lUNedhUPsuvXzl5NAj8DBXtcQ6TkZ51VN8TgsHrQ2WKwkKdVnZAzPnkEMxy/0oj5xG8tBL43RM/tXFUsUHJhpe3G9Xb7JprG/3T2aEZP/Sviy16QvvFWJWtZHq1knOIy3Fy/lGTJM/ymVciJpc0TGGtccDyeQDBxaoQrr1r4Q9q5CMED/kEXq5KNLmzbfB1WInQZJ7wQhtyyAJiXJxKIeR3hVGR1dfBJGSbIIgYA5sYv8HPnXrorU7XEgDWLkILjSNgCvaGOgC5B4sgTB1pmwPQ173ee3gbn+PCai6saU9lciXeCteQp9YRBBWfwl+DDy5oGsUCgYEA0TB+kXbUgFyatxI46LLYRFGYTHgOPZz6Reu2ZKRaVNWC75NHyFTQdLSxvYLnQTnKGmjLapCTUwapiEAB50tLSko/uVcf4bG44EhCfL4S8hmfS3uCczokhhBjR/tZxnamXb/T1Wn2X06QsPSYQQmZB7EoQ6G0u/K792YgGn/qh+cCgYEAweUWInTK5nIAGyA/k0v0BNOefNTvfgV25wfR6nvXM3SJamHUTuO8wZntekD/epd4EewTP57rEb9kCzwdQnMkAaT1ejr7pQE4RFAZcL86o2C998QS0k25fw5xUhRiOIxSMqK7RLkAlRsThel+6BzHQ+jHxB06te3yyIjxnqP576UCgYA7tvAqbhVzHvw7TkRYiNUbi39CNPM7u1fmJcdHK3NtzBU4dn6DPVLUPdCPHJMPF4QNzeRjYynrBXfXoQ3qDKBNcKyIJ8q+DpGL1JTGLywRWCcU0QkIA4zxiDQPFD0oXi5XjK7XuQvPYQoEuY3M4wSAIZ4w0DRbgosNsGVxqxoz+QKBgClYh3LLguTHFHy0ULpBLQTGd3pZEcTGt4cmZL3isI4ZYKAdwl8cMwj5oOk76P6kRAdWVvhvE+NR86xtojOkR95N5catwzF5ZB01E2e2b3OdUoT9+6F6z35nfwSoshUq3vBLQTGzXYtuHaillNk8IcW6YrbQIM/gsK/Qe+1/O/G9AoGAYJhKegiRuasxY7ig1viAdYmhnCbtKhOa6qsq4cvI4avDL+Qfcgq6E8V5xgUsPsl2QUGz4DkBDw+E0D1Z4uT60y2TTTPbK7xmDs7KZy6Tvb+UKQNYlxL++DKbjFvxz6VJg17btqid8sP+LMhT3oqfRSakyGS74Bn3NBpLUeonYkQ="
-        let pubKeyBytes: NSData = NSData(base64Encoded: pubKey, options: [])!
-        let privKeyBytes: NSData = NSData(base64Encoded: privKey, options: [])!
-        var keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
-        var error: Unmanaged<CFError>?
-        guard let publicKey = SecKeyCreateWithData(pubKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        keyOpts[kSecAttrKeyClass as String] = kSecAttrKeyClassPrivate
-        guard let privateKey = SecKeyCreateWithData(privKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let keyPair = try KeyPair(publicKey: publicKey, privateKey: privateKey)
+        let pubKeyBytes = Data(base64Encoded: pubKey)!
+        let privKeyBytes = Data(base64Encoded: privKey)!
+        let keyPair = try KeyPair(publicKeyBytes: pubKeyBytes, privateKeyBytes: privKeyBytes)
         
         //Restore offer id
         let offerId = Data(base64Encoded: "9tGMGTr0SbuySqE0QOsAMQ==")!

@@ -12,7 +12,6 @@
 		6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1914DA278B6DC6004A4329 /* MatrixTests.swift */; };
 		6D2682A92756D630008EC6F4 /* KMServiceUtilsTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */; };
 		6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */; };
-		6D32506B2751C34A000352BE /* KMUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D32506A2751C34A000352BE /* KMUtils.swift */; };
 		6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */; };
 		6D91C97B27533EBB00D85654 /* DBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97A27533EBB00D85654 /* DBService.swift */; };
 		6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97D2753F9B100D85654 /* DBKeyPair.swift */; };
@@ -46,7 +45,6 @@
 		6D1914DA278B6DC6004A4329 /* MatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixTests.swift; sourceTree = "<group>"; };
 		6D2682A82756D630008EC6F4 /* KMServiceUtilsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMServiceUtilsTest.swift; sourceTree = "<group>"; };
 		6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPlatCryptoCompatibility.swift; sourceTree = "<group>"; };
-		6D32506A2751C34A000352BE /* KMUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMUtils.swift; sourceTree = "<group>"; };
 		6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymmetricKey.swift; sourceTree = "<group>"; };
 		6D91C97A27533EBB00D85654 /* DBService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBService.swift; sourceTree = "<group>"; };
 		6D91C97D2753F9B100D85654 /* DBKeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBKeyPair.swift; sourceTree = "<group>"; };
@@ -135,7 +133,6 @@
 			children = (
 				6D91C9842754327900D85654 /* kmTypes */,
 				6D9ABCBC2736399F0034AE01 /* KMService.swift */,
-				6D32506A2751C34A000352BE /* KMUtils.swift */,
 			);
 			path = kmService;
 			sourceTree = "<group>";
@@ -418,7 +415,6 @@
 			files = (
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				6D91C97B27533EBB00D85654 /* DBService.swift in Sources */,
-				6D32506B2751C34A000352BE /* KMUtils.swift in Sources */,
 				6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */,
 				6D9ABCBD2736399F0034AE01 /* KMService.swift in Sources */,
 				6D91C9862754329B00D85654 /* KeyPair.swift in Sources */,

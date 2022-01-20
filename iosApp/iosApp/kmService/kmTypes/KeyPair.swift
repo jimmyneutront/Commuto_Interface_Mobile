@@ -9,7 +9,7 @@
 import CryptoKit
 import Foundation
 
-//TODO: static method to re-create public and private key from raw bytes
+//TODO: method to return bytes of public and private keys
 
 /**
  * The KeyPair struct is a wrapper around the SecKey class, with support for Commuto Interface IDs.
@@ -21,11 +21,42 @@ struct KeyPair {
     let interfaceId: Data
     let publicKey: SecKey
     let privateKey: SecKey
+    
     /**
-        Initializes a new KeyPair object, deriving interfaceId from the passed public key
+     Creates a KeyPair object using the PKCS#1 byte formats of a 2048-bit RSA private key and its public key
      - Parameters:
-            -publicKey: the public key of the key pair
-            -privateKey: the private key of the key pair
+        - privateKeyBytes: the PKCS#1 bytes of the private key of the key pair
+        - publicKeyBytes: the PKCS#1 bytes of the public key of the key pair
+     */
+    init(publicKeyBytes: Data, privateKeyBytes: Data) throws {
+        //Restore keys
+        var keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let publicKey = SecKeyCreateWithData(publicKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        keyOpts[kSecAttrKeyClass as String] = kSecAttrKeyClassPrivate
+        guard let privateKey = SecKeyCreateWithData(privateKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        self.publicKey = publicKey
+        self.privateKey = privateKey
+        
+        //Restore interface id
+        let interfaceIdDigest = SHA256.hash(data: publicKeyBytes as NSData)
+        var interfaceIdByteArray = [UInt8]()
+        for byte: UInt8 in interfaceIdDigest.makeIterator() {
+            interfaceIdByteArray.append(byte)
+        }
+        let interfaceIdBytes = Data(bytes: interfaceIdByteArray, count: interfaceIdByteArray.count)
+        self.interfaceId = interfaceIdBytes
+    }
+    
+    /**
+    Initializes a new KeyPair object, deriving interfaceId from the passed public key
+     - Parameters:
+        - publicKey: the public key of the key pair
+        - privateKey: the private key of the key pair
      */
     init(publicKey: SecKey, privateKey: SecKey) throws {
         self.publicKey = publicKey
@@ -102,6 +133,30 @@ struct KeyPair {
             throw error!.takeRetainedValue() as Error
         }
         return clearData
+    }
+    
+    /**
+     Encodes the RSA public key to a PKCS#1 formatted byte representation
+     - Returns Data: the public key's PKCS#1 byte representation
+     */
+    func pubKeyToPkcs1Bytes() throws -> Data {
+        var error: Unmanaged<CFError>?
+        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(self.publicKey, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        return pubKeyBytes as Data
+    }
+    
+    /**
+     Encodes the 2048-bit RSA private key to a PKCS#1 formatted byte representation
+     - Returns Data: the public key's PKCS#1 byte representation
+     */
+    func privKeyToPkcs1Bytes() throws -> Data {
+        var error: Unmanaged<CFError>?
+        guard let privKeyBytes = SecKeyCopyExternalRepresentation(self.privateKey, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        return privKeyBytes as Data
     }
     
 }

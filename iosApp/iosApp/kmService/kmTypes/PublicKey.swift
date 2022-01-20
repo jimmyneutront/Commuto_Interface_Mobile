@@ -9,8 +9,6 @@
 import CryptoKit
 import Foundation
 
-//TODO: static method to re-create public key from raw bytes
-
 /**
  * The PublicKey class is a wrapper around the SecKey class, with support for Commuto Interface IDs.
  * The wrapped public key shall be that corresponding to a 2048-bit RSA private key key, and interfaceId
@@ -20,6 +18,29 @@ struct PublicKey {
     
     let interfaceId: Data
     let publicKey: SecKey
+    
+    /**
+        Creates a PublicKey object using the PKCS#1 byte format of an RSA public key
+     - Parameter publicKeyBytes: the PKCS#1 byte encoded representation of the public key to be restored
+     */
+    init(publicKeyBytes: Data) throws {
+        //Restore public key
+        let keyOpts: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeyClass as String: kSecAttrKeyClassPublic, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let publicKey = SecKeyCreateWithData(publicKeyBytes as CFData, keyOpts as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        self.publicKey = publicKey
+        
+        //Restore interface id
+        let interfaceIdDigest = SHA256.hash(data: publicKeyBytes as NSData)
+        var interfaceIdByteArray = [UInt8]()
+        for byte: UInt8 in interfaceIdDigest.makeIterator() {
+            interfaceIdByteArray.append(byte)
+        }
+        let interfaceIdBytes = Data(bytes: interfaceIdByteArray, count: interfaceIdByteArray.count)
+        self.interfaceId = interfaceIdBytes
+    }
     
     /**
         Initializes a new PublicKey object, deriving interfaceId from the passed public key
@@ -70,6 +91,17 @@ struct PublicKey {
             throw error!.takeRetainedValue() as Error
         }
         return cipherData
+    }
+    
+    /**
+     Returns this key's PKCS1# formatted byte representation
+     */
+    func toPkcs1Bytes() throws -> Data {
+        var error: Unmanaged<CFError>?
+        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(self.publicKey, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        return pubKeyBytes as Data
     }
     
 }
