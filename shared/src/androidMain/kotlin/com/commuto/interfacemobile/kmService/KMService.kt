@@ -65,10 +65,8 @@ class KMService(var dbService: DBService) {
         val dbKeyPair: com.commuto.interfacemobile.db.KeyPair? = dbService
             .getKeyPair(Base64.encodeToString(interfaceId, Base64.DEFAULT))
         if (dbKeyPair != null) {
-            val pubKey: JavaSecPublicKey = pubKeyFromPkcs1Bytes(Base64.decode(dbKeyPair.publicKey, Base64.DEFAULT))
-            val privKey: PrivateKey = privKeyFromPkcs1Bytes(Base64.decode(dbKeyPair.privateKey, Base64.DEFAULT))
-            val keyPair = JavaSecKeyPair(pubKey, privKey)
-            return KeyPair(keyPair)
+            return KeyPair(Base64.decode(dbKeyPair.publicKey, Base64.DEFAULT),
+                Base64.decode(dbKeyPair.privateKey, Base64.DEFAULT))
         } else {
             return null
         }
@@ -101,77 +99,10 @@ class KMService(var dbService: DBService) {
         val dbPubKey: com.commuto.interfacemobile.db.PublicKey? = dbService
             .getPublicKey(Base64.encodeToString(interfaceId, Base64.DEFAULT))
         if (dbPubKey != null) {
-            val pubKey: JavaSecPublicKey = pubKeyFromPkcs1Bytes(Base64.decode(dbPubKey.publicKey, Base64.DEFAULT))
-            return PublicKey(pubKey)
+            return PublicKey(Base64.decode(dbPubKey.publicKey, Base64.DEFAULT))
         } else {
             return null
         }
-    }
-
-    /**
-     * Encodes an RSA PublicKey to a PKCS1 formatted byte representation
-     *
-     * @param pubKey the RSA public key from which the PKCS1 formatted byte representation will be derived
-     *
-     * @return a ByteArray containing the PKCS1 representation of the passed RSA public key
-     */
-    fun pubKeyToPkcs1Bytes(pubKey: JavaSecPublicKey): ByteArray {
-        val pubKeyX509Bytes = pubKey.encoded
-        val sPubKeyInfo: SubjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pubKeyX509Bytes)
-        val pubKeyPrimitive: ASN1Primitive = sPubKeyInfo.parsePublicKey()
-        val pubKeyPkcs1Bytes: ByteArray = pubKeyPrimitive.encoded
-        return pubKeyPkcs1Bytes
-    }
-
-    /**
-     * Restores a RSA PublicKey from a PKCS1 formatted byte representation
-     *
-     * @param pubKeyPkcs1Bytes the PKCS1 representation of the public RSA key to be restored
-     *
-     * @return the restored PublicKey described in by pubKeyPkcs1Bytes
-     */
-    fun pubKeyFromPkcs1Bytes(pubKeyPkcs1Bytes: ByteArray): JavaSecPublicKey {
-        val algorithmIdentifier: AlgorithmIdentifier = AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, DERNull.INSTANCE);
-        val pubKeyX509Bytes: ByteArray = SubjectPublicKeyInfo(algorithmIdentifier, pubKeyPkcs1Bytes).encoded
-        val pubKey: JavaSecPublicKey = KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(pubKeyX509Bytes))
-        return pubKey
-    }
-
-    /**
-     * Encodes a 2048-bit RSA PrivateKey to a PKCS1 formatted byte representation
-     *
-     * @param privKey the 2048-bit RSA private key from which the PKCS1 formatted byte representation will be derived
-     *
-     * @return a ByteArray containing the PKCS1 representation of the passed RSA private key
-     */
-    fun privKeyToPkcs1Bytes(privKey: PrivateKey): ByteArray {
-        val privKeyInfo = PrivateKeyInfo.getInstance(privKey.encoded)
-        val privKeyAsn1Encodable: ASN1Encodable = privKeyInfo.parsePrivateKey()
-        val privKeyAsn1Primitive: ASN1Primitive = privKeyAsn1Encodable.toASN1Primitive()
-        val privKeyPkcs1Bytes: ByteArray = privKeyAsn1Primitive.getEncoded()
-        return privKeyPkcs1Bytes
-    }
-
-    /**
-     * Restores a 2048-bit RSA PrivateKey from a PKCS1 formatted byte representation
-     *
-     * @param privKeyPkcs1Bytes the PKCS1 representation of the private RSA key to be restored
-     *
-     * @return the restored PrivateKey described in privKeyPkcs1Bytes
-     */
-    fun privKeyFromPkcs1Bytes(privKeyPkcs1Bytes: ByteArray): PrivateKey {
-        val rsaPrivKey: RSAPrivateKey = RSAPrivateKey.getInstance(ASN1Sequence.fromByteArray(privKeyPkcs1Bytes))
-        val privKeySpec: RSAPrivateKeySpec = RSAPrivateCrtKeySpec(rsaPrivKey.modulus,
-            rsaPrivKey.publicExponent,
-            rsaPrivKey.privateExponent,
-            rsaPrivKey.prime1,
-            rsaPrivKey.prime2,
-            rsaPrivKey.exponent1,
-            rsaPrivKey.exponent2,
-            rsaPrivKey.coefficient
-        )
-        val privKey: PrivateKey = KeyFactory.getInstance("RSA").generatePrivate(privKeySpec)
-        return privKey
     }
 
 }
