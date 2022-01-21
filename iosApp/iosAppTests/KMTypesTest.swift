@@ -9,7 +9,7 @@
 import XCTest
 @testable import iosApp
 
-class KMServiceUtilsTest: XCTestCase {
+class KMTypesTest: XCTestCase {
     
     let dbService: DBService = DBService()
     var kmService: KMService?

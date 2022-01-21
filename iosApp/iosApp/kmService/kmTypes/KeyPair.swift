@@ -9,8 +9,6 @@
 import CryptoKit
 import Foundation
 
-//TODO: method to return bytes of public and private keys
-
 /**
  * The KeyPair struct is a wrapper around the SecKey class, with support for Commuto Interface IDs.
  * The wrapped keys shall be a 2048-bit RSA private key and its corresponding public key. interfaceId
@@ -21,6 +19,18 @@ struct KeyPair {
     let interfaceId: Data
     let publicKey: SecKey
     let privateKey: SecKey
+    
+    /**
+     Creates a KeyPair object wrapped around a new 2058-bit RSA private key and its public key
+     */
+    init() throws {
+        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
+        var error: Unmanaged<CFError>?
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
+            throw error!.takeRetainedValue() as Error
+        }
+        try self.init(publicKey: SecKeyCopyPublicKey(privateKey)!, privateKey: privateKey)
+    }
     
     /**
      Creates a KeyPair object using the PKCS#1 byte formats of a 2048-bit RSA private key and its public key

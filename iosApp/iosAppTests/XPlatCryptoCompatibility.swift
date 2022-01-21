@@ -52,19 +52,9 @@ class XPlatCryptoCompatibility: XCTestCase {
     /**
      Prints a signature, original message and public key in Base64 format
      */
-    //TODO: No parameter initializer for KeyPair that creates a new KeyPair
     func testPrintSignature() throws {
-        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
-        var error: Unmanaged<CFError>?
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let publicKey = SecKeyCopyPublicKey(privateKey)!
-        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(publicKey, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let keyPair = try KeyPair(publicKey: publicKey, privateKey: privateKey)
-        let pubKeyB64Str = (pubKeyBytes as NSData).base64EncodedString(options: [])
+        let keyPair = try KeyPair()
+        let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
         print("Signed data B64:\n" + ("test".data(using: .utf16)! as NSData).base64EncodedString(options: []))
         print("Public Key B64:")
         print(pubKeyB64Str)
@@ -92,29 +82,17 @@ class XPlatCryptoCompatibility: XCTestCase {
      * compatibility testing
      */
     func testPrintEncryptedMessage() throws {
-        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
-        var error: Unmanaged<CFError>?
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let publicKey = SecKeyCopyPublicKey(privateKey)!
-        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(publicKey, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        guard let privKeyBytes = SecKeyCopyExternalRepresentation(privateKey, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let pubKeyB64Str = (pubKeyBytes as NSData).base64EncodedString(options: [])
-        let privKeyB64Str = (privKeyBytes as NSData).base64EncodedString(options: [])
+        let keyPair = try KeyPair()
+        let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
+        let privKeyB64Str = try keyPair.privKeyToPkcs1Bytes().base64EncodedString()
         print("Public Key B64:")
         print(pubKeyB64Str)
         print("Private Key B64:")
         print(privKeyB64Str)
-        let keyPair = try KeyPair(publicKey: publicKey, privateKey: privateKey)
         let originalMessage = "test"
         print("Original Message:\n" + originalMessage)
         print("Encrypted Message:")
-        print((try keyPair.encrypt(clearData: originalMessage.data(using: .utf16)!) as NSData).base64EncodedString(options: []))
+        print(try keyPair.encrypt(clearData: originalMessage.data(using: .utf16)!).base64EncodedString())
     }
     
     /**
@@ -142,20 +120,9 @@ class XPlatCryptoCompatibility: XCTestCase {
      * other.
      */
     func testGenB64RSAKeys() throws {
-        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
-        var error: Unmanaged<CFError>?
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let publicKey = SecKeyCopyPublicKey(privateKey)!
-        guard let pubKeyBytes = SecKeyCopyExternalRepresentation(publicKey, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        guard let privKeyBytes = SecKeyCopyExternalRepresentation(privateKey, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let pubKeyB64Str = (pubKeyBytes as NSData).base64EncodedString(options: [])
-        let privKeyB64Str = (privKeyBytes as NSData).base64EncodedString(options: [])
+        let keyPair = try KeyPair()
+        let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
+        let privKeyB64Str = try keyPair.privKeyToPkcs1Bytes().base64EncodedString()
         print("Public Key B64:")
         print(pubKeyB64Str)
         print("Private Key B64:")

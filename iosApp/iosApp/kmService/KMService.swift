@@ -36,12 +36,7 @@ class KMService {
      * SHA-256 hash of the PKCS#1 encoded byte representation of the public key.
      */
     func generateKeyPair(storeResult: Bool = true) throws -> KeyPair {
-        let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
-        var error: Unmanaged<CFError>?
-        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
-            throw error!.takeRetainedValue() as Error
-        }
-        let keyPair = try KeyPair(publicKey: try SecKeyCopyPublicKey(privateKey)!, privateKey: privateKey)
+        let keyPair = try KeyPair()
         if storeResult {
             let interfaceIdB64Str = keyPair.interfaceId.base64EncodedString()
             let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
@@ -50,7 +45,7 @@ class KMService {
         }
         return keyPair
     }
-    //TODO: Resume updating here
+    
     /**
      * Retrieves the persistently stored key pair associated with the given interface id, or returns null if not
      * present.
