@@ -33,6 +33,17 @@ import javax.crypto.spec.PSource
 class KeyPair {
 
     /**
+     * Creates a KeyPair object wrapped around a new 2058-bit RSA private key and its public key
+     */
+    constructor() {
+        val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("RSA")
+        keyPairGenerator.initialize(2048)
+        this.keyPair = keyPairGenerator.generateKeyPair()
+        this.interfaceId = MessageDigest.getInstance("SHA-256")
+            .digest(pubKeyToPkcs1Bytes())
+    }
+
+    /**
      * Creates a KeyPair object using the PKCS#1 byte formats of a 2048-bit RSA private key and its public key
      *
      * @param publicKeyBytes: the PKCS#1 byte encoded representation of the public key to be restored
