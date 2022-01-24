@@ -922,6 +922,11 @@ class CommutoCoreInteraction: XCTestCase {
             return nil
         }
         
+        //Check that interface id of maker's key matches value in "sender" field of message
+        guard senderInterfaceId == publicKey.interfaceId else {
+            return nil
+        }
+        
         //Create hash of payload
         let payloadDataDigest = SHA256.hash(data: payloadData)
         var payloadDataHashByteArray = [UInt8]()
