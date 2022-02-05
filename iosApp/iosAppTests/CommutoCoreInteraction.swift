@@ -828,124 +828,6 @@ class CommutoCoreInteraction: XCTestCase {
         }
     }
     
-    static func createPublicKeyAnnouncement(keyPair: KeyPair, offerId: Data) throws -> String {
-        //Create message NSDictionary
-        var message = [
-            "sender": keyPair.interfaceId.base64EncodedString(),
-            "msgType": "pka",
-            "payload": nil,
-            "signature": nil,
-        ]
-        
-        //Create Base64-encoded string of public key in PKCS#1 bytes
-        let pubKeyString = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
-        
-        //Create Base-64 encoded string of offer idV
-        let offerIdString = offerId.base64EncodedString()
-        
-        //Create payload NSDictionary
-        let payload = [
-            "pubKey": pubKeyString,
-            "offerId": offerIdString,
-        ]
-        
-        //Create payload UTF-8 bytes and their Base-64 encoded string
-        let payloadUTF8Bytes = try JSONSerialization.data(withJSONObject: payload)
-        let payloadString = payloadUTF8Bytes.base64EncodedString()
-        
-        //Set "payload" field of message
-        message["payload"] = payloadString
-        
-        //Create signature of payload
-        let payloadDataDigest = SHA256.hash(data: payloadUTF8Bytes)
-        var payloadDataHashByteArray = [UInt8]()
-        for byte: UInt8 in payloadDataDigest.makeIterator() {
-            payloadDataHashByteArray.append(byte)
-        }
-        let payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
-        let signature = try keyPair.sign(data: payloadDataHash)
-        
-        //Set "signature" field of message
-        message["signature"] = signature.base64EncodedString()
-        
-        //Prepare and return message string
-        let messageString = String(decoding: try JSONSerialization.data(withJSONObject: message), as: UTF8.self)
-        return messageString
-    }
-    
-    static func parsePublicKeyAnnouncement(messageString: String, makerInterfaceId: Data, offerId: Data) throws -> iosApp.PublicKey? {
-        //Restore message NSDictionary
-        guard let messageData = messageString.data(using: String.Encoding.utf8) else {
-            return nil
-        }
-        guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
-            return nil
-        }
-        
-        //Ensure that the message is a Public Key Announcement message
-        guard let messageType = message["msgType"] as? String else {
-            return nil
-        }
-        guard messageType == "pka" else {
-            return nil
-        }
-        
-        //Ensure that the sender is the maker
-        guard let senderInterfaceIdString = message["sender"] as? String, let senderInterfaceId = Data(base64Encoded: senderInterfaceIdString) else {
-            return nil
-        }
-        guard makerInterfaceId == senderInterfaceId else {
-            return nil
-        }
-        
-        //Restore payload NSDictionary
-        guard let payloadString = message["payload"] as? String, let payloadData = Data(base64Encoded: payloadString) else {
-            return nil
-        }
-        guard let payload = try JSONSerialization.jsonObject(with: payloadData) as? NSDictionary else {
-            return nil
-        }
-        
-        //Ensure that the offer id in the PKA matches the offer in question
-        guard let messageOfferIdString = payload["offerId"] as? String, let messageOfferId = Data(base64Encoded: messageOfferIdString) else {
-            return nil
-        }
-        guard messageOfferId == offerId else {
-            return nil
-        }
-        
-        //Re-create maker's public key
-        guard let pubKeyString = payload["pubKey"] as? String, let pubKeyBytes = Data(base64Encoded: pubKeyString) else {
-            return nil
-        }
-        guard let publicKey = try? PublicKey(publicKeyBytes: pubKeyBytes) else {
-            return nil
-        }
-        
-        //Check that interface id of maker's key matches value in "sender" field of message
-        guard senderInterfaceId == publicKey.interfaceId else {
-            return nil
-        }
-        
-        //Create hash of payload
-        let payloadDataDigest = SHA256.hash(data: payloadData)
-        var payloadDataHashByteArray = [UInt8]()
-        for byte: UInt8 in payloadDataDigest.makeIterator() {
-            payloadDataHashByteArray.append(byte)
-        }
-        let payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
-        
-        //Verify signature
-        guard let signatureString = message["signature"] as? String, let signature = Data(base64Encoded: signatureString) else {
-            return nil
-        }
-        if try publicKey.verifySignature(signedData: payloadDataHash, signature: signature) {
-            return publicKey
-        } else {
-            return nil
-        }
-    }
-    
     func testPKAParsing() throws {
         //Restore the maker's public key
         let pubKey = "MIIBCgKCAQEAnnDB4zV2llEwwLHw7c934eV7t69Om52dpLcuctXtOtjGsaKyOAV96egmxX6+C+MptFST3yX4wO6qK3/NSuOHWBXIHkhQGZEdTHOn4HE9hHdw2axJ0F9GQKZeT8t8kw+58+n+nlbQUaFHUw5iypl3WiI1K7En4XV2egfXGk9ujElMqXZO/eFun3eAM+asT1g7o/k2ysOpY5X+sqesLsJ0gzaGH4jfDVuWifS5YhdgFKkBi1i3U1tfPdc3sN53uNCPEhxjjuOuYH5I3WI9VzjpJezYoSlwzI4hYNOjY0cWzZM9kqeUt93KzTpvX4FeQigT9UO20cs23M5NbIW4q7lA4wIDAQAB"
@@ -958,190 +840,21 @@ class CommutoCoreInteraction: XCTestCase {
         let offerId = Data(base64Encoded: "9tGMGTr0SbuySqE0QOsAMQ==")!
         
         //Create Public Key Announcement message string
-        let swiftPkaMessageString = try! CommutoCoreInteraction.createPublicKeyAnnouncement(keyPair: keyPair, offerId: offerId)
+        let swiftPkaMessageString = try! createPublicKeyAnnouncement(keyPair: keyPair, offerId: offerId)
         
         //A Public Key Announcement message string generated by JVM code
         let jvmPkaMessageString = #"{"sender":"gXE4i2ZrzX+QK5AdNalVTpU1tJoIA9sEMca6uRfiRSE=","msgType":"pka","payload":"eyJwdWJLZXkiOiJNSUlCQ2dLQ0FRRUFubkRCNHpWMmxsRXd3TEh3N2M5MzRlVjd0NjlPbTUyZHBMY3VjdFh0T3RqR3NhS3lPQVY5NmVnbXhYNitDK01wdEZTVDN5WDR3TzZxSzMvTlN1T0hXQlhJSGtoUUdaRWRUSE9uNEhFOWhIZHcyYXhKMEY5R1FLWmVUOHQ4a3crNTgrbitubGJRVWFGSFV3NWl5cGwzV2lJMUs3RW40WFYyZWdmWEdrOXVqRWxNcVhaTy9lRnVuM2VBTSthc1QxZzdvL2syeXNPcFk1WCtzcWVzTHNKMGd6YUdINGpmRFZ1V2lmUzVZaGRnRktrQmkxaTNVMXRmUGRjM3NONTN1TkNQRWh4amp1T3VZSDVJM1dJOVZ6anBKZXpZb1Nsd3pJNGhZTk9qWTBjV3paTTlrcWVVdDkzS3pUcHZYNEZlUWlnVDlVTzIwY3MyM001TmJJVzRxN2xBNHdJREFRQUIiLCJvZmZlcklkIjoiOXRHTUdUcjBTYnV5U3FFMFFPc0FNUT09In0=","signature":"ZdIOEtAJGnyKjx468ddxdGGcxchfbuPYq25fSkZda33EZm/vapHaht3oQci/pOSiPnPCN08MTFsxodwRJFdxr1900lHPIyLuRT0KoDJMwhOseC+tcyB3FCUvpmNUYqWfMasAtBGqsYnbWOVXn6Fct8DYe9T394LbcfnO0YHvL0x2wmjiCC/viJMgeGr+/v8FGpmxqtfuTH0oJ5VTpNrLMSrCMMYpHlaPDPpSVDQrRpeqibm+ir+KXVbzgrga1LJimUEqk5UoGzFZGIROatutvLerV2nWiwf3RCb6Nfop7ZTAHyIDkA+zOoKd00XhjUpvG2/5AJhMr4nINVK8DWwKbA=="}"#
         
         //Attempt to parse Public Key Announcement message string generated by Swift code
-        let restoredSwiftPublicKey = try! CommutoCoreInteraction.parsePublicKeyAnnouncement(messageString: swiftPkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
+        let restoredSwiftPublicKey = try! parsePublicKeyAnnouncement(messageString: swiftPkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
         
         //Attempt to parse Public Key Announcement message string generated by JVM code
-        let restoredJvmPublicKey = try! CommutoCoreInteraction.parsePublicKeyAnnouncement(messageString: jvmPkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
+        let restoredJvmPublicKey = try! parsePublicKeyAnnouncement(messageString: jvmPkaMessageString, makerInterfaceId: keyPair.interfaceId as Data, offerId: offerId)
         
         //Check that original and restored interface ids (and thus keys) are identical
         XCTAssert(keyPair.interfaceId == restoredSwiftPublicKey!.interfaceId)
         XCTAssert(keyPair.interfaceId == restoredJvmPublicKey!.interfaceId)
         
-    }
-    
-    static func createTakerInfoMessage(keyPair: KeyPair, makerPubKey: iosApp.PublicKey, swapId: Data, paymentDetails: [String : Any]) throws -> String {
-        //Create message NSDictionary
-        var message = [
-            "sender": keyPair.interfaceId.base64EncodedString(),
-            "recipient": makerPubKey.interfaceId.base64EncodedString(),
-            "encryptedKey": nil,
-            "encryptedIV": nil,
-            "payload": nil,
-            "signature": nil
-        ]
-        
-        //Create Base64-encoded string of taker's public key in PKCS#1 bytes
-        let pubKeyString = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
-        
-        //Create Base-64 encoded string of swap id
-        let swapIdString = swapId.base64EncodedString()
-        
-        //Create payload NSDictionary
-        var payload = [
-            "msgType": "takerInfo",
-            "pubKey": pubKeyString,
-            "swapId": swapIdString,
-            "paymentDetails": nil
-        ]
-        
-        //Create payment details UTF-8 bytes and their Base64-encoded string
-        let paymentDetailsUTF8Bytes = try JSONSerialization.data(withJSONObject: paymentDetails)
-        
-        //Set "paymentDetails" field of payload
-        payload["paymentDetails"] = paymentDetailsUTF8Bytes.base64EncodedString()
-        
-        //Create payload UTF-8 bytes and their Base64-encoded string
-        let payloadUTF8Bytes = try JSONSerialization.data(withJSONObject: payload)
-        
-        //Generate a new symmetric key and initialization vector, and encrypt the payload bytes
-        let symmetricKey = try newSymmetricKey()
-        let encryptedPayload = try symmetricKey.encrypt(data: payloadUTF8Bytes)
-        
-        //Set "payload" field of message
-        message["payload"] = encryptedPayload.encryptedData.base64EncodedString()
-        
-        //Create signature of encrypted payload
-        let encryptedPayloadDataDigest = SHA256.hash(data: encryptedPayload.encryptedData)
-        var encryptedPayloadDataHashByteArray = [UInt8]()
-        for byte: UInt8 in encryptedPayloadDataDigest.makeIterator() {
-            encryptedPayloadDataHashByteArray.append(byte)
-        }
-        let encryptedPayloadDataHash = Data(bytes: encryptedPayloadDataHashByteArray, count: encryptedPayloadDataHashByteArray.count)
-        let signature = try keyPair.sign(data: encryptedPayloadDataHash)
-        
-        //Set signature field of message
-        message["signature"] = signature.base64EncodedString()
-        
-        //Encrypt symmetric key and initialization vector with maker's public key
-        let encryptedKey = try makerPubKey.encrypt(clearData: symmetricKey.keyData)
-        let encryptedIV = try makerPubKey.encrypt(clearData: encryptedPayload.initializationVectorData)
-        
-        //Set "encryptedKey" and "encryptedIV" fields of message
-        message["encryptedKey"] = encryptedKey.base64EncodedString()
-        message["encryptedIV"] = encryptedIV.base64EncodedString()
-        
-        //Prepare and return message string
-        let messageString = String(decoding: try JSONSerialization.data(withJSONObject: message), as: UTF8.self)
-        return messageString
-        
-    }
-    
-    static func parseTakerInfoMessage(messageString: String, keyPair: KeyPair, takerInterfaceId: Data, swapId: Data) throws -> (iosApp.PublicKey, [String : Any])? {
-        //Restore message NSDictionary
-        guard let messageData = messageString.data(using: String.Encoding.utf8) else {
-            return nil
-        }
-        guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
-            return nil
-        }
-        
-        //Ensure that the sender is the taker and the recipient is the maker
-        guard let senderInterfaceIdString = message["sender"] as? String, let senderInterfaceId = Data(base64Encoded: senderInterfaceIdString) else {
-            return nil
-        }
-        guard takerInterfaceId == senderInterfaceId else {
-            return nil
-        }
-        guard let recipientInterfaceIdString = message["recipient"] as? String, let recipientInterfaceId = Data(base64Encoded: recipientInterfaceIdString) else {
-            return nil
-        }
-        guard keyPair.interfaceId == recipientInterfaceId else {
-            return nil
-        }
-        
-        //Decrypt symmetric key, initialization vector and encrypted payload
-        guard let encryptedKeyString = message["encryptedKey"] as? String, let encryptedKey = Data(base64Encoded: encryptedKeyString) else {
-            return nil
-        }
-        let decryptedKeyBytes = try keyPair.decrypt(cipherData: encryptedKey)
-        let symmetricKey = SymmetricKey(key: decryptedKeyBytes)
-        guard let encryptedPayloadString = message["payload"] as? String, let encryptedPayloadData = Data(base64Encoded: encryptedPayloadString) else {
-            return nil
-        }
-        guard let encryptedIVString = message["encryptedIV"] as? String, let encryptedIV = Data(base64Encoded: encryptedIVString) else {
-            return nil
-        }
-        let decryptedIV = try keyPair.decrypt(cipherData: encryptedIV)
-        let encryptedPayload = SymmetricallyEncryptedData(data: encryptedPayloadData, iv: decryptedIV)
-        let decryptedPayloadData = try symmetricKey.decrypt(data: encryptedPayload)
-        
-        //Restore payload object
-        guard let payload = try JSONSerialization.jsonObject(with: decryptedPayloadData) as? NSDictionary else {
-            return nil
-        }
-        
-        //Ensure the message is a taker info message
-        guard let messageType = payload["msgType"] as? String else {
-            return nil
-        }
-        guard messageType == "takerInfo" else {
-            return nil
-        }
-        
-        //Ensure that the swap id in the takerInfo message matches the swap in qustion
-        guard let messageSwapIdString = payload["swapId"] as? String, let messageSwapId = Data(base64Encoded: messageSwapIdString) else {
-            return nil
-        }
-        guard messageSwapId == swapId else {
-            return nil
-        }
-        
-        //Re-create taker's public key
-        guard let pubKeyString = payload["pubKey"] as? String, let pubKeyBytes = Data(base64Encoded: pubKeyString) else {
-            return nil
-        }
-        guard let publicKey = try? PublicKey(publicKeyBytes: pubKeyBytes) else {
-            return nil
-        }
-        
-        //Check that interface id of taker's key matches value in "sender" field of message
-        guard senderInterfaceId == publicKey.interfaceId else {
-            return nil
-        }
-        
-        //Create hash of encrypted payload
-        let encryptedPayloadDataDigest = SHA256.hash(data: encryptedPayload.encryptedData)
-        var encryptedPayloadDataHashByteArray = [UInt8]()
-        for byte: UInt8 in encryptedPayloadDataDigest.makeIterator() {
-            encryptedPayloadDataHashByteArray.append(byte)
-        }
-        let encryptedPayloadDataHash = Data(bytes: encryptedPayloadDataHashByteArray, count: encryptedPayloadDataHashByteArray.count)
-        
-        //Verify signature
-        guard let signatureString = message["signature"] as? String, let signature = Data(base64Encoded: signatureString) else {
-            return nil
-        }
-        guard try publicKey.verifySignature(signedData: encryptedPayloadDataHash, signature: signature) else {
-            return nil
-        }
-        
-        //Restore payment details object
-        /*
-        TODO: In production, we should know the sort of payment info we are looking for, try to deserialize that type exactly, and return null if the payment info is for a different payment method
-         */
-        guard let paymentDetailsString = payload["paymentDetails"] as? String, let paymentDetailsData = Data(base64Encoded: paymentDetailsString) else {
-            return nil
-        }
-        guard let paymentDetails = try JSONSerialization.jsonObject(with: paymentDetailsData) as? [String : Any] else {
-            return nil
-        }
-        return (publicKey, paymentDetails)
     }
     
     func testTakerInfoParsing() throws {
@@ -1173,16 +886,16 @@ class CommutoCoreInteraction: XCTestCase {
         ]
         
         //Create taker info message string
-        let swiftTakerInfoMessageString = try! CommutoCoreInteraction.createTakerInfoMessage(keyPair: takerKeyPair, makerPubKey: makerPublicKey, swapId: swapId, paymentDetails: paymentDetails)
+        let swiftTakerInfoMessageString = try! createTakerInfoMessage(keyPair: takerKeyPair, makerPubKey: makerPublicKey, swapId: swapId, paymentDetails: paymentDetails)
         
         //A taker info message string generated by JVM code
         let jvmTakerInfoMessageString = #"{"sender":"HpIWD/7nBJ3VP+yQ2WYfh2lq5/uCLAkbkNIJ3FFJ2oc=","recipient":"gXE4i2ZrzX+QK5AdNalVTpU1tJoIA9sEMca6uRfiRSE=","encryptedKey":"YKav0mnW7vUGRgniGcwS5yXNKvNNZeh1s0GDVtZ/KLUmS0pZycrRn+4iwmsF4SYN1BOJkOB0ujqqAFW88kUX0+09CjHg+YDshZk3wUWVfM9Agu3qtyuF9TdOydVMaOi62nxSbMyPAUtA8suDtw2N9T38W92DwAYZOKoT9jBeDP6a9o20+Sifp3U/uCAjesje/lMLh9+67apfzGFgzRblwl2Mod/PI1nE/x0aDkMtaFO74BGHhEgM7hm1fjdqhDyBBCDa5QQmdysLUKsk9JZVyGcFlIISQZvbaydqYRKu3zG0+KQ0/ezNUMDFwemHkd4wyrrtT0GeYuJXoNMiC14VvQ==","encryptedIV":"K2pOgo9MObLjytbn74SjILyvTvVHGnaRCJncUBYGCoiqlYTOD2DMocPbxIbgDGMAw/p3ONidOMIASGqltOP+3/2+04WsXB4xprRTlHYmP8NFY0Hxaq5W1+/qU+VdVEAtqrSUyCJYI+eXr0ovYb1RU5mKF0jinKXmXMcWofXWxTeZUnMDyzUin0mrjBH0oBfRWfNmAH1AkdXfvspzq3mQsRrjFfERX8uH2e/02JQQQCzp+q8Fw2tU7eRxG42cZRNaXYMvo3EBXmdLBbX3z6B7MIjylMpn82G70IVex1gF/qgFL+kyhvAaj3iO9zhEP85CO4yh5JNDpv4qUG02L1hxfQ==","payload":"SdoUQeUdp1xC7sgg82OFD52V6tfMQ8Qlh/23YvT7Fd4+C2rhB4ePyvND+9EoTbnGZbUNFagqIK+XmrPAdAI0R+j6ZgFNVggsEHX6hfqWw/KQV7VGzOwHnA1XteyYyNREgt/UuDWYaE7BMPJCTSL0fVqhl9qcd7I+Hk10bTu+vIBOTabDhlWybmX5/zmulGoiOhoOD9xw7IGGpWe0dLpF99aEaAWo64YahhxA1bjimwUgzmCWrIS2HeTX+z4rl4XrhdOOfhDomTiFk0Q5ioiWmgyiPosX+AmJv5VX8ieM9VUvGOfNjW/lQjvk9025vb+zeEBtkJwBxbIXFX0612rxj8iFyYGdR1JiClhTN+V/90T0wLj3nUpORZA6c2O71KEVRuzAC8Rjmsbl5rynqggxi3FGT73NnB5npKM/Ycba7S0Jt9doEeRgpV77j8KSSsZ4ciV7P4GlGj/bTTuCedmFJJcvhh1MqmAxL8wOOLSclzXbNUP0Xi9zjpgZxQzGk1aTc+zwc4RKsRgMwxdel3GjI9ascRbu5aMR6Jc7sZrY1jyAdHVUaMotw5ynsoLcQz/PpvXwzc8DOtEKBofm62kgXuxZJDRpuggE3YRSQ4nA3jqUYFPrUbyg/qXXvn5Zx6+mUi1kBIpSgwKI9J/l8AK0TkEC02mAEwgh4YmtuO26LJ1JSLJIx/rA2dX8QxPwBnA47Ael8oUsIt51bA5Kk+dM+CFVIzudDwSvxNpa0HoePuolgdMOkrp2F0QttMaw4gmDJdfOURg3cZ1sWAGmvuISD/nvSKk3Vedt3fI4TtuA7fgThbMWi1FFenoQnasLsZY4/UI9hjnykssnz+EI7mVo/vuV6rU15jtHoCE9xkFVppc=","signature":"hHtRgIHQwFHDfKnjlWmvMRTz/Nuxls6rC4FARnAfiNH6ELHKjBe2bxpjlkS3RAwxICTtf/dmdQOxpxIZo1byylGEqLz7s2OWF0dh3ZtqTu2YG/9LDWfeW4FVQVgH+MFvBqqjUN9ej84n1SknoowY/8dDSNyOmn58dQJR82h9EgzqCtTJ5UUwwjYlm36NsZhLYcYif4KKmNHJ6FEIVGPExy29ivvPb0OSfFkMqqAcB/HMt3rf/cG+DhsX/uC8ipp19qIZE8qxplENaUDwo3c5dHkBCZlurT9VwtuLa+Dsmub9VAT+iu8zg28QpNlXCxYand+i5uhiYYRAWA0hnaKVDQ=="}"#
         
         //Attempt to parse taker info message string generated by Swift code
-        let swiftParsingResults = try! CommutoCoreInteraction.parseTakerInfoMessage(messageString: swiftTakerInfoMessageString, keyPair: makerKeyPair, takerInterfaceId: takerPublicKey.interfaceId, swapId: swapId)
+        let swiftParsingResults = try! parseTakerInfoMessage(messageString: swiftTakerInfoMessageString, keyPair: makerKeyPair, takerInterfaceId: takerPublicKey.interfaceId, swapId: swapId)
         
         //Attempt to parse taker info message string generated by JVM code
-        let jvmParsingResults = try! CommutoCoreInteraction.parseTakerInfoMessage(messageString: jvmTakerInfoMessageString, keyPair: makerKeyPair, takerInterfaceId: takerPublicKey.interfaceId, swapId: swapId)
+        let jvmParsingResults = try! parseTakerInfoMessage(messageString: jvmTakerInfoMessageString, keyPair: makerKeyPair, takerInterfaceId: takerPublicKey.interfaceId, swapId: swapId)
         
         //Check that original and restored interface ids (and thus keys) are identical
         XCTAssert(takerKeyPair.interfaceId == swiftParsingResults!.0.interfaceId)
@@ -1193,162 +906,6 @@ class CommutoCoreInteraction: XCTestCase {
         let jvmRestoredPD = jvmParsingResults!.1
         XCTAssert(swiftRestoredPD["name"] as! String == "USD-SWIFT" && swiftRestoredPD["beneficiary"] as! String == "Take Ker" && swiftRestoredPD["account"] as! String == "2039482" && swiftRestoredPD["bic"] as! String == "TAK3940")
         XCTAssert(jvmRestoredPD["name"] as! String == "USD-SWIFT" && jvmRestoredPD["beneficiary"] as! String == "Take Ker" && jvmRestoredPD["account"] as! String == "2039482" && jvmRestoredPD["bic"] as! String == "TAK3940")
-    }
-    
-    static func createMakerInfoMessage(keyPair: KeyPair, takerPubKey: iosApp.PublicKey, swapId: Data, paymentDetails: [String : Any]) throws -> String {
-        //Create message NSDictionary
-        var message = [
-            "sender": keyPair.interfaceId.base64EncodedString(),
-            "recipient": takerPubKey.interfaceId.base64EncodedString(),
-            "encryptedKey": nil,
-            "encryptedIV": nil,
-            "payload": nil,
-            "signature": nil
-        ]
-        
-        //Create Base-64 encoded string of swap id
-        let swapIdString = swapId.base64EncodedString()
-        
-        //Create payload NSDictionary
-        var payload = [
-            "msgType": "makerInfo",
-            "swapId": swapIdString,
-            "paymentDetails": nil
-        ]
-        
-        //Create payment details UTF-8 bytes and their Base64-encoded string
-        let paymentDetailsUTF8Bytes = try JSONSerialization.data(withJSONObject: paymentDetails)
-        
-        //Set "paymentDetails" field of payload
-        payload["paymentDetails"] = paymentDetailsUTF8Bytes.base64EncodedString()
-        
-        //Create payload UTF-8 bytes and their Base64-encoded string
-        let payloadUTF8Bytes = try JSONSerialization.data(withJSONObject: payload)
-        
-        //Generate a new symmetric key and initialization vector, and encrypt the payload bytes
-        let symmetricKey = try newSymmetricKey()
-        let encryptedPayload = try symmetricKey.encrypt(data: payloadUTF8Bytes)
-        
-        //Set "payload" field of message
-        message["payload"] = encryptedPayload.encryptedData.base64EncodedString()
-        
-        //Create signature of encrypted payload
-        let encryptedPayloadDataDigest = SHA256.hash(data: encryptedPayload.encryptedData)
-        var encryptedPayloadDataHashByteArray = [UInt8]()
-        for byte: UInt8 in encryptedPayloadDataDigest.makeIterator() {
-            encryptedPayloadDataHashByteArray.append(byte)
-        }
-        let encryptedPayloadDataHash = Data(bytes: encryptedPayloadDataHashByteArray, count: encryptedPayloadDataHashByteArray.count)
-        let signature = try keyPair.sign(data: encryptedPayloadDataHash)
-        
-        //Set "signature" field of message
-        message["signature"] = signature.base64EncodedString()
-        
-        //Encrypt symmetric key and initialization vector with taker's public key
-        let encryptedKey = try takerPubKey.encrypt(clearData: symmetricKey.keyData)
-        let encryptedIV = try takerPubKey.encrypt(clearData: encryptedPayload.initializationVectorData)
-        
-        //Set "encryptedKey" and "encryptedIV" fields of message
-        message["encryptedKey"] = encryptedKey.base64EncodedString()
-        message["encryptedIV"] = encryptedIV.base64EncodedString()
-        
-        //Prepare and return message string
-        let messageString = String(decoding: try JSONSerialization.data(withJSONObject: message), as: UTF8.self)
-        return messageString
-        
-    }
-    
-    static func parseMakerInfoMessage(messageString: String, keyPair: KeyPair, makerPubKey: iosApp.PublicKey, swapId: Data) throws -> [String : Any]? {
-        //Restore message NSDictionary
-        guard let messageData = messageString.data(using: String.Encoding.utf8) else {
-            return nil
-        }
-        guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
-            return nil
-        }
-        
-        //Ensure that the sender is the maker and the recipient is the taker
-        guard let senderInterfaceIdString = message["sender"] as? String, let senderInterfaceId = Data(base64Encoded: senderInterfaceIdString) else {
-            return nil
-        }
-        guard makerPubKey.interfaceId == senderInterfaceId else {
-            return nil
-        }
-        guard let recipientInterfaceIdString = message["recipient"] as? String, let recipientInterfaceId = Data(base64Encoded: recipientInterfaceIdString) else {
-            return nil
-        }
-        guard keyPair.interfaceId == recipientInterfaceId else {
-            return nil
-        }
-        
-        //Restore signature
-        guard let signatureString = message["signature"] as? String, let signature = Data(base64Encoded: signatureString) else {
-            return nil
-        }
-        
-        //Decode encrypted payload
-        guard let encryptedPayloadString = message["payload"] as? String, let encryptedPayloadData = Data(base64Encoded: encryptedPayloadString) else {
-            return nil
-        }
-        
-        //Create hash of encrypted payload
-        let encryptedPayloadDataDigest = SHA256.hash(data: encryptedPayloadData)
-        var encryptedPayloadDataHashByteArray = [UInt8]()
-        for byte: UInt8 in encryptedPayloadDataDigest.makeIterator() {
-            encryptedPayloadDataHashByteArray.append(byte)
-        }
-        let encryptedPayloadDataHash = Data(bytes: encryptedPayloadDataHashByteArray, count: encryptedPayloadDataHashByteArray.count)
-        
-        //Verify signature
-        guard try makerPubKey.verifySignature(signedData: encryptedPayloadDataHash, signature: signature) else {
-            return nil
-        }
-        
-        //Decrypt symmetric key, initialization vector and encrypted payload
-        guard let encryptedKeyString = message["encryptedKey"] as? String, let encryptedKey = Data(base64Encoded: encryptedKeyString) else {
-            return nil
-        }
-        let decryptedKeyBytes = try keyPair.decrypt(cipherData: encryptedKey)
-        let symmetricKey = SymmetricKey(key: decryptedKeyBytes)
-        guard let encryptedIVString = message["encryptedIV"] as? String, let encryptedIV = Data(base64Encoded: encryptedIVString) else {
-            return nil
-        }
-        let decryptedIV = try keyPair.decrypt(cipherData: encryptedIV)
-        let encryptedPayload = SymmetricallyEncryptedData(data: encryptedPayloadData, iv: decryptedIV)
-        let decryptedPayloadData = try symmetricKey.decrypt(data: encryptedPayload)
-        
-        //Restore payload object
-        guard let payload = try JSONSerialization.jsonObject(with: decryptedPayloadData) as? NSDictionary else {
-            return nil
-        }
-        
-        //Ensure the message is a maker info message
-        guard let messageType = payload["msgType"] as? String else {
-            return nil
-        }
-        guard messageType == "makerInfo" else {
-            return nil
-        }
-        
-        //Ensure that the swap id in the makerInfo message matches the swap in question
-        guard let messageSwapIdString = payload["swapId"] as? String, let messageSwapId = Data(base64Encoded: messageSwapIdString) else {
-            return nil
-        }
-        guard messageSwapId == swapId else {
-            return nil
-        }
-        
-        //Restore payment details object
-        /*
-        TODO: In production, we should know the sort of payment info we are looking for, try to deserialize that type exactly, and return null if the payment info is for a different payment method
-         */
-        guard let paymentDetailsString = payload["paymentDetails"] as? String, let paymentDetailsData = Data(base64Encoded: paymentDetailsString) else {
-            return nil
-        }
-        guard let paymentDetails = try JSONSerialization.jsonObject(with: paymentDetailsData) as? [String : Any] else {
-            return nil
-        }
-        return paymentDetails
     }
     
     func testMakerInfoParsing() throws {
@@ -1380,17 +937,17 @@ class CommutoCoreInteraction: XCTestCase {
         ]
         
         //Create maker info message string
-        let swiftMakerInfoMessageString = try! CommutoCoreInteraction.createMakerInfoMessage(keyPair: makerKeyPair, takerPubKey: takerPublicKey, swapId: swapId, paymentDetails: paymentDetails)
+        let swiftMakerInfoMessageString = try! createMakerInfoMessage(keyPair: makerKeyPair, takerPubKey: takerPublicKey, swapId: swapId, paymentDetails: paymentDetails)
         print(swiftMakerInfoMessageString)
         
         //A maker info message string generated by JVM code
         let jvmMakerInfoMessageString = #"{"sender":"gXE4i2ZrzX+QK5AdNalVTpU1tJoIA9sEMca6uRfiRSE=","recipient":"HpIWD/7nBJ3VP+yQ2WYfh2lq5/uCLAkbkNIJ3FFJ2oc=","encryptedKey":"mnNL1n06QkPSotloyrSiUeRLJjAuKxZnLzorw/zG9211mG/kJl11OZd6Y+lP39zM4EGGeArTWB1Yl2kTGuOGrw6HBFH0VfWUCFLKD7A6Ado7bFUdlr5VSUkFork+YaY1pgkmlQFIYJ2B0nCk2vzNj1uBLn/UtP2X9WMIPHOuLpTJk1abp8uY7U6v54EcFReWNWWV1Hk6xofFH/E2VM7fscuuglPAzPW1EY6oWQ/xJvmrhujdokDVRzh9veEnKGyDHXIfjyj/c+F3lEs4ja282MHkOQQUR83edq6wxhUWoe69zGSlAtv9CCv6Q46jX1a7wbDkL1elMyX5ZpWOe/an+w==","encryptedIV":"b+RRR9UPERMFqkzflTV5gD1THt3g20neQuD+6sRfZTHswhUzOlYghJ0JQY5ghZWqoYXv9wtT/JXt4dU43n+1cpXmg+fnwS5oO+znExMT6TRACZf+7czXooGGb/LJj85yWK6Rk3cYrDjl0OirGbji2/lPe/1PAYPxntWpE6z3x2MQg5S5FuN1szIPCOpkuLsdrZgIH9Y3btEL8TFprGjR1ALEcfMe93oQByYHmy2Cuc65Os4jVhDS3sj6sz/M6qtMo61//lYUITohdhpz5vhlp8LTumxgmMl+e9f09CCcTWPefCJordEmPQrT3eAN2Aza6kmO/biZJtrwxKSloKBCvA==","payload":"UrTgL1qBtD11q/zFjr3IAJFJXHhcjj191/1LAz8l4FHZ+Hzd4hLAazg0YPh+4FLCb0t5yUVM8G3uz0qOtVBMcSB/VBb5aGXkiRGifvmbdSJGT6Y2dQoETGJnNqLo1EfFjW4tXGcNVZ588LPSpo6pAZ/39zipcnmYv8VIjbz1PZbsnbI97L8FcQ6mgvaEiNz32QHQfGULgBA1wcGzyDRd4B6rmADJpD7s4mqL5Pg5MoHTt/ea0qhdYfCUUtY74XULbPJbpOyI3PyLWSLcb3H2j7yR1/QsOCoB+RLGXOjnhfWK4S4HQN6gmF1+DYIIsJsJP8fCidhSrUpeyROS8EnAhNlDZ5jSgKqVfK85b29/od6zsbLlQr7ptpU/BOYJ3oKJ","signature":"nG6K9w06FJlOZSmih3Bs1AekEL8HLCZBUclhPyGX93kmLBW1ewYUkhNJrNGvv3Gvd1En2gV1oSHn6WHruFDXxHBD2BMxMo4P5+WOprAnU00ZIJcOeg51ixppeZ3UeSDzG5gAMU7NQrEgGg5BvDNzXy5KS2Xs4JCqpADesD+9WzyKUpcjLa40GTc6coiR9HUPUdNuHQOdjVUZhlOmvnnlt+2hGdEaChQCBT5RpZ5zAAPycQsiuNzsPJItN2n1Ihw10oOcy19wUzprs9XqPRrGpXT3aNGIbmE8DLylNWOoUlcPgWD+GQWOwaTarhnL1GYeF1305DghDIGUa8szpQpNRQ=="}"#
         
         //Attempt to parse maker info message string generated by Swift code
-        let swiftRestoredPaymentDetails = try! CommutoCoreInteraction.parseMakerInfoMessage(messageString: swiftMakerInfoMessageString, keyPair: takerKeyPair, makerPubKey: makerPublicKey, swapId: swapId)
+        let swiftRestoredPaymentDetails = try! parseMakerInfoMessage(messageString: swiftMakerInfoMessageString, keyPair: takerKeyPair, makerPubKey: makerPublicKey, swapId: swapId)
         
         //Attempt to parse maker info message string generated by JVM code
-        let jvmRestoredPaymentDetails = try! CommutoCoreInteraction.parseMakerInfoMessage(messageString: jvmMakerInfoMessageString, keyPair: takerKeyPair, makerPubKey: makerPublicKey, swapId: swapId)
+        let jvmRestoredPaymentDetails = try! parseMakerInfoMessage(messageString: jvmMakerInfoMessageString, keyPair: takerKeyPair, makerPubKey: makerPublicKey, swapId: swapId)
         
         //Check that original and restored payment details are identical
         let swiftRPD = swiftRestoredPaymentDetails!
