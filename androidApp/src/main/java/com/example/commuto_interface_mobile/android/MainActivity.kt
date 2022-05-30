@@ -2,11 +2,11 @@ package com.example.commuto_interface_mobile.android
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.example.commuto_interface_mobile.Greeting
+//import com.example.commuto_interface_mobile.Greeting
 import android.widget.TextView
 
 fun greet(): String {
-    return Greeting().greeting()
+    return "Sup bro"//Greeting().greeting()
 }
 
 class MainActivity : AppCompatActivity() {
