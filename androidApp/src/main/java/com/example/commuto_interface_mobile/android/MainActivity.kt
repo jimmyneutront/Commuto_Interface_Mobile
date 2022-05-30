@@ -2,19 +2,18 @@ package com.example.commuto_interface_mobile.android
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-//import com.example.commuto_interface_mobile.Greeting
-import android.widget.TextView
+import androidx.activity.compose.setContent
+import androidx.compose.material.Text
 
 fun greet(): String {
-    return "Sup bro"//Greeting().greeting()
+    return "Sup bro"
 }
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        val tv: TextView = findViewById(R.id.text_view)
-        tv.text = greet()
+        setContent {
+            Text(text = greet())
+        }
     }
 }
