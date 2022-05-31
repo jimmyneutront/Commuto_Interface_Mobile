@@ -20,6 +20,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.4.1")
     // UI Tests
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.1.1")
+    // Navigation
+    val nav_version = "2.4.2"
+    implementation("androidx.navigation:navigation-compose:$nav_version")
 }
 
 android {

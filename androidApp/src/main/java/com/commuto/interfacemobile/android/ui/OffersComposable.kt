@@ -1,33 +1,31 @@
 package com.commuto.interfacemobile.android.ui
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.commuto.interfacemobile.android.offer.Offer
 
 @Composable
 fun OffersComposable(offers: List<Offer>) {
-    OffersDividerComposable()
-    LazyColumn {
-        items(offers) { offer ->
-            OfferCardComposable(offer, Modifier.padding(10.dp))
-            OffersDividerComposable()
+
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = "OffersListComposable") {
+        composable("OffersListComposable") {
+            OffersListComposable(offers, navController)
+        }
+        composable(
+            "OfferDetailComposable/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { backStackEntry ->
+            Text("id: " + backStackEntry.arguments?.getString("id"))
         }
     }
-}
-
-@Composable
-private fun OffersDividerComposable() {
-    Divider(
-        modifier = Modifier.padding(horizontal = 10.dp),
-        color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
-    )
 }
 
 @Preview

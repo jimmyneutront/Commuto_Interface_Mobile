@@ -13,8 +13,8 @@ import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.Offer
 
 @Composable
-fun OfferCardComposable(offer: Offer, modifier: Modifier) {
-    Box(modifier = modifier) {
+fun OfferCardComposable(offer: Offer) {
+    Box {
         Row {
             Column {
                 Text(
@@ -33,11 +33,12 @@ fun OfferCardComposable(offer: Offer, modifier: Modifier) {
     }
 }
 
-@Preview
+@Preview(
+    showBackground = true,
+)
 @Composable
 fun PreviewOfferCardComposable() {
     OfferCardComposable(
         offer = Offer.sampleOffers[0],
-        modifier = Modifier.padding(10.dp),
     )
 }
