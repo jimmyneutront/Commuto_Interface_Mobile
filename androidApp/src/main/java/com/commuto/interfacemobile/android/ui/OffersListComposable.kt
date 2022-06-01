@@ -14,7 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.commuto.interfacemobile.android.offer.Offer
+import com.commuto.interfacemobile.android.offer.OfferService
 
 @Composable
 fun OffersListComposable(viewModel: OffersViewModel, navController: NavController) {
@@ -56,5 +56,5 @@ private fun OffersDividerComposable() {
 )
 @Composable
 fun PreviewOffersListComposable() {
-    OffersListComposable(OffersViewModel(), rememberNavController())
+    OffersListComposable(OffersViewModel(OfferService()), rememberNavController())
 }
