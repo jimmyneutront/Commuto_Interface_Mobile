@@ -9,7 +9,9 @@
 import SwiftUI
 
 struct OfferCardView: View {
+    
     let offer: Offer
+    
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
@@ -24,7 +26,7 @@ struct OfferCardView: View {
 
 struct OfferCardView_Previews: PreviewProvider {
     static var previews: some View {
-        OfferCardView(offer: Offer.sampleOffers[0])
+        OfferCardView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!)
             .previewLayout(.fixed(width: 400, height: 60))
     }
 }

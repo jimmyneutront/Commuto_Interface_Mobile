@@ -9,17 +9,17 @@
 import SwiftUI
 
 struct OffersView: View {
-    let offers: [Offer]
+    
+    @ObservedObject var offersViewModel: OffersViewModel
     
     var body: some View {
         NavigationView {
             List {
-                ForEach(offers, id: \.id) { offer in
-                    NavigationLink(destination: Text(offer.pair)) {
+                ForEach(offersViewModel.offersDict.map { $0.1 }, id: \.id) { offer in
+                    NavigationLink(destination: Text("id: " + offer.id.uuidString)) {
                         OfferCardView(offer: offer)
                     }
-                }
-            }
+                }            }
             .navigationTitle("Offers")
             .toolbar {
                 HStack {
@@ -37,6 +37,6 @@ struct OffersView: View {
 
 struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
-        OffersView(offers: Offer.sampleOffers)
+        OffersView(offersViewModel: OffersViewModel())
     }
 }

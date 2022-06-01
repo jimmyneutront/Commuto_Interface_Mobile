@@ -16,10 +16,14 @@ struct Offer {
 }
 
 extension Offer {
-    static let sampleOffers: [Offer] =
-    [
-        Offer(id: UUID(), direction: "Buy", price: "1.004", pair: "USD/USDT"),
-        Offer(id: UUID(), direction: "Sell", price: "1.002", pair: "GBP/USDC"),
-        Offer(id: UUID(), direction: "Sell", price: "0.997", pair: "PLN/LUSD"),
+    static let sampleOfferIds = [
+        UUID(),
+        UUID(),
+        UUID()
+    ]
+    static let sampleOffers: [UUID: Offer] = [
+        sampleOfferIds[0]: Offer(id: sampleOfferIds[0], direction: "Buy", price: "1.004", pair: "USD/USDT"),
+        sampleOfferIds[1]: Offer(id: sampleOfferIds[1], direction: "Buy", price: "1.004", pair: "USD/USDT"),
+        sampleOfferIds[2]: Offer(id: sampleOfferIds[2], direction: "Buy", price: "1.004", pair: "USD/USDT"),
     ]
 }
