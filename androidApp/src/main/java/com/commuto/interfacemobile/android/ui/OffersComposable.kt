@@ -11,13 +11,13 @@ import androidx.navigation.navArgument
 import com.commuto.interfacemobile.android.offer.Offer
 
 @Composable
-fun OffersComposable(offers: List<Offer>) {
+fun OffersComposable(viewModel: OffersViewModel) {
 
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "OffersListComposable") {
         composable("OffersListComposable") {
-            OffersListComposable(offers, navController)
+            OffersListComposable(viewModel, navController)
         }
         composable(
             "OfferDetailComposable/{id}",
@@ -31,5 +31,5 @@ fun OffersComposable(offers: List<Offer>) {
 @Preview
 @Composable
 fun PreviewOffersComposable() {
-    OffersComposable(Offer.sampleOffers)
+    OffersComposable(OffersViewModel())
 }

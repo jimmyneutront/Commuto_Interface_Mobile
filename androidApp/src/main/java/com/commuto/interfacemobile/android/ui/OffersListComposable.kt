@@ -17,7 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.offer.Offer
 
 @Composable
-fun OffersListComposable(offers: List<Offer>, navController: NavController) {
+fun OffersListComposable(viewModel: OffersViewModel, navController: NavController) {
     Column {
         Text(
             text = "Offers",
@@ -27,7 +27,7 @@ fun OffersListComposable(offers: List<Offer>, navController: NavController) {
         )
         OffersDividerComposable()
         LazyColumn {
-            items(offers) { offer ->
+            items(viewModel.offers.value) { offer ->
                 Button(
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
                     contentPadding = PaddingValues(10.dp),
@@ -56,5 +56,5 @@ private fun OffersDividerComposable() {
 )
 @Composable
 fun PreviewOffersListComposable() {
-    OffersListComposable(Offer.sampleOffers, rememberNavController())
+    OffersListComposable(OffersViewModel(), rememberNavController())
 }

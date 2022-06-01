@@ -1,6 +1,11 @@
+import org.jetbrains.kotlin.kapt3.base.Kapt.kapt
+
 plugins {
     id("com.android.application")
     kotlin("android")
+    // Hilt dependency injection
+    kotlin("kapt")
+    id("dagger.hilt.android.plugin")
 }
 
 dependencies {
@@ -23,6 +28,13 @@ dependencies {
     // Navigation
     val nav_version = "2.4.2"
     implementation("androidx.navigation:navigation-compose:$nav_version")
+    // Hilt dependency injection
+    implementation("com.google.dagger:hilt-android:2.38.1")
+    configurations.get("kapt").dependencies.add(
+        org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency(
+            "com.google.dagger","hilt-android-compiler", "2.38.1"
+        )
+    )
 }
 
 android {
@@ -52,4 +64,9 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.1.1"
     }
+}
+
+// Allow references to generated code
+kapt {
+    correctErrorTypes = true
 }
