@@ -9,5 +9,12 @@
 import Foundation
 
 class OffersViewModel: ObservableObject {
-    @Published var offersDict = Offer.sampleOffers
+    
+    let offerService: OfferService
+    @Published var offersDict: [UUID: Offer]
+    
+    init(offerService: OfferService) {
+        self.offerService = offerService
+        offersDict = offerService.offers
+    }
 }

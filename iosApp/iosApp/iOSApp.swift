@@ -8,7 +8,12 @@ struct iOSApp: App {
     
     init() {
         container = Container()
-        container.register(OffersViewModel.self) {_ in OffersViewModel() }
+        container.register(OfferService.self) { _ in OfferService() }
+            .inObjectScope(.container)
+        container.register(OffersViewModel.self) { r in
+            OffersViewModel(offerService: r.resolve(OfferService.self)!)
+            
+        }
             .inObjectScope(.container)
     }
     

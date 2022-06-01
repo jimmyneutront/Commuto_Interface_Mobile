@@ -37,6 +37,6 @@ struct OffersView: View {
 
 struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
-        OffersView(offersViewModel: OffersViewModel())
+        OffersView(offersViewModel: OffersViewModel(offerService: OfferService()))
     }
 }
