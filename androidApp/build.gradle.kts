@@ -24,11 +24,11 @@ dependencies {
     // UI Tests
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.1.1")
     // Navigation
-    val nav_version = "2.4.2"
-    implementation("androidx.navigation:navigation-compose:$nav_version")
+    val navVersion = "2.4.2"
+    implementation("androidx.navigation:navigation-compose:$navVersion")
     // Hilt dependency injection
     implementation("com.google.dagger:hilt-android:2.38.1")
-    configurations.get("kapt").dependencies.add(
+    configurations["kapt"].dependencies.add(
         org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency(
             "com.google.dagger","hilt-android-compiler", "2.38.1"
         )
@@ -48,7 +48,7 @@ android {
     compileSdk = 32
     defaultConfig {
         applicationId = "com.example.commuto_interface_mobile.android"
-        minSdk = 21
+        minSdk = 24
         targetSdk = 32
         versionCode = 1
         versionName = "1.0"
@@ -67,6 +67,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+        freeCompilerArgs = freeCompilerArgs + "-opt-in=kotlin.RequiresOptIn"
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.1.1"
