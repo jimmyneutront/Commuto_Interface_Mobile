@@ -13,24 +13,33 @@ import web3swift
 
 class BlockchainService {
     
-    // The number of the last parsed block
-    private var lastParsedBlockNum: BigUInt = BigUInt.zero
+    init() {
+        let web3Instance = web3(provider: Web3HttpProvider(URL(string: "node.address.here:8545")!)!)
+        w3 = web3Instance
+        commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance)
+    }
     
-    private func setLastParsedBlockNumber(_ blockNumber: BigUInt) {
+    // The number of the last parsed block
+    private var lastParsedBlockNum = UInt64(0)
+    
+    private func setLastParsedBlockNumber(_ blockNumber: UInt64) {
         lastParsedBlockNum = blockNumber
     }
     
     // The number of the newest block
-    private var newestBlockNum: BigUInt = BigUInt.zero
+    private var newestBlockNum = UInt64()
     
-    // The number of milliseconds that BlockchainService should wait after parsing a block
-    private var listenInterval: UInt32 = 30
+    // The number of seconds that BlockchainService should wait after parsing a block
+    private var listenInterval: UInt32 = 1
     
     // The thread in which BlockchainService listens to the blockchain
     private var listenThread: Thread?
     
     // Web3Swift web3 instance
-    private var w3 = web3(provider: Web3HttpProvider(URL(string: "http://192.168.1.13:8545")!)!)
+    private var w3: web3
+    
+    // Commuto Swap contract instance
+    private let commutoSwap: web3.web3contract
     
     func listen() {
         listenThread = Thread { [self] in
@@ -44,13 +53,16 @@ class BlockchainService {
     
     func listenLoop() {
         while (true) {
-            newestBlockNum = try! getNewestBlockNumberPromise().wait()
+            newestBlockNum = UInt64(try! getNewestBlockNumberPromise().wait())
             if newestBlockNum > lastParsedBlockNum {
-                let block = try! getBlockPromise(blockNumber: lastParsedBlockNum + BigUInt.init(integerLiteral: 1)).wait()
+                let blockToParseNumber = lastParsedBlockNum + UInt64(1)
+                let block = try! getBlockPromise(blockToParseNumber).wait()
                 parseBlock(block)
-                setLastParsedBlockNumber(block.number)
+                setLastParsedBlockNumber(blockToParseNumber)
+            } else {
+                sleep(listenInterval)
             }
-            sleep(listenInterval)
+
         }
     }
     
@@ -58,13 +70,23 @@ class BlockchainService {
         return w3.eth.getBlockNumberPromise()
     }
     
-    private func getBlockPromise(blockNumber: BigUInt) -> Promise<Block> {
-        return w3.eth.getBlockByNumberPromise(blockNumber, fullTransactions: false)
+    private func getBlockPromise(_ blockNumber: UInt64) -> Promise<Block> {
+        return w3.eth.getBlockByNumberPromise(blockNumber)
     }
     
     private func parseBlock(_ block: Block) {
-        for tx in block.transactions {
-            
+        var events: [EventParserResultProtocol] = []
+        let eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: nil)
+        let eventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter)!
+        events.append(contentsOf: try! eventParser.parseBlock(block))
+        handleEvents(events)
+    }
+    
+    private func handleEvents(_ results: [EventParserResultProtocol]) {
+        for result in results {
+            if result.eventName == "OfferOpened" {
+                print(result.eventName)
+            }
         }
     }
     
