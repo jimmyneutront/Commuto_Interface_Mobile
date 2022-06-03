@@ -19,6 +19,14 @@ class OfferService @Inject constructor() {
         val mostSigBits = offerIdByteBuffer.long
         val leastSigBits = offerIdByteBuffer.long
         val offerId = UUID(mostSigBits, leastSigBits)
-        offers.add(Offer(id = offerId, direction = "Buy", price = "1.004", pair = "USD/USDT"),)
+        offers.add(Offer(id = offerId, direction = "Buy", price = "1.004", pair = "USD/USDT"))
+    }
+
+    fun handleOfferTakenEvent(offerTakenEventResponse: CommutoSwap.OfferTakenEventResponse) {
+        val offerIdByteBuffer = ByteBuffer.wrap(offerTakenEventResponse.offerID)
+        val mostSigBits = offerIdByteBuffer.long
+        val leastSigBits = offerIdByteBuffer.long
+        val offerId = UUID(mostSigBits, leastSigBits)
+        offers.removeIf { it.id == offerId }
     }
 }

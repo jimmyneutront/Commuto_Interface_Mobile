@@ -139,8 +139,10 @@ class BlockchainService @Inject constructor(val offerService: OfferService) {
     }
 
     private fun getEventResponsesFromReceipt(receipt: TransactionReceipt): List<BaseEventResponse> {
-        //TODO: check for more events
-        return commutoSwap.getOfferOpenedEvents(receipt)
+        val eventResponses: MutableList<List<BaseEventResponse>> = mutableListOf()
+        eventResponses.add(commutoSwap.getOfferOpenedEvents(receipt))
+        eventResponses.add(commutoSwap.getOfferTakenEvents(receipt))
+        return eventResponses.flatten()
     }
 
     private fun handleEventResponses(
@@ -150,6 +152,8 @@ class BlockchainService @Inject constructor(val offerService: OfferService) {
         for (eventResponse in eventResponses) {
             if (eventResponse is CommutoSwap.OfferOpenedEventResponse) {
                 offerService.handleNewOffer(eventResponse)
+            } else if (eventResponse is CommutoSwap.OfferTakenEventResponse) {
+                offerService.handleOfferTakenEvent(eventResponse)
             }
         }
     }
