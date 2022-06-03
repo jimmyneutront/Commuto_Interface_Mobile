@@ -27,7 +27,7 @@ fun OffersListComposable(viewModel: OffersViewModel, navController: NavControlle
         )
         OffersDividerComposable()
         LazyColumn {
-            items(viewModel.offers.value) { offer ->
+            items(viewModel.offerService.offers) { offer ->
                 Button(
                     colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
                     contentPadding = PaddingValues(10.dp),

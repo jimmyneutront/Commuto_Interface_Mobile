@@ -14,10 +14,10 @@ import org.web3j.protocol.http.HttpService
 import org.web3j.tx.ChainIdLong
 import java.math.BigInteger
 import javax.inject.Inject
+import javax.inject.Singleton
 
-@Module
-@InstallIn(SingletonComponent::class)
-class BlockchainService @Inject constructor() {
+@Singleton
+class BlockchainService @Inject constructor(val offerService: OfferService) {
 
     // Blockchain credentials
     private val creds: Credentials = Credentials.create(
