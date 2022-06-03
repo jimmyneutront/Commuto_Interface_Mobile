@@ -48,6 +48,7 @@ class BlockchainService {
         listenThread = Thread { [self] in
             listenLoop()
         }
+        listenThread!.start()
     }
     
     func stopListening() {
@@ -80,8 +81,10 @@ class BlockchainService {
     private func parseBlock(_ block: Block) {
         var events: [EventParserResultProtocol] = []
         let eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: nil)
-        let eventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter)!
-        events.append(contentsOf: try! eventParser.parseBlock(block))
+        let offerOpenedEventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter)!
+        let offerTakenEventParser = commutoSwap.createEventParser("OfferTaken", filter: eventFilter)!
+        events.append(contentsOf: try! offerOpenedEventParser.parseBlock(block))
+        events.append(contentsOf: try! offerTakenEventParser.parseBlock(block))
         handleEvents(events)
     }
     
@@ -89,6 +92,8 @@ class BlockchainService {
         for result in results {
             if result.eventName == "OfferOpened" {
                 offerService.handleOfferOpenedEvent(OfferOpenedEvent(result))
+            } else if result.eventName == "OfferTaken" {
+                offerService.handleOfferTakenEvent(OfferTakenEvent(result))
             }
         }
     }
