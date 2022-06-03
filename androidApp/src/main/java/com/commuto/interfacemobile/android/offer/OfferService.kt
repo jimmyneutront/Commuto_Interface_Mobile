@@ -14,7 +14,7 @@ class OfferService @Inject constructor() {
     var offers = mutableStateListOf<Offer>() //Offer.manySampleOffers
     private val scope = CoroutineScope(Dispatchers.Default)
 
-    fun handleNewOffer(offerEventResponse: CommutoSwap.OfferOpenedEventResponse) {
+    fun handleOfferOpenedEvent(offerEventResponse: CommutoSwap.OfferOpenedEventResponse) {
         val offerIdByteBuffer = ByteBuffer.wrap(offerEventResponse.offerID)
         val mostSigBits = offerIdByteBuffer.long
         val leastSigBits = offerIdByteBuffer.long

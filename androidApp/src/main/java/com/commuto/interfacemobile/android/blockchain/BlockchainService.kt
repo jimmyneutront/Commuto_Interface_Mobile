@@ -151,7 +151,7 @@ class BlockchainService @Inject constructor(val offerService: OfferService) {
         val eventResponses = eventResponseLists.flatten()
         for (eventResponse in eventResponses) {
             if (eventResponse is CommutoSwap.OfferOpenedEventResponse) {
-                offerService.handleNewOffer(eventResponse)
+                offerService.handleOfferOpenedEvent(eventResponse)
             } else if (eventResponse is CommutoSwap.OfferTakenEventResponse) {
                 offerService.handleOfferTakenEvent(eventResponse)
             }
