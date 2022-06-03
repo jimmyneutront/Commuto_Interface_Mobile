@@ -1,9 +1,7 @@
 package com.commuto.interfacemobile.android.blockchain
 
 import com.commuto.interfacemobile.android.CommutoSwap
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
+import com.commuto.interfacemobile.android.offer.OfferService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.asDeferred
 import org.web3j.crypto.Credentials
@@ -53,7 +51,7 @@ class BlockchainService @Inject constructor(val offerService: OfferService) {
     private val txManager = CommutoTransactionManager(web3, creds, ChainIdLong.NONE)
 
     // CommutoSwap contract address
-    private val swapAddress = "0x36B22905A1211A55E0d62eF46720172e2b0f24BD"
+    private val swapAddress = "0x687F36336FCAB8747be1D41366A416b41E7E1a96"
 
     // Commuto Swap contract instance
     private val commutoSwap: CommutoSwap = CommutoSwap.load(
@@ -151,7 +149,7 @@ class BlockchainService @Inject constructor(val offerService: OfferService) {
         val eventResponses = eventResponseLists.flatten()
         for (eventResponse in eventResponses) {
             if (eventResponse is CommutoSwap.OfferOpenedEventResponse) {
-                TODO("Pass this event to OfferService")
+                offerService.handleNewOffer(eventResponse)
             }
         }
     }

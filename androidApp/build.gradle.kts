@@ -72,6 +72,9 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.1.1"
     }
+    packagingOptions {
+        resources.excludes.add("META-INF/*")
+    }
 }
 
 // Allow references to generated code
