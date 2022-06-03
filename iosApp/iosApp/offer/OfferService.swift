@@ -7,7 +7,12 @@
 //
 
 import Foundation
+import web3swift
 
 class OfferService {
-    let offers = Offer.sampleOffers
+    var offers = Offer.sampleOffers
+    
+    func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
+        offers[event.id] = Offer(id: event.id, direction: "Buy", price: "1.004", pair: "USD/USDT")
+    }
 }

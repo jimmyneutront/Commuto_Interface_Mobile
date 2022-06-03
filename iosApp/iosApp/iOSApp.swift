@@ -10,6 +10,10 @@ struct iOSApp: App {
         container = Container()
         container.register(OfferService.self) { _ in OfferService() }
             .inObjectScope(.container)
+        container.register(BlockchainService.self) {r in
+            BlockchainService(offerService: r.resolve(OfferService.self)!)
+        }
+            .inObjectScope(.container)
         container.register(OffersViewModel.self) { r in
             OffersViewModel(offerService: r.resolve(OfferService.self)!)
             
@@ -20,6 +24,6 @@ struct iOSApp: App {
 	var body: some Scene {
 		WindowGroup {
             OffersView(offersViewModel: container.resolve(OffersViewModel.self)!)
-		}
+        }
 	}
 }

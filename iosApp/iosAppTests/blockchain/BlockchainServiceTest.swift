@@ -21,7 +21,7 @@ class BlockchainServiceTest: XCTestCase {
     }
     
     func testBlockchainService() {
-        let blockchainService = BlockchainService()
+        let blockchainService = BlockchainService(offerService: OfferService())
         blockchainService.listenLoop()
     }
     

@@ -13,11 +13,14 @@ import web3swift
 
 class BlockchainService {
     
-    init() {
-        let web3Instance = web3(provider: Web3HttpProvider(URL(string: "node.address.here:8545")!)!)
+    init(offerService: OfferService) {
+        self.offerService = offerService
+        let web3Instance = web3(provider: Web3HttpProvider(URL(string: "http://192.168.1.13:8545")!)!)
         w3 = web3Instance
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance)
     }
+    
+    private let offerService: OfferService
     
     // The number of the last parsed block
     private var lastParsedBlockNum = UInt64(0)
@@ -85,7 +88,7 @@ class BlockchainService {
     private func handleEvents(_ results: [EventParserResultProtocol]) {
         for result in results {
             if result.eventName == "OfferOpened" {
-                print(result.eventName)
+                offerService.handleOfferOpenedEvent(OfferOpenedEvent(result))
             }
         }
     }
