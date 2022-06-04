@@ -9,12 +9,19 @@
 import Foundation
 import web3swift
 
-class OfferService: ObservableObject {
-    @Published var offers = Offer.sampleOffers
+class OfferService {
+    
+    var viewModel: OffersViewModel? = nil
+    
     func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
-        offers[event.id] = Offer(id: event.id, direction: "Buy", price: "1.004", pair: "USD/USDT")
+        DispatchQueue.main.sync {
+            viewModel?.offers[event.id] = Offer(id: event.id, direction: "Buy", price: "1.004", pair: "USD/USDT")
+        }
     }
     func handleOfferTakenEvent(_ event: OfferTakenEvent) {
-        offers.removeValue(forKey: event.id)
+        _ = DispatchQueue.main.sync {
+            viewModel?.offers.removeValue(forKey: event.id)
+        }
     }
+    
 }

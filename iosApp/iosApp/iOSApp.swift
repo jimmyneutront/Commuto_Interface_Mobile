@@ -19,12 +19,15 @@ struct iOSApp: App {
             
         }
             .inObjectScope(.container)
+            .initCompleted { r, viewModel in
+                r.resolve(OfferService.self)!.viewModel = viewModel
+            }
         container.resolve(BlockchainService.self)!.listen()
     }
     
 	var body: some Scene {
 		WindowGroup {
-            OffersView(offersViewModel: container.resolve(OffersViewModel.self)!, offerService: container.resolve(OfferService.self)!)
+            OffersView(offersViewModel: container.resolve(OffersViewModel.self)!)
         }
 	}
 }

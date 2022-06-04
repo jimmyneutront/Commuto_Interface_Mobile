@@ -11,12 +11,11 @@ import SwiftUI
 struct OffersView: View {
     
     @ObservedObject var offersViewModel: OffersViewModel
-    @ObservedObject var offerService: OfferService
     
     var body: some View {
         NavigationView {
             List {
-                ForEach(offerService.offers.map { $0.1 }, id: \.id) { offer in
+                ForEach(offersViewModel.offers.map { $0.1 }, id: \.id) { offer in
                     NavigationLink(destination: Text("id: " + offer.id.uuidString)) {
                         OfferCardView(offer: offer)
                     }
@@ -39,6 +38,6 @@ struct OffersView: View {
 
 struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
-        OffersView(offersViewModel: OffersViewModel(offerService: OfferService()), offerService: OfferService())
+        OffersView(offersViewModel: OffersViewModel(offerService: OfferService()))
     }
 }
