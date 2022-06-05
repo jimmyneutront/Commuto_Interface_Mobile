@@ -32,18 +32,6 @@ class P2PServiceTest: XCTestCase {
         wait(for: [syncExpectation], timeout: 60.0)
     }
     
-    func testP2PServicePromise() {
-        let p2pService = P2PService()
-        let syncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
-        firstly {
-            p2pService.syncPromise(fromToken: nil)
-        }.done { response in
-            print(response)
-            syncExpectation.fulfill()
-        }.cauterize()
-        wait(for: [syncExpectation], timeout: 60.0)
-    }
-    
     func testListenLoop() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
         let p2pService = P2PService()

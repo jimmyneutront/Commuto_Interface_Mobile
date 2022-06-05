@@ -6,6 +6,7 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import CryptoKit
 import Foundation
 import MatrixSDK
 import PromiseKit
@@ -23,6 +24,13 @@ class P2PService {
     
     // Matrix REST client
     let mxClient: MXRestClient
+    
+    // The token at the end of the last batch of non-empty messages
+    private var lastNonEmptyBatchToken = ""
+    
+    private func updateLastNonEmptyBatchToken(_ newToken: String) {
+        lastNonEmptyBatchToken = newToken
+    }
     
     // The thread in which P2PService listens to the peer-to-peer network
     private var listenThread: Thread?
@@ -50,9 +58,13 @@ class P2PService {
             if (!isDoingListening) {
                 isDoingListening = true
                 firstly {
-                    roomSyncPromise()
-                }.done { response in
-                    self.isDoingListening = false
+                    self.roomSyncPromise()
+                }.then { [self] response -> Promise<MXResponse<MXPaginationResponse>> in
+                    updateLastNonEmptyBatchToken(response.value!.messages.end)
+                    return getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000)
+                }.done { [self] response in
+                    parseEvents(response.value!.chunk)
+                    isDoingListening = false
                 }.cauterize()
             }
         }
@@ -60,12 +72,102 @@ class P2PService {
         RunLoop.current.add(timer, forMode: .common)
     }
     
-    func roomSyncPromise() -> Promise<MXResponse<MXRoomInitialSync>> {
-        let promise = Promise<MXResponse<MXRoomInitialSync>> { seal in
+    private func roomSyncPromise() -> Promise<MXResponse<MXRoomInitialSync>> {
+        return Promise { seal in
             mxClient.intialSync(ofRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", limit: 5) { response in
                 seal.fulfill(response)
             }
         }
-        return promise
     }
+    
+    private func getMessagesPromise(from: String, limit: UInt?) -> Promise<MXResponse<MXPaginationResponse>> {
+        return Promise { seal in
+            mxClient.messages(forRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", from: from, direction: .backwards, limit: limit, filter: MXRoomEventFilter()) { response in
+                seal.fulfill(response)
+            }
+        }
+    }
+    
+    private func parseEvents(_ events: [MXEvent]) {
+        let messageEvents = events.filter { event in
+            return event.wireType == "m.room.message"
+        }
+        for event in messageEvents {
+            if let publicKey = try? parsePublicKeyAnnouncement(messageString: event.wireContent["body"] as? String) {
+                print(publicKey)
+            }
+        }
+    
+    }
+    
+    private func parsePublicKeyAnnouncement(messageString: String?) throws -> iosApp.PublicKey? {
+        guard messageString != nil else {
+            return nil
+        }
+        //Restore message NSDictionary
+        guard let messageData = messageString!.data(using: String.Encoding.utf8) else {
+            return nil
+        }
+        guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
+            return nil
+        }
+        
+        //Ensure that the message is a Public Key Announcement message
+        guard let messageType = message["msgType"] as? String else {
+            return nil
+        }
+        guard messageType == "pka" else {
+            return nil
+        }
+        
+        //Ensure that the sender is the maker
+        guard let senderInterfaceIdString = message["sender"] as? String, let senderInterfaceId = Data(base64Encoded: senderInterfaceIdString) else {
+            return nil
+        }
+        
+        //Restore payload NSDictionary
+        guard let payloadString = message["payload"] as? String, let payloadData = Data(base64Encoded: payloadString) else {
+            return nil
+        }
+        guard let payload = try JSONSerialization.jsonObject(with: payloadData) as? NSDictionary else {
+            return nil
+        }
+        
+        //Ensure that the offer id in the PKA matches the offer in question
+        guard let messageOfferIdString = payload["offerId"] as? String, let messageOfferId = Data(base64Encoded: messageOfferIdString) else {
+            return nil
+        }
+        
+        //Re-create maker's public key
+        guard let pubKeyString = payload["pubKey"] as? String, let pubKeyBytes = Data(base64Encoded: pubKeyString) else {
+            return nil
+        }
+        guard let publicKey = try? PublicKey(publicKeyBytes: pubKeyBytes) else {
+            return nil
+        }
+        
+        //Check that interface id of maker's key matches value in "sender" field of message
+        guard senderInterfaceId == publicKey.interfaceId else {
+            return nil
+        }
+        
+        //Create hash of payload
+        let payloadDataDigest = SHA256.hash(data: payloadData)
+        var payloadDataHashByteArray = [UInt8]()
+        for byte: UInt8 in payloadDataDigest.makeIterator() {
+            payloadDataHashByteArray.append(byte)
+        }
+        let payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+        
+        //Verify signature
+        guard let signatureString = message["signature"] as? String, let signature = Data(base64Encoded: signatureString) else {
+            return nil
+        }
+        if try publicKey.verifySignature(signedData: payloadDataHash, signature: signature) {
+            return publicKey
+        } else {
+            return nil
+        }
+    }
+    
 }
