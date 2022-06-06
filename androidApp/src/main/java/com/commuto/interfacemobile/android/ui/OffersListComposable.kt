@@ -8,18 +8,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.commuto.interfacemobile.android.R
 import com.commuto.interfacemobile.android.offer.OfferService
 
 @Composable
 fun OffersListComposable(viewModel: OffersViewModel, navController: NavController) {
     Column {
         Text(
-            text = "Offers",
+            text = stringResource(R.string.offers),
             style = MaterialTheme.typography.h2,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 10.dp)
@@ -61,7 +63,7 @@ private fun OffersNoneFoundComposable() {
         modifier = Modifier.fillMaxSize()
     ) {
         Text(
-            text = "No offers found",
+            text = stringResource(R.string.no_offers_found),
             style = MaterialTheme.typography.body1,
             modifier = Modifier.padding(horizontal = 10.dp)
         )
