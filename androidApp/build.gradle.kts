@@ -3,6 +3,7 @@ plugins {
     kotlin("android")
     // Hilt dependency injection
     kotlin("kapt")
+    kotlin("plugin.serialization") version "1.6.10"
     id("dagger.hilt.android.plugin")
 }
 
@@ -52,13 +53,15 @@ dependencies {
     implementation(trixnity("clientserverapi-client"))
     // Ktor engine for Trixnity
     implementation("io.ktor:ktor-client-okhttp:2.0.1")
+    // Serialization Library
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
 }
 
 android {
     compileSdk = 32
     defaultConfig {
         applicationId = "com.example.commuto_interface_mobile.android"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 32
         versionCode = 1
         versionName = "1.0"
