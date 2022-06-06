@@ -21,14 +21,14 @@ struct OffersView: View {
                     }
                 }
             }
-            .navigationTitle("Offers")
+            .navigationTitle(Text("Offers", comment: "Appears as a title above the list of open offers"))
             .toolbar {
                 HStack {
                     Button(action: {}) {
-                        Text("Create")
+                        Text("Create", comment: "The label of the button to create a new offer")
                     }
                     Button(action: {}) {
-                        Text("Filter")
+                        Text("Filter", comment: "The label of the button to filter the offers shown in the open offers list")
                     }
                 }
             }
@@ -38,6 +38,9 @@ struct OffersView: View {
 
 struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
-        OffersView(offersViewModel: OffersViewModel(offerService: OfferService()))
+        Group {
+            OffersView(offersViewModel: OffersViewModel(offerService: OfferService()))
+        }
+        .environment(\.locale, .init(identifier: "de"))
     }
 }

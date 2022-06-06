@@ -13,6 +13,7 @@
 		6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1914DA278B6DC6004A4329 /* MatrixTests.swift */; };
 		6D2682A92756D630008EC6F4 /* KMTypesTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2682A82756D630008EC6F4 /* KMTypesTest.swift */; };
 		6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */; };
+		6D35BC7A284EA9410046A9F8 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6D35BC7C284EA9410046A9F8 /* Localizable.strings */; };
 		6D38E9DF2847DDEF005C1285 /* OfferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D38E9DE2847DDEF005C1285 /* OfferService.swift */; };
 		6D5899AF284A787700DE390A /* BlockchainServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5899AE284A787700DE390A /* BlockchainServiceTest.swift */; };
 		6D6CE882284478040009B815 /* Offer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CE881284478040009B815 /* Offer.swift */; };
@@ -59,6 +60,8 @@
 		6D1914DA278B6DC6004A4329 /* MatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixTests.swift; sourceTree = "<group>"; };
 		6D2682A82756D630008EC6F4 /* KMTypesTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMTypesTest.swift; sourceTree = "<group>"; };
 		6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPlatCryptoCompatibility.swift; sourceTree = "<group>"; };
+		6D35BC7B284EA9410046A9F8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		6D35BC7D284EA9460046A9F8 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		6D38E9DE2847DDEF005C1285 /* OfferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferService.swift; sourceTree = "<group>"; };
 		6D5899AE284A787700DE390A /* BlockchainServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainServiceTest.swift; sourceTree = "<group>"; };
 		6D6CE881284478040009B815 /* Offer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Offer.swift; sourceTree = "<group>"; };
@@ -149,6 +152,7 @@
 				6D6CE884284479490009B815 /* OfferCardView.swift */,
 				6D9D547C28451183007D1093 /* OffersView.swift */,
 				6DA6C04F2847148100F5C1C5 /* OffersViewModel.swift */,
+				6D35BC7C284EA9410046A9F8 /* Localizable.strings */,
 			);
 			path = ui;
 			sourceTree = "<group>";
@@ -388,6 +392,7 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
 			);
 			mainGroup = 7555FF72242A565900829871;
 			productRefGroup = 7555FF7C242A565900829871 /* Products */;
@@ -412,6 +417,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D35BC7A284EA9410046A9F8 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -550,6 +556,18 @@
 			targetProxy = 6DC323CE273A2EB200936686 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		6D35BC7C284EA9410046A9F8 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				6D35BC7B284EA9410046A9F8 /* de */,
+				6D35BC7D284EA9460046A9F8 /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		6DC323D0273A2EB200936686 /* Debug */ = {

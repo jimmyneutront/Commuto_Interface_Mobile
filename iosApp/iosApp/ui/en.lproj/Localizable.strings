@@ -1,0 +1,12 @@
+/* 
+  Localizable.strings
+  iosApp
+
+  Created by jimmyt on 6/6/22.
+  Copyright © 2022 orgName. All rights reserved.
+*/
+
+// Used in OffersView
+"Offers" = "Offers";
+"Create" = "Create";
+"Filter" = "Filter";
