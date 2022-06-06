@@ -6,6 +6,12 @@ plugins {
     id("dagger.hilt.android.plugin")
 }
 
+// Trixnity Matrix SDK
+val trixnityVersion = "2.1.1"
+fun trixnity(module: String, version: String = trixnityVersion) =
+    "net.folivo:trixnity-$module:$version"
+
+
 dependencies {
     //implementation(project(":shared"))
     implementation("com.google.android.material:material:1.6.0")
@@ -42,6 +48,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.2")
     // Kotlin tests
     testImplementation("junit:junit:4.13.2")
+    // Trixnity Matrix SDK
+    implementation(trixnity("clientserverapi-client"))
+    // Ktor engine for Trixnity
+    implementation("io.ktor:ktor-client-okhttp:2.0.1")
 }
 
 android {
