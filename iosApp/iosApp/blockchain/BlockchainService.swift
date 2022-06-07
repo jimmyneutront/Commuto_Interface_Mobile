@@ -13,11 +13,10 @@ import web3swift
 
 class BlockchainService {
     
-    init(offerService: OfferService) {
+    init(offerService: OfferService, web3Instance: web3, commutoSwapAddress: String) {
         self.offerService = offerService
-        let web3Instance = web3(provider: Web3HttpProvider(URL(string: "http://192.168.1.13:8545")!)!)
         w3 = web3Instance
-        commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance)
+        commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
     }
     
     private let offerService: OfferService

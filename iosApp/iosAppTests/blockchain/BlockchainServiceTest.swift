@@ -9,6 +9,7 @@
 import XCTest
 
 @testable import iosApp
+@testable import web3swift
 
 class BlockchainServiceTest: XCTestCase {
     
@@ -21,7 +22,8 @@ class BlockchainServiceTest: XCTestCase {
     }
     
     func testBlockchainService() {
-        let blockchainService = BlockchainService(offerService: OfferService())
+        let w3 = web3(provider: Web3HttpProvider(URL(string: "")!)!)
+        let blockchainService = BlockchainService(offerService: OfferService(), web3Instance: w3, commutoSwapAddress: "")
         blockchainService.listenLoop()
     }
     
