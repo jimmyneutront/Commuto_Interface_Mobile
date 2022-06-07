@@ -9,7 +9,7 @@
 import Foundation
 import web3swift
 
-class OfferService {
+class OfferService: OfferNotifiable {
     
     var viewModel: OffersViewModel? = nil
     

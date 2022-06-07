@@ -13,13 +13,13 @@ import web3swift
 
 class BlockchainService {
     
-    init(offerService: OfferService, web3Instance: web3, commutoSwapAddress: String) {
+    init(offerService: OfferNotifiable, web3Instance: web3, commutoSwapAddress: String) {
         self.offerService = offerService
         w3 = web3Instance
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
     }
     
-    private let offerService: OfferService
+    private let offerService: OfferNotifiable
     
     // The number of the last parsed block
     private var lastParsedBlockNum = UInt64(0)
