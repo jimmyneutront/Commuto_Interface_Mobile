@@ -13,11 +13,14 @@ import web3swift
 
 class BlockchainService {
     
-    init(offerService: OfferNotifiable, web3Instance: web3, commutoSwapAddress: String) {
+    init(errorHandler: BlockchainErrorNotifiable, offerService: OfferNotifiable, web3Instance: web3, commutoSwapAddress: String) {
+        self.errorHandler = errorHandler
         self.offerService = offerService
         w3 = web3Instance
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
     }
+    
+    private let errorHandler: BlockchainErrorNotifiable
     
     private let offerService: OfferNotifiable
     
@@ -37,6 +40,9 @@ class BlockchainService {
     // The thread in which BlockchainService listens to the blockchain
     private var listenThread: Thread?
     
+    // Boolean that controls the listen loop
+    private var runLoop = true
+    
     // Web3Swift web3 instance
     private var w3: web3
     
@@ -45,27 +51,42 @@ class BlockchainService {
     
     func listen() {
         listenThread = Thread { [self] in
+            runLoop = true
             listenLoop()
         }
         listenThread!.start()
     }
     
     func stopListening() {
+        runLoop = false
         listenThread?.cancel()
     }
     
     func listenLoop() {
-        while (true) {
-            newestBlockNum = UInt64(try! getNewestBlockNumberPromise().wait())
-            if newestBlockNum > lastParsedBlockNum {
-                let blockToParseNumber = lastParsedBlockNum + UInt64(1)
-                let block = try! getBlockPromise(blockToParseNumber).wait()
-                parseBlock(block)
-                setLastParsedBlockNumber(blockToParseNumber)
-            } else {
-                sleep(listenInterval)
+        while (runLoop) {
+            do {
+                newestBlockNum = UInt64(try getNewestBlockNumberPromise().wait())
+                if newestBlockNum > lastParsedBlockNum {
+                    let blockToParseNumber = lastParsedBlockNum + UInt64(1)
+                    let block = try getBlockPromise(blockToParseNumber).wait()
+                    try parseBlock(block)
+                    setLastParsedBlockNumber(blockToParseNumber)
+                } else {
+                    sleep(listenInterval)
+                }
+            } catch {
+                errorHandler.handleBlockchainError(error)
+                if (error as NSError).domain == "NSURLErrorDomain" {
+                    stopListening()
+                } else {
+                    switch error {
+                    case Web3Error.connectionError:
+                        stopListening()
+                    default:
+                        break
+                    }
+                }
             }
-
         }
     }
     
@@ -77,13 +98,17 @@ class BlockchainService {
         return w3.eth.getBlockByNumberPromise(blockNumber)
     }
     
-    private func parseBlock(_ block: Block) {
+    private func parseBlock(_ block: Block) throws {
         var events: [EventParserResultProtocol] = []
         let eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: nil)
-        let offerOpenedEventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter)!
-        let offerTakenEventParser = commutoSwap.createEventParser("OfferTaken", filter: eventFilter)!
-        events.append(contentsOf: try! offerOpenedEventParser.parseBlock(block))
-        events.append(contentsOf: try! offerTakenEventParser.parseBlock(block))
+        guard let offerOpenedEventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferOpened event parser")
+        }
+        guard let offerTakenEventParser = commutoSwap.createEventParser("OfferTaken", filter: eventFilter) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferTaken event parser")
+        }
+        events.append(contentsOf: try offerOpenedEventParser.parseBlock(block))
+        events.append(contentsOf: try offerTakenEventParser.parseBlock(block))
         handleEvents(events)
     }
     

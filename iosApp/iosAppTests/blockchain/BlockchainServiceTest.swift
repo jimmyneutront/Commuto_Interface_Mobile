@@ -21,9 +21,29 @@ class BlockchainServiceTest: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
-    func testBlockchainService() {
+    func runBlockchainService() {
         let w3 = web3(provider: Web3HttpProvider(URL(string: "")!)!)
-        let blockchainService = BlockchainService(offerService: OfferService(), web3Instance: w3, commutoSwapAddress: "")
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            init(_ exp: XCTestExpectation) {
+                if !exp.isInverted {
+                    exp.isInverted = true
+                }
+                blockchainErrorInvertedExpectation = exp
+            }
+            let blockchainErrorInvertedExpectation: XCTestExpectation
+            func handleBlockchainError(_ error: Error) {
+                blockchainErrorInvertedExpectation.fulfill()
+            }
+        }
+        let blockchainErrorExpectation = XCTestExpectation(description: "BlockchainService encountered an unexpected error")
+        let errorHandler = TestBlockchainErrorHandler(blockchainErrorExpectation)
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: OfferService(),
+            web3Instance: w3,
+            commutoSwapAddress: ""
+        )
         blockchainService.listenLoop()
     }
     
@@ -59,6 +79,21 @@ class BlockchainServiceTest: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: "")!)!)
         
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            init(_ exp: XCTestExpectation) {
+                if !exp.isInverted {
+                    exp.isInverted = true
+                }
+                blockchainErrorInvertedExpectation = exp
+            }
+            let blockchainErrorInvertedExpectation: XCTestExpectation
+            func handleBlockchainError(_ error: Error) {
+                blockchainErrorInvertedExpectation.fulfill()
+            }
+        }
+        let blockchainErrorExpectation = XCTestExpectation(description: "BlockchainService encountered an unexpected error")
+        let errorHandler = TestBlockchainErrorHandler(blockchainErrorExpectation)
+        
         class TestOfferService: OfferNotifiable {
             init(_ oOE: XCTestExpectation, _ oTE: XCTestExpectation) {
                 offerOpenedExpectation = oOE
@@ -78,8 +113,13 @@ class BlockchainServiceTest: XCTestCase {
         let offerTakenExpectation = XCTestExpectation(description: "handleOfferTakenEvent was called")
         let offerService = TestOfferService(offerOpenedExpectation, offerTakenExpectation)
         
-        let blockchainService = BlockchainService(offerService: offerService, web3Instance: w3, commutoSwapAddress: testingServerResponse!.commutoSwapAddress)
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+        )
         blockchainService.listen()
-        wait(for: [offerOpenedExpectation, offerTakenExpectation], timeout: 60.0)
+        wait(for: [offerOpenedExpectation, offerTakenExpectation, blockchainErrorExpectation], timeout: 60.0)
     }
 }
