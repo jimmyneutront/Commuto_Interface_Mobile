@@ -10,7 +10,6 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -20,7 +19,16 @@ import org.junit.Test
 class BlockchainServiceTest {
     @Test
     fun testBlockchainService() = runBlocking {
-        val blockchainService = BlockchainService(OfferService())
+        class TestBlockchainExceptionHandler : BlockchainExceptionNotifiable {
+            @Throws
+            override fun handleBlockchainException(exception: Exception) {
+                throw exception
+            }
+        }
+        val blockchainService = BlockchainService(
+            TestBlockchainExceptionHandler(),
+            OfferService()
+        )
         blockchainService.listenLoop()
     }
 
@@ -42,6 +50,14 @@ class BlockchainServiceTest {
         val testingServerResponse: TestingServerResponse = runBlocking {
             testingServerClient.get(testingServiceUrl).body()
         }
+
+        class TestBlockchainExceptionHandler : BlockchainExceptionNotifiable {
+            @Throws
+            override fun handleBlockchainException(exception: Exception) {
+                throw exception
+            }
+        }
+        val blockchainExceptionHandler = TestBlockchainExceptionHandler()
 
         class TestOfferService : OfferNotifiable {
             val offerOpenedEventChannel = Channel<CommutoSwap.OfferOpenedEventResponse>()
@@ -67,6 +83,7 @@ class BlockchainServiceTest {
 
         val offerService = TestOfferService()
         val blockchainService = BlockchainService(
+            blockchainExceptionHandler,
             offerService,
             testingServerResponse.commutoSwapAddress
         )
