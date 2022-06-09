@@ -9,6 +9,7 @@
 import XCTest
 
 @testable import iosApp
+@testable import PromiseKit
 @testable import web3swift
 
 class BlockchainServiceTest: XCTestCase {
@@ -51,6 +52,7 @@ class BlockchainServiceTest: XCTestCase {
         
         struct TestingServerResponse: Decodable {
             let commutoSwapAddress: String
+            let offerId: String
         }
         
         let responseExpectation = XCTestExpectation(description: "Get new CommutoSwap contract address from testing server")
@@ -76,8 +78,9 @@ class BlockchainServiceTest: XCTestCase {
         }
         task.resume()
         wait(for: [responseExpectation, invertedExpectation], timeout: 60.0)
+        let expectedOfferId = UUID(uuidString: testingServerResponse!.offerId)!
         
-        let w3 = web3(provider: Web3HttpProvider(URL(string: "")!)!)
+        let w3 = web3(provider: Web3HttpProvider(URL(string: "http://192.168.1.13:8545")!)!)
         
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
             init(_ exp: XCTestExpectation) {
@@ -95,16 +98,25 @@ class BlockchainServiceTest: XCTestCase {
         let errorHandler = TestBlockchainErrorHandler(blockchainErrorExpectation)
         
         class TestOfferService: OfferNotifiable {
-            init(_ oOE: XCTestExpectation, _ oTE: XCTestExpectation) {
+            init(_ oOE: XCTestExpectation,
+                 _ oTE: XCTestExpectation) {
                 offerOpenedExpectation = oOE
                 offerTakenExpectation = oTE
             }
             let offerOpenedExpectation: XCTestExpectation
             let offerTakenExpectation: XCTestExpectation
+            var offerOpenedEventPromise: Promise<OfferOpenedEvent>? = nil
+            var offerTakenEventPromise: Promise<OfferTakenEvent>? = nil
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
+                offerOpenedEventPromise = Promise { seal in
+                    seal.fulfill(event)
+                }
                 offerOpenedExpectation.fulfill()
             }
             func handleOfferTakenEvent(_ event: OfferTakenEvent) {
+                offerTakenEventPromise = Promise { seal in
+                    seal.fulfill(event)
+                }
                 offerTakenExpectation.fulfill()
             }
         }
@@ -121,5 +133,7 @@ class BlockchainServiceTest: XCTestCase {
         )
         blockchainService.listen()
         wait(for: [offerOpenedExpectation, offerTakenExpectation, blockchainErrorExpectation], timeout: 60.0)
+        XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
+        XCTAssertEqual(expectedOfferId, try! offerService.offerTakenEventPromise!.wait().id)
     }
 }
