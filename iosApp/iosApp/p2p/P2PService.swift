@@ -13,11 +13,14 @@ import PromiseKit
 
 class P2PService {
     
-    init() {
-        let creds = MXCredentials(homeServer: "", userId: "", accessToken: "")
+    init(offerService: OfferMessageNotifiable) {
+        self.offerService = offerService
+        let creds = MXCredentials(homeServer: "https://matrix.org", userId: "@jimmyt:matrix.org", accessToken: "")
         self.creds = creds
         self.mxClient =  MXRestClient(credentials: creds, unrecognizedCertificateHandler: nil)
     }
+    
+    private let offerService: OfferMessageNotifiable
     
     // Matrix credentials
     private let creds: MXCredentials
@@ -25,8 +28,8 @@ class P2PService {
     // Matrix REST client
     let mxClient: MXRestClient
     
-    // The token at the end of the last batch of non-empty messages
-    private var lastNonEmptyBatchToken = ""
+    // The token at the end of the last batch of non-empty messages (this token is that from the beginning of the Commuto Interface network test room)
+    private var lastNonEmptyBatchToken = "t1-2607497254_757284974_11441483_1402797642_1423439559_3319206_507472245_4060289024_0"
     
     private func updateLastNonEmptyBatchToken(_ newToken: String) {
         lastNonEmptyBatchToken = newToken
@@ -60,8 +63,9 @@ class P2PService {
                 firstly {
                     self.roomSyncPromise()
                 }.then { [self] response -> Promise<MXResponse<MXPaginationResponse>> in
+                    let messagesPromise = getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000)
                     updateLastNonEmptyBatchToken(response.value!.messages.end)
-                    return getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000)
+                    return messagesPromise
                 }.done { [self] response in
                     parseEvents(response.value!.chunk)
                     isDoingListening = false
@@ -81,9 +85,10 @@ class P2PService {
         }
     }
     
+    // TODO: would be nice to specify "to" parameter here
     private func getMessagesPromise(from: String, limit: UInt?) -> Promise<MXResponse<MXPaginationResponse>> {
         return Promise { seal in
-            mxClient.messages(forRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", from: from, direction: .backwards, limit: limit, filter: MXRoomEventFilter()) { response in
+            mxClient.messages(forRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", from: from, direction: .forwards, limit: limit, filter: MXRoomEventFilter()) { response in
                 seal.fulfill(response)
             }
         }
@@ -94,14 +99,14 @@ class P2PService {
             return event.wireType == "m.room.message"
         }
         for event in messageEvents {
-            if let publicKey = try? parsePublicKeyAnnouncement(messageString: event.wireContent["body"] as? String) {
-                print(publicKey)
+            if let pka = try? parsePublicKeyAnnouncement(messageString: event.wireContent["body"] as? String) {
+                offerService.handlePublicKeyAnnouncement(pka)
             }
         }
     
     }
     
-    private func parsePublicKeyAnnouncement(messageString: String?) throws -> iosApp.PublicKey? {
+    private func parsePublicKeyAnnouncement(messageString: String?) throws -> PublicKeyAnnouncement? {
         guard messageString != nil else {
             return nil
         }
@@ -135,7 +140,7 @@ class P2PService {
         }
         
         //Ensure that the offer id in the PKA matches the offer in question
-        guard let messageOfferIdString = payload["offerId"] as? String, let messageOfferId = Data(base64Encoded: messageOfferIdString) else {
+        guard let messageOfferIdString = payload["offerId"] as? String, let messageOfferIdData = Data(base64Encoded: messageOfferIdString), let messageOfferId = UUID.from(data: messageOfferIdData) else {
             return nil
         }
         
@@ -165,7 +170,7 @@ class P2PService {
             return nil
         }
         if try publicKey.verifySignature(signedData: payloadDataHash, signature: signature) {
-            return publicKey
+            return PublicKeyAnnouncement(offerId: messageOfferId, pubKey: publicKey)
         } else {
             return nil
         }

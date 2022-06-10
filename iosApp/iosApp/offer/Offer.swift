@@ -27,3 +27,17 @@ extension Offer {
         sampleOfferIds[2]: Offer(id: sampleOfferIds[2], direction: "Buy", price: "1.004", pair: "USD/USDT"),
     ]
 }
+
+extension UUID {
+    static func from(data: Data?) -> UUID? {
+        guard data?.count == MemoryLayout<uuid_t>.size else {
+            return nil
+        }
+        return data?.withUnsafeBytes{
+            guard let baseAddress = $0.bindMemory(to: UInt8.self).baseAddress else {
+                return nil
+            }
+            return NSUUID(uuidBytes: baseAddress) as UUID
+        }
+    }
+}

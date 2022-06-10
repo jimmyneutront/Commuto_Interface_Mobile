@@ -6,6 +6,7 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import CryptoKit
 import XCTest
 
 @testable import iosApp
@@ -23,7 +24,10 @@ class P2PServiceTest: XCTestCase {
     }
     
     func testP2PServiceExpectation() {
-        let p2pService = P2PService()
+        class TestOfferService : OfferMessageNotifiable {
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
+        }
+        let p2pService = P2PService(offerService: TestOfferService())
         let syncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
         p2pService.mxClient.sync(fromToken: nil, serverTimeout: 60000, clientTimeout: 60000, setPresence: nil) { response in
             print(response)
@@ -32,10 +36,88 @@ class P2PServiceTest: XCTestCase {
         wait(for: [syncExpectation], timeout: 60.0)
     }
     
-    func testListenLoop() {
+    /*
+     This doesn't actually test anything, but we have to prefix the name with "test" otherwise Xcode won't run it
+     */
+    func test_runListenLoop() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
-        let p2pService = P2PService()
+        class TestOfferService : OfferMessageNotifiable {
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
+        }
+        let p2pService = P2PService(offerService: TestOfferService())
         p2pService.listenLoop()
         wait(for: [unfulfillableExpectation], timeout: 60.0)
+    }
+    
+    func test_runListen() {
+        let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
+        class TestOfferService : OfferMessageNotifiable {
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
+        }
+        let p2pService = P2PService(offerService: TestOfferService())
+        p2pService.listen()
+        wait(for: [unfulfillableExpectation], timeout: 60.0)
+    }
+    
+    func testListen() {
+        
+        let dbService: DBService = DBService()
+        let kmService: KMService = KMService(dbService: dbService)
+        let keyPair = try! kmService.generateKeyPair(storeResult: false)
+        var error: Unmanaged<CFError>?
+        let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error)!
+        
+        let offerId = UUID()
+        let offerIdBytes = offerId.uuid
+        let offerIdData = Data(fromArray: [offerIdBytes.0, offerIdBytes.1, offerIdBytes.2, offerIdBytes.3, offerIdBytes.4, offerIdBytes.5, offerIdBytes.6, offerIdBytes.7, offerIdBytes.8, offerIdBytes.9, offerIdBytes.10, offerIdBytes.11, offerIdBytes.12, offerIdBytes.13, offerIdBytes.14, offerIdBytes.15])
+        
+        class TestOfferService : OfferMessageNotifiable {
+            init(expectedPKA: PublicKeyAnnouncement) {
+                self.expectedPKA = expectedPKA
+            }
+            let expectedPKA: PublicKeyAnnouncement
+            let pkaExpectation = XCTestExpectation(description: "We should find our specific public key announcment while parsing peer-to-peer messages")
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {
+                if message.offerId == expectedPKA.offerId && message.publicKey.interfaceId == expectedPKA.publicKey.interfaceId {
+                    pkaExpectation.fulfill()
+                }
+            }
+        }
+        
+        let expectedPKA = PublicKeyAnnouncement(offerId: offerId, pubKey: try! PublicKey(publicKey: keyPair.publicKey))
+        let offerService = TestOfferService(expectedPKA: expectedPKA)
+        let p2pService = P2PService(offerService: offerService)
+        p2pService.listen()
+        
+        let publicKeyAnnouncementPayload: [String:Any] = [
+            "pubKey": (pubKeyBytes as NSData).base64EncodedString(),
+            "offerId": offerIdData.base64EncodedString()
+        ]
+        let payloadData = try! JSONSerialization.data(withJSONObject: publicKeyAnnouncementPayload)
+        let encodedPayloadString = payloadData.base64EncodedString()
+        
+        var publicKeyAnnouncementMsg: [String:Any] = [
+            "sender": keyPair.interfaceId.base64EncodedString(),
+            "msgType": "pka",
+            "payload": encodedPayloadString,
+            "signature": ""
+        ]
+        let payloadDataDigest = SHA256.hash(data: payloadData)
+        var payloadDataHashByteArray = [UInt8]()
+        for byte: UInt8 in payloadDataDigest.makeIterator() {
+            payloadDataHashByteArray.append(byte)
+        }
+        let payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
+        publicKeyAnnouncementMsg["signature"] = try! keyPair.sign(data: payloadDataHash).base64EncodedString()
+        let publicKeyAnnouncementString = String(decoding: try! JSONSerialization.data(withJSONObject: publicKeyAnnouncementMsg), as: UTF8.self)
+        
+        let sendMsgExpectation = XCTestExpectation(description: "Send public key announcement to Commuto Interface Network Test Room")
+        p2pService.mxClient.sendTextMessage(toRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", text: publicKeyAnnouncementString) { (response) in
+            if case .success(_) = response {
+                sendMsgExpectation.fulfill()
+            }
+        }
+        wait(for: [sendMsgExpectation], timeout: 60.0)
+        wait(for: [offerService.pkaExpectation], timeout: 120.0)
     }
 }
