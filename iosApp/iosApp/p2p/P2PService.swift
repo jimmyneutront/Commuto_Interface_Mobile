@@ -70,6 +70,7 @@ class P2PService {
         }
         timer.tolerance = 0.5
         RunLoop.current.add(timer, forMode: .common)
+        RunLoop.current.run()
     }
     
     private func roomSyncPromise() -> Promise<MXResponse<MXRoomInitialSync>> {
