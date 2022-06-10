@@ -138,34 +138,6 @@ class BlockchainServiceTest: XCTestCase {
     }
     
     func testListenErrorHandling() {
-        
-        struct TestingServerResponse: Decodable {
-            let commutoSwapAddress: String
-        }
-        
-        let responseExpectation = XCTestExpectation(description: "Get fake CommutoSwap contract address from testing server")
-        let invertedExpectation = XCTestExpectation(description: "Something unexpected happened")
-        invertedExpectation.isInverted = true
-        let testingServerUrl = URL(string: "http://localhost:8546/test_blockchainservice_error_handling")!
-        var request = URLRequest(url: testingServerUrl)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        var testingServerResponse: TestingServerResponse? = nil
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print(error)
-                invertedExpectation.fulfill()
-            } else if let data = data {
-                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
-                responseExpectation.fulfill()
-            } else {
-                print(response!)
-                invertedExpectation.fulfill()
-            }
-        }
-        task.resume()
-        wait(for: [responseExpectation, invertedExpectation], timeout: 5.0)
-        
         /*
          Yes, we want to create a web3 instance connected to the Commuto Testing Server, NOT a local Ethereum node. When a web3 instance is created, it attempts to call the "net_version" endpoint of the node it is to connect to. The Commuto Testing Server responds to this Ethereum endpoint in order to trick this web3 instance into thinking it is connected to a real Ethereum node, so that when it calls any other endpoint it throws an error and lets us test BlockchainService's error handling code.
          */
@@ -198,7 +170,7 @@ class BlockchainServiceTest: XCTestCase {
             errorHandler: errorHandler,
             offerService: TestOfferService(),
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: "0x0000000000000000000000000000000000000000"
         )
         blockchainService.listen()
         wait(for: [errorExpectation], timeout: 20.0)
