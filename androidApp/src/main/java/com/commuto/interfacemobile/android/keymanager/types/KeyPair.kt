@@ -83,6 +83,7 @@ class KeyPair {
             .digest(pubKeyToPkcs1Bytes())
     }
 
+    //TODO: make these private but make public getters
     val interfaceId: ByteArray
     val keyPair: JavaSecKeyPair
 

@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.p2p.payloads
+package com.commuto.interfacemobile.android.p2p.serializable.payloads
 
 import kotlinx.serialization.Serializable
 

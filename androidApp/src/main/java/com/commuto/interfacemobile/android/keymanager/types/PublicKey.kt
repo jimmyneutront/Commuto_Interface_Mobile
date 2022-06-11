@@ -23,6 +23,7 @@ import javax.crypto.spec.PSource
  * @property publicKey the java.security.PublicKey object around which this class is wrapped.
  * @property interfaceId the interface id derived from the public key
  */
+//TODO: PublicKey getter
 class PublicKey {
 
     /**
@@ -51,6 +52,7 @@ class PublicKey {
             .digest(toPkcs1Bytes())
     }
 
+    //TODO: make these private but make public getters
     private val interfaceId: ByteArray
     private val publicKey: JavaSecPublicKey
 
