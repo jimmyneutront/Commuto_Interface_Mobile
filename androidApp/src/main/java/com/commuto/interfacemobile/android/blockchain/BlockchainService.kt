@@ -15,6 +15,7 @@ import java.net.ConnectException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// TODO: rename errorHandler as exceptionHandler
 @Singleton
 class BlockchainService (private val errorHandler: BlockchainExceptionNotifiable,
                          private val offerService: OfferNotifiable,
