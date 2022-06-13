@@ -15,9 +15,8 @@ import java.net.ConnectException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// TODO: rename errorHandler as exceptionHandler
 @Singleton
-class BlockchainService (private val errorHandler: BlockchainExceptionNotifiable,
+class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifiable,
                          private val offerService: OfferNotifiable,
                          private val web3: Web3j,
                          commutoSwapAddress: String) {
@@ -94,7 +93,7 @@ class BlockchainService (private val errorHandler: BlockchainExceptionNotifiable
                 }
                 delay(listenInterval)
             } catch (e: Exception) {
-                errorHandler.handleBlockchainException(e)
+                exceptionHandler.handleBlockchainException(e)
                 if (e is ConnectException) {
                     stopListening()
                 }
