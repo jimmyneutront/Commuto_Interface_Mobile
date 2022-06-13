@@ -70,9 +70,9 @@ class MatrixTests: XCTestCase {
         
         let syncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
         mxRestClient.sync(fromToken: nil, serverTimeout: 60000, clientTimeout: 60000, setPresence: nil) { response in
-            let CINRoom = response.value!.rooms.join[CINRoomId]
-            let previousBatch = CINRoom!.timeline.prevBatch!
-            let latestEvents = CINRoom?.timeline.events!
+            let CINRoom = response.value!.rooms!.join![CINRoomId]
+            let previousBatch = CINRoom!.timeline.prevBatch
+            let latestEvents = CINRoom?.timeline.events
             latestNonEmptyBatch = previousBatch
             
             //Search for all three swap-related messages in 10 most recent messages
@@ -211,9 +211,9 @@ class MatrixTests: XCTestCase {
         let syncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
         mxRestClient.sync(fromToken: nil, serverTimeout: 60000, clientTimeout: 60000, setPresence: nil) { response in
             let CINRoomId = "!WEuJJHaRpDvkbSveLu:matrix.org"
-            let CINRoom = response.value!.rooms.join[CINRoomId]
+            let CINRoom = response.value!.rooms!.join![CINRoomId]
             let previousBatch = CINRoom!.timeline.prevBatch
-            let latestEvents = CINRoom?.timeline.events!
+            let latestEvents = CINRoom?.timeline.events
             
             //Search for all three swap-related messages in 10 most recent messages
             for event in latestEvents! {

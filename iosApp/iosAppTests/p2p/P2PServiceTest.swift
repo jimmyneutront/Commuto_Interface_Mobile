@@ -15,8 +15,14 @@ import XCTest
 
 class P2PServiceTest: XCTestCase {
     
+    var creds: MXCredentials?
+    var mxClient: MXRestClient?
+    
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
+        let creds = MXCredentials(homeServer: "https://matrix.org", userId: "@jimmyt:matrix.org", accessToken: "")
+        self.creds = creds
+        self.mxClient = MXRestClient(credentials: creds)
     }
 
     override func tearDownWithError() throws {
@@ -24,10 +30,13 @@ class P2PServiceTest: XCTestCase {
     }
     
     func testP2PServiceExpectation() {
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
         class TestOfferService : OfferMessageNotifiable {
             func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
-        let p2pService = P2PService(offerService: TestOfferService())
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), credentials: self.creds!, mxClient: self.mxClient!)
         let syncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
         p2pService.mxClient.sync(fromToken: nil, serverTimeout: 60000, clientTimeout: 60000, setPresence: nil) { response in
             print(response)
@@ -36,25 +45,46 @@ class P2PServiceTest: XCTestCase {
         wait(for: [syncExpectation], timeout: 60.0)
     }
     
+    func testRoomInitialSync() {
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        class TestOfferService : OfferMessageNotifiable {
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
+        }
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), credentials: self.creds!, mxClient: self.mxClient!)
+        let roomSyncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
+        p2pService.mxClient.intialSync(ofRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", limit: 5) { response in
+            print(response)
+        }
+        wait(for: [roomSyncExpectation], timeout: 60.0)
+    }
+    
     /*
      This doesn't actually test anything, but we have to prefix the name with "test" otherwise Xcode won't run it
      */
     func test_runListenLoop() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
         class TestOfferService : OfferMessageNotifiable {
             func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
-        let p2pService = P2PService(offerService: TestOfferService())
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), credentials: self.creds!, mxClient: self.mxClient!)
         p2pService.listenLoop()
-        wait(for: [unfulfillableExpectation], timeout: 60.0)
+        wait(for: [unfulfillableExpectation], timeout: 10.0)
     }
     
     func test_runListen() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
         class TestOfferService : OfferMessageNotifiable {
             func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
-        let p2pService = P2PService(offerService: TestOfferService())
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), credentials: self.creds!, mxClient: self.mxClient!)
         p2pService.listen()
         wait(for: [unfulfillableExpectation], timeout: 60.0)
     }
@@ -71,6 +101,9 @@ class P2PServiceTest: XCTestCase {
         let offerIdBytes = offerId.uuid
         let offerIdData = Data(fromArray: [offerIdBytes.0, offerIdBytes.1, offerIdBytes.2, offerIdBytes.3, offerIdBytes.4, offerIdBytes.5, offerIdBytes.6, offerIdBytes.7, offerIdBytes.8, offerIdBytes.9, offerIdBytes.10, offerIdBytes.11, offerIdBytes.12, offerIdBytes.13, offerIdBytes.14, offerIdBytes.15])
         
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
         class TestOfferService : OfferMessageNotifiable {
             init(expectedPKA: PublicKeyAnnouncement) {
                 self.expectedPKA = expectedPKA
@@ -86,7 +119,7 @@ class P2PServiceTest: XCTestCase {
         
         let expectedPKA = PublicKeyAnnouncement(offerId: offerId, pubKey: try! PublicKey(publicKey: keyPair.publicKey))
         let offerService = TestOfferService(expectedPKA: expectedPKA)
-        let p2pService = P2PService(offerService: offerService)
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: offerService, credentials: self.creds!, mxClient: self.mxClient!)
         p2pService.listen()
         
         let publicKeyAnnouncementPayload: [String:Any] = [
@@ -119,5 +152,32 @@ class P2PServiceTest: XCTestCase {
         }
         wait(for: [sendMsgExpectation], timeout: 60.0)
         wait(for: [offerService.pkaExpectation], timeout: 120.0)
+    }
+    
+    func testListenErrorHandling() {
+        class TestP2PErrorHandler: P2PErrorNotifiable {
+            init(_ eE: XCTestExpectation) {
+                errorExpectation = eE
+            }
+            var errorPromise: Promise<Error>? = nil
+            let errorExpectation: XCTestExpectation
+            func handleP2PError(_ error: Error) {
+                errorPromise = Promise { seal in
+                    seal.fulfill(error)
+                }
+                errorExpectation.fulfill()
+            }
+        }
+        let errorExpectation = XCTestExpectation(description: "We expect to get an error here")
+        let errorHandler = TestP2PErrorHandler(errorExpectation)
+        class TestOfferService : OfferMessageNotifiable {
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
+        }
+
+        // For some reason, uncommenting the following line causes a EXC_BAD_ACCESS error
+        // self.creds!.accessToken = "not-a-real-token"
+        let p2pService = P2PService(errorHandler: errorHandler, offerService: TestOfferService(), credentials: self.creds!, mxClient: self.mxClient!)
+        p2pService.listen()
+        wait(for: [errorExpectation], timeout: 60.0)
     }
 }

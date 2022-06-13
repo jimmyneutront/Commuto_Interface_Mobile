@@ -13,12 +13,14 @@ import PromiseKit
 
 class P2PService {
     
-    init(offerService: OfferMessageNotifiable) {
+    init(errorHandler: P2PErrorNotifiable, offerService: OfferMessageNotifiable, credentials: MXCredentials, mxClient: MXRestClient) {
+        self.errorHandler = errorHandler
         self.offerService = offerService
-        let creds = MXCredentials(homeServer: "https://matrix.org", userId: "@jimmyt:matrix.org", accessToken: "")
-        self.creds = creds
-        self.mxClient =  MXRestClient(credentials: creds, unrecognizedCertificateHandler: nil)
+        self.creds = credentials
+        self.mxClient =  mxClient
     }
+    
+    private let errorHandler: P2PErrorNotifiable
     
     private let offerService: OfferMessageNotifiable
     
@@ -64,12 +66,24 @@ class P2PService {
                     self.roomSyncPromise()
                 }.then { [self] response -> Promise<MXResponse<MXPaginationResponse>> in
                     let messagesPromise = getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000)
-                    updateLastNonEmptyBatchToken(response.value!.messages.end)
+                    // roomSyncPromise() should reject if the sync call fails, so by this point the response should be successful
+                    guard let token = response.value?.messages.end else {
+                        // TODO: Localize this
+                        throw P2PServiceError.noResponseValue(desc: "Matrix API call response unexpectedly had no value")
+                    }
+                    updateLastNonEmptyBatchToken(token)
                     return messagesPromise
                 }.done { [self] response in
                     parseEvents(response.value!.chunk)
-                    isDoingListening = false
-                }.cauterize()
+                }.catch { [self] error in
+                    // TODO: Stop listening to connection errors once bug is fixed
+                    errorHandler.handleP2PError(error)
+                    if (error as NSError).userInfo["errcode"] as? String == "M_MISSING_TOKEN" {
+                        stopListening()
+                    }
+                }.finally {
+                    self.isDoingListening = false
+                }
             }
         }
         timer.tolerance = 0.5
@@ -77,10 +91,20 @@ class P2PService {
         RunLoop.current.run()
     }
     
+    // TODO: Fix bug where completion closure isn't called in case of connection error
     private func roomSyncPromise() -> Promise<MXResponse<MXRoomInitialSync>> {
         return Promise { seal in
             mxClient.intialSync(ofRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", limit: 5) { response in
-                seal.fulfill(response)
+                if response.isSuccess {
+                    seal.fulfill(response)
+                } else {
+                    guard let error = response.error else {
+                        // TODO: Localize this
+                        seal.reject(P2PServiceError.matrixCallFailureWithNil(desc: "Matrix API call failed but returned no error"))
+                        return
+                    }
+                    seal.reject(error)
+                }
             }
         }
     }
