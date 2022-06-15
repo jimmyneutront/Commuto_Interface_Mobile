@@ -119,14 +119,20 @@ class BlockchainService {
     private func handleEvents(_ results: [EventParserResultProtocol]) throws {
         for result in results {
             if result.eventName == "OfferOpened" {
-                offerService.handleOfferOpenedEvent(OfferOpenedEvent(result))
+                guard let event = OfferOpenedEvent(result) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferOpened event from EventParserResultProtocol")
+                }
+                offerService.handleOfferOpenedEvent(event)
             } else if result.eventName == "OfferCanceled" {
                 guard let event = OfferCanceledEvent(result) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferCanceled event from EventParserResultProtocol")
                 }
                 offerService.handleOfferCanceledEvent(event)
             } else if result.eventName == "OfferTaken" {
-                offerService.handleOfferTakenEvent(OfferTakenEvent(result))
+                guard let event = OfferTakenEvent(result) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferTaken event from EventParserResultProtocol")
+                }
+                offerService.handleOfferTakenEvent(event)
             }
         }
     }

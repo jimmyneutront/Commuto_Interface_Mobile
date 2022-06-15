@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  OfferOpenedEvent.swift
 //  iosApp
 //
 //  Created by jimmyt on 6/3/22.
@@ -12,8 +12,14 @@ import web3swift
 class OfferOpenedEvent {
     let id: UUID
     let interfaceId: Data
-    init(_ result: EventParserResultProtocol) {
-        id = UUID.from(data: result.decodedResult["offerID"]! as? Data)!
-        interfaceId = result.decodedResult["interfaceId"]! as! Data
+    init?(_ result: EventParserResultProtocol) {
+        let resultId = UUID.from(data: result.decodedResult["offerID"] as? Data)
+        let resultInterfaceId = result.decodedResult["takerInterfaceId"] as? Data
+        if (resultId != nil && resultInterfaceId != nil) {
+            id = resultId!
+            interfaceId = resultInterfaceId!
+        } else {
+            return nil
+        }
     }
 }

@@ -9,12 +9,17 @@
 import Foundation
 import web3swift
 
-//TODO: so similar to OfferOpenedEvent so use some abstraction
 class OfferTakenEvent {
     let id: UUID
     let interfaceId: Data
-    init(_ result: EventParserResultProtocol) {
-        id = UUID.from(data: result.decodedResult["offerID"]! as? Data)!
-        interfaceId = result.decodedResult["takerInterfaceId"]! as! Data
+    init?(_ result: EventParserResultProtocol) {
+        let resultId = UUID.from(data: result.decodedResult["offerID"] as? Data)
+        let resultInterfaceId = result.decodedResult["takerInterfaceId"] as? Data
+        if (resultId != nil && resultInterfaceId != nil) {
+            id = resultId!
+            interfaceId = resultInterfaceId!
+        } else {
+            return nil
+        }
     }
 }
