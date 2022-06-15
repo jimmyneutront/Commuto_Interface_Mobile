@@ -14,7 +14,7 @@ class OfferOpenedEvent {
     let interfaceId: Data
     init?(_ result: EventParserResultProtocol) {
         let resultId = UUID.from(data: result.decodedResult["offerID"] as? Data)
-        let resultInterfaceId = result.decodedResult["takerInterfaceId"] as? Data
+        let resultInterfaceId = result.decodedResult["interfaceId"] as? Data
         if (resultId != nil && resultInterfaceId != nil) {
             id = resultId!
             interfaceId = resultInterfaceId!
