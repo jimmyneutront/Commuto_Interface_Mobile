@@ -155,9 +155,11 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
 
     private fun getEventResponsesFromReceipt(receipt: TransactionReceipt): List<BaseEventResponse> {
         val eventResponses: MutableList<List<BaseEventResponse>> = mutableListOf()
-        eventResponses.add(commutoSwap.getOfferOpenedEvents(receipt))
-        eventResponses.add(commutoSwap.getOfferCanceledEvents(receipt))
-        eventResponses.add(commutoSwap.getOfferTakenEvents(receipt))
+        if (receipt.to.equals(commutoSwap.contractAddress, ignoreCase = true)) {
+            eventResponses.add(commutoSwap.getOfferOpenedEvents(receipt))
+            eventResponses.add(commutoSwap.getOfferCanceledEvents(receipt))
+            eventResponses.add(commutoSwap.getOfferTakenEvents(receipt))
+        }
         return eventResponses.flatten()
     }
 
