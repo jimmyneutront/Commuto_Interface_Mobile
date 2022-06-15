@@ -25,19 +25,12 @@ class BlockchainServiceTest: XCTestCase {
     func runBlockchainService() {
         let w3 = web3(provider: Web3HttpProvider(URL(string: "")!)!)
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            init(_ exp: XCTestExpectation) {
-                if !exp.isInverted {
-                    exp.isInverted = true
-                }
-                blockchainErrorInvertedExpectation = exp
-            }
-            let blockchainErrorInvertedExpectation: XCTestExpectation
+            var gotError = false
             func handleBlockchainError(_ error: Error) {
-                blockchainErrorInvertedExpectation.fulfill()
+                gotError = true
             }
         }
-        let blockchainErrorExpectation = XCTestExpectation(description: "BlockchainService encountered an unexpected error")
-        let errorHandler = TestBlockchainErrorHandler(blockchainErrorExpectation)
+        let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
@@ -56,8 +49,6 @@ class BlockchainServiceTest: XCTestCase {
         }
         
         let responseExpectation = XCTestExpectation(description: "Get new CommutoSwap contract address from testing server")
-        let invertedExpectation = XCTestExpectation(description: "Something unexpected happened")
-        invertedExpectation.isInverted = true
         var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_blockchainservice_listen")!
         testingServerUrlComponents.queryItems = [
             URLQueryItem(name: "events", value: "offer-opened-taken")
@@ -66,39 +57,33 @@ class BlockchainServiceTest: XCTestCase {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print(error)
-                invertedExpectation.fulfill()
+                gotError = true
             } else if let data = data {
                 testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
                 responseExpectation.fulfill()
             } else {
                 print(response!)
-                invertedExpectation.fulfill()
+                gotError = true
             }
         }
         task.resume()
-        wait(for: [responseExpectation, invertedExpectation], timeout: 60.0)
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
         let expectedOfferId = UUID(uuidString: testingServerResponse!.offerId)!
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: "http://192.168.0.195:8545")!)!)
         
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            init(_ exp: XCTestExpectation) {
-                if !exp.isInverted {
-                    exp.isInverted = true
-                }
-                blockchainErrorInvertedExpectation = exp
-            }
-            let blockchainErrorInvertedExpectation: XCTestExpectation
+            var gotError = false
             func handleBlockchainError(_ error: Error) {
-                blockchainErrorInvertedExpectation.fulfill()
+                gotError = true
             }
         }
-        let blockchainErrorExpectation = XCTestExpectation(description: "BlockchainService encountered an unexpected error")
-        blockchainErrorExpectation.isInverted = true
-        let errorHandler = TestBlockchainErrorHandler(blockchainErrorExpectation)
+        let errorHandler = TestBlockchainErrorHandler()
         
         class TestOfferService: OfferNotifiable {
             init(_ oOE: XCTestExpectation,
@@ -115,7 +100,9 @@ class BlockchainServiceTest: XCTestCase {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
                 }
-                offerOpenedExpectation.fulfill()
+                DispatchQueue.main.async {
+                    self.offerOpenedExpectation.fulfill()
+                }
             }
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {
                 gotOfferCanceledEvent = true
@@ -124,7 +111,9 @@ class BlockchainServiceTest: XCTestCase {
                 offerTakenEventPromise = Promise { seal in
                     seal.fulfill(event)
                 }
-                offerTakenExpectation.fulfill()
+                DispatchQueue.main.async {
+                    self.offerTakenExpectation.fulfill()
+                }
             }
         }
         
@@ -139,10 +128,11 @@ class BlockchainServiceTest: XCTestCase {
             commutoSwapAddress: testingServerResponse!.commutoSwapAddress
         )
         blockchainService.listen()
-        wait(for: [offerOpenedExpectation, offerTakenExpectation, blockchainErrorExpectation], timeout: 60.0)
+        wait(for: [offerOpenedExpectation, offerTakenExpectation], timeout: 60.0)
         XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
         XCTAssertEqual(expectedOfferId, try! offerService.offerTakenEventPromise!.wait().id)
         XCTAssertTrue(!offerService.gotOfferCanceledEvent)
+        XCTAssertTrue(!errorHandler.gotError)
     }
     
     func testListenOfferOpenedCanceled() {
@@ -204,13 +194,17 @@ class BlockchainServiceTest: XCTestCase {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
                 }
-                offerOpenedExpectation.fulfill()
+                DispatchQueue.main.async {
+                    self.offerOpenedExpectation.fulfill()
+                }
             }
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {
                 offerCanceledEventPromise = Promise { seal in
                     seal.fulfill(event)
                 }
-                offerCanceledExpectation.fulfill()
+                DispatchQueue.main.async {
+                    self.offerCanceledExpectation.fulfill()
+                }
             }
             func handleOfferTakenEvent(_ event: OfferTakenEvent) {
                 gotOfferTakenEvent = true
