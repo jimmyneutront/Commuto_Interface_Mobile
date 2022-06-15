@@ -18,6 +18,11 @@ class OfferService: OfferNotifiable {
             viewModel?.offers[event.id] = Offer(id: event.id, direction: "Buy", price: "1.004", pair: "USD/USDT")
         }
     }
+    func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {
+        _ = DispatchQueue.main.sync {
+            viewModel?.offers.removeValue(forKey: event.id)
+        }
+    }
     func handleOfferTakenEvent(_ event: OfferTakenEvent) {
         _ = DispatchQueue.main.sync {
             viewModel?.offers.removeValue(forKey: event.id)

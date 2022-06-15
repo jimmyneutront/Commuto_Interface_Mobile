@@ -104,18 +104,27 @@ class BlockchainService {
         guard let offerOpenedEventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferOpened event parser")
         }
+        guard let offerCanceledEventParser = commutoSwap.createEventParser("OfferCanceled", filter: eventFilter) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferCanceled event parser")
+        }
         guard let offerTakenEventParser = commutoSwap.createEventParser("OfferTaken", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferTaken event parser")
         }
         events.append(contentsOf: try offerOpenedEventParser.parseBlock(block))
+        events.append(contentsOf: try offerCanceledEventParser.parseBlock(block))
         events.append(contentsOf: try offerTakenEventParser.parseBlock(block))
-        handleEvents(events)
+        try handleEvents(events)
     }
     
-    private func handleEvents(_ results: [EventParserResultProtocol]) {
+    private func handleEvents(_ results: [EventParserResultProtocol]) throws {
         for result in results {
             if result.eventName == "OfferOpened" {
                 offerService.handleOfferOpenedEvent(OfferOpenedEvent(result))
+            } else if result.eventName == "OfferCanceled" {
+                guard let event = OfferCanceledEvent(result) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferCanceled event from EventParserResultProtocol")
+                }
+                offerService.handleOfferCanceledEvent(event)
             } else if result.eventName == "OfferTaken" {
                 offerService.handleOfferTakenEvent(OfferTakenEvent(result))
             }

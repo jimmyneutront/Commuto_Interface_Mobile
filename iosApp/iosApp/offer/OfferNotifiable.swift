@@ -10,6 +10,8 @@ protocol OfferNotifiable {
     
     func handleOfferOpenedEvent(_ event: OfferOpenedEvent)
     
+    func handleOfferCanceledEvent(_ event: OfferCanceledEvent)
+    
     func handleOfferTakenEvent(_ event: OfferTakenEvent)
     
 }
