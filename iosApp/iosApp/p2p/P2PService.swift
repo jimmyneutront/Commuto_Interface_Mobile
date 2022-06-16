@@ -10,25 +10,26 @@ import CryptoKit
 import Foundation
 import MatrixSDK
 import PromiseKit
+import Switrix
 
 class P2PService {
     
-    init(errorHandler: P2PErrorNotifiable, offerService: OfferMessageNotifiable, credentials: MXCredentials, mxClient: MXRestClient) {
+    init(errorHandler: P2PErrorNotifiable, offerService: OfferMessageNotifiable, mxClient: MXRestClient, switrixClient: SwitrixClient) {
         self.errorHandler = errorHandler
         self.offerService = offerService
-        self.creds = credentials
         self.mxClient =  mxClient
+        self.switrixClient = switrixClient
     }
     
     private let errorHandler: P2PErrorNotifiable
     
     private let offerService: OfferMessageNotifiable
     
-    // Matrix credentials
-    private let creds: MXCredentials
-    
     // Matrix REST client
     let mxClient: MXRestClient
+    
+    // Switrix client
+    let switrixClient: SwitrixClient
     
     // The token at the end of the last batch of non-empty messages (this token is that from the beginning of the Commuto Interface network test room)
     private var lastNonEmptyBatchToken = "t1-2607497254_757284974_11441483_1402797642_1423439559_3319206_507472245_4060289024_0"
@@ -63,14 +64,10 @@ class P2PService {
             if (!isDoingListening) {
                 isDoingListening = true
                 firstly {
-                    self.roomSyncPromise()
+                    self.syncPromise()
                 }.then { [self] response -> Promise<MXResponse<MXPaginationResponse>> in
                     let messagesPromise = getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000)
-                    // roomSyncPromise() should reject if the sync call fails, so by this point the response should be successful
-                    guard let token = response.value?.messages.end else {
-                        // TODO: Localize this
-                        throw P2PServiceError.noResponseValue(desc: "Matrix API call response unexpectedly had no value")
-                    }
+                    let token = response.nextBatchToken
                     updateLastNonEmptyBatchToken(token)
                     return messagesPromise
                 }.done { [self] response in
@@ -78,8 +75,14 @@ class P2PService {
                 }.catch { [self] error in
                     // TODO: Stop listening to connection errors once bug is fixed
                     errorHandler.handleP2PError(error)
-                    if (error as NSError).userInfo["errcode"] as? String == "M_MISSING_TOKEN" {
-                        stopListening()
+                    if let switrixError = error as? SwitrixError {
+                        // TODO: stop for missing token errors as well
+                        switch switrixError {
+                        case .unknownToken:
+                            stopListening()
+                        default:
+                            break
+                        }
                     }
                 }.finally {
                     self.isDoingListening = false
@@ -91,18 +94,13 @@ class P2PService {
         RunLoop.current.run()
     }
     
-    // TODO: Fix bug where completion closure isn't called in case of connection error
-    private func roomSyncPromise() -> Promise<MXResponse<MXRoomInitialSync>> {
+    private func syncPromise() -> Promise<SwitrixSyncResponse> {
         return Promise { seal in
-            mxClient.intialSync(ofRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", limit: 5) { response in
-                if response.isSuccess {
-                    seal.fulfill(response)
-                } else {
-                    guard let error = response.error else {
-                        // TODO: Localize this
-                        seal.reject(P2PServiceError.matrixCallFailureWithNil(desc: "Matrix API call failed but returned no error"))
-                        return
-                    }
+            switrixClient.sync.sync { response in
+                switch response {
+                case .success(let switrixSyncResponse):
+                    seal.fulfill(switrixSyncResponse)
+                case .failure(let error):
                     seal.reject(error)
                 }
             }
