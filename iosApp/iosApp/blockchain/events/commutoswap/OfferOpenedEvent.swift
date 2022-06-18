@@ -20,7 +20,7 @@ class OfferOpenedEvent {
     let id: UUID
     let interfaceId: Data
     /**
-     Creates a new `OfferOpenedEvent` given a web3swift `EventParserResultProtocol` containing information from an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event, or returns `nil` of the passed `EventParserResultProtocol` doesn't contain information from an OfferOpened event.
+     Creates a new `OfferOpenedEvent` given a web3swift `EventParserResultProtocol` containing information from an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event, or returns `nil` if the passed `EventParserResultProtocol` doesn't contain information from an OfferOpened event.
      
      - Parameter result: A web3swift `EventParserResultProtocol`, from which this attempts to create an `OfferOpenedEvent`.
      */
