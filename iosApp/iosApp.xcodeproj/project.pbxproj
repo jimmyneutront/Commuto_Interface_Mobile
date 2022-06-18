@@ -14,7 +14,6 @@
 		6D0F4D9F2853C5A10089EE9E /* PublicKeyAnnouncement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F4D9E2853C5A10089EE9E /* PublicKeyAnnouncement.swift */; };
 		6D174E2D27AD7DB800E208F7 /* CINMessageParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */; };
 		6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1914DA278B6DC6004A4329 /* MatrixTests.swift */; };
-		6D19665D28552A5300F3BD46 /* P2PServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D19665C28552A5300F3BD46 /* P2PServiceError.swift */; };
 		6D2682A92756D630008EC6F4 /* KMTypesTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2682A82756D630008EC6F4 /* KMTypesTest.swift */; };
 		6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */; };
 		6D2C34112856CEFC0072AD96 /* P2PErrorNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2C34102856CEFC0072AD96 /* P2PErrorNotifiable.swift */; };
@@ -68,7 +67,6 @@
 		6D0F4D9E2853C5A10089EE9E /* PublicKeyAnnouncement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyAnnouncement.swift; sourceTree = "<group>"; };
 		6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CINMessageParsers.swift; sourceTree = "<group>"; };
 		6D1914DA278B6DC6004A4329 /* MatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixTests.swift; sourceTree = "<group>"; };
-		6D19665C28552A5300F3BD46 /* P2PServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PServiceError.swift; sourceTree = "<group>"; };
 		6D2682A82756D630008EC6F4 /* KMTypesTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KMTypesTest.swift; sourceTree = "<group>"; };
 		6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPlatCryptoCompatibility.swift; sourceTree = "<group>"; };
 		6D2C34102856CEFC0072AD96 /* P2PErrorNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PErrorNotifiable.swift; sourceTree = "<group>"; };
@@ -211,7 +209,6 @@
 			children = (
 				6D0F4D9D2853C55B0089EE9E /* messages */,
 				6D9291C9284BA082002B9E43 /* P2PService.swift */,
-				6D19665C28552A5300F3BD46 /* P2PServiceError.swift */,
 				6D0F4D9B2853C4F60089EE9E /* OfferMessageNotifiable.swift */,
 				6D2C34102856CEFC0072AD96 /* P2PErrorNotifiable.swift */,
 			);
@@ -570,7 +567,6 @@
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
 				6DDFAFA5284AAC52004BC95F /* OfferOpenedEvent.swift in Sources */,
 				6D91C988275432E300D85654 /* PublicKey.swift in Sources */,
-				6D19665D28552A5300F3BD46 /* P2PServiceError.swift in Sources */,
 				6D6CE885284479490009B815 /* OfferCardView.swift in Sources */,
 				6D91C9812753FA2900D85654 /* DBPublicKey.swift in Sources */,
 				6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */,
