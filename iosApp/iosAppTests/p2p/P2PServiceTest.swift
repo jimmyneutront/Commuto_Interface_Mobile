@@ -21,46 +21,13 @@ class P2PServiceTest: XCTestCase {
     
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
-        let creds = MXCredentials(homeServer: "https://matrix.org", userId: "@jimmyt:matrix.org", accessToken: "")
+        let creds = MXCredentials(homeServer: "https://matrix.org", userId: "@jimmyt:matrix.org", accessToken: ProcessInfo.processInfo.environment["MXKY"])
         self.creds = creds
         self.mxClient = MXRestClient(credentials: creds)
     }
 
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-    
-    func testP2PServiceExpectation() {
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
-        class TestOfferService : OfferMessageNotifiable {
-            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
-        }
-        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), mxClient: self.mxClient!, switrixClient: switrixClient)
-        let syncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
-        p2pService.mxClient.sync(fromToken: nil, serverTimeout: 60000, clientTimeout: 60000, setPresence: nil) { response in
-            print(response)
-            syncExpectation.fulfill()
-        }
-        wait(for: [syncExpectation], timeout: 60.0)
-    }
-    
-    func testRoomInitialSync() {
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
-        class TestOfferService : OfferMessageNotifiable {
-            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
-        }
-        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), mxClient: self.mxClient!, switrixClient: switrixClient)
-        let roomSyncExpectation = XCTestExpectation(description: "Sync with Matrix homeserver")
-        p2pService.mxClient.intialSync(ofRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", limit: 5) { response in
-            print(response)
-        }
-        wait(for: [roomSyncExpectation], timeout: 60.0)
     }
     
     /*
@@ -75,7 +42,7 @@ class P2PServiceTest: XCTestCase {
             func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), mxClient: self.mxClient!, switrixClient: switrixClient)
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
         p2pService.listenLoop()
         wait(for: [unfulfillableExpectation], timeout: 10.0)
     }
@@ -89,13 +56,13 @@ class P2PServiceTest: XCTestCase {
             func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), mxClient: self.mxClient!, switrixClient: switrixClient)
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
         p2pService.listen()
         wait(for: [unfulfillableExpectation], timeout: 60.0)
     }
     
     func testListen() {
-        
+        #warning("TODO: migrate to SwitrixSDK in this test")
         let dbService: DBService = DBService()
         let kmService: KMService = KMService(dbService: dbService)
         let keyPair = try! kmService.generateKeyPair(storeResult: false)
@@ -125,7 +92,7 @@ class P2PServiceTest: XCTestCase {
         let expectedPKA = PublicKeyAnnouncement(offerId: offerId, pubKey: try! PublicKey(publicKey: keyPair.publicKey))
         let offerService = TestOfferService(expectedPKA: expectedPKA)
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: offerService, mxClient: self.mxClient!, switrixClient: switrixClient)
+        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: offerService, switrixClient: switrixClient)
         p2pService.listen()
         
         let publicKeyAnnouncementPayload: [String:Any] = [
@@ -151,7 +118,7 @@ class P2PServiceTest: XCTestCase {
         let publicKeyAnnouncementString = String(decoding: try! JSONSerialization.data(withJSONObject: publicKeyAnnouncementMsg), as: UTF8.self)
         
         let sendMsgExpectation = XCTestExpectation(description: "Send public key announcement to Commuto Interface Network Test Room")
-        p2pService.mxClient.sendTextMessage(toRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", text: publicKeyAnnouncementString) { (response) in
+        mxClient!.sendTextMessage(toRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", text: publicKeyAnnouncementString) { (response) in
             if case .success(_) = response {
                 sendMsgExpectation.fulfill()
             }
@@ -183,7 +150,7 @@ class P2PServiceTest: XCTestCase {
         // For some reason, uncommenting the following line causes a EXC_BAD_ACCESS error
         // self.creds!.accessToken = "not-a-real-token"
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
-        let p2pService = P2PService(errorHandler: errorHandler, offerService: TestOfferService(), mxClient: self.mxClient!, switrixClient: switrixClient)
+        let p2pService = P2PService(errorHandler: errorHandler, offerService: TestOfferService(), switrixClient: switrixClient)
         p2pService.listen()
         wait(for: [errorExpectation], timeout: 60.0)
         XCTAssertTrue((try! errorHandler.errorPromise!.wait() as! SwitrixError).errorCode == "M_UNKNOWN_TOKEN")

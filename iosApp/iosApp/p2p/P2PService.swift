@@ -8,25 +8,20 @@
 
 import CryptoKit
 import Foundation
-import MatrixSDK
 import PromiseKit
 import Switrix
 
 class P2PService {
     
-    init(errorHandler: P2PErrorNotifiable, offerService: OfferMessageNotifiable, mxClient: MXRestClient, switrixClient: SwitrixClient) {
+    init(errorHandler: P2PErrorNotifiable, offerService: OfferMessageNotifiable, switrixClient: SwitrixClient) {
         self.errorHandler = errorHandler
         self.offerService = offerService
-        self.mxClient =  mxClient
         self.switrixClient = switrixClient
     }
     
     private let errorHandler: P2PErrorNotifiable
     
     private let offerService: OfferMessageNotifiable
-    
-    // Matrix REST client
-    let mxClient: MXRestClient
     
     // Switrix client
     let switrixClient: SwitrixClient
@@ -65,20 +60,21 @@ class P2PService {
                 isDoingListening = true
                 firstly {
                     self.syncPromise()
-                }.then { [self] response -> Promise<MXResponse<MXPaginationResponse>> in
+                }.then { [self] response -> Promise<SwitrixGetEventsResponse> in
                     let messagesPromise = getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000)
                     let token = response.nextBatchToken
                     updateLastNonEmptyBatchToken(token)
                     return messagesPromise
                 }.done { [self] response in
-                    parseEvents(response.value!.chunk)
+                    parseEvents(response.chunk)
                 }.catch { [self] error in
-                    // TODO: Stop listening to connection errors once bug is fixed
+                    // TODO: Stop listening for connection errors once bug is fixed
                     errorHandler.handleP2PError(error)
                     if let switrixError = error as? SwitrixError {
-                        // TODO: stop for missing token errors as well
                         switch switrixError {
                         case .unknownToken:
+                            stopListening()
+                        case .missingToken:
                             stopListening()
                         default:
                             break
@@ -107,21 +103,26 @@ class P2PService {
         }
     }
     
-    // TODO: would be nice to specify "to" parameter here
-    private func getMessagesPromise(from: String, limit: UInt?) -> Promise<MXResponse<MXPaginationResponse>> {
+    #warning("TODO: would be nice to specify to parameter here")
+    private func getMessagesPromise(from: String, limit: Int) -> Promise<SwitrixGetEventsResponse> {
         return Promise { seal in
-            mxClient.messages(forRoom: "!WEuJJHaRpDvkbSveLu:matrix.org", from: from, direction: .forwards, limit: limit, filter: MXRoomEventFilter()) { response in
-                seal.fulfill(response)
+            switrixClient.events.getEvents(roomId: "!WEuJJHaRpDvkbSveLu:matrix.org", from: from, direction: .forwards, limit: limit) { response in
+                switch response {
+                case .success(let switrixGetEventsResponse):
+                    seal.fulfill(switrixGetEventsResponse)
+                case .failure(let error):
+                    seal.reject(error)
+                }
             }
         }
     }
     
-    private func parseEvents(_ events: [MXEvent]) {
+    private func parseEvents(_ events: [SwitrixClientEvent]) {
         let messageEvents = events.filter { event in
-            return event.wireType == "m.room.message"
+            return event.type == "m.room.message"
         }
         for event in messageEvents {
-            if let pka = try? parsePublicKeyAnnouncement(messageString: event.wireContent["body"] as? String) {
+            if let pka = try? parsePublicKeyAnnouncement(messageString: (event.content as? SwitrixMessageEventContent)?.body) {
                 offerService.handlePublicKeyAnnouncement(pka)
             }
         }
