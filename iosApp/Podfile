@@ -4,11 +4,11 @@ target 'iosApp' do
   #pod 'shared', :path => '../shared'
   pod 'Swinject'
   pod 'CryptoSwift'
-  pod 'MatrixSDK'
   pod 'Switrix', :path => '../../Switrix'
   pod 'SQLite.swift'
   pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git', :branch => 'develop'
   #pod 'trixnity_clientserverapi_client', :path => '../../trixnity/trixnity-clientserverapi/trixnity-clientserverapi-client'
   target :iosAppTests
     pod 'Switrix', :path => '../../Switrix'
+    pod 'MatrixSDK'
 end
