@@ -195,7 +195,7 @@ class P2PService {
             return event.type == "m.room.message"
         }
         for event in messageEvents {
-            if let pka = try? parsePublicKeyAnnouncement(messageString: (event.content as? SwitrixMessageEventContent)?.body) {
+            if let pka = parsePublicKeyAnnouncement(messageString: (event.content as? SwitrixMessageEventContent)?.body) {
                 offerService.handlePublicKeyAnnouncement(pka)
             }
         }
