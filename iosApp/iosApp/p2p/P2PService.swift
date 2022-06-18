@@ -202,7 +202,6 @@ class P2PService {
     
     }
     
-    #warning("This shouldn't throw, it should just return nil")
     /**
      Attempts to restore a PublicKeyAnnouncement from a given string.
      
@@ -210,7 +209,7 @@ class P2PService {
      
      - Returns: A `PublicKeyAnnouncement?` that will be `nil` if `messageString` does not contain a valid public key announcement, and will be non-`nil` if `messageString` does contain a valid public key announcement.
      */
-    private func parsePublicKeyAnnouncement(messageString: String?) throws -> PublicKeyAnnouncement? {
+    private func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement? {
         guard messageString != nil else {
             return nil
         }
@@ -218,7 +217,7 @@ class P2PService {
         guard let messageData = messageString!.data(using: String.Encoding.utf8) else {
             return nil
         }
-        guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
+        guard let message = try? JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
             return nil
         }
         
@@ -239,7 +238,7 @@ class P2PService {
         guard let payloadString = message["payload"] as? String, let payloadData = Data(base64Encoded: payloadString) else {
             return nil
         }
-        guard let payload = try JSONSerialization.jsonObject(with: payloadData) as? NSDictionary else {
+        guard let payload = try? JSONSerialization.jsonObject(with: payloadData) as? NSDictionary else {
             return nil
         }
         
@@ -273,7 +272,7 @@ class P2PService {
         guard let signatureString = message["signature"] as? String, let signature = Data(base64Encoded: signatureString) else {
             return nil
         }
-        if try publicKey.verifySignature(signedData: payloadDataHash, signature: signature) {
+        if (try? publicKey.verifySignature(signedData: payloadDataHash, signature: signature)) != nil {
             return PublicKeyAnnouncement(offerId: messageOfferId, pubKey: publicKey)
         } else {
             return nil
