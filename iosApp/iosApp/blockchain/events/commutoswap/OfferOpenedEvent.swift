@@ -9,9 +9,21 @@
 import Foundation
 import web3swift
 
+/**
+ This class represents an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event, emitted by the CommutoSwap smart contract when a new offer is opened.
+ 
+ -Properties:
+    - id: The ID of the newly opened offer, as a `UUID`.
+    - interfaceId: The [interface ID](https://github.com/jimmyneutront/commuto-whitepaper/blob/d26697ab78a5b00bd9578bbea1f40796cda6f0b3/commuto-whitepaper.txt#L70) belonging to the maker of the newly opened offer, as `Data`.
+ */
 class OfferOpenedEvent {
     let id: UUID
     let interfaceId: Data
+    /**
+     Creates a new `OfferOpenedEvent` given a web3swift `EventParserResultProtocol` containing information from an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event, or returns `nil` of the passed `EventParserResultProtocol` doesn't contain information from an OfferOpened event.
+     
+     - Parameter result: A web3swift `EventParserResultProtocol`, from which this attempts to create an `OfferOpenedEvent`.
+     */
     init?(_ result: EventParserResultProtocol) {
         let resultId = UUID.from(data: result.decodedResult["offerID"] as? Data)
         let resultInterfaceId = result.decodedResult["interfaceId"] as? Data
