@@ -11,10 +11,9 @@ import SQLite
 
 #warning("rename this as DatabaseService")
 /**
- * The Database Service Class.
- *
- * This is responsible for storing data, serving it to Local Services upon request, and accepting
- * Local Services' requests to add and remove data from storage.
+ The Database Service Class.
+ 
+ This is responsible for storing data, serving it to other services upon request, and accepting services' requests to add and remove data from storage.
  */
 class DBService {
     //TODO: Localize error strings
@@ -60,7 +59,7 @@ class DBService {
     }
     
     /**
-     * Creates all necessary tables for proper operations
+     Creates all necessary database tables.
      */
     func createTables() throws {
         try db!.run(keyPairs.create { t in
@@ -82,13 +81,14 @@ class DBService {
     }
     
     /**
-     * Persistently stores a key pair associated with an interface id.
-     *
-     * -Parameter interfaceId: the interface id of the keypair as a byte array encoded to a hexadecimal String
-     * -Parameter publicKey: the public key of the keypair as a byte array encoded to a hexadecimal String
-     * -Parameter privateKey: the private key of the keypair as a byte array encoded to a hexadecimal String
-     *
-     * Used exclusively by KMService
+     Persistently stores a key pair associated with an interface ID.
+     
+     - Note: This function is used exclusively by `KeyManagerService`
+     
+     - Parameters:
+        - interfaceId: The interface ID of the key pair as a byte array encoded to a hexadecimal `String`.
+        - publicKey: The public key of the key pair as a byte array encoded to a hexadecimal `String`.
+        - privateKey: The private key of the key pair as a byte array encoded to a hexadecimal `String`.
      */
     func storeKeyPair(interfaceId interf_id: String, publicKey pub_key: String, privateKey priv_key: String) throws {
         guard try getKeyPair(interfaceId: interf_id) == nil else {
@@ -98,17 +98,13 @@ class DBService {
     }
     
     /**
-     * Retrieves the persistently stored key pair associated with the given interface id, or returns
-     * nil if not present.
-     *
-     * -Parameter interfaceId: the interface id of the keypair as a byte array encoded to a hexadecimal String
-     *
-     * -Returns: KeyPair object (defined in com.commuto.interfacedesktop.db) if key pair is found
-     * -Returns: nil if key pair is not found
-     * -Throws: DBServiceError.unexpectedDbResult if multiple key pairs are found for a given interface id, or if the interface id
-     * returned from the database query does not match the interface id passed to getKeyPair
-     *
-     * Used exclusively by KMService
+     Retrieves the persistently stored key pair associated with the given interface ID, or returns `nil` if no such key pair is present.
+     
+     - Parameter interfaceId: The interface ID of the desired key pair as a byte array encoded to a hexadecimal `String`.
+     
+     - Returns: A `DBKeyPair` if a key pair with the specified interface ID is found, or `nil` if such a key pair is not found.
+     
+     - Throws: A `DBServiceError.inexpectedDbResult` if multiple key pairs are found for a single interface ID, or if the interface ID of the key pair returned from the database query does not match the `interfaceId`.
      */
     func getKeyPair(interfaceId interfId: String) throws -> DBKeyPair? {
         let rowIterator = try db!.prepareRowIterator(keyPairs.filter(interfaceId == interfId))
@@ -126,12 +122,13 @@ class DBService {
     }
     
     /**
-     * Persistently stores a public key associated with an interface id.
-     *
-     * -Parameter interfaceId: the interface id of the keypair as a byte array encoded to a hexadecimal String
-     * -Parameter publicKey: the public key to be stored as a byte array encoded to a hexadecimal String
-     *
-     * -Throws: DBServiceError.unexpectedDbResult if a public key with the given interface id is already found in the database
+     Persistently stores a public key associated with an interface ID.
+     
+     - Parameters:
+        - interfaceId: The interface ID of the key pair as a byte array encoded to a hexadecimal `String`.
+        - publicKey: The public key to be stored, as a byte array encoded to a hexadecimal `String`.
+     
+     - Throws: `DBServiceError.unexpectedDbResult` if a public key with the given interface ID is already found in the database.
      */
     func storePublicKey(interfaceId interf_id: String, publicKey pub_key: String) throws {
         guard try getPublicKey(interfaceId: interf_id) == nil else {
@@ -141,17 +138,13 @@ class DBService {
     }
     
     /**
-     * Retrieves the persistently stored public key associated with the given interface id, or returns
-     * nil if not present
-     *
-     * -Parameter interfaceId: the interface id of the public key as a byte array encoded to a hexadecimal String
-     *
-     * -Returns: PublicKey object if public key is found
-     * -Returns: nil if public key is not found
-     * -Throws: DBServiceError.unexpectedDbResult if multiple public keys are found for a given interface id, or if the interface id
-     * returned from the database query does not match the interface id passed to getPublicKey
-     *
-     * Used exclusively by KMService
+     Retrieves the persistently stored public key associated with the given interface ID, or returns `nil` if not present.
+     
+     - Parameter interfaceId: The interface ID of the public key as a byte array encoded to a hexadecimal `String`.
+     
+     - Returns: A `DBPublicKey` if a public key with the specified interface ID is found, or `nil` if no such public key is found.
+     
+     - Throws: `DBServiceError.unexpectedDbResult` if multiple public keys are found for a given interface ID, or if the interface ID of the public key returned from the database query does not match `interfaceId`.
      */
     func getPublicKey(interfaceId interfId: String) throws -> DBPublicKey? {
         let rowIterator = try db!.prepareRowIterator(publicKeys.filter(interfaceId == interfId))
