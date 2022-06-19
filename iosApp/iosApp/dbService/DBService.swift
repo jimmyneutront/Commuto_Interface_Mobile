@@ -9,6 +9,7 @@
 import Foundation
 import SQLite
 
+#warning("rename this as DatabaseService")
 /**
  * The Database Service Class.
  *
@@ -18,17 +19,43 @@ import SQLite
 class DBService {
     //TODO: Localize error strings
     
+    #warning("rename this as connection")
+    /**
+     The connection to the SQLite database.
+     */
     var db: Connection?
+    /**
+     A database table of `KeyPair`s.
+     */
     let keyPairs = Table("KeyPair")
+    /**
+     A database table of `PublicKey`s.
+     */
     let publicKeys = Table("PublicKey")
     
     //KeyPair and PublicKey table expressions
+    /**
+     A database structure representing an interface ID.
+     */
     let interfaceId = Expression<String>("interfaceId")
+    /**
+     A database structure representing a public key.
+     */
     let publicKey = Expression<String>("publicKey")
+    /**
+     A database structure representing a private key.
+     */
     let privateKey = Expression<String>("privateKey")
     
-    //DBService related errors
+    /**
+     An `Error` thrown by `DatabaseService` functions.
+     */
     enum DBServiceError: Error {
+        /**
+         Thrown when `DatabaseService` receives an unexpected result from a database query.
+         
+         - Parameter message: A `String` that provides information about the context in which the error was thrown.
+         */
         case unexpectedDbResult(message: String)
     }
     
@@ -47,6 +74,9 @@ class DBService {
         })
     }
     
+    /**
+     Creates a new in-memory database, and stores its reference in `DatabaseService`'s `db` property.
+     */
     func connectToDb() throws {
         db = try Connection(.inMemory)
     }
