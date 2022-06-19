@@ -13,7 +13,7 @@ protocol P2PErrorNotifiable {
     /**
      The function called by `P2PService` in order to notify the structure or class adopting this protocol of an `Error` encountered by  `P2PService`.
      
-     - Parameter error: the `Error` encountered by `P2PService` of which  the structure or class adopting this protocol is being notified, and should handle in the implementation of this function.
+     - Parameter error: the `Error` encountered by `P2PService` of which the structure or class adopting this protocol is being notified and should handle in the implementation of this function.
      */
     func handleP2PError(_ error: Error)
 }
