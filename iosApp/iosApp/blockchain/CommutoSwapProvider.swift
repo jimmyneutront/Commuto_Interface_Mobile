@@ -8,7 +8,19 @@
 
 import web3swift
 
+/**
+ A `struct` used to create [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/cca886f724d9069069330b74e7653b781860bff8/CommutoSwap.sol) web3swift `web3.web3contract` instances.
+ */
 struct CommutoSwapProvider {
+    /**
+     Creates a [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/cca886f724d9069069330b74e7653b781860bff8/CommutoSwap.sol) contract object to be used by `BlockchainService` for interacting with the on-chain CommutoSwap contract.
+     
+     - Parameters:
+        - web3Instance: A web3swift `web3` instance that the returned contract object will use to interact with the on-chain CommutoSwap contract.
+        - commutoSwapAddress: The address of the on-chain CommutoSwap contract, as a `String`.
+     
+     - Returns: a web3swift `web3.web3contract` object that is aware of CommutoSwap's Application Binary Interface and can be used to interact with the on-chain CommutoSwap contract.
+     */
     static func provideCommutoSwap(web3Instance: web3, commutoSwapAddress: String) -> web3.web3contract {
         
         let commutoSwapAddress = EthereumAddress(commutoSwapAddress)!
