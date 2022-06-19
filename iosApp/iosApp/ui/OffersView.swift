@@ -8,8 +8,12 @@
 
 import SwiftUI
 
+/**
+ Displays the main list of offers as `OfferCardView`s in a `List` within a `NavigationView`.
+ */
 struct OffersView: View {
     
+    /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
     @ObservedObject var offersViewModel: OffersViewModel
     
     var body: some View {
@@ -36,6 +40,9 @@ struct OffersView: View {
     }
 }
 
+/**
+ Displays a preview of `OfferView` with sample offers, in German.
+ */
 struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
