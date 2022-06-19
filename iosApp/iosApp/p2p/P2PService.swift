@@ -88,7 +88,7 @@ class P2PService {
     }
     
     /**
-     Invalidates the `Timer` resposible for repeatedly starting the listening process and cancels the `listenThread`.
+     Invalidates the `Timer` resposible for repeatedly starting the listening process and cancels `listenThread`.
      */
     func stopListening() {
         timer?.invalidate()
