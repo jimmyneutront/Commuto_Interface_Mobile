@@ -10,7 +10,7 @@ import CryptoKit
 import Foundation
 
 /**
- This is a wrapper around `CryptoKit`'s `SecKey`, with added support for [Commuto Interface IDs](https://github.com/jimmyneutront/commuto-whitepaper/blob/d26697ab78a5b00bd9578bbea1f40796cda6f0b3/commuto-whitepaper.txt#L70). The wrapped keys are a 2048-bit RSA private key and its corresponding public key.
+ This is a wrapper around `CryptoKit`'s `SecKey`, with added support for Commuto Interface IDs. The wrapped keys are a 2048-bit RSA private key and its corresponding public key.
  
  - Properties:
     - interfaceId: The interface ID of this `KeyPair`, which is the SHA-256 hash of the public key encoded in PKCS#1 byte format.
@@ -38,13 +38,13 @@ struct KeyPair {
     }
     
     /**
-     Creates a `KeyPair` using the PKCS#1-formatted `Data`  of a 2048-bit RSA private key and its public key.
+     Creates a `KeyPair` using the PKCS#1-formatted byte representation of a 2048-bit RSA private key and its public key.
      
      - Parameters:
         - publicKeyBytes: the PKCS#1 bytes of the public key of the key pair, as `Data`.
         - privateKeyBytes: the PKCS#1 bytes of the private key of the key pair. as `Data`.
      
-     - Throws: An `Error` if key creation with the given data fails.
+     - Throws: An `Error` if key creation with the given bytes fails.
      */
     init(publicKeyBytes: Data, privateKeyBytes: Data) throws {
         //Restore keys
@@ -74,8 +74,8 @@ struct KeyPair {
      Creates a new `KeyPair` using a 2048-bit RSA private key as a `SecKey` and its public key, also as a `SecKey`.
      
      - Parameters:
-        - publicKey: the public `SecKey` of the key pair.
-        - privateKey: the private `SecKey` of the key pair.
+        - publicKey: The public `SecKey` of the key pair.
+        - privateKey: The private `SecKey` of the key pair.
      
      - Throws: An `Error` if we are not able to get a public key from the given private key.
      */
@@ -175,7 +175,7 @@ struct KeyPair {
     }
     
     /**
-     Encodes this `KeyPair`'s RSA public key to its PKCS#1 formatted byte representation.
+     Encodes this `KeyPair`'s RSA public key to its PKCS#1-formatted byte representation.
      
      - Returns: The PKCS#1 byte representation of this `KeyPair`'s public key, as `Data`.
      
@@ -190,7 +190,7 @@ struct KeyPair {
     }
     
     /**
-     Encodes this `KeyPair`'s 2048-bit RSA private key to its PKCS#1 formatted byte representation.
+     Encodes this `KeyPair`'s 2048-bit RSA private key to its PKCS#-formatted byte representation.
      
      - Returns: The PKCS#1 byte representation of this `KeyPair`'s private key, as `Data`.
      
