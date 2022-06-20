@@ -10,30 +10,44 @@ import CryptoSwift
 import Foundation
 
 /**
- * The SymmetricKey struct contains an AES-256 key, with methods for encrypting and decrypting data using the key.
- *
- * - Parameter keyBytes: the AES-256 key in byte array format
- * - Parameter keyData: the AES-256 key in Data format
+ This is an AES-245 key, with functions for encryption and decryption.
+ 
+ - Properties:
+    - keyBytes: The AES-256 key in byte array format.
+    - keyData: The AES-256 key as `Data`.
  */
 struct SymmetricKey {
     let keyBytes: [UInt8]
     let keyData: Data
     
+    /**
+     Creates a new `SymmetricKey` given an AES-256 key as a byte array.
+     
+     - Parameter key: The AES-256 key to be created, as a byte array.
+     */
     init(key: [UInt8]) {
         self.keyBytes = key
         self.keyData = Data(keyBytes)
     }
     
+    /**
+     Creates a new `SymmetricKey` given an AES-256 key as `Data`.
+     
+     - Parameter key: The AES-256 key to be created, as `Data`.
+     */
     init(key: Data) {
         self.keyData = key
         self.keyBytes = key.bytes
     }
-
+    
     /**
-     * Encrypt data with this key using CBC with PKCS5 padding.
-     *
-     * - Parameter data: the data to be encrypted
-     * - Returns SymmetricallyEncryptedData: the encrypted data along with the initialization vector used.
+     Creates a new initialization vector and then performs AES encryption on the given bytes with this `SymmetricKey` using CBC with PKCS#5 padding.
+     
+     - Parameter data: The bytes to be encrypted, as `Data`.
+     
+     - Returns `SymmetricallyEncryptedData`, containing a new initialization vector and `data` encrypted with this `SymmetricKey` and the new initialization vector.
+     
+     - Throws An `Error` if AES encryption fails.
      */
     func encrypt(data: Data) throws -> SymmetricallyEncryptedData {
         let iv: [UInt8] = AES.randomIV(AES.blockSize)
@@ -41,13 +55,15 @@ struct SymmetricKey {
         let encryptedBytes = try aes.encrypt(data.bytes)
         return SymmetricallyEncryptedData(data: encryptedBytes, iv: iv)
     }
-    
+
     /**
-     * Decrypt data encrypted using CBC with PKCS5 padding with this key.
-     *
-     * - Parameter data: the SymmetricallyEncryptedData object containing both the encrypted data and the initialization
-     * vector used.
-     * - Returns Data: the decrypted data
+     Decrypts `SymmetricallyEncryptedData` that has been AES encrypted with this `SymmetricKey` using CBC with PKCS#5 padding.
+     
+     - Parameter data: The `SymmetricallyEncryptedData` to be decrypted, which contains the cipher data to be decrypted and the initialization vector used to decrypt the cipher data.
+     
+     - Returns: The cipher data in the passed `SymmetricallyEncryptedData` decrypted with the initialization vector in the passed `SymmetricallyEncryptedData` and this `SymmetricKey`, as `Data`.
+     
+     - Throws: An `Error` if AES decryption fails.
      */
     func decrypt(data: SymmetricallyEncryptedData) throws -> Data {
         let aes = try AES(key: keyBytes, blockMode: CBC(iv: data.initializationVectorBytes), padding: .pkcs5)
@@ -55,19 +71,36 @@ struct SymmetricKey {
     }
 }
 
+#warning("TODO: move this to its own file")
 /**
- * The SymmetricallyEncryptedData struct contains symmetrically encrypted data and the initialization vector used to encrypt it.
- *
- * - Parameter encryptedData: symmetrically encrypted data
- * - Parameter iv: the initialization vector used to encrypt encryptedData
+ Contains data encrypted with a `SymmetricKey` and the initialization vector used to encrypt it.
  */
 struct SymmetricallyEncryptedData {
+    /**
+     The encrypted data, as a byte array.
+     */
     let encryptedDataBytes: [UInt8]
+    /**
+     The encrypted data as `Data`.
+     */
     let encryptedData: Data
     
+    /**
+     The initialization vector used to encrypt this `SymmetricallyEncryptedData`, as a byte array.
+     */
     let initializationVectorBytes: [UInt8]
+    /**
+     The initialization vector used to encrypt this `SymmetricallyEncryptedData`, as `Data`.
+     */
     let initializationVectorData: Data
     
+    /**
+     Creates a new `SymmetricallyEncryptedData` given encrypted data and the initialization vector used to encrypt it, both as byte arrays.
+     
+     - Parameters:
+        - data: The encrypted data, as a byte array.
+        - iv: The initialization vector used to encrypt `data`, as a byte array.
+     */
     init(data: [UInt8], iv: [UInt8]) {
         self.encryptedDataBytes = data
         self.initializationVectorBytes = iv
@@ -76,6 +109,13 @@ struct SymmetricallyEncryptedData {
         self.initializationVectorData = Data(initializationVectorBytes)
     }
     
+    /**
+     Creates a new `SymmetricallyEncryptedData` given encrypted data and the initialization vector used to encrypt it, both as `Data`.
+     
+     - Parameters:
+        - data: The encrypted data, as `Data`.
+        - iv: The initialization vector used to encrypt `data`, as `Data`.
+     */
     init(data: Data, iv: Data) {
         self.encryptedDataBytes = data.bytes
         self.initializationVectorBytes = iv.bytes
@@ -86,14 +126,25 @@ struct SymmetricallyEncryptedData {
 }
 
 /**
- Thrown when newSymmetricKey() encounters an error generating random bytes
+ An `Error` thrown when `newSymmetricKey()` encounters an `Error` while generating random bytes.
  */
 enum SymmetricKeyError: Error {
+    #warning("TODO: rename message as desc")
+    /**
+     Thrown when `newSymmetricKey()` encounters an error while generating random bytes to create a new `SymmetricKey`.
+     
+     - Parameter message: A `String` that provides information about the context in which the error was thrown.
+     */
     case creationError(message: String)
 }
 
+#warning("TODO: make this a no-argument constructor of SymmetricKey")
 /**
- * Returns a new SymmetricKey object wrapped around an AES-256 key.
+ Creates a new `SymmetricKey` wrapped around a new AES-256 key.
+ 
+ - Returns: A new `SymmetricKey`.
+ 
+ - Throws: A `SymmetricKeyError.creationError` if key creation fails.
  */
 func newSymmetricKey() throws -> SymmetricKey {
     var keyBytes = [UInt8](repeating: 0, count: 32)

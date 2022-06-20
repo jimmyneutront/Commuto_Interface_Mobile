@@ -9,7 +9,7 @@
 import Foundation
 import SQLite
 
-#warning("rename this as DatabaseService")
+#warning("TODO: rename this as DatabaseService")
 /**
  The Database Service Class.
  
@@ -17,7 +17,7 @@ import SQLite
  */
 class DBService {
     
-    #warning("rename this as connection")
+    #warning("TODO: rename this as connection")
     /**
      The connection to the SQLite database.
      */

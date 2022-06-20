@@ -14,7 +14,7 @@ import Foundation
     - offerId: The ID of the offer corresponding to this `PublicKeyAnnouncement`.
     - pubKey: The `PublicKey` that this `PublicKeyAnnouncement` is announcing
  */
-#warning("Make this a struct")
+#warning("TODO: Make this a struct")
 class PublicKeyAnnouncement {
     let offerId: UUID
     let publicKey: PublicKey
