@@ -16,7 +16,6 @@ import SQLite
  This is responsible for storing data, serving it to other services upon request, and accepting services' requests to add and remove data from storage.
  */
 class DBService {
-    //TODO: Localize error strings
     
     #warning("rename this as connection")
     /**
