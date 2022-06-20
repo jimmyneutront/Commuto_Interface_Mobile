@@ -6,8 +6,6 @@
 //  Copyright © 2021 orgName. All rights reserved.
 //
 
-import Foundation
-
 /**
  Contains the interface ID as Base64 `String` encoded bytes, public key and private key, both in PKCS#1 raw byte format encoded as Base64 `String`s, of a `KeyPair`. This class exists only to assist in the storage and retrieval of key pairs from a database, and therefore `DBKeyPair`s should never be used for any cryptography operations.
  
@@ -37,7 +35,7 @@ public class DBKeyPair: Equatable {
     }
     
     /**
-    Compares two `DBKeyPair`s for equality. Two `DBKeyPair`s are defined as equal when their `interfaceId`, `publicKey` and `privateKey` properties (which are `String`s) are equal.
+    Compares two `DBKeyPair`s for equality. Two `DBKeyPair`s are defined as equal if their `interfaceId`, `publicKey` and `privateKey` properties (which are `String`s) are equal.
      
      - Parameters:
         - lhs: The `DBKeyPair` on the left side of the equality operator.
