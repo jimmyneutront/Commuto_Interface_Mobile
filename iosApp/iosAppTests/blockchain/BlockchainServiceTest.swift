@@ -12,6 +12,9 @@ import XCTest
 @testable import PromiseKit
 @testable import web3swift
 
+/**
+ Tests for `BlockchainService`.
+ */
 class BlockchainServiceTest: XCTestCase {
     
     override func setUpWithError() throws {
@@ -22,6 +25,9 @@ class BlockchainServiceTest: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
+    /**
+     Runs the listen loop in the current thread. This doesn't actually test anything.
+     */
     func runBlockchainService() {
         let w3 = web3(provider: Web3HttpProvider(URL(string: "")!)!)
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
@@ -41,6 +47,9 @@ class BlockchainServiceTest: XCTestCase {
         blockchainService.listenLoop()
     }
     
+    /**
+     Tests `BlockchainService` by ensuring it detects and handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events for a specific offer properly.
+     */
     func testListenOfferOpenedTaken() {
         
         struct TestingServerResponse: Decodable {
@@ -135,6 +144,9 @@ class BlockchainServiceTest: XCTestCase {
         XCTAssertTrue(!errorHandler.gotError)
     }
     
+    /**
+     Tests `BlockchainService` by ensuring it detects and handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events for a specific offer properly.
+     */
     func testListenOfferOpenedCanceled() {
         
         struct TestingServerResponse: Decodable {
@@ -230,6 +242,9 @@ class BlockchainServiceTest: XCTestCase {
         
     }
     
+    /**
+     Tests `BlockchainService`'s error handling logic by ensuring that it handles empty node response errors properly.
+     */
     func testListenErrorHandling() {
         /*
          Yes, we want to create a web3 instance connected to the Commuto Testing Server, NOT a local Ethereum node. When a web3 instance is created, it attempts to call the "net_version" endpoint of the node it is to connect to. The Commuto Testing Server responds to this Ethereum endpoint in order to trick this web3 instance into thinking it is connected to a real Ethereum node, so that when it calls any other endpoint it throws an error and lets us test BlockchainService's error handling code.
