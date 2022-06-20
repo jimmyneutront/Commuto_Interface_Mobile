@@ -1,11 +1,20 @@
 import SwiftUI
 import Swinject
 
+/**
+ The entrypoint for the iOS Commuto Interface SwiftUI App.
+ */
 @main
 struct iOSApp: App {
     
+    /**
+     The Swinject `Container` for dependency injection.
+     */
     let container: Container
     
+    /**
+     Configures `container` and begins necessary background activities.
+     */
     init() {
         container = Container()
         container.register(OfferService.self) { _ in OfferService() }
