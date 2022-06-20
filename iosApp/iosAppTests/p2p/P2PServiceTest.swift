@@ -14,11 +14,23 @@ import XCTest
 @testable import MatrixSDK
 @testable import Switrix
 
+/**
+ Tests for `P2PService`.
+ */
 class P2PServiceTest: XCTestCase {
     
+    /**
+     Matrix credentials for tests that have not yet been migrated to Switrix
+     */
     var creds: MXCredentials?
+    /**
+     Matrix client for tests that have not yet been migrated to Switrix
+     */
     var mxClient: MXRestClient?
     
+    /**
+     Creates credentials and a Matrix client for tests that have not yet been migrated to Switrix
+     */
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
         let creds = MXCredentials(homeServer: "https://matrix.org", userId: "@jimmyt:matrix.org", accessToken: ProcessInfo.processInfo.environment["MXKY"])
@@ -30,8 +42,8 @@ class P2PServiceTest: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
-    /*
-     This doesn't actually test anything, but we have to prefix the name with "test" otherwise Xcode won't run it
+    /**
+     Runs the listen loop in the current thread. This doesn't actually test anything, but we have to prefix the name with "test" otherwise Xcode won't run it.
      */
     func test_runListenLoop() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
@@ -47,6 +59,9 @@ class P2PServiceTest: XCTestCase {
         wait(for: [unfulfillableExpectation], timeout: 10.0)
     }
     
+    /**
+     Runs `P2PService`'s `listen()` function. This doesn't actually test anything, but we have to prefix the name with "test" otherwise Xcode won't run it.
+     */
     func test_runListen() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
         class TestP2PErrorHandler : P2PErrorNotifiable {
@@ -61,6 +76,9 @@ class P2PServiceTest: XCTestCase {
         wait(for: [unfulfillableExpectation], timeout: 60.0)
     }
     
+    /**
+     Tests `P2PService`'s `listen()` function by ensuring it detects and handles public key announcements properly.
+     */
     func testListen() {
         #warning("TODO: migrate to SwitrixSDK in this test")
         let dbService: DBService = DBService()
@@ -127,6 +145,9 @@ class P2PServiceTest: XCTestCase {
         wait(for: [offerService.pkaExpectation], timeout: 120.0)
     }
     
+    /**
+     Tests `P2PService`'s error handling logic by ensuring that it handles unknown token errors properly.
+     */
     func testListenErrorHandling() {
         class TestP2PErrorHandler: P2PErrorNotifiable {
             init(_ eE: XCTestExpectation) {
