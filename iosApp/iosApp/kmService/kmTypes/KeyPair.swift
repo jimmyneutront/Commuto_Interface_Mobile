@@ -10,9 +10,12 @@ import CryptoKit
 import Foundation
 
 /**
- * The KeyPair struct is a wrapper around the SecKey class, with support for Commuto Interface IDs.
- * The wrapped keys shall be a 2048-bit RSA private key and its corresponding public key. interfaceId
- * is the SHA-256 hash of the key pair's public key encoded in PKCS#1 byte format.
+ This is a wrapper around `CryptoKit`'s `SecKey`, with added support for [Commuto Interface IDs](https://github.com/jimmyneutront/commuto-whitepaper/blob/d26697ab78a5b00bd9578bbea1f40796cda6f0b3/commuto-whitepaper.txt#L70). The wrapped keys are a 2048-bit RSA private key and its corresponding public key.
+ 
+ - Properties:
+    - interfaceId: The interface ID of this `KeyPair`, which is the SHA-256 hash of the public key encoded in PKCS#1 byte format.
+    - publicKey: The public RSA key derived from the 2048-bit RSA private key that this `KeyPair` wraps.
+    - privateKey: The 2048-bit RSA private key that this `KeyPair` wraps.
  */
 struct KeyPair {
     
@@ -21,7 +24,9 @@ struct KeyPair {
     let privateKey: SecKey
     
     /**
-     Creates a KeyPair object wrapped around a new 2058-bit RSA private key and its public key
+     Creates a `KeyPair`, which is wrapped around a new 2058-bit RSA private key and its public key.
+     
+     - Throws: An `Error` if key creation fails.
      */
     init() throws {
         let attributes: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048]
@@ -33,10 +38,13 @@ struct KeyPair {
     }
     
     /**
-     Creates a KeyPair object using the PKCS#1 byte formats of a 2048-bit RSA private key and its public key
+     Creates a `KeyPair` using the PKCS#1-formatted `Data`  of a 2048-bit RSA private key and its public key.
+     
      - Parameters:
-        - privateKeyBytes: the PKCS#1 bytes of the private key of the key pair
-        - publicKeyBytes: the PKCS#1 bytes of the public key of the key pair
+        - publicKeyBytes: the PKCS#1 bytes of the public key of the key pair, as `Data`.
+        - privateKeyBytes: the PKCS#1 bytes of the private key of the key pair. as `Data`.
+     
+     - Throws: An `Error` if key creation with the given data fails.
      */
     init(publicKeyBytes: Data, privateKeyBytes: Data) throws {
         //Restore keys
@@ -63,10 +71,13 @@ struct KeyPair {
     }
     
     /**
-    Initializes a new KeyPair object, deriving interfaceId from the passed public key
+     Creates a new `KeyPair` using a 2048-bit RSA private key as a `SecKey` and its public key, also as a `SecKey`.
+     
      - Parameters:
-        - publicKey: the public key of the key pair
-        - privateKey: the private key of the key pair
+        - publicKey: the public `SecKey` of the key pair.
+        - privateKey: the private `SecKey` of the key pair.
+     
+     - Throws: An `Error` if we are not able to get a public key from the given private key.
      */
     init(publicKey: SecKey, privateKey: SecKey) throws {
         self.publicKey = publicKey
@@ -85,10 +96,12 @@ struct KeyPair {
     }
     
     /**
-     * Create a signature from the passed ByteArray using this KeyPair's private key
-     *
-     * - Parameter data: the data to be signed
-     * - Returns Data: the signature
+     Signs bytes using this `KeyPair`'s private key.
+     
+     - Parameter data: The bytes to be signed, as `Data`.
+     - Returns: The signature, as `Data`.
+     
+     - Throws: An `Error` if signature creation fails.
      */
     func sign(data: Data) throws -> Data {
         let algorithm: SecKeyAlgorithm = .rsaSignatureMessagePKCS1v15SHA256
@@ -100,12 +113,15 @@ struct KeyPair {
     }
     
     /**
-     * Verifies a signature using this KeyPair's public key
-     *
-     * - Parameter signedData: the data that was signed
-     * - Parameter signature: the signature
-     *
-     * - Returns Boolean: indicating the success of the verification
+     Verifies a signature using this `KeyPair`'s public key.
+     
+     - Parameters:
+        - signedData: The bytes that have been signed, as `Data`.
+        - signature: The signature of `signedData`.
+     
+     - Returns: A `Bool` indicating whether or not verification was successful.
+     
+     - Throws: An `Error` if we are unable to complete signature verification.
      */
     func verifySignature(signedData: Data, signature: Data) throws -> Bool {
         let algorithm: SecKeyAlgorithm = .rsaSignatureMessagePKCS1v15SHA256
@@ -118,9 +134,13 @@ struct KeyPair {
     }
     
     /**
-     Encrypt the passed data using this KeyPair's RSA public key, using OEAP SHA-256 padding.
-     - Parameter clearData: the data to be encrypted
-     - Returns Data: the encrypted data
+     Encrypts the given bytes using this `KeyPair`'s public key, using OEAP SHA-256 padding.
+     
+     - Parameter clearData: The bytes to be encrypted, as `Data`.
+     
+     - Returns: `clearData` encrypted with this `KeyPair`'s public key.
+     
+     - Throws: An `Error` if encryption fails.
      */
     func encrypt(clearData: Data) throws -> Data {
         let algorithm: SecKeyAlgorithm = .rsaEncryptionOAEPSHA256
@@ -136,6 +156,15 @@ struct KeyPair {
      - Parameter cipherData: the data to be decrypted
      - Returns Data: the decrypted data
      */
+    /**
+     Decrypts the given bytes using this `KeyPair`'s private key, using OEAP SHA-256 padding.
+     
+     - Parameter cipherData: The bytes to be decrypted, as `Data`.
+     
+     - Returns: `cipherData` decrypted with this `KeyPair`'s private key.
+     
+     - Throws: An `Error` if we are unable to complete the decryption process.
+     */
     func decrypt(cipherData: Data) throws -> Data {
         let algorithm: SecKeyAlgorithm = .rsaEncryptionOAEPSHA256
         var error: Unmanaged<CFError>?
@@ -146,8 +175,11 @@ struct KeyPair {
     }
     
     /**
-     Encodes the RSA public key to a PKCS#1 formatted byte representation
-     - Returns Data: the public key's PKCS#1 byte representation
+     Encodes this `KeyPair`'s RSA public key to its PKCS#1 formatted byte representation.
+     
+     - Returns: The PKCS#1 byte representation of this `KeyPair`'s public key, as `Data`.
+     
+     - Throws: An `Error` if encoding fails.
      */
     func pubKeyToPkcs1Bytes() throws -> Data {
         var error: Unmanaged<CFError>?
@@ -158,8 +190,11 @@ struct KeyPair {
     }
     
     /**
-     Encodes the 2048-bit RSA private key to a PKCS#1 formatted byte representation
-     - Returns Data: the public key's PKCS#1 byte representation
+     Encodes this `KeyPair`'s 2048-bit RSA private key to its PKCS#1 formatted byte representation.
+     
+     - Returns: The PKCS#1 byte representation of this `KeyPair`'s private key, as `Data`.
+     
+     - Throws: An `Error` if encoding fails.
      */
     func privKeyToPkcs1Bytes() throws -> Data {
         var error: Unmanaged<CFError>?
