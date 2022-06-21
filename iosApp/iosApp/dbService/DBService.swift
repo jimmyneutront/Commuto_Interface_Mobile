@@ -103,7 +103,7 @@ class DBService {
      
      - Returns: A `DBKeyPair` if a key pair with the specified interface ID is found, or `nil` if such a key pair is not found.
      
-     - Throws: A `DBServiceError.inexpectedDbResult` if multiple key pairs are found for a single interface ID, or if the interface ID of the key pair returned from the database query does not match the `interfaceId`.
+     - Throws: A `DBServiceError.inexpectedDbResult` if multiple key pairs are found for a single interface ID, or if the interface ID of the key pair returned from the database query does not match `interfaceId`.
      */
     func getKeyPair(interfaceId interfId: String) throws -> DBKeyPair? {
         let rowIterator = try db!.prepareRowIterator(keyPairs.filter(interfaceId == interfId))
@@ -137,7 +137,7 @@ class DBService {
     }
     
     /**
-     Retrieves the persistently stored public key associated with the given interface ID, or returns `nil` if not present.
+     Retrieves the persistently stored public key associated with the given interface ID, or returns `nil` if no such key is found.
      
      - Parameter interfaceId: The interface ID of the public key as a byte array encoded to a hexadecimal `String`.
      
