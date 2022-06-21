@@ -24,7 +24,7 @@ class OffersViewModel: ObservableObject {
     }
     
     /**
-     The `OfferService` responsible for adding and removing `Offers` from this class's `offers` dictionary as offers are created, canceled and taken.
+     The `OfferService` responsible for adding and removing `Offer`s from this class's `offers` dictionary as offers are created, canceled and taken.
      */
     let offerService: OfferService
     
