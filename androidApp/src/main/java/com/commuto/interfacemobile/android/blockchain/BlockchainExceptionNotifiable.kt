@@ -9,12 +9,12 @@ import javax.inject.Singleton
 @Singleton
 interface BlockchainExceptionNotifiable {
     /**
-     * The function called by [BlockchainService] in order to notify the class implementing this
+     * The method called by [BlockchainService] in order to notify the class implementing this
      * interface of an [Exception] encountered by [BlockchainService].
      *
      * @param exception The [Exception] encountered by [BlockchainService] of which the class
-     * implementing this interface is being notified, and should handle in the implementation of
-     * this function.
+     * implementing this interface is being notified and should handle in the implementation of this
+     * method.
      */
     fun handleBlockchainException(exception: Exception)
 }
