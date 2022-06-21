@@ -45,7 +45,7 @@ class BlockchainService {
     private let offerService: OfferNotifiable
     
     /**
-     The block number of the last parsed block.
+     The block number of the most recently parsed block.
      */
     private var lastParsedBlockNum = UInt64(0)
     
