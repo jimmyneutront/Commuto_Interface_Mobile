@@ -7,14 +7,15 @@
 //
 
 import Foundation
+
+#warning("TODO: Make this a struct")
 /**
- This represents a Public Key Announcement, as specified in the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/d26697ab78a5b00bd9578bbea1f40796cda6f0b3/commuto-interface-specification.txt#L50).
+ This represents a [Public Key Announcement](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt#L50).
  
  - Properties:
     - offerId: The ID of the offer corresponding to this `PublicKeyAnnouncement`.
     - pubKey: The `PublicKey` that this `PublicKeyAnnouncement` is announcing
  */
-#warning("TODO: Make this a struct")
 class PublicKeyAnnouncement {
     let offerId: UUID
     let publicKey: PublicKey
