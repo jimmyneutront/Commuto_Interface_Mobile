@@ -8,6 +8,12 @@ import com.commuto.interfacemobile.android.ui.OffersViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+/**
+ * The main Activity and entry point into the application.
+ *
+ * @property offersViewModel The [OffersViewModel] that acts as a single source of truth for all
+ * offer-related data.
+ */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
