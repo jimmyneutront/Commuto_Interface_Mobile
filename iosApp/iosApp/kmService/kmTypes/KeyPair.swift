@@ -10,7 +10,7 @@ import CryptoKit
 import Foundation
 
 /**
- This is a wrapper around `CryptoKit`'s `SecKey`, with added support for Commuto Interface IDs. The wrapped keys are a 2048-bit RSA private key and its corresponding public key.
+ This is a wrapper around `CryptoKit`'s `SecKey`, with added support for Commuto Interface IDs. The wrapped keys are a 2048-bit RSA private key and its corresponding public key, and the interface ID of a key pair is the SHA-256 hash of the public key encoded in PKCS#1 byte format.
  
  - Properties:
     - interfaceId: The interface ID of this `KeyPair`, which is the SHA-256 hash of the public key encoded in PKCS#1 byte format.
@@ -41,8 +41,8 @@ struct KeyPair {
      Creates a `KeyPair` using the PKCS#1-formatted byte representation of a 2048-bit RSA private key and its public key.
      
      - Parameters:
-        - publicKeyBytes: the PKCS#1 bytes of the public key of the key pair, as `Data`.
-        - privateKeyBytes: the PKCS#1 bytes of the private key of the key pair. as `Data`.
+        - publicKeyBytes: The PKCS#1 bytes of the public key of the key pair, as `Data`.
+        - privateKeyBytes: The PKCS#1 bytes of the private key of the key pair. as `Data`.
      
      - Throws: An `Error` if key creation with the given bytes fails.
      */
@@ -150,12 +150,7 @@ struct KeyPair {
         }
         return cipherData
     }
-
-    /**
-     Decrypt the passed data using this KeyPair's RSA private key, using OEAP SHA-256 padding.
-     - Parameter cipherData: the data to be decrypted
-     - Returns Data: the decrypted data
-     */
+    
     /**
      Decrypts the given bytes using this `KeyPair`'s private key, using OEAP SHA-256 padding.
      
@@ -190,7 +185,7 @@ struct KeyPair {
     }
     
     /**
-     Encodes this `KeyPair`'s 2048-bit RSA private key to its PKCS#-formatted byte representation.
+     Encodes this `KeyPair`'s 2048-bit RSA private key to its PKCS#1-formatted byte representation.
      
      - Returns: The PKCS#1 byte representation of this `KeyPair`'s private key, as `Data`.
      
