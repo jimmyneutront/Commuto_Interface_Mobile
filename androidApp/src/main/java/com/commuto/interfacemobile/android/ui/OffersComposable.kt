@@ -10,6 +10,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.commuto.interfacemobile.android.offer.OfferService
 
+/**
+ * Contains the [NavHost] for offers and displays the [Composable] to which the user has navigated.
+ *
+ * @param viewModel The OffersViewModel that acts as a single source of truth for all offer-related
+ * data.
+ */
 @Composable
 fun OffersComposable(viewModel: OffersViewModel) {
 
@@ -28,6 +34,9 @@ fun OffersComposable(viewModel: OffersViewModel) {
     }
 }
 
+/**
+ * Displays a preview of [OffersComposable].
+ */
 @Preview
 @Composable
 fun PreviewOffersComposable() {
