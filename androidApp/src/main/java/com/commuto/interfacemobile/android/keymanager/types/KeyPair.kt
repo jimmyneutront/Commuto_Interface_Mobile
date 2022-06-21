@@ -21,14 +21,14 @@ import javax.crypto.spec.OAEPParameterSpec
 import javax.crypto.spec.PSource
 
 /**
- * This is a wrapper around [KeyPair] class with added support for Commuto Interface IDs and several
- * methods for encoding the wrapped public and private key. The wrapped keys are a 2048-bit RSA
- * private key and its corresponding public key, and the interface ID of a key pair is the SHA-256
- * hash of the public key encoded in PKCS#1 byte format.
+ * This is a wrapper around [JavaSecKeyPair] class with added support for Commuto Interface IDs and
+ * several methods for encoding the wrapped public and private key. The wrapped keys are a 2048-bit
+ * RSA private key and its corresponding public key, and the interface ID of a key pair is the
+ * SHA-256 hash of the public key encoded in PKCS#1 byte format.
  *
  * @property interfaceId The interface ID of this [KeyPair], which is the SHA-256 hash of the public
  * key encoded in PKCS#1 byte format.
- * @property keyPair The [java.security.KeyPair] object that this class wraps.
+ * @property keyPair The [JavaSecKeyPair] that this class wraps.
  */
 class KeyPair {
 
@@ -84,7 +84,7 @@ class KeyPair {
     /**
      * Creates a [KeyPair] to wrap an RSA [JavaSecKeyPair]
      *
-     * @param keyPair The JavaSecKeyPair to be wrapped in a [KeyPair].
+     * @param keyPair The [JavaSecKeyPair] to be wrapped in a [KeyPair].
      */
     constructor(keyPair: JavaSecKeyPair) {
         this.keyPair = keyPair
