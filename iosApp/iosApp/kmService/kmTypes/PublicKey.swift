@@ -10,7 +10,7 @@ import CryptoKit
 import Foundation
 
 /**
- This is a wrapper around `CryptoKit`'s `SecKey`, with added support for Commuto Interface IDs. The wrapped key is the public key of a 2048-bit RSA private key.
+ This is a wrapper around `CryptoKit`'s `SecKey`, with added support for Commuto Interface IDs. The wrapped key is the public key of a 2048-bit RSA private key, and the interface ID of a public key is the SHA-256 hash of its PKCS#1 formatted byte representation.
  
  - Properties:
     - interfaceId: The interface ID of this `PublicKey`, which is the SHA-256 hash of its PKCS#1 byte representation.
@@ -108,9 +108,6 @@ struct PublicKey {
         return cipherData
     }
     
-    /**
-     Returns this key's PKCS1# formatted byte representation
-     */
     /**
      Encodes this `PublicKey` to its PKCS#1-formatted byte representation.
      
