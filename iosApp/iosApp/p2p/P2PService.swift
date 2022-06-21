@@ -47,7 +47,6 @@ class P2PService {
      */
     let switrixClient: SwitrixClient
     
-    // The token at the end of the last batch of non-empty messages (this token is that from the beginning of the Commuto Interface network test room)
     /**
      The token at the end of the last batch of non-empty Matrix events that was parsed. (The value specified here is that from the beginning of the Commuto Interface Network testing room.) This should be updated every time a new batch of events is parsed.
      */
@@ -112,6 +111,7 @@ class P2PService {
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] _ in
             if (!isDoingListening) {
                 isDoingListening = true
+                #warning("TODO: we shouldn't call updateLastNonEmptyBatchToken until we are done parsing events")
                 firstly {
                     self.syncPromise()
                 }.then { [self] response -> Promise<SwitrixGetEventsResponse> in
@@ -188,7 +188,7 @@ class P2PService {
     /**
      Parses an array of `SwitrixClientEvent`s, filters out all non-message events, attempts to create message objects from the content bodies of message events, if present, and then passes any created offer-related message objects to `offerService`.
      
-     - Parameter events: a list of `SwitrixClientEvent` objects.
+     - Parameter events: a list of `SwitrixClientEvent`s.
      */
     private func parseEvents(_ events: [SwitrixClientEvent]) {
         let messageEvents = events.filter { event in
@@ -203,7 +203,7 @@ class P2PService {
     }
     
     /**
-     Attempts to restore a PublicKeyAnnouncement from a given string.
+     Attempts to restore a PublicKeyAnnouncement from a given `String`.
      
      - Parameter messageString: A `String?` from which to try to restore a `PublicKeyAnnouncement`. If `messageString` is nil, `parsePublicKeyAnnouncement(...)` immediately returns nil.
      
