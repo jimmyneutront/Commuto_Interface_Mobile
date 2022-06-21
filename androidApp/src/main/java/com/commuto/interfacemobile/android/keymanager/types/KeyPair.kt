@@ -21,17 +21,19 @@ import javax.crypto.spec.OAEPParameterSpec
 import javax.crypto.spec.PSource
 
 /**
- * The KeyPair class is a wrapper around the java.security.KeyPair class, with support for Commuto Interface IDs and
- * several methods for encoding the wrapped public and private key. The wrapped key pair shall be a 2048-bit RSA key
- * pair, and interfaceId is the SHA-256 hash of the key pair's public key encoded in PKCS#1 byte format.
+ * This is a wrapper around [KeyPair] class with added support for Commuto Interface IDs and several
+ * methods for encoding the wrapped public and private key. The wrapped keys are a 2048-bit RSA
+ * private key and its corresponding public key, and the interface ID of a key pair is the SHA-256
+ * hash of the public key encoded in PKCS#1 byte format.
  *
- * @property keyPair the java.security.KeyPair object around which this class is wrapped.
- * @property interfaceId the interface id derived from the key pair's public key
+ * @property interfaceId The interface ID of this [KeyPair], which is the SHA-256 hash of the public
+ * key encoded in PKCS#1 byte format.
+ * @property keyPair The [java.security.KeyPair] object that this class wraps.
  */
 class KeyPair {
 
     /**
-     * Creates a KeyPair object wrapped around a new 2058-bit RSA private key and its public key
+     * Creates a [KeyPair] wrapped around a new 2058-bit RSA private key and its public key
      */
     constructor() {
         val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance("RSA")
@@ -42,20 +44,26 @@ class KeyPair {
     }
 
     /**
-     * Creates a KeyPair object using the PKCS#1 byte formats of a 2048-bit RSA private key and its public key
+     * Creates a [KeyPair] using the PKCS#1-formatted byte representation of a 2048-bit RSA private
+     * key and its public key.
      *
-     * @param publicKeyBytes: the PKCS#1 byte encoded representation of the public key to be restored
-     * @param privateKeyBytes: the PKCS#1 byte encoded representation of the 2048-bit RSA private key to be restored
+     * @param publicKeyBytes The PKCS#1 bytes of the public key of the key pair, as a [ByteArray].
+     * @param privateKeyBytes: The PKCS#1 bytes of the private key of the key pair, as a
+     * [ByteArray].
      */
     constructor(publicKeyBytes: ByteArray, privateKeyBytes: ByteArray) {
         //Restore public key
-        val algorithmIdentifier = AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, DERNull.INSTANCE)
+        val algorithmIdentifier = AlgorithmIdentifier(
+            PKCSObjectIdentifiers.rsaEncryption,
+            DERNull.INSTANCE
+        )
         val pubKeyX509Bytes = SubjectPublicKeyInfo(algorithmIdentifier, publicKeyBytes).encoded
         val publicKey: PublicKey = KeyFactory.getInstance("RSA")
             .generatePublic(X509EncodedKeySpec(pubKeyX509Bytes))
 
         //Restore private key
-        val rsaPrivKey: RSAPrivateKey = RSAPrivateKey.getInstance(ASN1Sequence.fromByteArray(privateKeyBytes))
+        val rsaPrivKey: RSAPrivateKey = RSAPrivateKey
+            .getInstance(ASN1Sequence.fromByteArray(privateKeyBytes))
         val privKeySpec: RSAPrivateKeySpec = RSAPrivateCrtKeySpec(rsaPrivKey.modulus,
             rsaPrivKey.publicExponent,
             rsaPrivKey.privateExponent,
@@ -65,7 +73,8 @@ class KeyPair {
             rsaPrivKey.exponent2,
             rsaPrivKey.coefficient
         )
-        val privateKey: PrivateKey = KeyFactory.getInstance("RSA").generatePrivate(privKeySpec)
+        val privateKey: PrivateKey = KeyFactory.getInstance("RSA")
+            .generatePrivate(privKeySpec)
 
         this.keyPair = JavaSecKeyPair(publicKey, privateKey)
         this.interfaceId = MessageDigest.getInstance("SHA-256")
@@ -73,9 +82,9 @@ class KeyPair {
     }
 
     /**
-     * Creates a KeyPair object using an RSA JavaSecKeyPair
+     * Creates a [KeyPair] to wrap an RSA [JavaSecKeyPair]
      *
-     * @param keyPair: the JavaSecKeyPair to be wrapped in a KeyPair
+     * @param keyPair The JavaSecKeyPair to be wrapped in a [KeyPair].
      */
     constructor(keyPair: JavaSecKeyPair) {
         this.keyPair = keyPair
@@ -88,10 +97,11 @@ class KeyPair {
     val keyPair: JavaSecKeyPair
 
     /**
-     * Create a signature from the passed ByteArray using this KeyPair's private key
+     * Signs a [ByteArray] using this [KeyPair]'s private key.
      *
-     * @param data: the data to be signed
-     * @return ByteArray: the signature
+     * @param data The [ByteArray] to be signed.
+     *
+     * @return The signature, as a [ByteArray].
      */
     fun sign(data: ByteArray): ByteArray {
         val signatureObj = Signature.getInstance("SHA256withRSA")
@@ -101,12 +111,12 @@ class KeyPair {
     }
 
     /**
-     * Verifies a signature using this KeyPair's public key
+     * Verifies a signature using this [KeyPair]'s public key.
      *
-     * @param signedData: the data that was signed
-     * @param signature: the signature
+     * @param signedData The [ByteArray] that has been signed.
+     * @param signature The signature of [signedData].
      *
-     * @return Boolean: indicating the success of the verification
+     * @return A [Boolean] indicating whether or not verification was successful.
      */
     fun verifySignature(signedData: ByteArray, signature: ByteArray): Boolean {
         val signatureObj = Signature.getInstance("SHA256withRSA")
@@ -116,35 +126,47 @@ class KeyPair {
     }
 
     /**
-     * Encrypt the passed data using this KeyPair's RSA public key, using OEAP SHA-256 padding.
+     * Encrypts the given bytes using this [KeyPair]'s public key, using OEAP SHA-256 padding.
      *
-     * @param clearData: the data to be encrypted
-     * @return ByteArray: the encrypted data
+     * @param clearData The bytes to be encrypted, as a [ByteArray].
+     *
+     * @return [clearData] encrypted with this [KeyPair]'s public key.
      */
     fun encrypt(clearData: ByteArray): ByteArray {
         val encryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
-        val oaepParams = OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec("SHA-256"), PSource.PSpecified.DEFAULT)
+        val oaepParams = OAEPParameterSpec(
+            "SHA-256",
+            "MGF1",
+            MGF1ParameterSpec("SHA-256"),
+            PSource.PSpecified.DEFAULT
+        )
         encryptCipher.init(Cipher.ENCRYPT_MODE, this.keyPair.public, oaepParams)
         return encryptCipher.doFinal(clearData)
     }
 
     /**
-     * Decrypt the passed data using this KeyPair's RSA private key, using OEAP SHA-256 padding.
+     * Decrypts the given bytes using this [KeyPair]'s private key, using OEAP SHA-256 padding.
      *
-     * @param cipherData: the data to be decrypted
-     * @return ByteArray: the decrypted data
+     * @param cipherData The bytes to be decrypted, as a [ByteArray].
+     *
+     * @return [cipherData] decrypted with this [KeyPair]'s private key.
      */
     fun decrypt(cipherData: ByteArray): ByteArray {
         val encryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
-        val oaepParams = OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec("SHA-256"), PSource.PSpecified.DEFAULT)
+        val oaepParams = OAEPParameterSpec(
+            "SHA-256",
+            "MGF1",
+            MGF1ParameterSpec("SHA-256"),
+            PSource.PSpecified.DEFAULT
+        )
         encryptCipher.init(Cipher.DECRYPT_MODE, this.keyPair.private, oaepParams)
         return encryptCipher.doFinal(cipherData)
     }
 
     /**
-     * Encodes the RSA PublicKey to a PKCS#1 formatted byte representation
+     * Encodes this [KeyPair]'s RSA public key to its PKCS#1-formatted byte representation.
      *
-     * @return a ByteArray containing the PKCS#1 representation of the KeyPair's RSA public key
+     * @return The PKCS#1 byte representation of this [KeyPair]'s public key, as a [ByteArray].
      */
     fun pubKeyToPkcs1Bytes(): ByteArray {
         val pubKeyX509Bytes = this.keyPair.public.encoded
@@ -155,9 +177,10 @@ class KeyPair {
     }
 
     /**
-     * Encodes the 2048-bit RSA PrivateKey to a PKCS#1 formatted byte representation
+     * Encodes this [KeyPair]'s 2048-bit RSA private key to its PKCS#1-formatted byte
+     * representation.
      *
-     * @return a ByteArray containing the PKCS#1 representation of the  RSA private key
+     * @return The PKCS#1 byte representation of this [KeyPair]'s private key, as a [ByteArray].
      */
     fun privKeyToPkcs1Bytes(): ByteArray {
         val privKeyInfo = PrivateKeyInfo.getInstance(this.keyPair.private.encoded)
