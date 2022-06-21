@@ -49,8 +49,9 @@ class BlockchainService {
      */
     private var lastParsedBlockNum = UInt64(0)
     
+    #warning("rename this as updateLastParsedBlockNumber")
     /**
-     Updates `lastParsedBlockNum`. Evantually, this function will store `blockNumber` in persistent storage.
+     Updates `lastParsedBlockNum`. Eventually, this function will store `blockNumber` in persistent storage.
      
      - Parameter blockNumber: The block number of the block that has been most recently parsed by `BlockchainService`, to be set as `lastParsedBlockNum`.
      */
@@ -68,7 +69,6 @@ class BlockchainService {
      */
     private var listenInterval: UInt32 = 1
     
-    // The thread in which BlockchainService listens to the blockchain
     /**
      The `Thread` in which `BlockchainService` listens for new blocks and parses the transaction receipts that they contain.
      */
@@ -84,7 +84,6 @@ class BlockchainService {
      */
     private var w3: web3
     
-    // Commuto Swap contract instance
     /**
      The web3swift `web3.contract` instance of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) that `BlockchainService` uses to parse transaction receipts for CommutoSwap events and interact with the CommutoSwap contract on chain.
      */
