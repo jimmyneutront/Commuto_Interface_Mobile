@@ -1,7 +1,5 @@
 package com.commuto.interfacemobile.android.ui
 
-import android.content.res.Configuration
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -12,6 +10,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.Offer
 
+/**
+ * Displays a card with basic information about an offer, to be shown in the main list of open
+ * offers.
+ *
+ * @param offer The offer for which this card displays basic information.
+ */
 @Composable
 fun OfferCardComposable(offer: Offer) {
     Box {
@@ -33,6 +37,9 @@ fun OfferCardComposable(offer: Offer) {
     }
 }
 
+/**
+ * Displays a preview of [OfferCardComposable] with a sample [Offer].
+ */
 @Preview(
     showBackground = true,
 )
