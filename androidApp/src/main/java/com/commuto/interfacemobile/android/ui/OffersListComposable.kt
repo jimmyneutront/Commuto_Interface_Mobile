@@ -17,6 +17,17 @@ import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.R
 import com.commuto.interfacemobile.android.offer.OfferService
 
+/**
+ * Displays a [OffersNoneFoundComposable] if there are no open offers in [viewModel], or, if there
+ * are open offers in [viewModel], displays a list containing an [OfferCardComposable]-labeled
+ * [Button] for each open offer in [viewModel] that navigates to "OfferDetailComposable/ + offer id
+ * as a [String]" when pressed.
+ *
+ * @param viewModel The OffersViewModel that acts as a single source of truth for all offer-related
+ * data.
+ * @param navController The [NavController] that controls navigation between offer-related
+ * [Composable]s.
+ */
 @Composable
 fun OffersListComposable(viewModel: OffersViewModel, navController: NavController) {
     Column {
@@ -48,6 +59,9 @@ fun OffersListComposable(viewModel: OffersViewModel, navController: NavControlle
     }
 }
 
+/**
+ * Displays a horizontal divider.
+ */
 @Composable
 private fun OffersDividerComposable() {
     Divider(
@@ -56,6 +70,9 @@ private fun OffersDividerComposable() {
     )
 }
 
+/**
+ * Displays the vertically and horizontally centered words "No Offers Found".
+ */
 @Composable
 private fun OffersNoneFoundComposable() {
     Box(
@@ -70,6 +87,9 @@ private fun OffersNoneFoundComposable() {
     }
 }
 
+/**
+ * Displays a preview of [OffersListComposable].
+ */
 @Preview(
     showBackground = true,
     heightDp = 600,
