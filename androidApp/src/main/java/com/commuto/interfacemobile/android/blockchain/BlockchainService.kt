@@ -65,6 +65,14 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
 
     private var newestBlockNum: BigInteger = BigInteger.ZERO
 
+    // TODO: rename this as updateLastParsedBlockNumber
+    /**
+     * Updates [lastParsedBlockNum]. Eventually, this function will store [blockNumber] in
+     * persistent storage.
+     *
+     * @param blockNumber The block number of the block that has been most recently parsed by
+     * [BlockchainService], to be set as [lastParsedBlockNum].
+     */
     private fun setLastParsedBlockNumber(blockNumber: BigInteger) {
         lastParsedBlockNum = blockNumber
     }
@@ -123,9 +131,9 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
      * greater than that of the last parsed block. Then we parse this new block, and then set the
      * last parsed block number as the block number of this newly parsed block.
      *
-     * If we encounter an [Exception], we pass it to [exceptionHandler]. Additionally, if the error
-     * is a [ConnectException], indicating that we are having problems communicating with the
-     * network node, then we stop listening.
+     * If we encounter an [Exception], we pass it to [exceptionHandler]. Additionally, if the
+     * exception is a [ConnectException], indicating that we are having problems communicating with
+     * the network node, then we stop listening.
      */
     suspend fun listenLoop() {
         while (runLoop) {
