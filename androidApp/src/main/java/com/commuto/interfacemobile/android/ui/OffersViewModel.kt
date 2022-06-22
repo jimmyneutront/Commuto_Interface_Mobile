@@ -10,7 +10,7 @@ import javax.inject.Singleton
  * offer-related [androidx.compose.runtime.Composable]s.
  *
  * @property offerService The [OfferService] responsible for adding and removing
- * [com.commuto.interfacemobile.android.offer.Offer]s from the list of open offerss as they are
+ * [com.commuto.interfacemobile.android.offer.Offer]s from the list of open offers as they are
  * created, canceled and taken.
  */
 @Singleton
