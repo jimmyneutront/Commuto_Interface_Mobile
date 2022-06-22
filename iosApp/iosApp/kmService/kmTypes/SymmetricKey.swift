@@ -10,7 +10,7 @@ import CryptoSwift
 import Foundation
 
 /**
- This is an AES-245 key, with functions for encryption and decryption.
+ This is an AES-256 key, with functions for encryption and decryption.
  
  - Properties:
     - keyBytes: The AES-256 key in byte array format.
