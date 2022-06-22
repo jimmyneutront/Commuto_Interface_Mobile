@@ -23,7 +23,7 @@ class BlockchainService {
         - errorHandler: An object that conforms to the `BlockchainErrorNotifiable` protocol, to which this will pass errors when they occur.
         - offerService: An object that comforms to the `OfferMessageNotifiable` protocol, to which this will pass offer-related events.
         - web3Instance: A web3swift `web3` instance that this will use to interact with the EVM-compatible blockchain.
-        - commutoSwapAddress: A `String` containing the address of the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/cca886f724d9069069330b74e7653b781860bff8/CommutoSwap.sol)
+        - commutoSwapAddress: A `String` containing the address of the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol)
      
      - Returns: A new `BlockchainService` instance.
      */
@@ -171,7 +171,7 @@ class BlockchainService {
     
     
     /**
-     Parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/cca886f724d9069069330b74e7653b781860bff8/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events. (Specifically, the events are web3swift `EventParserResultProtocols`.)
+     Parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
      - Note: In order to parse a block, the `EventParserProtocol`s created in this function must query a network node for full transaction receipts.
      

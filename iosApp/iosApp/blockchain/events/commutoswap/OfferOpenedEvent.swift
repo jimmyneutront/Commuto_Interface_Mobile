@@ -14,7 +14,7 @@ import web3swift
  
  -Properties:
     - id: The ID of the newly opened offer, as a `UUID`.
-    - interfaceId: The [interface ID](https://github.com/jimmyneutront/commuto-whitepaper/blob/d26697ab78a5b00bd9578bbea1f40796cda6f0b3/commuto-whitepaper.txt#L70) belonging to the maker of the newly opened offer, as `Data`.
+    - interfaceId: The [interface ID](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt#L70) belonging to the maker of the newly opened offer, as `Data`.
  */
 class OfferOpenedEvent {
     let id: UUID
