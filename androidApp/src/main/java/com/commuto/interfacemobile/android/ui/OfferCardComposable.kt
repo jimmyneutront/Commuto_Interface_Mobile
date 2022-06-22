@@ -14,7 +14,7 @@ import com.commuto.interfacemobile.android.offer.Offer
  * Displays a card with basic information about an offer, to be shown in the main list of open
  * offers.
  *
- * @param offer The offer for which this card displays basic information.
+ * @param offer The [Offer] for which this card displays basic information.
  */
 @Composable
 fun OfferCardComposable(offer: Offer) {
