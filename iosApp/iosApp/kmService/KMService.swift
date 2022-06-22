@@ -71,7 +71,7 @@ class KMService {
     /**
      Persistently stores a `PublicKey` in such a way that it can be retrieved again given its interface ID. This will generate a PKCS#1 byte representation of `pubKey`, encode it as a Base64 `String` and store it using `DatabaseService`.
      
-     - Parameter pubKey: the `PublicKey` to be persistently stored.
+     - Parameter pubKey: The `PublicKey` to be persistently stored.
      */
     func storePublicKey(pubKey: PublicKey) throws {
         let interfaceIdB64Str = pubKey.interfaceId.base64EncodedString()
