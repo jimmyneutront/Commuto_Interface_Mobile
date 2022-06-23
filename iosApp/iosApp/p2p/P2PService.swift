@@ -122,9 +122,11 @@ class P2PService {
                 }.done { [self] response in
                     parseEvents(response.chunk)
                 }.catch { [self] error in
-                    // TODO: Stop listening for connection errors once bug is fixed
                     errorHandler.handleP2PError(error)
-                    if let switrixError = error as? SwitrixError {
+                    if (error as NSError).domain == "NSURLErrorDomain" {
+                        // There is a problem with the internet connection, so there is no point in continuing to listen for new events.
+                        stopListening()
+                    } else if let switrixError = error as? SwitrixError {
                         switch switrixError {
                         case .unknownToken:
                             stopListening()

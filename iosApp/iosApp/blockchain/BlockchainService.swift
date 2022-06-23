@@ -134,6 +134,7 @@ class BlockchainService {
             } catch {
                 errorHandler.handleBlockchainError(error)
                 if (error as NSError).domain == "NSURLErrorDomain" {
+                    // There is a problem with the internet connection, so there is no point in continuing to listen to the blockchain.
                     stopListening()
                 } else {
                     switch error {
