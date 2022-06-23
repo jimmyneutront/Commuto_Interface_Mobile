@@ -22,6 +22,9 @@ import java.nio.charset.Charset
 import java.security.MessageDigest
 import java.util.*
 
+/**
+ * Tests for [P2PService].
+ */
 class P2PServiceTest {
 
     /**

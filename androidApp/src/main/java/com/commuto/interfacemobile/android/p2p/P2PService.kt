@@ -121,7 +121,8 @@ class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiabl
             } catch (e: Exception) {
                 exceptionHandler.handleP2PException(e)
                 if (e is ConnectException ||
-                    (e as? MatrixServerException)?.errorResponse is ErrorResponse) {
+                    (e as? MatrixServerException)?.errorResponse is ErrorResponse.UnknownToken ||
+                    (e as? MatrixServerException)?.errorResponse is ErrorResponse.MissingToken) {
                     stopListening()
                 }
             }
