@@ -114,13 +114,11 @@ class P2PService {
                 #warning("TODO: we shouldn't call updateLastNonEmptyBatchToken until we are done parsing events")
                 firstly {
                     self.syncPromise()
-                }.then { [self] response -> Promise<SwitrixGetEventsResponse> in
-                    let messagesPromise = getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000)
-                    let token = response.nextBatchToken
-                    updateLastNonEmptyBatchToken(token)
-                    return messagesPromise
-                }.done { [self] response in
+                }.then { [self] response in
+                    getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000).map { ($0, response.nextBatchToken)  }
+                }.done { [self] response, newToken in
                     parseEvents(response.chunk)
+                    updateLastNonEmptyBatchToken(newToken)
                 }.catch { [self] error in
                     errorHandler.handleP2PError(error)
                     if (error as NSError).domain == "NSURLErrorDomain" {
