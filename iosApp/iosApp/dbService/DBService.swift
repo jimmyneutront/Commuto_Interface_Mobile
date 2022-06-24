@@ -22,6 +22,16 @@ class DBService {
      The connection to the SQLite database.
      */
     var db: Connection?
+    
+    /**
+     The serial DispatchQueue used to synchronize database access. All database queries should be run on this queue to prevent data races.
+     */
+    let databaseQueue = DispatchQueue(label: "databaseService.serial.queue")
+    
+    /**
+     A database table of [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events.
+     */
+    let offerOpenedEvents = Table("OfferOpenedEvent")
     /**
      A database table of `KeyPair`s.
      */
@@ -31,7 +41,10 @@ class DBService {
      */
     let publicKeys = Table("PublicKey")
     
-    //KeyPair and PublicKey table expressions
+    /**
+     A database structure representing an offer ID.
+     */
+    let offerId = Expression<String>("offerId")
     /**
      A database structure representing an interface ID.
      */
@@ -45,6 +58,7 @@ class DBService {
      */
     let privateKey = Expression<String>("privateKey")
     
+    #warning("This should get its own file")
     /**
      An `Error` thrown by `DatabaseService` functions.
      */
@@ -70,6 +84,10 @@ class DBService {
             t.column(interfaceId, unique: true)
             t.column(publicKey)
         })
+        try db!.run(offerOpenedEvents.create { t in
+            t.column(offerId, unique: true)
+            t.column(interfaceId)
+        })
     }
     
     /**
@@ -77,6 +95,19 @@ class DBService {
      */
     func connectToDb() throws {
         db = try Connection(.inMemory)
+    }
+    
+    /**
+     Persistently stores the contents of an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) Event.
+     
+     - Parameters:
+        - id: The offer ID specified in the OfferOpened event, as a `String`.
+        - interfaceId: The interface ID specified in the OfferOpened event, as a `String`.
+     */
+    func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
+        _ = try databaseQueue.sync {
+            try db!.run(offerOpenedEvents.insert(offerId <- id, self.interfaceId <- interfaceId))
+        }
     }
     
     /**

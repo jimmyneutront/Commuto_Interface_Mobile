@@ -111,7 +111,6 @@ class P2PService {
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] _ in
             if (!isDoingListening) {
                 isDoingListening = true
-                #warning("TODO: we shouldn't call updateLastNonEmptyBatchToken until we are done parsing events")
                 firstly {
                     self.syncPromise()
                 }.then { [self] response in

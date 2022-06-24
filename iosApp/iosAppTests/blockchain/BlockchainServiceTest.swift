@@ -38,9 +38,11 @@ class BlockchainServiceTest: XCTestCase {
         }
         let errorHandler = TestBlockchainErrorHandler()
         
+        let databaseService = DBService()
+        
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
-            offerService: OfferService(),
+            offerService: OfferService(databaseService: databaseService),
             web3Instance: w3,
             commutoSwapAddress: ""
         )
@@ -84,7 +86,7 @@ class BlockchainServiceTest: XCTestCase {
         XCTAssertTrue(!gotError)
         let expectedOfferId = UUID(uuidString: testingServerResponse!.offerId)!
         
-        let w3 = web3(provider: Web3HttpProvider(URL(string: "http://192.168.0.195:8545")!)!)
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
             var gotError = false
@@ -181,7 +183,7 @@ class BlockchainServiceTest: XCTestCase {
         XCTAssertTrue(!gotError)
         let expectedOfferId = UUID(uuidString: testingServerResponse!.offerId)!
         
-        let w3 = web3(provider: Web3HttpProvider(URL(string: "http://192.168.0.195:8545")!)!)
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
             var gotError = false

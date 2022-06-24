@@ -46,7 +46,7 @@ struct OffersView: View {
 struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            OffersView(offersViewModel: OffersViewModel(offerService: OfferService()))
+            OffersView(offersViewModel: OffersViewModel())
         }
         .environment(\.locale, .init(identifier: "de"))
     }
