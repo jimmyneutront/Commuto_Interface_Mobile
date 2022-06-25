@@ -19,11 +19,16 @@
 		6D2C34112856CEFC0072AD96 /* P2PErrorNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2C34102856CEFC0072AD96 /* P2PErrorNotifiable.swift */; };
 		6D35BC7A284EA9410046A9F8 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6D35BC7C284EA9410046A9F8 /* Localizable.strings */; };
 		6D38E9DF2847DDEF005C1285 /* OfferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D38E9DE2847DDEF005C1285 /* OfferService.swift */; };
+		6D56891C2865530800BDE490 /* OfferServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D56891B2865530800BDE490 /* OfferServiceTests.swift */; };
+		6D56891E28656D1000BDE490 /* OfferServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D56891D28656D1000BDE490 /* OfferServiceError.swift */; };
+		6D5689212865724900BDE490 /* OfferStruct.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5689202865724900BDE490 /* OfferStruct.swift */; };
 		6D5899AF284A787700DE390A /* BlockchainServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5899AE284A787700DE390A /* BlockchainServiceTest.swift */; };
 		6D6B0FC028504603003A24B3 /* BlockchainErrorNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6B0FBF28504603003A24B3 /* BlockchainErrorNotifiable.swift */; };
 		6D6B0FC228504926003A24B3 /* BlockchainServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6B0FC128504926003A24B3 /* BlockchainServiceError.swift */; };
 		6D6CE882284478040009B815 /* Offer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CE881284478040009B815 /* Offer.swift */; };
 		6D6CE885284479490009B815 /* OfferCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CE884284479490009B815 /* OfferCardView.swift */; };
+		6D70A5CA28665E50003FEDF3 /* OfferTruthSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */; };
+		6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */; };
 		6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */; };
 		6D91C97B27533EBB00D85654 /* DBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97A27533EBB00D85654 /* DBService.swift */; };
 		6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97D2753F9B100D85654 /* DBKeyPair.swift */; };
@@ -73,11 +78,16 @@
 		6D35BC7B284EA9410046A9F8 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		6D35BC7D284EA9460046A9F8 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		6D38E9DE2847DDEF005C1285 /* OfferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferService.swift; sourceTree = "<group>"; };
+		6D56891B2865530800BDE490 /* OfferServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferServiceTests.swift; sourceTree = "<group>"; };
+		6D56891D28656D1000BDE490 /* OfferServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferServiceError.swift; sourceTree = "<group>"; };
+		6D5689202865724900BDE490 /* OfferStruct.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferStruct.swift; sourceTree = "<group>"; };
 		6D5899AE284A787700DE390A /* BlockchainServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainServiceTest.swift; sourceTree = "<group>"; };
 		6D6B0FBF28504603003A24B3 /* BlockchainErrorNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainErrorNotifiable.swift; sourceTree = "<group>"; };
 		6D6B0FC128504926003A24B3 /* BlockchainServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainServiceError.swift; sourceTree = "<group>"; };
 		6D6CE881284478040009B815 /* Offer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Offer.swift; sourceTree = "<group>"; };
 		6D6CE884284479490009B815 /* OfferCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCardView.swift; sourceTree = "<group>"; };
+		6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTruthSource.swift; sourceTree = "<group>"; };
+		6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainEventRepository.swift; sourceTree = "<group>"; };
 		6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymmetricKey.swift; sourceTree = "<group>"; };
 		6D91C97A27533EBB00D85654 /* DBService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBService.swift; sourceTree = "<group>"; };
 		6D91C97D2753F9B100D85654 /* DBKeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBKeyPair.swift; sourceTree = "<group>"; };
@@ -147,6 +157,22 @@
 			path = messages;
 			sourceTree = "<group>";
 		};
+		6D56891A286552F400BDE490 /* offer */ = {
+			isa = PBXGroup;
+			children = (
+				6D56891B2865530800BDE490 /* OfferServiceTests.swift */,
+			);
+			path = offer;
+			sourceTree = "<group>";
+		};
+		6D56891F2865722F00BDE490 /* structs */ = {
+			isa = PBXGroup;
+			children = (
+				6D5689202865724900BDE490 /* OfferStruct.swift */,
+			);
+			path = structs;
+			sourceTree = "<group>";
+		};
 		6D5899AD284A782D00DE390A /* blockchain */ = {
 			isa = PBXGroup;
 			children = (
@@ -161,6 +187,8 @@
 				6D6CE881284478040009B815 /* Offer.swift */,
 				6D38E9DE2847DDEF005C1285 /* OfferService.swift */,
 				6DE0896C284FD49300948166 /* OfferNotifiable.swift */,
+				6D56891D28656D1000BDE490 /* OfferServiceError.swift */,
+				6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */,
 			);
 			path = offer;
 			sourceTree = "<group>";
@@ -235,6 +263,7 @@
 		6DC323CB273A2EB200936686 /* iosAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				6D56891A286552F400BDE490 /* offer */,
 				6D9291CB284BC66A002B9E43 /* p2p */,
 				6D5899AD284A782D00DE390A /* blockchain */,
 				6D1914DA278B6DC6004A4329 /* MatrixTests.swift */,
@@ -269,11 +298,13 @@
 		6DE6938A284A68C100086719 /* blockchain */ = {
 			isa = PBXGroup;
 			children = (
+				6D56891F2865722F00BDE490 /* structs */,
 				6DDFAFA2284AAC3D004BC95F /* events */,
 				6DE6938B284A68D400086719 /* BlockchainService.swift */,
 				6D6B0FC128504926003A24B3 /* BlockchainServiceError.swift */,
 				6D6B0FBF28504603003A24B3 /* BlockchainErrorNotifiable.swift */,
 				6DA19782284A8CAD00D2D073 /* CommutoSwapProvider.swift */,
+				6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */,
 			);
 			path = blockchain;
 			sourceTree = "<group>";
@@ -532,6 +563,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D56891C2865530800BDE490 /* OfferServiceTests.swift in Sources */,
 				6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */,
 				6D91C9832753FBD900D85654 /* DBServiceTest.swift in Sources */,
 				6D2682A92756D630008EC6F4 /* KMTypesTest.swift in Sources */,
@@ -553,18 +585,22 @@
 				6D2C34112856CEFC0072AD96 /* P2PErrorNotifiable.swift in Sources */,
 				6DE6938C284A68D400086719 /* BlockchainService.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
+				6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */,
 				6D91C97B27533EBB00D85654 /* DBService.swift in Sources */,
 				6D0F4D9C2853C4F60089EE9E /* OfferMessageNotifiable.swift in Sources */,
+				6D5689212865724900BDE490 /* OfferStruct.swift in Sources */,
 				6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */,
 				6D9D547D28451183007D1093 /* OffersView.swift in Sources */,
 				6D9ABCBD2736399F0034AE01 /* KMService.swift in Sources */,
 				6D0F4D9F2853C5A10089EE9E /* PublicKeyAnnouncement.swift in Sources */,
 				6D6B0FC028504603003A24B3 /* BlockchainErrorNotifiable.swift in Sources */,
 				6D0886ED28595E2E009B6CF7 /* OfferCanceledEvent.swift in Sources */,
+				6D56891E28656D1000BDE490 /* OfferServiceError.swift in Sources */,
 				6D6CE882284478040009B815 /* Offer.swift in Sources */,
 				6D91C9862754329B00D85654 /* KeyPair.swift in Sources */,
 				6DA6C0502847148100F5C1C5 /* OffersViewModel.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				6D70A5CA28665E50003FEDF3 /* OfferTruthSource.swift in Sources */,
 				6DDFAFA5284AAC52004BC95F /* OfferOpenedEvent.swift in Sources */,
 				6D91C988275432E300D85654 /* PublicKey.swift in Sources */,
 				6D6CE885284479490009B815 /* OfferCardView.swift in Sources */,

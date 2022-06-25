@@ -58,7 +58,21 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.connectToDb()
         try! databaseService.createTables()
         
-        let offerService = OfferService(databaseService: databaseService)
+        class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent> {
+            var appendedEvent: OfferOpenedEvent? = nil
+            var removedEvent: OfferOpenedEvent? = nil
+            override func append(_ element: OfferOpenedEvent) {
+                appendedEvent = element
+                super.append(element)
+            }
+            override func remove(_ elementToRemove: OfferOpenedEvent) {
+                removedEvent = elementToRemove
+                super.append(elementToRemove)
+            }
+        }
+        let offerOpenedEventRepository = TestBlockchainEventRepository()
+        
+        let offerService = OfferService(databaseService: databaseService, offerOpenedEventRepository: offerOpenedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             init() {
@@ -102,5 +116,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 1)
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID]!.id == expectedOfferID)
+        XCTAssertEqual(offerOpenedEventRepository.appendedEvent!.id, expectedOfferID)
+        XCTAssertEqual(offerOpenedEventRepository.removedEvent!.id, expectedOfferID)
     }
 }
