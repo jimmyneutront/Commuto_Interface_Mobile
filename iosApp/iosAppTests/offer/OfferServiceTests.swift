@@ -54,8 +54,7 @@ class OfferServiceTests: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        let databaseService = DatabaseService()
-        try! databaseService.connectToDb()
+        let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent> {

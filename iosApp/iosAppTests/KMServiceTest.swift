@@ -12,14 +12,13 @@ import XCTest
 
 class KMServiceTest: XCTestCase {
     
-    let dbService: DatabaseService = DatabaseService()
+    let dbService = try! DatabaseService()
     var kmService: KMService?
      
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
         kmService = KMService(dbService: dbService)
-        try dbService.connectToDb()
         try dbService.createTables()
     }
 

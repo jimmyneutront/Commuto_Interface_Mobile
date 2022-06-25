@@ -38,7 +38,7 @@ class BlockchainServiceTest: XCTestCase {
         }
         let errorHandler = TestBlockchainErrorHandler()
         
-        let databaseService = DatabaseService()
+        let databaseService = try! DatabaseService()
         
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,

@@ -160,10 +160,9 @@ class CommutoCoreInteraction: XCTestCase {
         options.gasPrice = .manual(gasPrice)
         options.gasLimit = .manual(gasLimit)
         
-        //Setup DBService and KMService
-        let dbService: DBService = DBService()
+        //Setup DatabaseService and KMService
+        let dbService = try! DatabaseService()
         let kmService: KMService = KMService(dbService: dbService)
-        try dbService.connectToDb()
         try dbService.createTables()
         
         //Create key pair

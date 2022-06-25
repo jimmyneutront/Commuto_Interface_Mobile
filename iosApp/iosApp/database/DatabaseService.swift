@@ -9,7 +9,6 @@
 import Foundation
 import SQLite
 
-#warning("create initializer that establishes database connection and remove force unwraps")
 #warning("catch UNIQUE constraint errors here so we don't have to deal with them elsewhere")
 /**
  The Database Service Class.
@@ -19,9 +18,16 @@ import SQLite
 class DatabaseService {
     
     /**
+     Creates a new `DatabaseService`, and creates an in-memory database with its reference stored in `DatabaseService`'s `connection` property.
+     */
+    init() throws {
+        connection = try Connection(.inMemory)
+    }
+    
+    /**
      The connection to the SQLite database.
      */
-    var connection: Connection?
+    var connection: Connection
     
     /**
      The serial DispatchQueue used to synchronize database access. All database queries should be run on this queue to prevent data races.
@@ -62,29 +68,19 @@ class DatabaseService {
      Creates all necessary database tables.
      */
     func createTables() throws {
-        guard connection != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during createTables call")
-        }
-        try connection!.run(keyPairs.create { t in
+        try connection.run(keyPairs.create { t in
             t.column(interfaceId, unique: true)
             t.column(publicKey)
             t.column(privateKey)
         })
-        try connection!.run(publicKeys.create { t in
+        try connection.run(publicKeys.create { t in
             t.column(interfaceId, unique: true)
             t.column(publicKey)
         })
-        try connection!.run(offerOpenedEvents.create { t in
+        try connection.run(offerOpenedEvents.create { t in
             t.column(offerId, unique: true)
             t.column(interfaceId)
         })
-    }
-    
-    /**
-     Creates a new in-memory database, and stores its reference in `DatabaseService`'s `connection` property.
-     */
-    func connectToDb() throws {
-        connection = try Connection(.inMemory)
     }
     
     /**
@@ -97,11 +93,8 @@ class DatabaseService {
      - Throws: A `DatabaseServiceError.unexpectedNilError` if `connection` is `nil`.
      */
     func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
-        guard connection != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during storeOfferOpenedEvent call")
-        }
         _ = try databaseQueue.sync {
-            try connection!.run(offerOpenedEvents.insert(offerId <- id, self.interfaceId <- interfaceId))
+            try connection.run(offerOpenedEvents.insert(offerId <- id, self.interfaceId <- interfaceId))
         }
     }
     
@@ -115,12 +108,9 @@ class DatabaseService {
      - Returns: A `DatabaseOfferOpenedEvent` corresponding to `id`, or `nil` if no such event is found.
      */
     func getOfferOpenedEvent(id: String) throws -> DatabaseOfferOpenedEvent? {
-        guard connection != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during getOfferOpenedEvent call")
-        }
         var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
-            rowIterator = try connection!.prepareRowIterator(offerOpenedEvents.filter(offerId == id))
+            rowIterator = try connection.prepareRowIterator(offerOpenedEvents.filter(offerId == id))
         }
         guard rowIterator != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getOfferOpenedEvent call")
@@ -149,11 +139,8 @@ class DatabaseService {
         - privateKey: The private key of the key pair as a byte array encoded to a hexadecimal `String`.
      */
     func storeKeyPair(interfaceId interf_id: String, publicKey pub_key: String, privateKey priv_key: String) throws {
-        guard connection != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during storeKeyPair call")
-        }
         _ = try databaseQueue.sync {
-            try connection!.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
+            try connection.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
         }
     }
     
@@ -167,12 +154,9 @@ class DatabaseService {
      - Throws: A `DatabaseServiceError.unexpectedQueryResult` if multiple key pairs are found for a single interface ID, or if the interface ID of the key pair returned from the database query does not match `interfaceId`.
      */
     func getKeyPair(interfaceId interfId: String) throws -> DatabaseKeyPair? {
-        guard connection != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during getKeyPair call")
-        }
         var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
-            rowIterator = try connection!.prepareRowIterator(keyPairs.filter(interfaceId == interfId))
+            rowIterator = try connection.prepareRowIterator(keyPairs.filter(interfaceId == interfId))
         }
         guard rowIterator != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getKeyPair call")
@@ -200,11 +184,8 @@ class DatabaseService {
      - Throws: `DatabaseServiceError.unexpectedQueryResult` if a public key with the given interface ID is already found in the database.
      */
     func storePublicKey(interfaceId interf_id: String, publicKey pub_key: String) throws {
-        guard connection != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during storeKeyPair call")
-        }
         _ = try databaseQueue.sync {
-            try connection!.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))
+            try connection.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))
         }
     }
     
@@ -217,13 +198,9 @@ class DatabaseService {
      
      - Throws: `DatabaseServiceError.unexpectedQueryResult` if multiple public keys are found for a given interface ID, or if the interface ID of the public key returned from the database query does not match `interfaceId`.
      */
-    func getPublicKey(interfaceId interfId: String) throws -> DatabasePublicKey? {
-        guard connection != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during storeKeyPair call")
-        }
-        var rowIterator: RowIterator? = nil
+    func getPublicKey(interfaceId interfId: String) throws -> DatabasePublicKey? {        var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
-            rowIterator = try connection!.prepareRowIterator(publicKeys.filter(interfaceId == interfId))
+            rowIterator = try connection.prepareRowIterator(publicKeys.filter(interfaceId == interfId))
         }
         guard rowIterator != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getPublicKey call")
