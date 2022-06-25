@@ -9,7 +9,7 @@
 import Foundation
 import SQLite
 
-#warning("all database reads should happen on dispatch queue")
+#warning("create initializer that establishes database connection and remove force unwraps")
 /**
  The Database Service Class.
  
@@ -110,6 +110,8 @@ class DatabaseService {
      - Parameter id: The offer ID of the OfferOpened event to return, as a Base64-`String` of bytes.
      
      - Throws: A `DatabaseServiceError.unexpectedNilError` if `connection` or `rowIterator` are nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple events are found with the same offer ID or if the offer ID of the event returned from the database does not match `id`.
+     
+     - Returns: A `DatabaseOfferOpenedEvent` corresponding to `id`, or `nil` if no such event is found.
      */
     func getOfferOpenedEvent(id: String) throws -> DatabaseOfferOpenedEvent? {
         guard connection != nil else {
@@ -152,7 +154,9 @@ class DatabaseService {
         guard try getKeyPair(interfaceId: interf_id) == nil else {
             throw DatabaseServiceError.unexpectedQueryResult(message: "Database query for key pair with interface id " + interf_id + " returned result")
         }
-        try connection!.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
+        _ = try databaseQueue.sync {
+            try connection!.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
+        }
     }
     
     /**
@@ -168,8 +172,14 @@ class DatabaseService {
         guard connection != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during getKeyPair call")
         }
-        let rowIterator = try connection!.prepareRowIterator(keyPairs.filter(interfaceId == interfId))
-        let result = try Array(rowIterator)
+        var rowIterator: RowIterator? = nil
+        _ = try databaseQueue.sync {
+            rowIterator = try connection!.prepareRowIterator(keyPairs.filter(interfaceId == interfId))
+        }
+        guard rowIterator != nil else {
+            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getKeyPair call")
+        }
+        let result = try Array(rowIterator!)
         if (result.count > 1) {
             throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple key pairs found with given interface id " + interfId)
         } else if (result.count == 1) {
@@ -198,7 +208,9 @@ class DatabaseService {
         guard try getPublicKey(interfaceId: interf_id) == nil else {
             throw DatabaseServiceError.unexpectedQueryResult(message: "Database query for public key with interface id " + interf_id + " returned result")
         }
-        try connection!.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))
+        _ = try databaseQueue.sync {
+            try connection!.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))
+        }
     }
     
     /**
@@ -214,8 +226,14 @@ class DatabaseService {
         guard connection != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during storeKeyPair call")
         }
-        let rowIterator = try connection!.prepareRowIterator(publicKeys.filter(interfaceId == interfId))
-        let result = try Array(rowIterator)
+        var rowIterator: RowIterator? = nil
+        _ = try databaseQueue.sync {
+            rowIterator = try connection!.prepareRowIterator(publicKeys.filter(interfaceId == interfId))
+        }
+        guard rowIterator != nil else {
+            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getPublicKey call")
+        }
+        let result = try Array(rowIterator!)
         if (result.count > 1) {
             throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple public keys found with given interface id " + interfId)
         } else if (result.count == 1) {
