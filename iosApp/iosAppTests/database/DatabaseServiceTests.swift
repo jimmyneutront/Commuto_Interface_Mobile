@@ -1,5 +1,5 @@
 //
-//  DBServiceTest.swift
+//  DatabaseServiceTests.swift
 //  iosAppTests
 //
 //  Created by jimmyt on 11/28/21.
@@ -9,8 +9,7 @@
 import XCTest
 @testable import iosApp
 
-#warning("TODO: update these once DatabaseService refactor is complete")
-class DBServiceTest: XCTestCase {
+class DatabaseServiceTests: XCTestCase {
     
     let dbService = DatabaseService()
 
@@ -22,6 +21,13 @@ class DBServiceTest: XCTestCase {
 
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
+    }
+    
+    func testStoreAndGetOfferOpenedEvent() throws {
+        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
+        let expectedOfferOpenedEvent = DatabaseOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
+        let offerOpenedEvent = try dbService.getOfferOpenedEvent(id: "offer_id")
+        XCTAssertEqual(expectedOfferOpenedEvent, offerOpenedEvent)
     }
     
     func testStoreAndGetKeyPair() throws {

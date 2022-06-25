@@ -9,6 +9,7 @@
 import Foundation
 import SQLite
 
+#warning("all database reads should happen on dispatch queue")
 /**
  The Database Service Class.
  
@@ -85,13 +86,14 @@ class DatabaseService {
         connection = try Connection(.inMemory)
     }
     
-    #warning("TODO: test this")
     /**
      Persistently stores the contents of an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) Event.
      
      - Parameters:
-        - id: The offer ID specified in the OfferOpened event, as a `String`.
-        - interfaceId: The interface ID specified in the OfferOpened event, as a `String`.
+        - id: The offer ID specified in the OfferOpened event, as a Base64-`String` of its bytes.
+        - interfaceId: The interface ID specified in the OfferOpened event, as a Base64-`String` of bytes.
+     
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `connection` is `nil`.
      */
     func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
         guard connection != nil else {
@@ -99,6 +101,37 @@ class DatabaseService {
         }
         _ = try databaseQueue.sync {
             try connection!.run(offerOpenedEvents.insert(offerId <- id, self.interfaceId <- interfaceId))
+        }
+    }
+    
+    /**
+     Retrieves the persistently stored OfferOpened event with the given offer ID, or returns `nil` if no such event is present.
+     
+     - Parameter id: The offer ID of the OfferOpened event to return, as a Base64-`String` of bytes.
+     
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `connection` or `rowIterator` are nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple events are found with the same offer ID or if the offer ID of the event returned from the database does not match `id`.
+     */
+    func getOfferOpenedEvent(id: String) throws -> DatabaseOfferOpenedEvent? {
+        guard connection != nil else {
+            throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during getOfferOpenedEvent call")
+        }
+        var rowIterator: RowIterator? = nil
+        _ = try databaseQueue.sync {
+            rowIterator = try connection!.prepareRowIterator(offerOpenedEvents.filter(offerId == id))
+        }
+        guard rowIterator != nil else {
+            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getOfferOpenedEvent call")
+        }
+        let result = try Array(rowIterator!)
+        if result.count > 1 {
+            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple OfferOpened events found with given offer id" + id)
+        } else if result.count == 1 {
+            guard result[0][offerId] == id else {
+                throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned OfferOpened event did not match specified offer ID " + id)
+            }
+            return DatabaseOfferOpenedEvent(id: result[0][offerId], interfaceId: result[0][interfaceId])
+        } else {
+            return nil
         }
     }
     
