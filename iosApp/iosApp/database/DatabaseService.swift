@@ -10,6 +10,7 @@ import Foundation
 import SQLite
 
 #warning("create initializer that establishes database connection and remove force unwraps")
+#warning("catch UNIQUE constraint errors here so we don't have to deal with them elsewhere")
 /**
  The Database Service Class.
  
@@ -151,9 +152,6 @@ class DatabaseService {
         guard connection != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during storeKeyPair call")
         }
-        guard try getKeyPair(interfaceId: interf_id) == nil else {
-            throw DatabaseServiceError.unexpectedQueryResult(message: "Database query for key pair with interface id " + interf_id + " returned result")
-        }
         _ = try databaseQueue.sync {
             try connection!.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
         }
@@ -204,9 +202,6 @@ class DatabaseService {
     func storePublicKey(interfaceId interf_id: String, publicKey pub_key: String) throws {
         guard connection != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "connection was nil during storeKeyPair call")
-        }
-        guard try getPublicKey(interfaceId: interf_id) == nil else {
-            throw DatabaseServiceError.unexpectedQueryResult(message: "Database query for public key with interface id " + interf_id + " returned result")
         }
         _ = try databaseQueue.sync {
             try connection!.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))

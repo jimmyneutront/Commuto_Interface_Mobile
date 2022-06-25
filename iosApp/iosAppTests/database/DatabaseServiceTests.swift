@@ -8,6 +8,7 @@
 
 import XCTest
 @testable import iosApp
+@testable import SQLite
 
 class DatabaseServiceTests: XCTestCase {
     
@@ -48,8 +49,7 @@ class DatabaseServiceTests: XCTestCase {
         try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
         do {
             try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        } catch DatabaseServiceError.unexpectedQueryResult(let message) where message == "Database query for key pair with interface id interf_id returned result" {
-            
+        } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: KeyPair.interfaceId" {
         }
     }
     
@@ -57,8 +57,7 @@ class DatabaseServiceTests: XCTestCase {
         try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
         do {
             try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        } catch DatabaseServiceError.unexpectedQueryResult(let message) where message == "Database query for public key with interface id interf_id returned result" {
-            
+        } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: PublicKey.interfaceId" {
         }
     }
 
