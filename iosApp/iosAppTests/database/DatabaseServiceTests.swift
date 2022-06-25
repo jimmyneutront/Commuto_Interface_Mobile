@@ -46,18 +46,26 @@ class DatabaseServiceTests: XCTestCase {
     
     func testDuplicateKeyPairProtection() throws {
         try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        do {
-            try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: KeyPair.interfaceId" {
-        }
+        // This should do nothing and not throw
+        try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
+        // This should not throw, since only one such key pair should exist in the database
+        _ = try dbService.getKeyPair(interfaceId: "interf_id")
     }
     
     func testDuplicatePublicKeyProtection() throws {
         try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        do {
-            try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: PublicKey.interfaceId" {
-        }
+        // This should do nothing and not throw
+        try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
+        // This should not throw, since only one such public key should exist in the database
+        _ = try dbService.getPublicKey(interfaceId: "interf_id")
+    }
+    
+    func testDuplicateOfferOpenedEventProtection() throws {
+        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
+        // This should do nothing and not throw
+        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
+        // This should not throw, since only one such OfferOpened event should exist in the database
+        _ = try dbService.getOfferOpenedEvent(id: "offer_id")
     }
 
 }

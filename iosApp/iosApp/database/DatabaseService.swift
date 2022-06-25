@@ -9,7 +9,6 @@
 import Foundation
 import SQLite
 
-#warning("catch UNIQUE constraint errors here so we don't have to deal with them elsewhere")
 /**
  The Database Service Class.
  
@@ -84,17 +83,19 @@ class DatabaseService {
     }
     
     /**
-     Persistently stores the contents of an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) Event.
+     Persistently stores the contents of an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) Event. If an OfferOpened event with an offer ID equal to `id` already exists in the database, this does nothing.
      
      - Parameters:
         - id: The offer ID specified in the OfferOpened event, as a Base64-`String` of its bytes.
         - interfaceId: The interface ID specified in the OfferOpened event, as a Base64-`String` of bytes.
-     
-     - Throws: A `DatabaseServiceError.unexpectedNilError` if `connection` is `nil`.
      */
     func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(offerOpenedEvents.insert(offerId <- id, self.interfaceId <- interfaceId))
+            do {
+                try connection.run(offerOpenedEvents.insert(offerId <- id, self.interfaceId <- interfaceId))
+            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: OfferOpenedEvent.offerId" {
+                // An OfferOpened event with the specified id already exists in the database, so we do nothing
+            }
         }
     }
     
@@ -103,7 +104,7 @@ class DatabaseService {
      
      - Parameter id: The offer ID of the OfferOpened event to return, as a Base64-`String` of bytes.
      
-     - Throws: A `DatabaseServiceError.unexpectedNilError` if `connection` or `rowIterator` are nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple events are found with the same offer ID or if the offer ID of the event returned from the database does not match `id`.
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple events are found with the same offer ID or if the offer ID of the event returned from the database does not match `id`.
      
      - Returns: A `DatabaseOfferOpenedEvent` corresponding to `id`, or `nil` if no such event is found.
      */
@@ -140,7 +141,11 @@ class DatabaseService {
      */
     func storeKeyPair(interfaceId interf_id: String, publicKey pub_key: String, privateKey priv_key: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
+            do {
+                try connection.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
+            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: KeyPair.interfaceId" {
+                // A KeyPair with the specified interface ID already exists in the database, so we do nothing
+            }
         }
     }
     
@@ -151,7 +156,7 @@ class DatabaseService {
      
      - Returns: A `DatabaseKeyPair` if a key pair with the specified interface ID is found, or `nil` if such a key pair is not found.
      
-     - Throws: A `DatabaseServiceError.unexpectedQueryResult` if multiple key pairs are found for a single interface ID, or if the interface ID of the key pair returned from the database query does not match `interfaceId`.
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple key pairs are found with the same interface ID or if the interface ID of the key pair returned from the database does not match `interfaceId`.
      */
     func getKeyPair(interfaceId interfId: String) throws -> DatabaseKeyPair? {
         var rowIterator: RowIterator? = nil
@@ -180,12 +185,14 @@ class DatabaseService {
      - Parameters:
         - interfaceId: The interface ID of the key pair as a byte array encoded to a hexadecimal `String`.
         - publicKey: The public key to be stored, as a byte array encoded to a hexadecimal `String`.
-     
-     - Throws: `DatabaseServiceError.unexpectedQueryResult` if a public key with the given interface ID is already found in the database.
      */
     func storePublicKey(interfaceId interf_id: String, publicKey pub_key: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))
+            do {
+                try connection.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))
+            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: PublicKey.interfaceId" {
+                // A PublicKey with the specified interface ID already exists in the database, so we do nothing
+            }
         }
     }
     
@@ -196,7 +203,7 @@ class DatabaseService {
      
      - Returns: A `DatabasePublicKey` if a public key with the specified interface ID is found, or `nil` if no such public key is found.
      
-     - Throws: `DatabaseServiceError.unexpectedQueryResult` if multiple public keys are found for a given interface ID, or if the interface ID of the public key returned from the database query does not match `interfaceId`.
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple public keys are found with the same interface ID or if the interface ID of the public key returned from the database does not match `interfaceId`.
      */
     func getPublicKey(interfaceId interfId: String) throws -> DatabasePublicKey? {        var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
