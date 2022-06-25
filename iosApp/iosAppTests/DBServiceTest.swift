@@ -9,9 +9,10 @@
 import XCTest
 @testable import iosApp
 
+#warning("TODO: update these once DatabaseService refactor is complete")
 class DBServiceTest: XCTestCase {
     
-    let dbService = DBService()
+    let dbService = DatabaseService()
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
@@ -25,15 +26,15 @@ class DBServiceTest: XCTestCase {
     
     func testStoreAndGetKeyPair() throws {
         try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        let expectedKeyPair = DBKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        let keyPair: DBKeyPair? = try dbService.getKeyPair(interfaceId: "interf_id")
+        let expectedKeyPair = DatabaseKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
+        let keyPair: DatabaseKeyPair? = try dbService.getKeyPair(interfaceId: "interf_id")
         XCTAssertEqual(expectedKeyPair, keyPair!)
     }
     
     func testStoreAndGetPublicKey() throws {
         try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        let expectedPublicKey = DBPublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        let publicKey: DBPublicKey? = try dbService.getPublicKey(interfaceId: "interf_id")
+        let expectedPublicKey = DatabasePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
+        let publicKey: DatabasePublicKey? = try dbService.getPublicKey(interfaceId: "interf_id")
         XCTAssertEqual(expectedPublicKey, publicKey!)
     }
     
@@ -41,7 +42,7 @@ class DBServiceTest: XCTestCase {
         try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
         do {
             try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        } catch DBService.DBServiceError.unexpectedDbResult(let message) where message == "Database query for key pair with interface id interf_id returned result" {
+        } catch DatabaseServiceError.unexpectedQueryResult(let message) where message == "Database query for key pair with interface id interf_id returned result" {
             
         }
     }
@@ -50,7 +51,7 @@ class DBServiceTest: XCTestCase {
         try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
         do {
             try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        } catch DBService.DBServiceError.unexpectedDbResult(let message) where message == "Database query for public key with interface id interf_id returned result" {
+        } catch DatabaseServiceError.unexpectedQueryResult(let message) where message == "Database query for public key with interface id interf_id returned result" {
             
         }
     }

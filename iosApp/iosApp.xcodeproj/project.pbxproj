@@ -29,10 +29,11 @@
 		6D6CE885284479490009B815 /* OfferCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CE884284479490009B815 /* OfferCardView.swift */; };
 		6D70A5CA28665E50003FEDF3 /* OfferTruthSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */; };
 		6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */; };
+		6D70A5CE2866A64E003FEDF3 /* DatabaseServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5CD2866A64E003FEDF3 /* DatabaseServiceError.swift */; };
 		6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */; };
-		6D91C97B27533EBB00D85654 /* DBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97A27533EBB00D85654 /* DBService.swift */; };
-		6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97D2753F9B100D85654 /* DBKeyPair.swift */; };
-		6D91C9812753FA2900D85654 /* DBPublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9802753FA2900D85654 /* DBPublicKey.swift */; };
+		6D91C97B27533EBB00D85654 /* DatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97A27533EBB00D85654 /* DatabaseService.swift */; };
+		6D91C97E2753F9B100D85654 /* DatabaseKeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97D2753F9B100D85654 /* DatabaseKeyPair.swift */; };
+		6D91C9812753FA2900D85654 /* DatabasePublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9802753FA2900D85654 /* DatabasePublicKey.swift */; };
 		6D91C9832753FBD900D85654 /* DBServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9822753FBD900D85654 /* DBServiceTest.swift */; };
 		6D91C9862754329B00D85654 /* KeyPair.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C9852754329A00D85654 /* KeyPair.swift */; };
 		6D91C988275432E300D85654 /* PublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C987275432E300D85654 /* PublicKey.swift */; };
@@ -88,10 +89,11 @@
 		6D6CE884284479490009B815 /* OfferCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCardView.swift; sourceTree = "<group>"; };
 		6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTruthSource.swift; sourceTree = "<group>"; };
 		6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainEventRepository.swift; sourceTree = "<group>"; };
+		6D70A5CD2866A64E003FEDF3 /* DatabaseServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseServiceError.swift; sourceTree = "<group>"; };
 		6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymmetricKey.swift; sourceTree = "<group>"; };
-		6D91C97A27533EBB00D85654 /* DBService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBService.swift; sourceTree = "<group>"; };
-		6D91C97D2753F9B100D85654 /* DBKeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBKeyPair.swift; sourceTree = "<group>"; };
-		6D91C9802753FA2900D85654 /* DBPublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBPublicKey.swift; sourceTree = "<group>"; };
+		6D91C97A27533EBB00D85654 /* DatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseService.swift; sourceTree = "<group>"; };
+		6D91C97D2753F9B100D85654 /* DatabaseKeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseKeyPair.swift; sourceTree = "<group>"; };
+		6D91C9802753FA2900D85654 /* DatabasePublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabasePublicKey.swift; sourceTree = "<group>"; };
 		6D91C9822753FBD900D85654 /* DBServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DBServiceTest.swift; sourceTree = "<group>"; };
 		6D91C9852754329A00D85654 /* KeyPair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPair.swift; sourceTree = "<group>"; };
 		6D91C987275432E300D85654 /* PublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKey.swift; sourceTree = "<group>"; };
@@ -207,19 +209,20 @@
 		6D91C97927533E7A00D85654 /* dbService */ = {
 			isa = PBXGroup;
 			children = (
-				6D91C97C2753F99400D85654 /* dbTypes */,
-				6D91C97A27533EBB00D85654 /* DBService.swift */,
+				6D91C97C2753F99400D85654 /* databaseTypes */,
+				6D91C97A27533EBB00D85654 /* DatabaseService.swift */,
+				6D70A5CD2866A64E003FEDF3 /* DatabaseServiceError.swift */,
 			);
 			path = dbService;
 			sourceTree = "<group>";
 		};
-		6D91C97C2753F99400D85654 /* dbTypes */ = {
+		6D91C97C2753F99400D85654 /* databaseTypes */ = {
 			isa = PBXGroup;
 			children = (
-				6D91C97D2753F9B100D85654 /* DBKeyPair.swift */,
-				6D91C9802753FA2900D85654 /* DBPublicKey.swift */,
+				6D91C97D2753F9B100D85654 /* DatabaseKeyPair.swift */,
+				6D91C9802753FA2900D85654 /* DatabasePublicKey.swift */,
 			);
-			path = dbTypes;
+			path = databaseTypes;
 			sourceTree = "<group>";
 		};
 		6D91C9842754327900D85654 /* kmTypes */ = {
@@ -586,10 +589,10 @@
 				6DE6938C284A68D400086719 /* BlockchainService.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */,
-				6D91C97B27533EBB00D85654 /* DBService.swift in Sources */,
+				6D91C97B27533EBB00D85654 /* DatabaseService.swift in Sources */,
 				6D0F4D9C2853C4F60089EE9E /* OfferMessageNotifiable.swift in Sources */,
 				6D5689212865724900BDE490 /* OfferStruct.swift in Sources */,
-				6D91C97E2753F9B100D85654 /* DBKeyPair.swift in Sources */,
+				6D91C97E2753F9B100D85654 /* DatabaseKeyPair.swift in Sources */,
 				6D9D547D28451183007D1093 /* OffersView.swift in Sources */,
 				6D9ABCBD2736399F0034AE01 /* KMService.swift in Sources */,
 				6D0F4D9F2853C5A10089EE9E /* PublicKeyAnnouncement.swift in Sources */,
@@ -604,11 +607,12 @@
 				6DDFAFA5284AAC52004BC95F /* OfferOpenedEvent.swift in Sources */,
 				6D91C988275432E300D85654 /* PublicKey.swift in Sources */,
 				6D6CE885284479490009B815 /* OfferCardView.swift in Sources */,
-				6D91C9812753FA2900D85654 /* DBPublicKey.swift in Sources */,
+				6D91C9812753FA2900D85654 /* DatabasePublicKey.swift in Sources */,
 				6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */,
 				6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */,
 				6DA19783284A8CAD00D2D073 /* CommutoSwapProvider.swift in Sources */,
 				6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */,
+				6D70A5CE2866A64E003FEDF3 /* DatabaseServiceError.swift in Sources */,
 				6DE0896D284FD49300948166 /* OfferNotifiable.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

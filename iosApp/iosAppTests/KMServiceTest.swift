@@ -12,7 +12,7 @@ import XCTest
 
 class KMServiceTest: XCTestCase {
     
-    let dbService: DBService = DBService()
+    let dbService: DatabaseService = DatabaseService()
     var kmService: KMService?
      
 

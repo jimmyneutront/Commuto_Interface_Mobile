@@ -81,7 +81,7 @@ class P2PServiceTest: XCTestCase {
      */
     func testListen() {
         #warning("TODO: migrate to SwitrixSDK in this test")
-        let dbService: DBService = DBService()
+        let dbService: DatabaseService = DatabaseService()
         let kmService: KMService = KMService(dbService: dbService)
         let keyPair = try! kmService.generateKeyPair(storeResult: false)
         var error: Unmanaged<CFError>?

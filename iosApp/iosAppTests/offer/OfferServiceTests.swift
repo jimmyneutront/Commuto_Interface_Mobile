@@ -54,7 +54,7 @@ class OfferServiceTests: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        let databaseService = DBService()
+        let databaseService = DatabaseService()
         try! databaseService.connectToDb()
         try! databaseService.createTables()
         

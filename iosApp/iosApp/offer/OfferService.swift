@@ -20,7 +20,7 @@ class OfferService: OfferNotifiable {
      
      - Parameter databaseService: The `DatabaseService` that the `OfferService` will use for persistent storage.
      */
-    init(databaseService: DBService, offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>()) {
+    init(databaseService: DatabaseService, offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>()) {
         self.databaseService = databaseService
         self.offerOpenedEventRepository = offerOpenedEventRepository
     }
@@ -37,7 +37,7 @@ class OfferService: OfferNotifiable {
     /**
      The `DatabaseService` that this uses for persistent storage.
      */
-    private let databaseService: DBService
+    private let databaseService: DatabaseService
     
     #warning("this should be an object with a default value in the initializer, so we can inject a test object to ensure events are created and removed properly")
     /**
