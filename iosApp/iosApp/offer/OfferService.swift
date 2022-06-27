@@ -46,7 +46,7 @@ class OfferService: OfferNotifiable {
     private var offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent>
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` persistently stores `event`, saves it in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, creates a new `Offer` with the results, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` persistently stores `event`, saves it in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, creates a new `Offer` with the results, persistently stores the new offer, removes the `OfferOpenedEvent` from persistent storage, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferOpenedEvent` of which `OfferService` is being notified.
      */
@@ -81,8 +81,29 @@ class OfferService: OfferNotifiable {
             settlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion
         )
-        #warning("TODO: save to offer database")
-        #warning("TODO: safe offer payment methods to database")
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            onChainPrice: offer.onChainPrice.base64EncodedString(),
+            protocolVersion: String(offer.protocolVersion)
+        )
+        try databaseService.storeOffer(offer: offerForDatabase)
+        var paymentMethodStrings: [String] = []
+        for paymentMethod in offer.settlementMethods {
+            paymentMethodStrings.append(paymentMethod.base64EncodedString())
+        }
+        try databaseService.storeSettlementMethods(id: offerForDatabase.id, settlementMethods: paymentMethodStrings)
+        try databaseService.deleteOfferOpenedEvents(id: offerForDatabase.id)
+        offerOpenedEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
         }
@@ -90,8 +111,6 @@ class OfferService: OfferNotifiable {
         DispatchQueue.main.sync {
             offerTruthSource!.offers[offer.id] = offer
         }
-        #warning("TODO: remove OfferOpenedEvent from database now that we have offer info")
-        offerOpenedEventRepository.remove(event)
         #warning("TODO: try to get public key announcement data. if we have it, update the offer struct and add it to the ViewModel's list")
     }
     

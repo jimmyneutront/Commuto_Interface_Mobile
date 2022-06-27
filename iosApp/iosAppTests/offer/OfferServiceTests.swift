@@ -10,6 +10,7 @@ import XCTest
 
 @testable import iosApp
 @testable import web3swift
+import SwiftUI
 
 /**
  Tests for OfferService
@@ -54,30 +55,58 @@ class OfferServiceTests: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        let databaseService = try! DatabaseService()
+        class TestDatabaseService: DatabaseService {
+            
+            override init() throws {
+                try super.init()
+            }
+            
+            var storedDatabaseOfferOpenedEvent: DatabaseOfferOpenedEvent? = nil
+            var wasDeleteOfferOpenedEventCalled = false
+            
+            override func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
+                storedDatabaseOfferOpenedEvent = DatabaseOfferOpenedEvent(id: id, interfaceId: interfaceId)
+                try super.storeOfferOpenedEvent(id: id, interfaceId: interfaceId)
+            }
+            
+            override func deleteOfferOpenedEvents(id: String) throws {
+                wasDeleteOfferOpenedEventCalled = true
+                try super.deleteOfferOpenedEvents(id: id)
+            }
+            
+        }
+        
+        let databaseService = try! TestDatabaseService()
         try! databaseService.createTables()
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent> {
+            
             var appendedEvent: OfferOpenedEvent? = nil
             var removedEvent: OfferOpenedEvent? = nil
+            
             override func append(_ element: OfferOpenedEvent) {
                 appendedEvent = element
                 super.append(element)
             }
+            
             override func remove(_ elementToRemove: OfferOpenedEvent) {
                 removedEvent = elementToRemove
                 super.append(elementToRemove)
             }
+            
         }
         let offerOpenedEventRepository = TestBlockchainEventRepository()
         
         let offerService = OfferService(databaseService: databaseService, offerOpenedEventRepository: offerOpenedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
+            
             init() {
                 offers = [:]
             }
+            
             let offerAddedExpectation = XCTestExpectation(description: "Fulfilled when an offer is added to the offers dictionary")
+            
             var offers: [UUID: Offer] {
                 didSet {
                     // We want to ignore initialization and only fulfill when a new offer is actually added
@@ -86,6 +115,7 @@ class OfferServiceTests: XCTestCase {
                     }
                 }
             }
+            
         }
         
         let offerTruthSource = TestOfferTruthSource()
@@ -117,5 +147,18 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID]!.id == expectedOfferID)
         XCTAssertEqual(offerOpenedEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerOpenedEventRepository.removedEvent!.id, expectedOfferID)
+        XCTAssertEqual(databaseService.storedDatabaseOfferOpenedEvent!.id, expectedOfferID.asData().base64EncodedString())
+        XCTAssertTrue(databaseService.wasDeleteOfferOpenedEventCalled)
+        let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
+        XCTAssertTrue(offerInDatabase!.isCreated)
+        XCTAssertFalse(offerInDatabase!.isTaken)
+        XCTAssertEqual(offerInDatabase!.interfaceId, Data("maker interface Id here".utf8).base64EncodedString())
+        XCTAssertEqual(offerInDatabase!.amountLowerBound, "10000")
+        XCTAssertEqual(offerInDatabase!.amountUpperBound, "10000")
+        XCTAssertEqual(offerInDatabase!.securityDepositAmount, "1000")
+        XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
+        XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
+        XCTAssertEqual(offerInDatabase!.onChainPrice, Data("a price here".utf8).base64EncodedString())
+        XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
     }
 }
