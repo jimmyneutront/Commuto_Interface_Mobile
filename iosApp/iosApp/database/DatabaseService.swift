@@ -38,6 +38,10 @@ class DatabaseService {
      */
     let offers = Table("Offer")
     /**
+     A database table of settlement methods, as Base-64 `String` encoded  bytes.
+     */
+    let settlementMethods = Table("SettlementMethod")
+    /**
      A database table of [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events.
      */
     let offerOpenedEvents = Table("OfferOpenedEvent")
@@ -110,6 +114,10 @@ class DatabaseService {
      A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `protocolVersion` property.
      */
     let protocolVersion = Expression<String>("protocolVersion")
+    /**
+     A database structure representing a particular settlement method of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     */
+    let settlementMethod = Expression<String>("settlementMethod")
     
     /**
      Creates all necessary database tables.
@@ -130,6 +138,10 @@ class DatabaseService {
             t.column(onChainPrice)
             t.column(protocolVersion)
         })
+        try connection.run(settlementMethods.create { t in
+            t.column(offerId)
+            t.column(settlementMethod)
+        })
         try connection.run(offerOpenedEvents.create { t in
             t.column(offerId, unique: true)
             t.column(interfaceId)
@@ -143,6 +155,54 @@ class DatabaseService {
             t.column(interfaceId, unique: true)
             t.column(publicKey)
         })
+    }
+    
+    #warning("TODO: evantually this should delete all payment methods associated with the specified ID before storing any new ones, so in case the offer is edited, we don't have any unsupported payment methods still in persistent storage.")
+    /**
+     Persistently stores each settlement method in the supplied `Array`, associating each one with the supplied ID.
+     
+     - Parameters:
+        - offerId: The ID of the offer or swap to be associated with the settlement methods.
+        - paymentMethods: The settlement methods to be persistently stored.
+     */
+    func storeSettlementMethods(id: String, settlementMethods _settlementMethods: [String]) throws {
+        _ = try databaseQueue.sync {
+            for _settlementMethod in _settlementMethods {
+                try connection.run(settlementMethods.insert(
+                    offerId <- id,
+                    settlementMethod <- _settlementMethod
+                ))
+            }
+        }
+    }
+    
+    /**
+     Retrieves the persistently stored settlment methods associated with the specified offer ID, or returns `nil` if no such settlement methods are present.
+     
+     - Parameter id: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
+     
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if if `rowIterator` is `nil`.
+     
+     - Returns: An `Array` of `Strings` which are settlement methods associated with `id`, or `nil` if no such payment methods are found.
+     */
+    func getSettlementMethods(id: String) throws -> [String]? {
+        var rowIterator: RowIterator? = nil
+        _ = try databaseQueue.sync {
+            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(offerId == id))
+        }
+        guard rowIterator != nil else {
+            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getPaymentMethods call")
+        }
+        let result = try Array(rowIterator!)
+        if result.count > 0 {
+            var settlementMethodsArray: [String] = []
+            for (index, _) in result.enumerated() {
+                settlementMethodsArray.append(result[index][settlementMethod])
+            }
+            return settlementMethodsArray
+        } else {
+            return nil
+        }
     }
     
     /**
@@ -179,7 +239,7 @@ class DatabaseService {
      
      - Parameter id: The offer ID of the `DatabaseOffer` to return, as a Base64-`String` of bytes.
      
-     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if `DatabaseOffer`s are found with the same offer ID or if the offer ID of the `DatabaseOffer` returned from the database does not match `id`.
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`, and a `DatabaseServiceError.unexpectedQueryResult` if `DatabaseOffer`s are found with the same offer ID or if the offer ID of the `DatabaseOffer` returned from the database does not match `id`.
      
      - Returns: A `DatabaseOffer` corresponding to `id`, or `nil` if no such event is found.
      */

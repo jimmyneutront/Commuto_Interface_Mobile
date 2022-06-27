@@ -60,6 +60,21 @@ class DatabaseServiceTests: XCTestCase {
         XCTAssertEqual(returnedOffer, offerToStore)
     }
     
+    func testStoreAndGetSettlementMethods() throws {
+        let offerId = "an_offer_id"
+        let settlementMethods = [
+            "settlement_method_zero",
+            "settlement_method_one",
+            "settlement_method_two"
+        ]
+        try dbService.storeSettlementMethods(id: offerId, settlementMethods: settlementMethods)
+        let receivedSettlementMethods = try dbService.getSettlementMethods(id: offerId)
+        XCTAssertEqual(receivedSettlementMethods!.count, 3)
+        XCTAssertEqual(receivedSettlementMethods![0], "settlement_method_zero")
+        XCTAssertEqual(receivedSettlementMethods![1], "settlement_method_one")
+        XCTAssertEqual(receivedSettlementMethods![2], "settlement_method_two")
+    }
+    
     func testStoreAndGetOfferOpenedEvent() throws {
         try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
         // This should do nothing and not throw
