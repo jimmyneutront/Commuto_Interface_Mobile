@@ -29,6 +29,7 @@ class OfferService: OfferNotifiable {
      An object adopting `OfferTruthSource` in which this is responsible for maintaining an accurate list of all open offers.
      */
     var offerTruthSource: OfferTruthSource? = nil
+    
     /**
      The `BlockchainService` that this uses for interacting with the blockchain.
      */
@@ -39,7 +40,6 @@ class OfferService: OfferNotifiable {
      */
     private let databaseService: DatabaseService
     
-    #warning("this should be an object with a default value in the initializer, so we can inject a test object to ensure events are created and removed properly")
     /**
      An `Array` of `OfferOpenedEvent`s for offers that are open and for which complete offer information has not yet been retrieved.
      */
@@ -82,6 +82,7 @@ class OfferService: OfferNotifiable {
             protocolVersion: offerStruct.protocolVersion
         )
         #warning("TODO: save to offer database")
+        #warning("TODO: safe offer payment methods to database")
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
         }

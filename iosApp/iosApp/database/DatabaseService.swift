@@ -34,6 +34,10 @@ class DatabaseService {
     let databaseQueue = DispatchQueue(label: "databaseService.serial.queue")
     
     /**
+     A database table of `Offer`s.
+     */
+    let offers = Table("Offer")
+    /**
      A database table of [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events.
      */
     let offerOpenedEvents = Table("OfferOpenedEvent")
@@ -62,11 +66,74 @@ class DatabaseService {
      A database structure representing a private key.
      */
     let privateKey = Expression<String>("privateKey")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `isCreated` property.
+     */
+    let isCreated = Expression<Bool>("isCreated")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `isTaken` property.
+     */
+    let isTaken = Expression<Bool>("isTaken")
+    /**
+     A database structure representing the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     */
+    let maker = Expression<String>("maker")
+    /**
+     A database structure representing a stablecoin smart contract address.
+     */
+    let stablecoin = Expression<String>("stablecoin")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `amountLowerBound` property.
+     */
+    let amountLowerBound = Expression<String>("amountLowerBound")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `amountUpperBound` property.
+     */
+    let amountUpperBound = Expression<String>("amountUpperBound")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `securityDepositAmount` property.
+     */
+    let securityDepositAmount = Expression<String>("securityDepositAmount")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `serviceFeeRate` property.
+     */
+    let serviceFeeRate = Expression<String>("serviceFeeRate")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `onChainDirection` property.
+     */
+    let onChainDirection = Expression<String>("onChainDirection")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `onChainPrice` property.
+     */
+    let onChainPrice = Expression<String>("onChainPrice")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `protocolVersion` property.
+     */
+    let protocolVersion = Expression<String>("protocolVersion")
     
     /**
      Creates all necessary database tables.
      */
     func createTables() throws {
+        try connection.run(offers.create { t in
+            t.column(offerId, unique: true)
+            t.column(isCreated)
+            t.column(isTaken)
+            t.column(maker)
+            t.column(interfaceId)
+            t.column(stablecoin)
+            t.column(amountLowerBound)
+            t.column(amountUpperBound)
+            t.column(securityDepositAmount)
+            t.column(serviceFeeRate)
+            t.column(onChainDirection)
+            t.column(onChainPrice)
+            t.column(protocolVersion)
+        })
+        try connection.run(offerOpenedEvents.create { t in
+            t.column(offerId, unique: true)
+            t.column(interfaceId)
+        })
         try connection.run(keyPairs.create { t in
             t.column(interfaceId, unique: true)
             t.column(publicKey)
@@ -76,10 +143,79 @@ class DatabaseService {
             t.column(interfaceId, unique: true)
             t.column(publicKey)
         })
-        try connection.run(offerOpenedEvents.create { t in
-            t.column(offerId, unique: true)
-            t.column(interfaceId)
-        })
+    }
+    
+    /**
+     Persistently stores a `DatabaseOffer`. If a `DatabaseOffer` with an offer ID equal to that of `offer` already exists in the database, this does nothing.
+     
+     - Parameter offer: The `offer` to be persistently stored.
+     */
+    func storeOffer(offer: DatabaseOffer) throws {
+        _ = try databaseQueue.sync {
+            do {
+                try connection.run(offers.insert(
+                    offerId <- offer.id,
+                    isCreated <- offer.isCreated,
+                    isTaken <- offer.isTaken,
+                    maker <- offer.maker,
+                    interfaceId <- offer.interfaceId,
+                    stablecoin <- offer.stablecoin,
+                    amountLowerBound <- offer.amountLowerBound,
+                    amountUpperBound <- offer.amountUpperBound,
+                    securityDepositAmount <- offer.securityDepositAmount,
+                    serviceFeeRate <- offer.serviceFeeRate,
+                    onChainDirection <- offer.onChainDirection,
+                    onChainPrice <- offer.onChainPrice,
+                    protocolVersion <- offer.protocolVersion
+                ))
+            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
+                // An Offer with the specified id already exists in the database, so we do nothing
+            }
+        }
+    }
+    
+    /**
+     Retrieves the persistently stored `DatabaseOffer` with the specified offer ID, or returns `nil` if no such event is present.
+     
+     - Parameter id: The offer ID of the `DatabaseOffer` to return, as a Base64-`String` of bytes.
+     
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if `DatabaseOffer`s are found with the same offer ID or if the offer ID of the `DatabaseOffer` returned from the database does not match `id`.
+     
+     - Returns: A `DatabaseOffer` corresponding to `id`, or `nil` if no such event is found.
+     */
+    func getOffer(id: String) throws -> DatabaseOffer? {
+        var rowIterator: RowIterator? = nil
+        _ = try databaseQueue.sync {
+            rowIterator = try connection.prepareRowIterator(offers.filter(offerId == id))
+        }
+        guard rowIterator != nil else {
+            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getOffer call")
+        }
+        let result = try Array(rowIterator!)
+        if result.count > 1 {
+            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Offers found with given offer id" + id)
+        } else if result.count == 1 {
+            guard result[0][offerId] == id else {
+                throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned Offer did not match specified offer ID " + id)
+            }
+            return DatabaseOffer(
+                id: result[0][offerId],
+                isCreated: result[0][isCreated],
+                isTaken: result[0][isTaken],
+                maker: result[0][maker],
+                interfaceId: result[0][interfaceId],
+                stablecoin: result[0][stablecoin],
+                amountLowerBound: result[0][amountLowerBound],
+                amountUpperBound: result[0][amountUpperBound],
+                securityDepositAmount: result[0][securityDepositAmount],
+                serviceFeeRate: result[0][serviceFeeRate],
+                onChainDirection: result[0][onChainDirection],
+                onChainPrice: result[0][onChainPrice],
+                protocolVersion: result[0][protocolVersion]
+            )
+        } else {
+            return nil
+        }
     }
     
     /**
