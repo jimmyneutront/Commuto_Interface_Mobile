@@ -47,25 +47,29 @@ class DatabaseServiceTests: XCTestCase {
     func testDuplicateKeyPairProtection() throws {
         try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
         // This should do nothing and not throw
-        try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
+        try dbService.storeKeyPair(interfaceId: "another_interf_id", publicKey: "another_pub_key", privateKey: "another_priv_key")
         // This should not throw, since only one such key pair should exist in the database
-        _ = try dbService.getKeyPair(interfaceId: "interf_id")
+        let keyPair = try dbService.getKeyPair(interfaceId: "interf_id")
+        XCTAssertEqual(keyPair!.publicKey, "pub_key")
+        XCTAssertEqual(keyPair!.privateKey, "priv_key")
     }
     
     func testDuplicatePublicKeyProtection() throws {
         try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
         // This should do nothing and not throw
-        try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
+        try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "another_pub_key")
         // This should not throw, since only one such public key should exist in the database
-        _ = try dbService.getPublicKey(interfaceId: "interf_id")
+        let publicKey = try dbService.getPublicKey(interfaceId: "interf_id")
+        XCTAssertEqual(publicKey!.publicKey, "pub_key")
     }
     
     func testDuplicateOfferOpenedEventProtection() throws {
         try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
         // This should do nothing and not throw
-        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
+        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "another_interf_id")
         // This should not throw, since only one such OfferOpened event should exist in the database
-        _ = try dbService.getOfferOpenedEvent(id: "offer_id")
+        let offerOpenedEvent = try dbService.getOfferOpenedEvent(id: "offer_id")
+        XCTAssertEqual(offerOpenedEvent!.interfaceId, "interf_id")
     }
 
 }
