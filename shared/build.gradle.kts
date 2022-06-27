@@ -76,6 +76,6 @@ android {
 
 sqldelight {
     database("CommutoInterfaceDB") {
-        packageName = "com.commuto.interfacemobile.db"
+        packageName = "com.commuto.interfacemobile.android.database"
     }
 }

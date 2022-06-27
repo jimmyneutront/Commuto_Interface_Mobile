@@ -5,6 +5,8 @@ plugins {
     kotlin("kapt")
     kotlin("plugin.serialization") version "1.6.10"
     id("dagger.hilt.android.plugin")
+    // SQLDelight plugin for code generation
+    id("com.squareup.sqldelight")
 }
 
 // Trixnity Matrix SDK
@@ -40,6 +42,12 @@ dependencies {
             "com.google.dagger","hilt-android-compiler", "2.38.1"
         )
     )
+    // SQLDelight for persistent storage
+    implementation("com.squareup.sqldelight:sqlite-driver:1.5.1")
+    implementation("org.xerial:sqlite-jdbc:3.34.0") {
+        because("SQLDelight depends on this, but we need it in the compile classpath so we can catch " +
+                "exceptions defined in it")
+    }
     // Web3j
     //TODO: Update these to a version with no vulnerabilities
     implementation("org.web3j:codegen:4.9.2")
@@ -97,4 +105,10 @@ android {
 // Allow references to generated code
 kapt {
     correctErrorTypes = true
+}
+
+sqldelight {
+    database("CommutoInterfaceDB") {
+        packageName = "com.commuto.interfacemobile.android.database"
+    }
 }

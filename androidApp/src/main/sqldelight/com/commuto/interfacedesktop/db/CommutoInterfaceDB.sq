@@ -1,0 +1,34 @@
+createKeyPairTable:
+CREATE TABLE KeyPair (
+interfaceId TEXT UNIQUE NOT NULL,
+publicKey TEXT NOT NULL,
+privateKey TEXT NOT NULL
+);
+
+createPublicKeyTable:
+CREATE TABLE PublicKey (
+interfaceId TEXT UNIQUE NOT NULL,
+publicKey TEXT NOT NULL
+);
+
+insertKeyPair:
+INSERT INTO KeyPair(interfaceId, publicKey, privateKey)
+VALUES(?, ?, ?);
+
+insertPublicKey:
+INSERT INTO PublicKey(interfaceId, publicKey)
+VALUES(?, ?);
+
+removeAllKeyPairs:
+DELETE FROM KeyPair;
+
+removeAllPublicKeys:
+DELETE FROM PublicKey;
+
+selectKeyPairByInterfaceId:
+SELECT * FROM KeyPair
+WHERE interfaceId = ?;
+
+selectPublicKeyByInterfaceId:
+SELECT * FROM PublicKey
+WHERE interfaceId = ?;
