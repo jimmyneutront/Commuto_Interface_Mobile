@@ -62,51 +62,32 @@ class DatabaseServiceTests: XCTestCase {
     
     func testStoreAndGetOfferOpenedEvent() throws {
         try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
+        // This should do nothing and not throw
+        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "different_interface_id")
         let expectedOfferOpenedEvent = DatabaseOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
+        // This should not throw since only one such OfferOpened event should exist in the database
         let offerOpenedEvent = try dbService.getOfferOpenedEvent(id: "offer_id")
         XCTAssertEqual(expectedOfferOpenedEvent, offerOpenedEvent)
     }
     
     func testStoreAndGetKeyPair() throws {
         try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
+        // This should do nothing and not throw
+        try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "another_pub_key", privateKey: "another_priv_key")
         let expectedKeyPair = DatabaseKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        let keyPair: DatabaseKeyPair? = try dbService.getKeyPair(interfaceId: "interf_id")
-        XCTAssertEqual(expectedKeyPair, keyPair!)
+        // This should not throw since only one such key pair should exist in the database
+        let keyPair = try dbService.getKeyPair(interfaceId: "interf_id")
+        XCTAssertEqual(expectedKeyPair, keyPair)
     }
     
     func testStoreAndGetPublicKey() throws {
         try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        let expectedPublicKey = DatabasePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
-        let publicKey: DatabasePublicKey? = try dbService.getPublicKey(interfaceId: "interf_id")
-        XCTAssertEqual(expectedPublicKey, publicKey!)
-    }
-    
-    func testDuplicateOfferOpenedEventProtection() throws {
-        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
-        // This should do nothing and not throw
-        try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "another_interf_id")
-        // This should not throw, since only one such OfferOpened event should exist in the database
-        let offerOpenedEvent = try dbService.getOfferOpenedEvent(id: "offer_id")
-        XCTAssertEqual(offerOpenedEvent!.interfaceId, "interf_id")
-    }
-    
-    func testDuplicateKeyPairProtection() throws {
-        try dbService.storeKeyPair(interfaceId: "interf_id", publicKey: "pub_key", privateKey: "priv_key")
-        // This should do nothing and not throw
-        try dbService.storeKeyPair(interfaceId: "another_interf_id", publicKey: "another_pub_key", privateKey: "another_priv_key")
-        // This should not throw, since only one such key pair should exist in the database
-        let keyPair = try dbService.getKeyPair(interfaceId: "interf_id")
-        XCTAssertEqual(keyPair!.publicKey, "pub_key")
-        XCTAssertEqual(keyPair!.privateKey, "priv_key")
-    }
-    
-    func testDuplicatePublicKeyProtection() throws {
-        try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
         // This should do nothing and not throw
         try dbService.storePublicKey(interfaceId: "interf_id", publicKey: "another_pub_key")
-        // This should not throw, since only one such public key should exist in the database
+        let expectedPublicKey = DatabasePublicKey(interfaceId: "interf_id", publicKey: "pub_key")
+        // This should not throw since only one such public key should exist in the database
         let publicKey = try dbService.getPublicKey(interfaceId: "interf_id")
-        XCTAssertEqual(publicKey!.publicKey, "pub_key")
+        XCTAssertEqual(expectedPublicKey, publicKey)
     }
 
 }
