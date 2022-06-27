@@ -75,7 +75,7 @@ class DatabaseServiceTests: XCTestCase {
         XCTAssertEqual(receivedSettlementMethods![2], "settlement_method_two")
     }
     
-    func testStoreAndGetOfferOpenedEvent() throws {
+    func testStoreAndGetAndDeleteOfferOpenedEvent() throws {
         try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "interf_id")
         // This should do nothing and not throw
         try dbService.storeOfferOpenedEvent(id: "offer_id", interfaceId: "different_interface_id")
@@ -83,6 +83,9 @@ class DatabaseServiceTests: XCTestCase {
         // This should not throw since only one such OfferOpened event should exist in the database
         let offerOpenedEvent = try dbService.getOfferOpenedEvent(id: "offer_id")
         XCTAssertEqual(expectedOfferOpenedEvent, offerOpenedEvent)
+        try dbService.deleteOfferOpenedEvents(id: "offer_id")
+        let offerOpenedEventAfterDeletion = try dbService.getOfferOpenedEvent(id: "offer_id")
+        XCTAssertEqual(offerOpenedEventAfterDeletion, nil)
     }
     
     func testStoreAndGetKeyPair() throws {

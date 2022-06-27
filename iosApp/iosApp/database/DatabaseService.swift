@@ -296,6 +296,17 @@ class DatabaseService {
     }
     
     /**
+     Removes every [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) Event with an offer ID equal to `id` from persistent storage.
+     
+     - Parameter id: The offer ID of the OfferOpened events to be removed, as a Base64-`String` of bytes.
+     */
+    func deleteOfferOpenedEvents(id: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offerOpenedEvents.filter(offerId == id).delete())
+        }
+    }
+    
+    /**
      Retrieves the persistently stored OfferOpened event with the given offer ID, or returns `nil` if no such event is present.
      
      - Parameter id: The offer ID of the OfferOpened event to return, as a Base64-`String` of bytes.
