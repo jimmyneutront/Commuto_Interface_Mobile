@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.database
 
 import com.commuto.interfacedesktop.db.KeyPair
+import com.commuto.interfacedesktop.db.Offer
 import com.commuto.interfacedesktop.db.OfferOpenedEvent
 import com.commuto.interfacedesktop.db.PublicKey
 
@@ -18,6 +19,7 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
      * Creates all necessary database tables.
      */
     internal fun createTables() {
+        dbQuery.createOfferTable()
         dbQuery.createOfferOpenedEventTable()
         dbQuery.createPublicKeyTable()
         dbQuery.createKeyPairTable()
@@ -28,10 +30,21 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
      */
     internal fun clearDatabase() {
         dbQuery.transaction {
+            dbQuery.removeAllOffers()
             dbQuery.removeAllOfferOpenedEvents()
             dbQuery.removeAllKeyPairs()
             dbQuery.removeAllPublicKeys()
         }
+    }
+
+    /**
+     * Returns [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)s with the specified offer
+     * ID.
+     * @param id The ID of the Offers to be returned.
+     * @return A [List] of [Offer]s with offer IDs equal to [id].
+     */
+    internal fun selectOfferByOfferId(id: String): List<Offer> {
+        return dbQuery.selectOfferByOfferId(id).executeAsList()
     }
 
     /**
@@ -60,6 +73,28 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
      */
     internal fun selectPublicKeyByInterfaceId(interfaceId: String): List<PublicKey> {
         return dbQuery.selectPublicKeyByInterfaceId(interfaceId).executeAsList()
+    }
+
+    /**
+     * Inserts an [Offer] into the database.
+     * @param offer The [Offer] to be inserted in the database.
+     */
+    internal fun insertOffer(offer: Offer) {
+        dbQuery.insertOffer(
+            offerId = offer.offerId,
+            isCreated = offer.isCreated,
+            isTaken = offer.isTaken,
+            maker = offer.maker,
+            interfaceId = offer.interfaceId,
+            stablecoin = offer.stablecoin,
+            amountLowerBound = offer.amountLowerBound,
+            amountUpperBound = offer.amountUpperBound,
+            securityDepositAmount = offer.securityDepositAmount,
+            serviceFeeRate = offer.serviceFeeRate,
+            onChainDirection = offer.onChainDirection,
+            onChainPrice = offer.onChainPrice,
+            protocolVersion = offer.protocolVersion
+        )
     }
 
     /**

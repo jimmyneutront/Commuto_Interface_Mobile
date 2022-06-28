@@ -2,6 +2,7 @@ package com.commuto.interfacemobile.android.database
 
 // TODO: Figure out why these are interfacedesktop instaed of interfacemobile.android
 import com.commuto.interfacedesktop.db.KeyPair
+import com.commuto.interfacedesktop.db.Offer
 import com.commuto.interfacedesktop.db.OfferOpenedEvent
 import com.commuto.interfacedesktop.db.PublicKey
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -11,6 +12,7 @@ import org.sqlite.SQLiteException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// TODO: document that these functions throw
 /**
  * The Database Service Class.
  *
@@ -42,6 +44,57 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
      */
     fun clearDatabase() {
         database.clearDatabase()
+    }
+
+    /**
+     * Persistently stores an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer). If an Offer
+     * with the specified offer ID already exists in the database, this does nothing.
+     *
+     * @param offer The [Offer] to be stored in the database.
+     *
+     * @throws Exception if database insertion is unsuccessful for a reason OTHER than UNIQUE constraint failure.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun storeOffer(offer: Offer) {
+        try {
+            withContext(databaseServiceContext) {
+                database.insertOffer(offer)
+            }
+        } catch (exception: SQLiteException) {
+            /*
+            The result code for a UNIQUE constraint failure; see here: https://www.sqlite.org/rescode.html
+            If an Offer with the specified offer ID already exists, we do nothing.
+             */
+            if (exception.resultCode.code != 2067) {
+                throw exception
+            }
+        }
+    }
+
+    /**
+     * Retrieves the persistently stored [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)
+     * with the given offer ID, or returns null if no such event is present.
+     *
+     * @param id The offer ID of the Offer to return, as a Base64-[String] of bytes.
+     *
+     * @throws IllegalStateException if multiple offers are found for a single offer ID, or if the offer ID of the offer
+     * returned from the database query does not match [id].
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun getOffer(id: String): Offer? {
+        val dbOffers: List<Offer> = withContext(databaseServiceContext) {
+            database.selectOfferByOfferId(id)
+        }
+        return if (dbOffers.size > 1) {
+            throw IllegalStateException("Multiple offers found with given offer id $id")
+        } else if (dbOffers.size == 1) {
+            check(dbOffers[0].offerId == id) {
+                "Returned offer id " + id + " did not match specified offer id " + id
+            }
+            dbOffers[0]
+        } else {
+            null
+        }
     }
 
     /**

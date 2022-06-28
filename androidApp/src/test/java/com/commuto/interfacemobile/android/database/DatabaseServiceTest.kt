@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.database
 
 import com.commuto.interfacedesktop.db.KeyPair
+import com.commuto.interfacedesktop.db.Offer
 import com.commuto.interfacedesktop.db.OfferOpenedEvent
 import com.commuto.interfacedesktop.db.PublicKey
 import kotlinx.coroutines.runBlocking
@@ -15,6 +16,44 @@ class DatabaseServiceTest {
     @Before
     fun testCreateTables() {
         databaseService.createTables()
+    }
+
+    @Test
+    fun testStoreAndGetOffer() = runBlocking {
+        val offerToStore = Offer(
+            "a_uuid",
+            1L,
+            0L,
+            "maker_address",
+            "interface_id",
+            "stablecoin_address",
+            "lower_bound_amount",
+            "upper_bound_amount",
+            "security_deposit_amount",
+            "service_fee_rate",
+            "direction",
+            "a_price",
+            "some_version",
+        )
+        databaseService.storeOffer(offerToStore)
+        val anotherOfferToStore = Offer(
+            "a_uuid",
+            1L,
+            0L,
+            "another_maker_address",
+            "another_interface_id",
+            "another_stablecoin_address",
+            "another_lower_bound_amount",
+            "another_upper_bound_amount",
+            "another_security_deposit_amount",
+            "another_service_fee_rate",
+            "opposite_direction",
+            "a_different_price",
+            "some_other_version",
+        )
+        databaseService.storeOffer(anotherOfferToStore)
+        val returnedOffer = databaseService.getOffer("a_uuid")
+        assertEquals(returnedOffer, offerToStore)
     }
 
     @Test
