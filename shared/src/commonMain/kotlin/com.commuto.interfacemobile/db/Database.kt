@@ -1,6 +1,6 @@
 package com.commuto.interfacemobile.db
 
-import com.commuto.interfacemobile.db.CommutoInterfaceDB
+import com.commuto.interfacemobile.android.database.CommutoInterfaceDB
 
 internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     private val database = CommutoInterfaceDB(databaseDriverFactory.createDriver())

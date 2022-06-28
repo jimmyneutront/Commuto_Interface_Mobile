@@ -3,6 +3,7 @@ package com.commuto.interfacemobile.android.blockchain
 import com.commuto.interfacemobile.android.CommutoSwap
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
+import com.commuto.interfacemobile.android.ui.OffersViewModel
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
@@ -38,9 +39,11 @@ class BlockchainServiceTest {
                 throw exception
             }
         }
+        val offersService = OfferService()
+        OffersViewModel(offersService)
         val blockchainService = BlockchainService(
             TestBlockchainExceptionHandler(),
-            OfferService()
+            offersService
         )
         blockchainService.listenLoop()
     }
@@ -78,7 +81,7 @@ class BlockchainServiceTest {
         offerIdByteBuffer.putLong(expectedOfferId.mostSignificantBits)
         offerIdByteBuffer.putLong(expectedOfferId.leastSignificantBits)
 
-        val w3 = Web3j.build(HttpService("http://192.168.0.195:8545"))
+        val w3 = Web3j.build(HttpService("http://192.168.1.13:8545"))
 
         class TestBlockchainExceptionHandler : BlockchainExceptionNotifiable {
             @Throws
@@ -161,7 +164,7 @@ class BlockchainServiceTest {
         offerIdByteBuffer.putLong(expectedOfferId.mostSignificantBits)
         offerIdByteBuffer.putLong(expectedOfferId.leastSignificantBits)
 
-        val w3 = Web3j.build(HttpService("http://192.168.0.195:8545"))
+        val w3 = Web3j.build(HttpService("http://192.168.1.13:8545"))
 
         class TestBlockchainExceptionHandler : BlockchainExceptionNotifiable {
             @Throws

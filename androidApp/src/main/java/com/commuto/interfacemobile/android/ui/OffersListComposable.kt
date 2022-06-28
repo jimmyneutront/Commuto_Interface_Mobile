@@ -38,11 +38,11 @@ fun OffersListComposable(viewModel: OffersViewModel, navController: NavControlle
             modifier = Modifier.padding(horizontal = 10.dp)
         )
         OffersDividerComposable()
-        if (viewModel.offerService.offers.size == 0) {
+        if (viewModel.offers.size == 0) {
             OffersNoneFoundComposable()
         } else {
             LazyColumn {
-                items(viewModel.offerService.offers) { offer ->
+                items(viewModel.offers) { offer ->
                     Button(
                         colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
                         contentPadding = PaddingValues(10.dp),

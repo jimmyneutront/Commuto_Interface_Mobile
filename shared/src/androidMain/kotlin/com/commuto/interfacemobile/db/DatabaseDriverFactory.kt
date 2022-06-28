@@ -1,7 +1,7 @@
 package com.commuto.interfacemobile.db
 
 import android.content.Context
-import com.commuto.interfacemobile.db.CommutoInterfaceDB
+import com.commuto.interfacemobile.android.database.CommutoInterfaceDB
 import com.squareup.sqldelight.android.AndroidSqliteDriver
 import com.squareup.sqldelight.db.SqlDriver
 
