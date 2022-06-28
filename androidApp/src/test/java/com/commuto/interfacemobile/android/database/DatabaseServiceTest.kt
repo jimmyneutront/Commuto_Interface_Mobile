@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.database
 
 import com.commuto.interfacedesktop.db.KeyPair
+import com.commuto.interfacedesktop.db.OfferOpenedEvent
 import com.commuto.interfacedesktop.db.PublicKey
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -14,6 +15,20 @@ class DatabaseServiceTest {
     @Before
     fun testCreateTables() {
         databaseService.createTables()
+    }
+
+    @Test
+    fun testStoreAndGetAndDeleteOfferOpenedEvent() = runBlocking {
+        databaseService.storeOfferOpenedEvent("offer_id", "interf_id")
+        // This should do nothing and not throw
+        databaseService.storeOfferOpenedEvent("offer_id", "interf_id")
+        val expectedOfferOpenedEvent = OfferOpenedEvent("offer_id", "interf_id")
+        // This should not throw since only one such OfferOpened event should exist in the database
+        val offerOpenedEvent = databaseService.getOfferOpenedEvent("offer_id")
+        assertEquals(expectedOfferOpenedEvent, offerOpenedEvent)
+        databaseService.deleteOfferOpenedEvent("offer_id")
+        val offerOpenedEventAfterDeletion = databaseService.getOfferOpenedEvent("offer_id")
+        assertEquals(offerOpenedEventAfterDeletion, null)
     }
 
     @Test

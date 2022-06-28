@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.database
 
 import com.commuto.interfacedesktop.db.KeyPair
+import com.commuto.interfacedesktop.db.OfferOpenedEvent
 import com.commuto.interfacedesktop.db.PublicKey
 
 /**
@@ -17,6 +18,7 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
      * Creates all necessary database tables.
      */
     internal fun createTables() {
+        dbQuery.createOfferOpenedEventTable()
         dbQuery.createPublicKeyTable()
         dbQuery.createKeyPairTable()
     }
@@ -26,9 +28,20 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
      */
     internal fun clearDatabase() {
         dbQuery.transaction {
+            dbQuery.removeAllOfferOpenedEvents()
             dbQuery.removeAllKeyPairs()
             dbQuery.removeAllPublicKeys()
         }
+    }
+
+    /**
+     * Returns [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events with the
+     * specified offer ID.
+     * @param id The offer ID of the OfferOpened events to be returned.
+     * @return A [List] of [OfferOpenedEvent]s with offer IDs equal to [id].
+     */
+    internal fun selectOfferOpenedEventByOfferId(id: String): List<OfferOpenedEvent> {
+        return dbQuery.selectOfferOpenedEventByOfferId(id).executeAsList()
     }
 
     /**
@@ -47,6 +60,17 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
      */
     internal fun selectPublicKeyByInterfaceId(interfaceId: String): List<PublicKey> {
         return dbQuery.selectPublicKeyByInterfaceId(interfaceId).executeAsList()
+    }
+
+    /**
+     * Inserts a [OfferOpenedEvent] into the database.
+     * @param offerOpenedEvent The [OfferOpenedEvent] to be inserted in the database.
+     */
+    internal fun insertOfferOpenedEvent(offerOpenedEvent: OfferOpenedEvent) {
+        dbQuery.insertOfferOpenedEvent(
+            offerId = offerOpenedEvent.offerId,
+            interfaceId = offerOpenedEvent.interfaceId
+        )
     }
 
     /**
@@ -71,4 +95,15 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
             publicKey = publicKey.publicKey,
         )
     }
+
+    /**
+     * Deletes all [OfferOpenedEvent]s with the specified offer ID from the database.
+     * @param id The offer ID of the [OfferOpenedEvent]s to be deleted.
+     */
+    internal fun deleteOfferOpenedEvent(id: String) {
+        dbQuery.deleteOfferOpenedEventByOfferId(
+            offerId = id
+        )
+    }
+
 }

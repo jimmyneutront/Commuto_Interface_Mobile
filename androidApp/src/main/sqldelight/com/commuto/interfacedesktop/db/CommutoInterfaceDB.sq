@@ -1,3 +1,9 @@
+createOfferOpenedEventTable:
+CREATE TABLE OfferOpenedEvent (
+offerId TEXT UNIQUE NOT NULL,
+interfaceId TEXT NOT NULL
+);
+
 createKeyPairTable:
 CREATE TABLE KeyPair (
 interfaceId TEXT UNIQUE NOT NULL,
@@ -11,6 +17,10 @@ interfaceId TEXT UNIQUE NOT NULL,
 publicKey TEXT NOT NULL
 );
 
+insertOfferOpenedEvent:
+INSERT INTO OfferOpenedEvent(offerId, interfaceId)
+VALUES(?, ?);
+
 insertKeyPair:
 INSERT INTO KeyPair(interfaceId, publicKey, privateKey)
 VALUES(?, ?, ?);
@@ -19,11 +29,9 @@ insertPublicKey:
 INSERT INTO PublicKey(interfaceId, publicKey)
 VALUES(?, ?);
 
-removeAllKeyPairs:
-DELETE FROM KeyPair;
-
-removeAllPublicKeys:
-DELETE FROM PublicKey;
+selectOfferOpenedEventByOfferId:
+SELECT * FROM OfferOpenedEvent
+WHERE offerId = ?;
 
 selectKeyPairByInterfaceId:
 SELECT * FROM KeyPair
@@ -32,3 +40,16 @@ WHERE interfaceId = ?;
 selectPublicKeyByInterfaceId:
 SELECT * FROM PublicKey
 WHERE interfaceId = ?;
+
+deleteOfferOpenedEventByOfferId:
+DELETE FROM OfferOpenedEvent
+WHERE offerId = ?;
+
+removeAllOfferOpenedEvents:
+DELETE FROM OfferOpenedEvent;
+
+removeAllKeyPairs:
+DELETE FROM KeyPair;
+
+removeAllPublicKeys:
+DELETE FROM PublicKey;

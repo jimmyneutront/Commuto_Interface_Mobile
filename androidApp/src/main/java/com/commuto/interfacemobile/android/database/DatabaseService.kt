@@ -2,11 +2,14 @@ package com.commuto.interfacemobile.android.database
 
 // TODO: Figure out why these are interfacedesktop instaed of interfacemobile.android
 import com.commuto.interfacedesktop.db.KeyPair
+import com.commuto.interfacedesktop.db.OfferOpenedEvent
 import com.commuto.interfacedesktop.db.PublicKey
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withContext
 import org.sqlite.SQLiteException
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * The Database Service Class.
@@ -19,7 +22,8 @@ import org.sqlite.SQLiteException
  * @property databaseServiceContext The single-threaded CoroutineContext in which all database read and write operations
  * are run, in order to prevent data races.
  */
-class DatabaseService(private val databaseDriverFactory: DatabaseDriverFactory) {
+@Singleton
+class DatabaseService @Inject constructor(private val databaseDriverFactory: DatabaseDriverFactory) {
 
     private val database = Database(databaseDriverFactory)
     // We want to run all database operations on a single thread to prevent data races.
@@ -38,6 +42,67 @@ class DatabaseService(private val databaseDriverFactory: DatabaseDriverFactory) 
      */
     fun clearDatabase() {
         database.clearDatabase()
+    }
+
+    /**
+     * Persistently stores an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened)
+     * event. If an OfferOpened event with the specified offer ID already exists in the database, this does nothing.
+     *
+     * @param id The offer ID specified in the OfferOpened event, as a Base64 [String] of its bytes.
+     * @param interfaceId The interface ID specified in the OfferOpened event, as a Base64 [String] of bytes.
+     *
+     * @throws Exception if database insertion is unsuccessful for a reason OTHER than UNIQUE constraint failure.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun storeOfferOpenedEvent(id: String, interfaceId: String) {
+        try {
+            withContext(databaseServiceContext) {
+                database.insertOfferOpenedEvent(OfferOpenedEvent(id, interfaceId))
+            }
+        } catch (exception: SQLiteException) {
+            /*
+            The result code for a UNIQUE constraint failure; see here: https://www.sqlite.org/rescode.html
+            If an OfferOpened event with the specified offer ID already exists, we do nothing.
+             */
+            if (exception.resultCode.code != 2067) {
+                throw exception
+            }
+        }
+    }
+
+    /**
+     * Removes every [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event with
+     * an offer ID equal to [id] from persistent storage.
+     *
+     * @param id The  offer ID of the OfferOpened events to be removed, as a Base64-[String] of bytes.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun deleteOfferOpenedEvent(id: String) {
+        withContext(databaseServiceContext) {
+            database.deleteOfferOpenedEvent(id)
+        }
+    }
+
+    /**
+     * Retrieves the persistently stored
+     * [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event with the given
+     * offer ID, or returns null if no such event is present.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun getOfferOpenedEvent(id: String): OfferOpenedEvent? {
+        val dbOfferOpenedEvents: List<OfferOpenedEvent> = withContext(databaseServiceContext) {
+            database.selectOfferOpenedEventByOfferId(id)
+        }
+        return if (dbOfferOpenedEvents.size > 1) {
+            throw IllegalStateException("Multiple OfferOpened events found with given offer ID $id")
+        } else if (dbOfferOpenedEvents.size == 1) {
+            check(dbOfferOpenedEvents[0].offerId == id) {
+                "Returned offer ID " + dbOfferOpenedEvents[0].offerId + " did not match specified offer ID " + id
+            }
+            OfferOpenedEvent(dbOfferOpenedEvents[0].offerId, dbOfferOpenedEvents[0].interfaceId)
+        } else {
+            null
+        }
     }
 
     /**
@@ -67,11 +132,6 @@ class DatabaseService(private val databaseDriverFactory: DatabaseDriverFactory) 
             }
         }
     }
-    /*
-    fun storeKeyPair(interfaceId: String, publicKey: String, privateKey: String) {
-        val keyPair = KeyPair(interfaceId, publicKey, privateKey)
-        database.insertKeyPair(keyPair)
-    }*/
 
     /**
      * Retrieves the persistently stored key pair associated with the given interface ID, or returns null if no such key
@@ -94,7 +154,7 @@ class DatabaseService(private val databaseDriverFactory: DatabaseDriverFactory) 
             throw IllegalStateException("Multiple key pairs found with given interface id $interfaceId")
         } else if (dbKeyPairs.size == 1) {
             check(dbKeyPairs[0].interfaceId == interfaceId) {
-                "Returned interface id " + dbKeyPairs[0].interfaceId + "did not match specified interface id " +
+                "Returned interface id " + dbKeyPairs[0].interfaceId + " did not match specified interface id " +
                         interfaceId
             }
             KeyPair(interfaceId, dbKeyPairs[0].publicKey, dbKeyPairs[0].privateKey)
@@ -150,7 +210,7 @@ class DatabaseService(private val databaseDriverFactory: DatabaseDriverFactory) 
             throw IllegalStateException("Multiple public keys found with given interface id $interfaceId")
         } else if (dbPublicKeys.size == 1) {
             check(dbPublicKeys[0].interfaceId == interfaceId) {
-                "Returned interface id " + dbPublicKeys[0].interfaceId + "did not match specified interface id " +
+                "Returned interface id " + dbPublicKeys[0].interfaceId + " did not match specified interface id " +
                         interfaceId
             }
             PublicKey(interfaceId, dbPublicKeys[0].publicKey)
