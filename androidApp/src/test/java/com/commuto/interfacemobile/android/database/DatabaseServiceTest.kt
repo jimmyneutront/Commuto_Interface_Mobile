@@ -80,7 +80,7 @@ class DatabaseServiceTest {
         // This should not throw since only one such OfferOpened event should exist in the database
         val offerOpenedEvent = databaseService.getOfferOpenedEvent("offer_id")
         assertEquals(expectedOfferOpenedEvent, offerOpenedEvent)
-        databaseService.deleteOfferOpenedEvent("offer_id")
+        databaseService.deleteOfferOpenedEvents("offer_id")
         val offerOpenedEventAfterDeletion = databaseService.getOfferOpenedEvent("offer_id")
         assertEquals(offerOpenedEventAfterDeletion, null)
     }

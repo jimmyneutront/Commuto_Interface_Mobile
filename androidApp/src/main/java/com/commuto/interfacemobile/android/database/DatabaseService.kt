@@ -164,7 +164,7 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
      * @param id The  offer ID of the OfferOpened events to be removed, as a Base64-[String] of bytes.
      */
     @OptIn(DelicateCoroutinesApi::class)
-    suspend fun deleteOfferOpenedEvent(id: String) {
+    suspend fun deleteOfferOpenedEvents(id: String) {
         withContext(databaseServiceContext) {
             database.deleteOfferOpenedEvent(id)
         }
