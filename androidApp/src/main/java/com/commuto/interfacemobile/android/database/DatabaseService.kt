@@ -1,10 +1,7 @@
 package com.commuto.interfacemobile.android.database
 
 // TODO: Figure out why these are interfacedesktop instaed of interfacemobile.android
-import com.commuto.interfacedesktop.db.KeyPair
-import com.commuto.interfacedesktop.db.Offer
-import com.commuto.interfacedesktop.db.OfferOpenedEvent
-import com.commuto.interfacedesktop.db.PublicKey
+import com.commuto.interfacedesktop.db.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withContext
@@ -94,6 +91,43 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
             dbOffers[0]
         } else {
             null
+        }
+    }
+
+    /**
+     * Persistently stores each settlement method in the supplied [List], associating each one with the supplied ID.
+     *
+     * @param id The ID of the offer or swap to be associated with the settlement methods.
+     * @param settlementMethods The settlement methods to be persistently stored.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun storeSettlementMethods(id: String, settlementMethods: List<String>) {
+        withContext(databaseServiceContext) {
+            for (settlementMethod in settlementMethods) {
+                database.insertSettlementMethod(SettlementMethod(id, settlementMethod))
+            }
+        }
+    }
+
+    /**
+     * Retrieves the persistently stored settlement methods associated with the specified offer ID, or returns null if no
+     * such settlement methods are present.
+     *
+     * @param id: The ID of the offer for which settlement methods should be returned, as a Base64-[String] of bytes.
+     * @return A [List] of [String]s which are settlement methods associated with [id], or null if no such settlement
+     * methods are found.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun getSettlementMethods(id: String): List<String>? {
+        val dbSettlementMethods: List<SettlementMethod> = withContext(databaseServiceContext) {
+            database.selectSettlementMethodByOfferId(id)
+        }
+        if (dbSettlementMethods.isNotEmpty()) {
+            return dbSettlementMethods.map {
+                it.settlementMethod
+            }
+        } else {
+            return null
         }
     }
 

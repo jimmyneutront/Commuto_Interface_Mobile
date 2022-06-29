@@ -15,6 +15,12 @@ onChainPrice TEXT NOT NULL,
 protocolVersion TEXT NOT NULL
 );
 
+createSettlementMethodTable:
+CREATE TABLE SettlementMethod (
+offerId TEXT NOT NULL,
+settlementMethod TEXT NOT NULL
+);
+
 createOfferOpenedEventTable:
 CREATE TABLE OfferOpenedEvent (
 offerId TEXT UNIQUE NOT NULL,
@@ -54,6 +60,10 @@ VALUES(?, ?, ?, ?, ?, ?, ?,
 ?, ?, ?, ?, ?,
 ?);
 
+insertSettlementMethod:
+INSERT INTO SettlementMethod(offerId, settlementMethod)
+VALUES(?, ?);
+
 insertOfferOpenedEvent:
 INSERT INTO OfferOpenedEvent(offerId, interfaceId)
 VALUES(?, ?);
@@ -68,6 +78,10 @@ VALUES(?, ?);
 
 selectOfferByOfferId:
 SELECT * FROM Offer
+WHERE offerId = ?;
+
+selectSettlementMethodByOfferId:
+SELECT * FROM SettlementMethod
 WHERE offerId = ?;
 
 selectOfferOpenedEventByOfferId:
@@ -88,6 +102,9 @@ WHERE offerId = ?;
 
 removeAllOffers:
 DELETE FROM Offer;
+
+removeAllSettlementMethods:
+DELETE FROM SettlementMethod;
 
 removeAllOfferOpenedEvents:
 DELETE FROM OfferOpenedEvent;

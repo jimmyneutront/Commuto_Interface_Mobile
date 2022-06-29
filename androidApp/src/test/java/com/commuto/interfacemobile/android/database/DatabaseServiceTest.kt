@@ -57,6 +57,21 @@ class DatabaseServiceTest {
     }
 
     @Test
+    fun testStoreAndGetSettlementMethods() = runBlocking {
+        val offerId = "an_offer_id"
+        val settlementMethods = listOf(
+            "settlement_method_zero",
+            "settlement_method_one",
+            "settlement_method_two",
+        )
+        databaseService.storeSettlementMethods(offerId, settlementMethods)
+        val receivedSettlementMethods = databaseService.getSettlementMethods(offerId)!!
+        assertEquals(receivedSettlementMethods[0], "settlement_method_zero")
+        assertEquals(receivedSettlementMethods[1], "settlement_method_one")
+        assertEquals(receivedSettlementMethods[2], "settlement_method_two")
+    }
+
+    @Test
     fun testStoreAndGetAndDeleteOfferOpenedEvent() = runBlocking {
         databaseService.storeOfferOpenedEvent("offer_id", "interf_id")
         // This should do nothing and not throw
