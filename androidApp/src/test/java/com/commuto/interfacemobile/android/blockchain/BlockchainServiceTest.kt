@@ -41,7 +41,7 @@ class BlockchainServiceTest {
                 throw exception
             }
         }
-        val offersService = OfferService()
+        val offersService = OfferService(DatabaseService(DatabaseDriverFactory()))
         OffersViewModel(offersService)
         val blockchainService = BlockchainService(
             TestBlockchainExceptionHandler(),

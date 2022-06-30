@@ -17,9 +17,12 @@ import javax.inject.Singleton
  * @property offers A mutable state list of [Offer]s that acts as a single source of truth for all offer-related data.
  */
 @Singleton
-class OffersViewModel @Inject constructor(val offerService: OfferService): ViewModel() {
+open class OffersViewModel @Inject constructor(val offerService: OfferService): ViewModel() {
     init {
         offerService.setOffersTruthSource(this)
     }
     var offers = mutableStateListOf<Offer>() //Offer.manySampleOffers
+    open fun addOffer(offer: Offer) {
+        offers.add(offer)
+    }
 }

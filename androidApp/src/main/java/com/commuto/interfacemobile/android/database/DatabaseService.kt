@@ -9,7 +9,6 @@ import org.sqlite.SQLiteException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// TODO: document that these functions throw
 /**
  * The Database Service Class.
  *
@@ -22,7 +21,7 @@ import javax.inject.Singleton
  * are run, in order to prevent data races.
  */
 @Singleton
-class DatabaseService @Inject constructor(private val databaseDriverFactory: DatabaseDriverFactory) {
+open class DatabaseService @Inject constructor(private val databaseDriverFactory: DatabaseDriverFactory) {
 
     private val database = Database(databaseDriverFactory)
     // We want to run all database operations on a single thread to prevent data races.
@@ -86,7 +85,7 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
             throw IllegalStateException("Multiple offers found with given offer id $id")
         } else if (dbOffers.size == 1) {
             check(dbOffers[0].offerId == id) {
-                "Returned offer id " + id + " did not match specified offer id " + id
+                "Returned offer id $id did not match specified offer id $id"
             }
             dbOffers[0]
         } else {
@@ -99,6 +98,8 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
      *
      * @param id The ID of the offer or swap to be associated with the settlement methods.
      * @param settlementMethods The settlement methods to be persistently stored.
+     *
+     * @throws Exception if database insertion is unsuccessful.
      */
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun storeSettlementMethods(id: String, settlementMethods: List<String>) {
@@ -116,18 +117,20 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
      * @param id: The ID of the offer for which settlement methods should be returned, as a Base64-[String] of bytes.
      * @return A [List] of [String]s which are settlement methods associated with [id], or null if no such settlement
      * methods are found.
+     *
+     * @throws Exception if database selection is unsuccessful.
      */
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun getSettlementMethods(id: String): List<String>? {
         val dbSettlementMethods: List<SettlementMethod> = withContext(databaseServiceContext) {
             database.selectSettlementMethodByOfferId(id)
         }
-        if (dbSettlementMethods.isNotEmpty()) {
-            return dbSettlementMethods.map {
+        return if (dbSettlementMethods.isNotEmpty()) {
+            dbSettlementMethods.map {
                 it.settlementMethod
             }
         } else {
-            return null
+            null
         }
     }
 
@@ -141,7 +144,7 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
      * @throws Exception if database insertion is unsuccessful for a reason OTHER than UNIQUE constraint failure.
      */
     @OptIn(DelicateCoroutinesApi::class)
-    suspend fun storeOfferOpenedEvent(id: String, interfaceId: String) {
+    open suspend fun storeOfferOpenedEvent(id: String, interfaceId: String) {
         try {
             withContext(databaseServiceContext) {
                 database.insertOfferOpenedEvent(OfferOpenedEvent(id, interfaceId))
@@ -162,9 +165,11 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
      * an offer ID equal to [id] from persistent storage.
      *
      * @param id The  offer ID of the OfferOpened events to be removed, as a Base64-[String] of bytes.
+     *
+     * @throws Exception if deletion is unsuccessful.
      */
     @OptIn(DelicateCoroutinesApi::class)
-    suspend fun deleteOfferOpenedEvents(id: String) {
+    open suspend fun deleteOfferOpenedEvents(id: String) {
         withContext(databaseServiceContext) {
             database.deleteOfferOpenedEvent(id)
         }
@@ -174,6 +179,8 @@ class DatabaseService @Inject constructor(private val databaseDriverFactory: Dat
      * Retrieves the persistently stored
      * [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event with the given
      * offer ID, or returns null if no such event is present.
+     *
+     * @param id The offer ID of the OfferOpened event to return, as a Base64-[String] of bytes.
      */
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun getOfferOpenedEvent(id: String): OfferOpenedEvent? {

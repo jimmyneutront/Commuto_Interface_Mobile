@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.R
+import com.commuto.interfacemobile.android.database.DatabaseDriverFactory
+import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.offer.OfferService
 
 /**
@@ -96,5 +98,8 @@ private fun OffersNoneFoundComposable() {
 )
 @Composable
 fun PreviewOffersListComposable() {
-    OffersListComposable(OffersViewModel(OfferService()), rememberNavController())
+    OffersListComposable(
+        OffersViewModel(OfferService(DatabaseService(DatabaseDriverFactory()))),
+        rememberNavController()
+    )
 }
