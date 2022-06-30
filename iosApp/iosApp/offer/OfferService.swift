@@ -41,7 +41,7 @@ class OfferService: OfferNotifiable {
     private let databaseService: DatabaseService
     
     /**
-     An `Array` of `OfferOpenedEvent`s for offers that are open and for which complete offer information has not yet been retrieved.
+     A repository containing `OfferOpenedEvent`s for offers that are open and for which complete offer information has not yet been retrieved.
      */
     private var offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent>
     
@@ -97,11 +97,11 @@ class OfferService: OfferNotifiable {
             protocolVersion: String(offer.protocolVersion)
         )
         try databaseService.storeOffer(offer: offerForDatabase)
-        var paymentMethodStrings: [String] = []
-        for paymentMethod in offer.settlementMethods {
-            paymentMethodStrings.append(paymentMethod.base64EncodedString())
+        var settlementMethodStrings: [String] = []
+        for settlementMethod in offer.settlementMethods {
+            settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
-        try databaseService.storeSettlementMethods(id: offerForDatabase.id, settlementMethods: paymentMethodStrings)
+        try databaseService.storeSettlementMethods(id: offerForDatabase.id, settlementMethods: settlementMethodStrings)
         try databaseService.deleteOfferOpenedEvents(id: offerForDatabase.id)
         offerOpenedEventRepository.remove(event)
         guard offerTruthSource != nil else {

@@ -17,7 +17,7 @@ import SwiftUI
  */
 class OfferServiceTests: XCTestCase {
     /**
-     Ensure that `OfferService` handles [OfferOpenedEvent]s properly.
+     Ensures that `OfferService` handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events properly.
      */
     func testHandleOfferOpenedEvent() {
         
@@ -69,6 +69,7 @@ class OfferServiceTests: XCTestCase {
                 try super.storeOfferOpenedEvent(id: id, interfaceId: interfaceId)
             }
             
+            //TODO: check that the id matches that in storeOfferOpenedEvent cal
             override func deleteOfferOpenedEvents(id: String) throws {
                 wasDeleteOfferOpenedEventCalled = true
                 try super.deleteOfferOpenedEvents(id: id)
@@ -137,10 +138,6 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
-        /*
-        let unfulfillableExpectation = XCTestExpectation(description: "Wait for a long time")
-        wait(for: [unfulfillableExpectation], timeout: 60_000_000.0)
-         */
         wait(for: [offerTruthSource.offerAddedExpectation], timeout: 60.0)
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 1)

@@ -157,54 +157,6 @@ class DatabaseService {
         })
     }
     
-    #warning("TODO: evantually this should delete all payment methods associated with the specified ID before storing any new ones, so in case the offer is edited, we don't have any unsupported payment methods still in persistent storage.")
-    /**
-     Persistently stores each settlement method in the supplied `Array`, associating each one with the supplied ID.
-     
-     - Parameters:
-        - offerId: The ID of the offer or swap to be associated with the settlement methods.
-        - paymentMethods: The settlement methods to be persistently stored.
-     */
-    func storeSettlementMethods(id: String, settlementMethods _settlementMethods: [String]) throws {
-        _ = try databaseQueue.sync {
-            for _settlementMethod in _settlementMethods {
-                try connection.run(settlementMethods.insert(
-                    offerId <- id,
-                    settlementMethod <- _settlementMethod
-                ))
-            }
-        }
-    }
-    
-    /**
-     Retrieves the persistently stored settlment methods associated with the specified offer ID, or returns `nil` if no such settlement methods are present.
-     
-     - Parameter id: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
-     
-     - Throws: A `DatabaseServiceError.unexpectedNilError` if if `rowIterator` is `nil`.
-     
-     - Returns: An `Array` of `Strings` which are settlement methods associated with `id`, or `nil` if no such payment methods are found.
-     */
-    func getSettlementMethods(id: String) throws -> [String]? {
-        var rowIterator: RowIterator? = nil
-        _ = try databaseQueue.sync {
-            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(offerId == id))
-        }
-        guard rowIterator != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getPaymentMethods call")
-        }
-        let result = try Array(rowIterator!)
-        if result.count > 0 {
-            var settlementMethodsArray: [String] = []
-            for (index, _) in result.enumerated() {
-                settlementMethodsArray.append(result[index][settlementMethod])
-            }
-            return settlementMethodsArray
-        } else {
-            return nil
-        }
-    }
-    
     /**
      Persistently stores a `DatabaseOffer`. If a `DatabaseOffer` with an offer ID equal to that of `offer` already exists in the database, this does nothing.
      
@@ -273,6 +225,54 @@ class DatabaseService {
                 onChainPrice: result[0][onChainPrice],
                 protocolVersion: result[0][protocolVersion]
             )
+        } else {
+            return nil
+        }
+    }
+    
+    #warning("TODO: evantually this should delete all payment methods associated with the specified ID before storing any new ones, so in case the offer is edited, we don't have any unsupported payment methods still in persistent storage.")
+    /**
+     Persistently stores each settlement method in the supplied `Array`, associating each one with the supplied ID.
+     
+     - Parameters:
+        - id: The ID of the offer or swap to be associated with the settlement methods.
+        - settlementMethods: The settlement methods to be persistently stored.
+     */
+    func storeSettlementMethods(id: String, settlementMethods _settlementMethods: [String]) throws {
+        _ = try databaseQueue.sync {
+            for _settlementMethod in _settlementMethods {
+                try connection.run(settlementMethods.insert(
+                    offerId <- id,
+                    settlementMethod <- _settlementMethod
+                ))
+            }
+        }
+    }
+
+    /**
+     Retrieves the persistently stored settlement methods associated with the specified offer ID, or returns `nil` if no such settlement methods are present.
+     
+     - Parameter id: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
+     
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`.
+     
+     - Returns: An `Array` of `Strings` which are settlement methods associated with `id`, or `nil` if no such settlement  methods are found.
+     */
+    func getSettlementMethods(id: String) throws -> [String]? {
+        var rowIterator: RowIterator? = nil
+        _ = try databaseQueue.sync {
+            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(offerId == id))
+        }
+        guard rowIterator != nil else {
+            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getSettlementMethods call")
+        }
+        let result = try Array(rowIterator!)
+        if result.count > 0 {
+            var settlementMethodsArray: [String] = []
+            for (index, _) in result.enumerated() {
+                settlementMethodsArray.append(result[index][settlementMethod])
+            }
+            return settlementMethodsArray
         } else {
             return nil
         }
