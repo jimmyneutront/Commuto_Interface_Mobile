@@ -22,6 +22,12 @@ open class OffersViewModel @Inject constructor(val offerService: OfferService): 
         offerService.setOffersTruthSource(this)
     }
     var offers = mutableStateListOf<Offer>() //Offer.manySampleOffers
+
+    /**
+     * Adds a new [Offer] to [offers].
+     *
+     * @param offer The new [Offer] to be added to [offers].
+     */
     open fun addOffer(offer: Offer) {
         offers.add(offer)
     }
