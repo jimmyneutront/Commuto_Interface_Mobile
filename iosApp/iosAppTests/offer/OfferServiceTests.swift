@@ -62,16 +62,18 @@ class OfferServiceTests: XCTestCase {
             }
             
             var storedDatabaseOfferOpenedEvent: DatabaseOfferOpenedEvent? = nil
-            var wasDeleteOfferOpenedEventCalled = false
+            var wasDeleteOfferOpenedEventCalledCorrectly = false
             
             override func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
                 storedDatabaseOfferOpenedEvent = DatabaseOfferOpenedEvent(id: id, interfaceId: interfaceId)
                 try super.storeOfferOpenedEvent(id: id, interfaceId: interfaceId)
             }
             
-            //TODO: check that the id matches that in storeOfferOpenedEvent cal
             override func deleteOfferOpenedEvents(id: String) throws {
-                wasDeleteOfferOpenedEventCalled = true
+                wasDeleteOfferOpenedEventCalledCorrectly = true
+                if id == storedDatabaseOfferOpenedEvent!.id {
+                    wasDeleteOfferOpenedEventCalledCorrectly = true
+                }
                 try super.deleteOfferOpenedEvents(id: id)
             }
             
@@ -145,7 +147,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerOpenedEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerOpenedEventRepository.removedEvent!.id, expectedOfferID)
         XCTAssertEqual(databaseService.storedDatabaseOfferOpenedEvent!.id, expectedOfferID.asData().base64EncodedString())
-        XCTAssertTrue(databaseService.wasDeleteOfferOpenedEventCalled)
+        XCTAssertTrue(databaseService.wasDeleteOfferOpenedEventCalledCorrectly)
         let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
         XCTAssertTrue(offerInDatabase!.isCreated)
         XCTAssertFalse(offerInDatabase!.isTaken)
