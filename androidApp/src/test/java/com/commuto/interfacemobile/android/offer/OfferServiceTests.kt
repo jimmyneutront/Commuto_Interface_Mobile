@@ -1,5 +1,6 @@
 package com.commuto.interfacemobile.android.offer
 
+import androidx.compose.runtime.mutableStateListOf
 import com.commuto.interfacedesktop.db.OfferOpenedEvent
 import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainEventRepository
@@ -7,7 +8,6 @@ import com.commuto.interfacemobile.android.blockchain.BlockchainExceptionNotifia
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
 import com.commuto.interfacemobile.android.database.DatabaseDriverFactory
 import com.commuto.interfacemobile.android.database.DatabaseService
-import com.commuto.interfacemobile.android.ui.OffersViewModel
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
@@ -116,10 +116,14 @@ class OfferServiceTests {
         val offerService = OfferService(databaseService, offerOpenedEventRepository)
 
         // TODO: Implement OfferTruthSource as in iOS, and then un-open OffersViewModel
-        class TestOfferTruthSource: OffersViewModel(offerService) {
+        class TestOfferTruthSource: OfferTruthSource {
+            init {
+                offerService.setOffersTruthSource(this)
+            }
             val offersChannel = Channel<Offer>()
+            override var offers = mutableStateListOf<Offer>()
             override fun addOffer(offer: Offer) {
-                super.addOffer(offer)
+                offers.add(offer)
                 runBlocking {
                     offersChannel.send(offer)
                 }

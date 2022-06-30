@@ -33,7 +33,7 @@ class OfferService (
 
     @Inject constructor(databaseService: DatabaseService): this(databaseService, BlockchainEventRepository())
 
-    private lateinit var offersTruthSource: OffersViewModel
+    private lateinit var offersTruthSource: OfferTruthSource
 
     private lateinit var blockchainService: BlockchainService
 
@@ -42,7 +42,7 @@ class OfferService (
      *
      * @param newTruthSource The new value of the [offersTruthSource] property, which cannot be null.
      */
-    fun setOffersTruthSource(newTruthSource: OffersViewModel) {
+    fun setOffersTruthSource(newTruthSource: OfferTruthSource) {
         check(!::offersTruthSource.isInitialized) {
             "offersTruthSource is already initialized"
         }
