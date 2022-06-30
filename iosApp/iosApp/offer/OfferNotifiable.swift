@@ -22,7 +22,7 @@ protocol OfferNotifiable {
      
      - Parameter event: The `OfferCanceledEvent` of which the structure or class adopting this protocol is being notified and should handle in the implementation of  this function.
      */
-    func handleOfferCanceledEvent(_ event: OfferCanceledEvent)
+    func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws
     
     /**
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of an `OfferTakenEvent`.

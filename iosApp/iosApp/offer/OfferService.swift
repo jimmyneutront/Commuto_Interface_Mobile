@@ -18,11 +18,19 @@ class OfferService: OfferNotifiable {
     /**
      Initializes a new OfferService object.
      
-     - Parameter databaseService: The `DatabaseService` that the `OfferService` will use for persistent storage.
+     - Parameters:
+        - databaseService: The `DatabaseService` that the `OfferService` will use for persistent storage.
+        - offerOpenedEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferOpenedEvent`s during `handleOfferOpenedEvent` calls.
+        - offerCanceledEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferCanceledEvent`s during `handleOfferCanceledEvent` calls.
      */
-    init(databaseService: DatabaseService, offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>()) {
+    init(
+        databaseService: DatabaseService,
+        offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>(),
+        offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent> = BlockchainEventRepository<OfferCanceledEvent>()
+    ) {
         self.databaseService = databaseService
         self.offerOpenedEventRepository = offerOpenedEventRepository
+        self.offerCanceledEventRepository = offerCanceledEventRepository
     }
     
     /**
@@ -44,6 +52,11 @@ class OfferService: OfferNotifiable {
      A repository containing `OfferOpenedEvent`s for offers that are open and for which complete offer information has not yet been retrieved.
      */
     private var offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent>
+    
+    /**
+     A repository containing `OfferCanceledEvent`s for offers that have been canceled but haven't yet been removed from persistent storage or `offerTruthSource`.
+     */
+    private var offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent>
     
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` persistently stores `event`, saves it in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, creates a new `Offer` with the results, persistently stores the new offer, removes the `OfferOpenedEvent` from persistent storage, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
@@ -114,14 +127,29 @@ class OfferService: OfferNotifiable {
         #warning("TODO: try to get public key announcement data. if we have it, update the offer struct and add it to the ViewModel's list")
     }
     
+    // TODO: Update this documentation comment
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` gets the ID of the now-canceled offer from `event` and then synchronously removes the `Offer` mapped to the ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` persistently stores `event`, saves it in `offerCanceledEventsRepository`, gets the ID of the now-canceled offer from `event`, removes the offer corresponding to the offer ID from persistent storage (if present), removes the settlement methods associated with the offer ID from persistent storage (if present), removes `event` from persistent storage and from `offerCanceledEventsRepository`, and then synchronously removes the `Offer` mapped to the offer ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferCanceledEvent` of which `OfferService` is being notified.
      */
-    func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {
+    func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {
+        // Save the passed OfferCanceledEvent persistently
+        let offerIdString = event.id.asData().base64EncodedString()
+        try databaseService.storeOfferCanceledEvent(
+            id: offerIdString
+        )
+        offerCanceledEventRepository.append(event)
+        try databaseService.deleteOffers(id: offerIdString)
+        try databaseService.deleteSettlementMethods(id: offerIdString)
+        try databaseService.deleteOfferCanceledEvents(id: event.id.asData().base64EncodedString())
+        offerCanceledEventRepository.remove(event)
+        guard offerTruthSource != nil else {
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call")
+        }
+        // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
         _ = DispatchQueue.main.sync {
-            offerTruthSource?.offers.removeValue(forKey: event.id)
+            offerTruthSource!.offers.removeValue(forKey: event.id)
         }
     }
     

@@ -194,6 +194,17 @@ class DatabaseService {
     }
     
     /**
+     Removes every `DatabaseOffer` with an offer ID equal to `id` from persistent storage.
+     
+     - Parameter id: The ID of the offers to be removed, as a Base64-`String` of bytes.
+     */
+    func deleteOffers(id: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(offerId == id).delete())
+        }
+    }
+    
+    /**
      Retrieves the persistently stored `DatabaseOffer` with the specified offer ID, or returns `nil` if no such event is present.
      
      - Parameter id: The offer ID of the `DatabaseOffer` to return, as a Base64-`String` of bytes.
@@ -253,6 +264,17 @@ class DatabaseService {
                     settlementMethod <- _settlementMethod
                 ))
             }
+        }
+    }
+    
+    /**
+     Removes every persistently stored settlement method associated with an offer ID equal to `id`.
+     
+     - Parameter id: The ID of the offer for which associated settlement methods should be removed.
+     */
+    func deleteSettlementMethods(id: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(settlementMethods.filter(offerId == id).delete())
         }
     }
 

@@ -23,7 +23,7 @@ class DatabaseServiceTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
-    func testStoreAndGetOffer() throws {
+    func testStoreAndGetAndDeleteOffer() throws {
         let offerToStore = DatabaseOffer(
             id: "a_uuid",
             isCreated: true,
@@ -55,9 +55,14 @@ class DatabaseServiceTests: XCTestCase {
             onChainPrice: "a_different_price",
             protocolVersion: "some_other_version"
         )
+        // This should do nothing and not throw
         try dbService.storeOffer(offer: anotherOfferToStore)
+        // This should not throw since only one such Offer should exist in the database
         let returnedOffer = try dbService.getOffer(id: "a_uuid")
         XCTAssertEqual(returnedOffer, offerToStore)
+        try dbService.deleteOffers(id: "a_uuid")
+        let returnedOfferAfterDeletion = try dbService.getOffer(id: "a_uuid")
+        XCTAssertEqual(returnedOfferAfterDeletion, nil)
     }
     
     func testStoreAndGetSettlementMethods() throws {
@@ -68,11 +73,14 @@ class DatabaseServiceTests: XCTestCase {
             "settlement_method_two"
         ]
         try dbService.storeSettlementMethods(id: offerId, settlementMethods: settlementMethods)
-        let receivedSettlementMethods = try dbService.getSettlementMethods(id: offerId)
-        XCTAssertEqual(receivedSettlementMethods!.count, 3)
-        XCTAssertEqual(receivedSettlementMethods![0], "settlement_method_zero")
-        XCTAssertEqual(receivedSettlementMethods![1], "settlement_method_one")
-        XCTAssertEqual(receivedSettlementMethods![2], "settlement_method_two")
+        let returnedSettlementMethods = try dbService.getSettlementMethods(id: offerId)
+        XCTAssertEqual(returnedSettlementMethods!.count, 3)
+        XCTAssertEqual(returnedSettlementMethods![0], "settlement_method_zero")
+        XCTAssertEqual(returnedSettlementMethods![1], "settlement_method_one")
+        XCTAssertEqual(returnedSettlementMethods![2], "settlement_method_two")
+        try dbService.deleteSettlementMethods(id: offerId)
+        let returnedSettlementMethodsAfterDeletion = try dbService.getSettlementMethods(id: offerId)
+        XCTAssertEqual(returnedSettlementMethodsAfterDeletion, nil)
     }
     
     func testStoreAndGetAndDeleteOfferOpenedEvent() throws {

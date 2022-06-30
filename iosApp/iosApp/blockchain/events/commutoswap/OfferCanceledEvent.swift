@@ -15,7 +15,7 @@ import web3swift
  -Properties:
     - id: The ID of the canceled offer, as a `UUID`.
  */
-class OfferCanceledEvent {
+class OfferCanceledEvent: Equatable {
     let id: UUID
     /**
      Creates a new `OfferCanceledEvent` given a web3swift `EventParserResultProtocol` containing information from an [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) event, or returns `nil` if the passed `EventParserResultProtocol` doesn't contain information from an OfferCanceled event.
@@ -29,5 +29,18 @@ class OfferCanceledEvent {
         } else {
             return nil
         }
+    }
+    
+    /**
+    Compares two `OfferCanceledEvent`s for equality. Two `OfferCanceledEvent`s are defined as equal if their `id` properties are equal.
+     
+     - Parameters:
+        - lhs: The `OfferCanceledEvent` on the left side of the equality operator.
+        - rhs: The `OfferCanceledEvent` on the right side of the equality operator.
+     
+     - Returns: A `Bool` indicating whether or not `lhs` and `rhs` are equal.
+     */
+    static func == (lhs: OfferCanceledEvent, rhs: OfferCanceledEvent) -> Bool {
+        return lhs.id == rhs.id
     }
 }
