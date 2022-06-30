@@ -115,10 +115,9 @@ class OfferServiceTests {
 
         val offerService = OfferService(databaseService, offerOpenedEventRepository)
 
-        // TODO: Implement OfferTruthSource as in iOS, and then un-open OffersViewModel
         class TestOfferTruthSource: OfferTruthSource {
             init {
-                offerService.setOffersTruthSource(this)
+                offerService.setOfferTruthSource(this)
             }
             val offersChannel = Channel<Offer>()
             override var offers = mutableStateListOf<Offer>()
