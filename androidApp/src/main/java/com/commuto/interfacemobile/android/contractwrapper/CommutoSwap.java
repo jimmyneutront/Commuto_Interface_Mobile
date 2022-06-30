@@ -1,7 +1,9 @@
-package com.commuto.interfacemobile.android;
+package com.commuto.interfacemobile.android.contractwrapper;
 
 import io.reactivex.Flowable;
 import io.reactivex.functions.Function;
+
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,6 +11,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.web3j.abi.EventEncoder;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Bool;
@@ -31,6 +35,7 @@ import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.tx.Contract;
 import org.web3j.tx.TransactionManager;
+import org.web3j.tx.exceptions.ContractCallException;
 import org.web3j.tx.gas.ContractGasProvider;
 
 /**
@@ -1065,7 +1070,69 @@ public class CommutoSwap extends Contract {
         final org.web3j.abi.datatypes.Function function = new org.web3j.abi.datatypes.Function(FUNC_GETOFFER, 
                 Arrays.<Type>asList(new org.web3j.abi.datatypes.generated.Bytes16(offerID)), 
                 Arrays.<TypeReference<?>>asList(new TypeReference<Offer>() {}));
-        return executeRemoteCallSingleValueReturn(function, Offer.class);
+        /*
+        Normally, this would return the result of
+        executeRemoteCallSingleValueReturn(function, Offer.class). However, since Web3j can't decode
+        dynamically sized arrays properly, we call our own function here.
+         */
+        return executeRemoteCallSingleValueReturnWithDynamicArrayOfBytes(function, Offer.class);
+    }
+
+    // Added to work around Web3j's inability to decode DynamicArrays properly
+    protected <T> RemoteFunctionCall<T> executeRemoteCallSingleValueReturnWithDynamicArrayOfBytes(
+            org.web3j.abi.datatypes.Function function, Class<T> returnType) {
+        return new RemoteFunctionCall<>(
+                function, () ->
+                executeCallSingleValueReturnWithDynamicArrayOfBytes(function, returnType));
+    }
+
+    // Added to work around Web3j's inability to decode DynamicArrays properly
+    protected <T extends Type, R> R executeCallSingleValueReturnWithDynamicArrayOfBytes(
+            org.web3j.abi.datatypes.Function function, Class<R> returnType) throws IOException {
+        T result = executeCallSingleValueReturnWithDynamicArrayOfBytes(function);
+        if (result == null) {
+            throw new ContractCallException("Empty value (0x) returned from contract");
+        }
+
+        Object value = result.getValue();
+        if (returnType.isAssignableFrom(result.getClass())) {
+            return (R) result;
+        } else if (returnType.isAssignableFrom(value.getClass())) {
+            return (R) value;
+        } else if (result.getClass().equals(Address.class) && returnType.equals(String.class)) {
+            return (R) result.toString(); // cast isn't necessary
+        } else {
+            throw new ContractCallException(
+                    "Unable to convert response: "
+                            + value
+                            + " to expected type: "
+                            + returnType.getSimpleName());
+        }
+    }
+
+    // Added to work around Web3j's inability to decode DynamicArrays properly
+    protected <T extends Type> T executeCallSingleValueReturnWithDynamicArrayOfBytes(
+            org.web3j.abi.datatypes.Function function
+    )
+            throws IOException {
+        List<Type> values = executeCallForDynamicArrayOfBytes(function);
+        if (!values.isEmpty()) {
+            return (T) values.get(0);
+        } else {
+            return null;
+        }
+    }
+
+    // Added to work around Web3j's inability to decode DynamicArrays properly
+    private List<Type> executeCallForDynamicArrayOfBytes(
+            org.web3j.abi.datatypes.Function function
+    ) throws IOException {
+        String encodedFunction = FunctionEncoder.encode(function);
+
+        String value = call(contractAddress, encodedFunction, defaultBlockParameter);
+        // Instead of the default function return decoder, we use our modified one
+        return FunctionReturnDecoderForDynamicArrayOfBytes
+                .decode(value, function.getOutputParameters());
     }
 
     public RemoteFunctionCall<BigInteger> getServiceFeeRate() {

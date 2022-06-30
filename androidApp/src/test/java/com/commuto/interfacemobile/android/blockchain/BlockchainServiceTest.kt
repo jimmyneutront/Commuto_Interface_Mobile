@@ -1,6 +1,8 @@
 package com.commuto.interfacemobile.android.blockchain
 
-import com.commuto.interfacemobile.android.CommutoSwap
+import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
+import com.commuto.interfacemobile.android.database.DatabaseDriverFactory
+import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.ui.OffersViewModel

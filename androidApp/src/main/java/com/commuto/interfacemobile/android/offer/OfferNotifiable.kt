@@ -1,6 +1,6 @@
 package com.commuto.interfacemobile.android.offer
 
-import com.commuto.interfacemobile.android.CommutoSwap
+import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import javax.inject.Singleton
 
 /**

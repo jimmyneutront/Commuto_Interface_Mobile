@@ -73,7 +73,7 @@ android {
     compileSdk = 32
     defaultConfig {
         applicationId = "com.example.commuto_interface_mobile.android"
-        minSdk = 26
+        minSdk = 28 // TODO: Downgrade this to 26 when we no longer need custom web3j code
         targetSdk = 32
         versionCode = 1
         versionName = "1.0"

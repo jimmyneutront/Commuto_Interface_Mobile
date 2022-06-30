@@ -1,6 +1,10 @@
 package com.commuto.interfacemobile.android.offer
 
-import com.commuto.interfacemobile.android.CommutoSwap
+import com.commuto.interfacedesktop.db.Offer as DatabaseOffer
+import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
+import com.commuto.interfacemobile.android.blockchain.BlockchainEventRepository
+import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.ui.OffersViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

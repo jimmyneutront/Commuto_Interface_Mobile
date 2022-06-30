@@ -1,6 +1,6 @@
 package com.commuto.interfacemobile.android.blockchain
 
-import com.commuto.interfacemobile.android.CommutoSwap
+import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.asDeferred
