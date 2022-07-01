@@ -24,16 +24,22 @@ import javax.inject.Singleton
  * all open offers. If this is not yet initialized, event handling methods will throw the corresponding error.
  * @property offerOpenedEventRepository A repository containing [CommutoSwap.OfferOpenedEventResponse]s for offers that
  * are open and for which complete offer information has not yet been retrieved.
+ * @property offerCanceledEventRepository A repository containing [CommutoSwap.OfferCanceledEventResponse]s for offers
+ * that have been canceled but haven't yet been removed from persistent storage or [offerTruthSource].
+ * @property offerTakenEventRepository A repository containing [CommutoSwap.OfferTakenEventResponse]s for offers
+ * that have been taken but haven't yet been removed from persistent storage or [offerTruthSource].
  */
 @Singleton
 class OfferService (
     private val databaseService: DatabaseService,
     private val offerOpenedEventRepository: BlockchainEventRepository<CommutoSwap.OfferOpenedEventResponse>,
-    private val offerCanceledEventRepository: BlockchainEventRepository<CommutoSwap.OfferCanceledEventResponse>
+    private val offerCanceledEventRepository: BlockchainEventRepository<CommutoSwap.OfferCanceledEventResponse>,
+    private val offerTakenEventRepository: BlockchainEventRepository<CommutoSwap.OfferTakenEventResponse>
 ): OfferNotifiable {
 
     @Inject constructor(databaseService: DatabaseService): this(
         databaseService,
+        BlockchainEventRepository(),
         BlockchainEventRepository(),
         BlockchainEventRepository()
     )
@@ -165,24 +171,25 @@ class OfferService (
 
 
     /**
-     * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to
-     * notify [OfferService] of an [CommutoSwap.OfferTakenEventResponse]. Once notified,
-     * [OfferService] gets the ID of the now-taken offer from
-     * [CommutoSwap.OfferTakenEventResponse] and removes the [Offer] with the specified ID from
-     * [offerTruthSource].
+     * The method called by [BlockchainService] to notify [OfferService] of a [CommutoSwap.OfferTakenEventResponse].
+     * Once notified, [OfferService] saves [event] in [offerTakenEventRepository], removes the corresponding [Offer] and
+     * its settlement methods from persistent storage, removes [event] from [offerTakenEventRepository], and then
+     * removes the corresponding [Offer] from [offerTruthSource] on the main coroutine dispatcher.
      *
-     * @param event The [CommutoSwap.OfferTakenEventResponse] of which
-     * [OfferService] is being notified.
+     * @param event The [CommutoSwap.OfferTakenEventResponse] of which [OfferService] is being notified.
      */
-    override suspend fun handleOfferTakenEvent(
-        event: CommutoSwap.OfferTakenEventResponse
-    ) {
+    override suspend fun handleOfferTakenEvent(event: CommutoSwap.OfferTakenEventResponse) {
         val offerIdByteBuffer = ByteBuffer.wrap(event.offerID)
         val mostSigBits = offerIdByteBuffer.long
         val leastSigBits = offerIdByteBuffer.long
         val offerId = UUID(mostSigBits, leastSigBits)
+        val offerIdString = Base64.getEncoder().encodeToString(event.offerID)
+        offerTakenEventRepository.append(event)
+        databaseService.deleteOffers(offerIdString)
+        databaseService.deleteSettlementMethods(offerIdString)
+        offerTakenEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            offerTruthSource.offers.removeIf { it.id == offerId }
+            offerTruthSource.removeOffer(offerId)
         }
     }
 }
