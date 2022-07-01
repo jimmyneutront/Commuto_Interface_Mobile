@@ -22,16 +22,21 @@ import javax.inject.Singleton
  *
  * @property offerTruthSource The [OffersViewModel] in which this is responsible for maintaining an accurate list of
  * all open offers. If this is not yet initialized, event handling methods will throw the corresponding error.
- * @property offerOpenedEventsRepository A repository containing [CommutoSwap.OfferOpenedEventResponse]s for offers that
+ * @property offerOpenedEventRepository A repository containing [CommutoSwap.OfferOpenedEventResponse]s for offers that
  * are open and for which complete offer information has not yet been retrieved.
  */
 @Singleton
 class OfferService (
     private val databaseService: DatabaseService,
-    private val offerOpenedEventsRepository: BlockchainEventRepository<CommutoSwap.OfferOpenedEventResponse>
+    private val offerOpenedEventRepository: BlockchainEventRepository<CommutoSwap.OfferOpenedEventResponse>,
+    private val offerCanceledEventRepository: BlockchainEventRepository<CommutoSwap.OfferCanceledEventResponse>
 ): OfferNotifiable {
 
-    @Inject constructor(databaseService: DatabaseService): this(databaseService, BlockchainEventRepository())
+    @Inject constructor(databaseService: DatabaseService): this(
+        databaseService,
+        BlockchainEventRepository(),
+        BlockchainEventRepository()
+    )
 
     private lateinit var offerTruthSource: OfferTruthSource
 
@@ -67,7 +72,7 @@ class OfferService (
     /**
      * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
      * of an [CommutoSwap.OfferOpenedEventResponse]. Once notified, [OfferService] persistently stores [event], saves it
-     * in [offerOpenedEventsRepository], gets all on-chain offer data by calling [blockchainService]'s
+     * in [offerOpenedEventRepository], gets all on-chain offer data by calling [blockchainService]'s
      * [BlockchainService.getOfferAsync] method, creates a new [Offer] with the results, persistently stores the new
      * offer, removes [event] from persistent storage, and then adds the new [Offer] to [offerTruthSource] on the main
      * coroutine dispatcher.
@@ -86,7 +91,7 @@ class OfferService (
             id = encoder.encodeToString(event.offerID),
             interfaceId = encoder.encodeToString(event.interfaceId)
         )
-        offerOpenedEventsRepository.append(event)
+        offerOpenedEventRepository.append(event)
         val onChainOffer = blockchainService.getOfferAsync(offerId).await()
         val offer = Offer(
             id = offerId,
@@ -130,7 +135,7 @@ class OfferService (
         }
         databaseService.storeSettlementMethods(offerForDatabase.offerId, settlementMethodStrings)
         databaseService.deleteOfferOpenedEvents(encoder.encodeToString(event.offerID))
-        offerOpenedEventsRepository.remove(event)
+        offerOpenedEventRepository.remove(event)
         withContext(Dispatchers.Main) {
             offerTruthSource.addOffer(offer)
         }
@@ -153,8 +158,17 @@ class OfferService (
         val mostSigBits = offerIdByteBuffer.long
         val leastSigBits = offerIdByteBuffer.long
         val offerId = UUID(mostSigBits, leastSigBits)
+        val offerIdString = Base64.getEncoder().encodeToString(event.offerID)
+        databaseService.storeOfferCanceledEvent(
+            id = offerIdString
+        )
+        offerCanceledEventRepository.append(event)
+        databaseService.deleteOffers(offerIdString)
+        databaseService.deleteSettlementMethods(offerIdString)
+        databaseService.deleteOfferCanceledEvents(offerIdString)
+        offerCanceledEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            offerTruthSource.offers.removeIf { it.id == offerId }
+            offerTruthSource.removeOffer(offerId)
         }
     }
 

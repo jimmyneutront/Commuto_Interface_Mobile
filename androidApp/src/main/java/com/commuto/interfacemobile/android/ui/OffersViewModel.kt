@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,5 +32,14 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
      */
     override fun addOffer(offer: Offer) {
         offers.add(offer)
+    }
+
+    /**
+     * Removes all [Offer]s with an ID equal to [id] from [offers]. There should only be one such [Offer].
+     *
+     * @param id The ID of the [Offer] to remove.
+     */
+    override fun removeOffer(id: UUID) {
+        offers.removeIf { it.id == id }
     }
 }
