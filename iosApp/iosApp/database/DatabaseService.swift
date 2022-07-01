@@ -42,14 +42,6 @@ class DatabaseService {
      */
     let settlementMethods = Table("SettlementMethod")
     /**
-     A database table of [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events.
-     */
-    let offerOpenedEvents = Table("OfferOpenedEvent")
-    /**
-     A database table of [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled)
-     */
-    let offerCanceledEvents = Table("OfferCanceledEvent")
-    /**
      A database table of `KeyPair`s.
      */
     let keyPairs = Table("KeyPair")
@@ -145,13 +137,6 @@ class DatabaseService {
         try connection.run(settlementMethods.create { t in
             t.column(offerId)
             t.column(settlementMethod)
-        })
-        try connection.run(offerOpenedEvents.create { t in
-            t.column(offerId, unique: true)
-            t.column(interfaceId)
-        })
-        try connection.run(offerCanceledEvents.create { t in
-            t.column(offerId, unique: true)
         })
         try connection.run(keyPairs.create { t in
             t.column(interfaceId, unique: true)
@@ -302,120 +287,6 @@ class DatabaseService {
                 settlementMethodsArray.append(result[index][settlementMethod])
             }
             return settlementMethodsArray
-        } else {
-            return nil
-        }
-    }
-    
-    /**
-     Persistently stores the contents of an [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) Event. If an OfferOpened event with an offer ID equal to `id` already exists in the database, this does nothing.
-     
-     - Parameters:
-        - id: The offer ID specified in the OfferOpened event, as a Base64-`String` of its bytes.
-        - interfaceId: The interface ID specified in the OfferOpened event, as a Base64-`String` of bytes.
-     */
-    func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
-        _ = try databaseQueue.sync {
-            do {
-                try connection.run(offerOpenedEvents.insert(offerId <- id, self.interfaceId <- interfaceId))
-            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: OfferOpenedEvent.offerId" {
-                // An OfferOpened event with the specified id already exists in the database, so we do nothing
-            }
-        }
-    }
-    
-    /**
-     Removes every [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) Event with an offer ID equal to `id` from persistent storage.
-     
-     - Parameter id: The offer ID of the OfferOpened events to be removed, as a Base64-`String` of bytes.
-     */
-    func deleteOfferOpenedEvents(id: String) throws {
-        _ = try databaseQueue.sync {
-            try connection.run(offerOpenedEvents.filter(offerId == id).delete())
-        }
-    }
-    
-    /**
-     Retrieves the persistently stored OfferOpened event with the given offer ID, or returns `nil` if no such event is present.
-     
-     - Parameter id: The offer ID of the OfferOpened event to return, as a Base64-`String` of bytes.
-     
-     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple events are found with the same offer ID or if the offer ID of the event returned from the database does not match `id`.
-     
-     - Returns: A `DatabaseOfferOpenedEvent` corresponding to `id`, or `nil` if no such event is found.
-     */
-    func getOfferOpenedEvent(id: String) throws -> DatabaseOfferOpenedEvent? {
-        var rowIterator: RowIterator? = nil
-        _ = try databaseQueue.sync {
-            rowIterator = try connection.prepareRowIterator(offerOpenedEvents.filter(offerId == id))
-        }
-        guard rowIterator != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getOfferOpenedEvent call")
-        }
-        let result = try Array(rowIterator!)
-        if result.count > 1 {
-            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple OfferOpened events found with given offer id" + id)
-        } else if result.count == 1 {
-            guard result[0][offerId] == id else {
-                throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned OfferOpened event did not match specified offer ID " + id)
-            }
-            return DatabaseOfferOpenedEvent(id: result[0][offerId], interfaceId: result[0][interfaceId])
-        } else {
-            return nil
-        }
-    }
-    
-    /**
-     Persistently stores the contents of an [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) Event. If an OfferCanceled event with an offer ID equal to `id` already exists in the database, this does nothing.
-     
-     - Parameter id: The offer ID specified in the OfferCanceled event, as a Base64-`String` of its bytes.
-     */
-    func storeOfferCanceledEvent(id: String) throws {
-        _ = try databaseQueue.sync {
-            do {
-                try connection.run(offerCanceledEvents.insert(offerId <- id))
-            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: OfferCanceledEvent.offerId" {
-                // An OfferCanceled event with the specified id already exists in the database, so we do nothing.
-            }
-        }
-    }
-    
-    /**
-     Removes every [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) Event with an offer ID equal to `id` from persistent storage.
-     
-     - Parameter id: The offer ID of the OfferCanceled events to be removed, as a Base64-`String` of bytes.
-     */
-    func deleteOfferCanceledEvents(id: String) throws {
-        _ = try databaseQueue.sync {
-            try connection.run(offerCanceledEvents.filter(offerId == id).delete())
-        }
-    }
-    
-    /**
-     Retrieves the persistently stored OfferCanceled event with the given offer ID, or returns `nil` if no such event is present.
-     
-     - Parameter id: The offer ID of the OfferCanceled event to return as a Base64-`String` of bytes.`
-     
-     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple events are found with the same offer ID or if the offer ID of the event returned from the database does not match `id`.
-     
-     - Returns: A `DatabaseOfferCanceledEvent` corresponding to `id` or `nil` if no such event is found.
-     */
-    func getOfferCanceledEvent(id: String) throws -> DatabaseOfferCanceledEvent? {
-        var rowIterator: RowIterator? = nil
-        _ = try databaseQueue.sync {
-            rowIterator = try connection.prepareRowIterator(offerCanceledEvents.filter(offerId == id))
-        }
-        guard rowIterator != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getOfferCanceledEvent call")
-        }
-        let result = try Array(rowIterator!)
-        if result.count > 1 {
-            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple OfferCanceled events found with given offer id" + id)
-        } else if result.count == 1 {
-            guard result[0][offerId] == id else {
-                throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned OfferCanceled event did not match specified offer ID " + id)
-            }
-            return DatabaseOfferCanceledEvent(id: result[0][offerId])
         } else {
             return nil
         }

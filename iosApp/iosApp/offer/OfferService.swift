@@ -59,16 +59,11 @@ class OfferService: OfferNotifiable {
     private var offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent>
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` persistently stores `event`, saves it in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, creates a new `Offer` with the results, persistently stores the new offer, removes the `OfferOpenedEvent` from persistent storage, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, creates a new `Offer` with the results, persistently stores the new offer and its settlement methods, removes `event` from persistent `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferOpenedEvent` of which `OfferService` is being notified.
      */
     func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {
-        // Save the passed OfferOpenedEvent persistently
-        try databaseService.storeOfferOpenedEvent(
-            id: event.id.asData().base64EncodedString(),
-            interfaceId: event.interfaceId.base64EncodedString()
-        )
         offerOpenedEventRepository.append(event)
         guard blockchainService != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during handleOfferOpenedEvent call")
@@ -115,7 +110,6 @@ class OfferService: OfferNotifiable {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
         try databaseService.storeSettlementMethods(id: offerForDatabase.id, settlementMethods: settlementMethodStrings)
-        try databaseService.deleteOfferOpenedEvents(id: offerForDatabase.id)
         offerOpenedEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
@@ -127,22 +121,16 @@ class OfferService: OfferNotifiable {
         #warning("TODO: try to get public key announcement data. if we have it, update the offer struct and add it to the ViewModel's list")
     }
     
-    // TODO: Update this documentation comment
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` persistently stores `event`, saves it in `offerCanceledEventsRepository`, gets the ID of the now-canceled offer from `event`, removes the offer corresponding to the offer ID from persistent storage (if present), removes the settlement methods associated with the offer ID from persistent storage (if present), removes `event` from persistent storage and from `offerCanceledEventsRepository`, and then synchronously removes the `Offer` mapped to the offer ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` saves `event` in `offerCanceledEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerCanceledEventsRepository`, and then synchronously removes the `Offer` mapped to the offer ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferCanceledEvent` of which `OfferService` is being notified.
      */
     func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {
-        // Save the passed OfferCanceledEvent persistently
         let offerIdString = event.id.asData().base64EncodedString()
-        try databaseService.storeOfferCanceledEvent(
-            id: offerIdString
-        )
         offerCanceledEventRepository.append(event)
         try databaseService.deleteOffers(id: offerIdString)
         try databaseService.deleteSettlementMethods(id: offerIdString)
-        try databaseService.deleteOfferCanceledEvents(id: event.id.asData().base64EncodedString())
         offerCanceledEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call")

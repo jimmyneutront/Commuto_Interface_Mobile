@@ -55,30 +55,7 @@ class OfferServiceTests: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        class TestDatabaseService: DatabaseService {
-            
-            override init() throws {
-                try super.init()
-            }
-            
-            var storedDatabaseOfferOpenedEvent: DatabaseOfferOpenedEvent? = nil
-            var wasDeleteOfferOpenedEventCalledCorrectly = false
-            
-            override func storeOfferOpenedEvent(id: String, interfaceId: String) throws {
-                storedDatabaseOfferOpenedEvent = DatabaseOfferOpenedEvent(id: id, interfaceId: interfaceId)
-                try super.storeOfferOpenedEvent(id: id, interfaceId: interfaceId)
-            }
-            
-            override func deleteOfferOpenedEvents(id: String) throws {
-                if id == storedDatabaseOfferOpenedEvent!.id {
-                    wasDeleteOfferOpenedEventCalledCorrectly = true
-                }
-                try super.deleteOfferOpenedEvents(id: id)
-            }
-            
-        }
-        
-        let databaseService = try! TestDatabaseService()
+        let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent> {
@@ -146,8 +123,6 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID]!.id == expectedOfferID)
         XCTAssertEqual(offerOpenedEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerOpenedEventRepository.removedEvent!.id, expectedOfferID)
-        XCTAssertEqual(databaseService.storedDatabaseOfferOpenedEvent!.id, expectedOfferID.asData().base64EncodedString())
-        XCTAssertTrue(databaseService.wasDeleteOfferOpenedEventCalledCorrectly)
         let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
         XCTAssertTrue(offerInDatabase!.isCreated)
         XCTAssertFalse(offerInDatabase!.isTaken)
@@ -199,30 +174,7 @@ class OfferServiceTests: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        class TestDatabaseService: DatabaseService {
-            
-            override init() throws {
-                try super.init()
-            }
-            
-            var storedDatabaseOfferCanceledEvent: DatabaseOfferCanceledEvent? = nil
-            var wasDeleteOfferCanceledEventCalledCorrectly = false
-            
-            override func storeOfferCanceledEvent(id: String) throws {
-                storedDatabaseOfferCanceledEvent = DatabaseOfferCanceledEvent(id: id)
-                try super.storeOfferCanceledEvent(id: id)
-            }
-            
-            override func deleteOfferCanceledEvents(id: String) throws {
-                if id == storedDatabaseOfferCanceledEvent!.id {
-                    wasDeleteOfferCanceledEventCalledCorrectly = true
-                }
-                try super.deleteOfferCanceledEvents(id: id)
-            }
-            
-        }
-        
-        let databaseService = try! TestDatabaseService()
+        let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferCanceledEvent> {
@@ -295,8 +247,6 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID] == nil)
         XCTAssertEqual(offerCanceledEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerCanceledEventRepository.removedEvent!.id, expectedOfferID)
-        XCTAssertEqual(databaseService.storedDatabaseOfferCanceledEvent!.id, expectedOfferID.asData().base64EncodedString())
-        XCTAssertTrue(databaseService.wasDeleteOfferCanceledEventCalledCorrectly)
         let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
         XCTAssertEqual(offerInDatabase, nil)
     }
