@@ -29,6 +29,6 @@ protocol OfferNotifiable {
      
      - Parameter event: The `OfferTakenEvent` of which the structure or class adopting this protocol is being notified and should handle in the implementation of  this function.
      */
-    func handleOfferTakenEvent(_ event: OfferTakenEvent)
+    func handleOfferTakenEvent(_ event: OfferTakenEvent) throws
     
 }

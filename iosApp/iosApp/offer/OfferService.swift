@@ -26,11 +26,13 @@ class OfferService: OfferNotifiable {
     init(
         databaseService: DatabaseService,
         offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>(),
-        offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent> = BlockchainEventRepository<OfferCanceledEvent>()
+        offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent> = BlockchainEventRepository<OfferCanceledEvent>(),
+        offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent> = BlockchainEventRepository<OfferTakenEvent>()
     ) {
         self.databaseService = databaseService
         self.offerOpenedEventRepository = offerOpenedEventRepository
         self.offerCanceledEventRepository = offerCanceledEventRepository
+        self.offerTakenEventRepository = offerTakenEventRepository
     }
     
     /**
@@ -57,6 +59,11 @@ class OfferService: OfferNotifiable {
      A repository containing `OfferCanceledEvent`s for offers that have been canceled but haven't yet been removed from persistent storage or `offerTruthSource`.
      */
     private var offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent>
+    
+    /**
+     A repository containing `OfferTakenEvent`s for offers that have been taken but haven't yet been removed from persistent storage or `offerTruthSource`.
+     */
+    private var offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent>
     
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, creates a new `Offer` with the results, persistently stores the new offer and its settlement methods, removes `event` from persistent `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
@@ -142,13 +149,22 @@ class OfferService: OfferNotifiable {
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` gets the ID of the now-taken offer from `event` and then synchronously removes the `Offer` mapped to the ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerTakenEventsRepository`, and then synchronously removes the `Offer` mapped to the offer ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferTakenEvent` of which `OfferService` is being notified.
      */
-    func handleOfferTakenEvent(_ event: OfferTakenEvent) {
+    func handleOfferTakenEvent(_ event: OfferTakenEvent) throws {
+        let offerIdString = event.id.asData().base64EncodedString()
+        offerTakenEventRepository.append(event)
+        try databaseService.deleteOffers(id: offerIdString)
+        try databaseService.deleteSettlementMethods(id: offerIdString)
+        offerTakenEventRepository.remove(event)
+        guard offerTruthSource != nil else {
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferTakenEvent call")
+        }
+        // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
         _ = DispatchQueue.main.sync {
-            offerTruthSource?.offers.removeValue(forKey: event.id)
+            offerTruthSource!.offers.removeValue(forKey: event.id)
         }
     }
     

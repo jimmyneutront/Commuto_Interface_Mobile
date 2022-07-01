@@ -243,7 +243,7 @@ class BlockchainService {
                 guard let event = OfferTakenEvent(result) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferTaken event from EventParserResultProtocol")
                 }
-                offerService.handleOfferTakenEvent(event)
+                try offerService.handleOfferTakenEvent(event)
             }
         }
     }

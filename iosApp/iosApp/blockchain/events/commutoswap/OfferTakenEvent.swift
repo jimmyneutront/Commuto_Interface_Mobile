@@ -16,7 +16,7 @@ import web3swift
     - id: The ID of the taken offer, as a `UUID`.
     - interfaceId: The [interface ID](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt#L70) belonging to the taker of the offer, as `Data`.
  */
-class OfferTakenEvent {
+class OfferTakenEvent: Equatable {
     let id: UUID
     let interfaceId: Data
     /**
@@ -33,5 +33,18 @@ class OfferTakenEvent {
         } else {
             return nil
         }
+    }
+    
+    /**
+    Compares two `OfferTakenEvent`s for equality. Two `OfferTakenEvent`s are defined as equal if their `id` properties are equal.
+     
+     - Parameters:
+        - lhs: The `OfferTakenEvent` on the left side of the equality operator.
+        - rhs: The `OfferTakenEvent` on the right side of the equality operator.
+     
+     - Returns: A `Bool` indicating whether or not `lhs` and `rhs` are equal.
+     */
+    static func == (lhs: OfferTakenEvent, rhs: OfferTakenEvent) -> Bool {
+        return lhs.id == rhs.id && lhs.interfaceId == rhs.interfaceId
     }
 }
