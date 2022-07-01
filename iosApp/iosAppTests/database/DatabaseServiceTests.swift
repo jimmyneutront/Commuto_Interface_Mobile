@@ -65,7 +65,7 @@ class DatabaseServiceTests: XCTestCase {
         XCTAssertEqual(returnedOfferAfterDeletion, nil)
     }
     
-    func testStoreAndGetSettlementMethods() throws {
+    func testStoreAndGetAndDeleteSettlementMethods() throws {
         let offerId = "an_offer_id"
         let settlementMethods = [
             "settlement_method_zero",
