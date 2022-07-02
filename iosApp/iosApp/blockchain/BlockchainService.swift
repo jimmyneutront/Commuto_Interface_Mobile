@@ -208,6 +208,9 @@ class BlockchainService {
         guard let offerOpenedEventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferOpened event parser")
         }
+        guard let offerEditedEventParser = commutoSwap.createEventParser("OfferEdited", filter: eventFilter) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferEdited event parser")
+        }
         guard let offerCanceledEventParser = commutoSwap.createEventParser("OfferCanceled", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferCanceled event parser")
         }
@@ -215,6 +218,7 @@ class BlockchainService {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferTaken event parser")
         }
         events.append(contentsOf: try offerOpenedEventParser.parseBlock(block))
+        events.append(contentsOf: try offerEditedEventParser.parseBlock(block))
         events.append(contentsOf: try offerCanceledEventParser.parseBlock(block))
         events.append(contentsOf: try offerTakenEventParser.parseBlock(block))
         try handleEvents(events)
@@ -234,6 +238,11 @@ class BlockchainService {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferOpened event from EventParserResultProtocol")
                 }
                 try offerService.handleOfferOpenedEvent(event)
+            } else if result.eventName == "OfferEdited" {
+                guard let event = OfferEditedEvent(result) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferEdited event from EventParserResultProtocol")
+                }
+                try offerService.handleOfferEditedEvent(event)
             } else if result.eventName == "OfferCanceled" {
                 guard let event = OfferCanceledEvent(result) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferCanceled event from EventParserResultProtocol")

@@ -18,6 +18,13 @@ protocol OfferNotifiable {
     func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws
     
     /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of an `OfferEditedEvent`.
+     
+     - Parameter event: The `OfferEditedEvent` of which the structure or class adopting this protocol is being notified and should handle in the implementation of  this function.
+     */
+    func handleOfferEditedEvent(_ event: OfferEditedEvent) throws
+    
+    /**
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of an `OfferCanceledEvent`.
      
      - Parameter event: The `OfferCanceledEvent` of which the structure or class adopting this protocol is being notified and should handle in the implementation of  this function.

@@ -106,6 +106,7 @@ class BlockchainServiceTest: XCTestCase {
             let offerTakenExpectation: XCTestExpectation
             var offerOpenedEventPromise: Promise<OfferOpenedEvent>? = nil
             var offerTakenEventPromise: Promise<OfferTakenEvent>? = nil
+            var gotOfferEditedEvent = false
             var gotOfferCanceledEvent = false
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
@@ -114,6 +115,9 @@ class BlockchainServiceTest: XCTestCase {
                 DispatchQueue.main.async {
                     self.offerOpenedExpectation.fulfill()
                 }
+            }
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {
+                gotOfferEditedEvent = true
             }
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {
                 gotOfferCanceledEvent = true
@@ -142,8 +146,9 @@ class BlockchainServiceTest: XCTestCase {
         wait(for: [offerOpenedExpectation, offerTakenExpectation], timeout: 60.0)
         XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
         XCTAssertEqual(expectedOfferId, try! offerService.offerTakenEventPromise!.wait().id)
-        XCTAssertTrue(!offerService.gotOfferCanceledEvent)
-        XCTAssertTrue(!errorHandler.gotError)
+        XCTAssertFalse(offerService.gotOfferEditedEvent)
+        XCTAssertFalse(offerService.gotOfferCanceledEvent)
+        XCTAssertFalse(errorHandler.gotError)
     }
     
     /**
@@ -203,6 +208,7 @@ class BlockchainServiceTest: XCTestCase {
             let offerCanceledExpectation: XCTestExpectation
             var offerOpenedEventPromise: Promise<OfferOpenedEvent>? = nil
             var offerCanceledEventPromise: Promise<OfferCanceledEvent>? = nil
+            var gotOfferEditedEvent = false
             var gotOfferTakenEvent = false
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
@@ -211,6 +217,9 @@ class BlockchainServiceTest: XCTestCase {
                 DispatchQueue.main.async {
                     self.offerOpenedExpectation.fulfill()
                 }
+            }
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {
+                gotOfferEditedEvent = true
             }
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {
                 offerCanceledEventPromise = Promise { seal in
@@ -239,8 +248,112 @@ class BlockchainServiceTest: XCTestCase {
         wait(for: [offerOpenedExpectation, offerCanceledExpectation], timeout: 60.0)
         XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
         XCTAssertEqual(expectedOfferId, try! offerService.offerCanceledEventPromise!.wait().id)
-        XCTAssertTrue(!offerService.gotOfferTakenEvent)
-        XCTAssertTrue(!errorHandler.gotError)
+        XCTAssertFalse(offerService.gotOfferEditedEvent)
+        XCTAssertFalse(offerService.gotOfferTakenEvent)
+        XCTAssertFalse(errorHandler.gotError)
+        
+    }
+    
+    /**
+     Tests `BlockchainService` by ensuring it detects and handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and [OfferEdited](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeredited) events for a specific offer properly.
+     */
+    func testListenOfferOpenedEdited() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let offerId: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get new CommutoSwap contract address from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_blockchainservice_listen")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-edited")
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = false
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        let expectedOfferId = UUID(uuidString: testingServerResponse!.offerId)!
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        class TestOfferService: OfferNotifiable {
+            init(_ oOE: XCTestExpectation,
+                 _ oEE: XCTestExpectation) {
+                offerOpenedExpectation = oOE
+                offerEditedExpectation = oEE
+            }
+            let offerOpenedExpectation: XCTestExpectation
+            let offerEditedExpectation: XCTestExpectation
+            var offerOpenedEventPromise: Promise<OfferOpenedEvent>? = nil
+            var offerEditedEventPromise: Promise<OfferEditedEvent>? = nil
+            var gotOfferCanceledEvent = false
+            var gotOfferTakenEvent = false
+            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
+                offerOpenedEventPromise = Promise { seal in
+                    seal.fulfill(event)
+                }
+                DispatchQueue.main.async {
+                    self.offerOpenedExpectation.fulfill()
+                }
+            }
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {
+                offerEditedEventPromise = Promise { seal in
+                    seal.fulfill(event)
+                }
+                DispatchQueue.main.async {
+                    self.offerEditedExpectation.fulfill()
+                }
+            }
+            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {
+                gotOfferCanceledEvent = true
+            }
+            func handleOfferTakenEvent(_ event: OfferTakenEvent) {
+                gotOfferTakenEvent = true
+            }
+        }
+        
+        let offerOpenedExpectation = XCTestExpectation(description: "handleOfferOpenedEvent was called")
+        let offerEditedExpectation = XCTestExpectation(description: "handleOfferEditedEvent was called")
+        let offerService = TestOfferService(offerOpenedExpectation, offerEditedExpectation)
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+        )
+        blockchainService.listen()
+        wait(for: [offerOpenedExpectation, offerEditedExpectation], timeout: 60.0)
+        XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
+        XCTAssertEqual(expectedOfferId, try! offerService.offerEditedEventPromise!.wait().id)
+        XCTAssertFalse(offerService.gotOfferCanceledEvent)
+        XCTAssertFalse(offerService.gotOfferTakenEvent)
+        XCTAssertFalse(errorHandler.gotError)
         
     }
     
@@ -271,6 +384,7 @@ class BlockchainServiceTest: XCTestCase {
         
         class TestOfferService: OfferNotifiable {
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
             func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
         }
