@@ -182,7 +182,7 @@ class DatabaseService {
      Updates the price of a persistently stored `DatabaseOffer`.
      
      - Parameters:
-        - id: The ID of the offer of which the price will be updated.
+        - id: The ID of the offer with the price to be updated.
         - price: The new price of the offer.
      */
     func updateOfferPrice(id: String, price: String) throws {
@@ -249,7 +249,7 @@ class DatabaseService {
     }
     
     /**
-     Persistently stores each settlement method in the supplied `Array`, associating each one with the supplied ID.
+     Deletes all persistently stored settlement methods associated with the specified ID, and then persistently stores each settlement method in the supplied `Array`, associating each one with the supplied ID.
      
      - Parameters:
         - id: The ID of the offer or swap to be associated with the settlement methods.
