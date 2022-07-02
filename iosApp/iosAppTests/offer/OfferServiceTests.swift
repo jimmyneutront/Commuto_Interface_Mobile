@@ -70,7 +70,7 @@ class OfferServiceTests: XCTestCase {
             
             override func remove(_ elementToRemove: OfferOpenedEvent) {
                 removedEvent = elementToRemove
-                super.append(elementToRemove)
+                super.remove(elementToRemove)
             }
             
         }
@@ -134,6 +134,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
         XCTAssertEqual(offerInDatabase!.onChainPrice, Data("a price here".utf8).base64EncodedString())
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
+        #warning("TODO: test settlement method storage here")
     }
     
     /**
@@ -189,7 +190,7 @@ class OfferServiceTests: XCTestCase {
             
             override func remove(_ elementToRemove: OfferCanceledEvent) {
                 removedEvent = elementToRemove
-                super.append(elementToRemove)
+                super.remove(elementToRemove)
             }
             
         }
@@ -304,7 +305,7 @@ class OfferServiceTests: XCTestCase {
             
             override func remove(_ elementToRemove: OfferTakenEvent) {
                 removedEvent = elementToRemove
-                super.append(elementToRemove)
+                super.remove(elementToRemove)
             }
             
         }
@@ -362,5 +363,133 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID] == nil)
         let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
         XCTAssertEqual(offerInDatabase, nil)
+    }
+    
+    /**
+     Ensures that `OfferService` handles [OfferrEdited](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeredited) events properly.
+     */
+    func testHandleOfferEditedEvent() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let offerId: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_handleOfferEditedEvent")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-edited")
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        let expectedOfferID = UUID(uuidString: testingServerResponse!.offerId)!
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        
+        class TestBlockchainEventRepository: BlockchainEventRepository<OfferEditedEvent> {
+            
+            var appendedEvent: OfferEditedEvent? = nil
+            var removedEvent: OfferEditedEvent? = nil
+            
+            override func append(_ element: OfferEditedEvent) {
+                appendedEvent = element
+                super.append(element)
+            }
+            
+            override func remove(_ elementToRemove: OfferEditedEvent) {
+                removedEvent = elementToRemove
+                super.remove(elementToRemove)
+            }
+            
+        }
+        
+        let offerEditedEventRepository = TestBlockchainEventRepository()
+        
+        let offerService = OfferService(databaseService: databaseService, offerEditedEventRepository: offerEditedEventRepository)
+        
+        class TestOfferTruthSource: OfferTruthSource {
+            
+            init() {
+                offers = [:]
+            }
+            
+            let editedOfferAddedExpectation = XCTestExpectation(description: "Fulfilled when the edited offer is added to the offers dictionary")
+            
+            var offersAddedCounter = 0
+            
+            var offers: [UUID: Offer] {
+                didSet {
+                    // We want to ignore initialization and only fulfill when two `Offer`s have been added.
+                    if offers.keys.count != 0 {
+                        offersAddedCounter += 1
+                        if offersAddedCounter == 2 {
+                            editedOfferAddedExpectation.fulfill()
+                        }
+                    }
+                }
+            }
+            
+        }
+        
+        let offerTruthSource = TestOfferTruthSource()
+        offerService.offerTruthSource = offerTruthSource
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+        )
+        offerService.blockchainService = blockchainService
+        blockchainService.listen()
+        wait(for: [offerTruthSource.editedOfferAddedExpectation], timeout: 60.0)
+        XCTAssertTrue(!errorHandler.gotError)
+        XCTAssertTrue(offerTruthSource.offers.keys.count == 1)
+        XCTAssertTrue(offerTruthSource.offers[expectedOfferID]!.id == expectedOfferID)
+        XCTAssertEqual(offerEditedEventRepository.appendedEvent!.id, expectedOfferID)
+        XCTAssertEqual(offerEditedEventRepository.removedEvent!.id, expectedOfferID)
+        let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
+        XCTAssertTrue(offerInDatabase!.isCreated)
+        XCTAssertFalse(offerInDatabase!.isTaken)
+        XCTAssertEqual(offerInDatabase!.interfaceId, Data("maker interface Id here".utf8).base64EncodedString())
+        XCTAssertEqual(offerInDatabase!.amountLowerBound, "10000")
+        XCTAssertEqual(offerInDatabase!.amountUpperBound, "10000")
+        XCTAssertEqual(offerInDatabase!.securityDepositAmount, "1000")
+        XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
+        XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
+        XCTAssertEqual(offerInDatabase!.onChainPrice, Data("an edited price here".utf8).base64EncodedString())
+        XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
+        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(id: expectedOfferID.asData().base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
+        XCTAssertEqual(settlementMethodsInDatabase![0], Data("EUR-SEPA".utf8).base64EncodedString())
     }
 }

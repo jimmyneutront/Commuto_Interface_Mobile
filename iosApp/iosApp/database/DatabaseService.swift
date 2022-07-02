@@ -179,6 +179,21 @@ class DatabaseService {
     }
     
     /**
+     Updates the price of a persistently stored `DatabaseOffer`.
+     
+     - Parameters:
+        - id: The ID of the offer of which the price will be updated.
+        - price: The new price of the offer.
+     */
+    func updateOfferPrice(id: String, price: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(offerId == id).update(
+                onChainPrice <- price
+            ))
+        }
+    }
+    
+    /**
      Removes every `DatabaseOffer` with an offer ID equal to `id` from persistent storage.
      
      - Parameter id: The ID of the offers to be removed, as a Base64-`String` of bytes.
@@ -233,7 +248,6 @@ class DatabaseService {
         }
     }
     
-    #warning("TODO: evantually this should delete all payment methods associated with the specified ID before storing any new ones, so in case the offer is edited, we don't have any unsupported payment methods still in persistent storage.")
     /**
      Persistently stores each settlement method in the supplied `Array`, associating each one with the supplied ID.
      
@@ -243,6 +257,7 @@ class DatabaseService {
      */
     func storeSettlementMethods(id: String, settlementMethods _settlementMethods: [String]) throws {
         _ = try databaseQueue.sync {
+            try connection.run(settlementMethods.filter(offerId == id).delete())
             for _settlementMethod in _settlementMethods {
                 try connection.run(settlementMethods.insert(
                     offerId <- id,

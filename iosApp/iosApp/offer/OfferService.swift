@@ -26,11 +26,13 @@ class OfferService: OfferNotifiable {
     init(
         databaseService: DatabaseService,
         offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>(),
+        offerEditedEventRepository: BlockchainEventRepository<OfferEditedEvent> = BlockchainEventRepository<OfferEditedEvent>(),
         offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent> = BlockchainEventRepository<OfferCanceledEvent>(),
         offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent> = BlockchainEventRepository<OfferTakenEvent>()
     ) {
         self.databaseService = databaseService
         self.offerOpenedEventRepository = offerOpenedEventRepository
+        self.offerEditedEventRepository = offerEditedEventRepository
         self.offerCanceledEventRepository = offerCanceledEventRepository
         self.offerTakenEventRepository = offerTakenEventRepository
     }
@@ -54,6 +56,11 @@ class OfferService: OfferNotifiable {
      A repository containing `OfferOpenedEvent`s for offers that are open and for which complete offer information has not yet been retrieved.
      */
     private var offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent>
+    
+    /**
+     A repository containing `OfferEditedEvent`s for offers that are open and for which stored price and payment method information is currently inaccurate.
+     */
+    private var offerEditedEventRepository: BlockchainEventRepository<OfferEditedEvent>
     
     /**
      A repository containing `OfferCanceledEvent`s for offers that have been canceled but haven't yet been removed from persistent storage or `offerTruthSource`.
@@ -128,7 +135,48 @@ class OfferService: OfferNotifiable {
         #warning("TODO: try to get public key announcement data. if we have it, update the offer struct and add it to the ViewModel's list")
     }
     
-    func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
+    func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {
+        offerEditedEventRepository.append(event)
+        guard blockchainService != nil else {
+            throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during handleOfferEditedEvent call")
+        }
+        // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
+        let offerStruct = try blockchainService!.getOffer(id: event.id)
+        let offer = Offer(
+            id: event.id,
+            direction: "Buy",
+            price: "1.004",
+            pair: "USD/UST",
+            isCreated: offerStruct.isCreated,
+            isTaken: offerStruct.isTaken,
+            maker: offerStruct.maker,
+            interfaceId: offerStruct.interfaceId,
+            stablecoin: offerStruct.stablecoin,
+            amountLowerBound: offerStruct.amountLowerBound,
+            amountUpperBound: offerStruct.amountUpperBound,
+            securityDepositAmount: offerStruct.securityDepositAmount,
+            serviceFeeRate: offerStruct.serviceFeeRate,
+            onChainDirection: offerStruct.direction,
+            onChainPrice: offerStruct.price,
+            settlementMethods: offerStruct.settlementMethods,
+            protocolVersion: offerStruct.protocolVersion
+        )
+        let offerIdString = offer.id.asData().base64EncodedString()
+        try databaseService.updateOfferPrice(id: offerIdString, price: offer.onChainPrice.base64EncodedString())
+        var settlementMethodStrings: [String] = []
+        for settlementMethod in offerStruct.settlementMethods {
+            settlementMethodStrings.append(settlementMethod.base64EncodedString())
+        }
+        try databaseService.storeSettlementMethods(id: offerIdString, settlementMethods: settlementMethodStrings)
+        offerEditedEventRepository.remove(event)
+        guard offerTruthSource != nil else {
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferEditedEvent call")
+        }
+        // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
+        DispatchQueue.main.sync {
+            offerTruthSource!.offers[offer.id] = offer
+        }
+    }
     
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` saves `event` in `offerCanceledEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerCanceledEventsRepository`, and then synchronously removes the `Offer` mapped to the offer ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
