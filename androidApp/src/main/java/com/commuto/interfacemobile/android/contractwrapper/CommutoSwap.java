@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.FunctionEncoder;
-import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Bool;
@@ -173,6 +172,10 @@ public class CommutoSwap extends Contract {
             Arrays.<TypeReference<?>>asList(new TypeReference<Bytes16>() {}));
     ;
 
+    public static final Event OFFEREDITED_EVENT = new Event("OfferEdited", 
+            Arrays.<TypeReference<?>>asList(new TypeReference<Bytes16>() {}));
+    ;
+
     public static final Event OFFEROPENED_EVENT = new Event("OfferOpened", 
             Arrays.<TypeReference<?>>asList(new TypeReference<Bytes16>() {}, new TypeReference<DynamicBytes>() {}));
     ;
@@ -186,10 +189,6 @@ public class CommutoSwap extends Contract {
     ;
 
     public static final Event PAYMENTSENT_EVENT = new Event("PaymentSent", 
-            Arrays.<TypeReference<?>>asList(new TypeReference<Bytes16>() {}));
-    ;
-
-    public static final Event PRICECHANGED_EVENT = new Event("PriceChanged", 
             Arrays.<TypeReference<?>>asList(new TypeReference<Bytes16>() {}));
     ;
 
@@ -521,6 +520,37 @@ public class CommutoSwap extends Contract {
         return offerCanceledEventFlowable(filter);
     }
 
+    public List<OfferEditedEventResponse> getOfferEditedEvents(TransactionReceipt transactionReceipt) {
+        List<Contract.EventValuesWithLog> valueList = extractEventParametersWithLog(OFFEREDITED_EVENT, transactionReceipt);
+        ArrayList<OfferEditedEventResponse> responses = new ArrayList<OfferEditedEventResponse>(valueList.size());
+        for (Contract.EventValuesWithLog eventValues : valueList) {
+            OfferEditedEventResponse typedResponse = new OfferEditedEventResponse();
+            typedResponse.log = eventValues.getLog();
+            typedResponse.offerID = (byte[]) eventValues.getNonIndexedValues().get(0).getValue();
+            responses.add(typedResponse);
+        }
+        return responses;
+    }
+
+    public Flowable<OfferEditedEventResponse> offerEditedEventFlowable(EthFilter filter) {
+        return web3j.ethLogFlowable(filter).map(new Function<Log, OfferEditedEventResponse>() {
+            @Override
+            public OfferEditedEventResponse apply(Log log) {
+                Contract.EventValuesWithLog eventValues = extractEventParametersWithLog(OFFEREDITED_EVENT, log);
+                OfferEditedEventResponse typedResponse = new OfferEditedEventResponse();
+                typedResponse.log = log;
+                typedResponse.offerID = (byte[]) eventValues.getNonIndexedValues().get(0).getValue();
+                return typedResponse;
+            }
+        });
+    }
+
+    public Flowable<OfferEditedEventResponse> offerEditedEventFlowable(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) {
+        EthFilter filter = new EthFilter(startBlock, endBlock, getContractAddress());
+        filter.addSingleTopic(EventEncoder.encode(OFFEREDITED_EVENT));
+        return offerEditedEventFlowable(filter);
+    }
+
     public List<OfferOpenedEventResponse> getOfferOpenedEvents(TransactionReceipt transactionReceipt) {
         List<Contract.EventValuesWithLog> valueList = extractEventParametersWithLog(OFFEROPENED_EVENT, transactionReceipt);
         ArrayList<OfferOpenedEventResponse> responses = new ArrayList<OfferOpenedEventResponse>(valueList.size());
@@ -647,37 +677,6 @@ public class CommutoSwap extends Contract {
         EthFilter filter = new EthFilter(startBlock, endBlock, getContractAddress());
         filter.addSingleTopic(EventEncoder.encode(PAYMENTSENT_EVENT));
         return paymentSentEventFlowable(filter);
-    }
-
-    public List<PriceChangedEventResponse> getPriceChangedEvents(TransactionReceipt transactionReceipt) {
-        List<Contract.EventValuesWithLog> valueList = extractEventParametersWithLog(PRICECHANGED_EVENT, transactionReceipt);
-        ArrayList<PriceChangedEventResponse> responses = new ArrayList<PriceChangedEventResponse>(valueList.size());
-        for (Contract.EventValuesWithLog eventValues : valueList) {
-            PriceChangedEventResponse typedResponse = new PriceChangedEventResponse();
-            typedResponse.log = eventValues.getLog();
-            typedResponse.offerID = (byte[]) eventValues.getNonIndexedValues().get(0).getValue();
-            responses.add(typedResponse);
-        }
-        return responses;
-    }
-
-    public Flowable<PriceChangedEventResponse> priceChangedEventFlowable(EthFilter filter) {
-        return web3j.ethLogFlowable(filter).map(new Function<Log, PriceChangedEventResponse>() {
-            @Override
-            public PriceChangedEventResponse apply(Log log) {
-                Contract.EventValuesWithLog eventValues = extractEventParametersWithLog(PRICECHANGED_EVENT, log);
-                PriceChangedEventResponse typedResponse = new PriceChangedEventResponse();
-                typedResponse.log = log;
-                typedResponse.offerID = (byte[]) eventValues.getNonIndexedValues().get(0).getValue();
-                return typedResponse;
-            }
-        });
-    }
-
-    public Flowable<PriceChangedEventResponse> priceChangedEventFlowable(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) {
-        EthFilter filter = new EthFilter(startBlock, endBlock, getContractAddress());
-        filter.addSingleTopic(EventEncoder.encode(PRICECHANGED_EVENT));
-        return priceChangedEventFlowable(filter);
     }
 
     public List<PrimaryTimelockChangedEventResponse> getPrimaryTimelockChangedEvents(TransactionReceipt transactionReceipt) {
@@ -1067,8 +1066,8 @@ public class CommutoSwap extends Contract {
     }
 
     public RemoteFunctionCall<Offer> getOffer(byte[] offerID) {
-        final org.web3j.abi.datatypes.Function function = new org.web3j.abi.datatypes.Function(FUNC_GETOFFER, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.generated.Bytes16(offerID)), 
+        final org.web3j.abi.datatypes.Function function = new org.web3j.abi.datatypes.Function(FUNC_GETOFFER,
+                Arrays.<Type>asList(new org.web3j.abi.datatypes.generated.Bytes16(offerID)),
                 Arrays.<TypeReference<?>>asList(new TypeReference<Offer>() {}));
         /*
         Normally, this would return the result of
@@ -1651,6 +1650,10 @@ public class CommutoSwap extends Contract {
         public byte[] offerID;
     }
 
+    public static class OfferEditedEventResponse extends BaseEventResponse {
+        public byte[] offerID;
+    }
+
     public static class OfferOpenedEventResponse extends BaseEventResponse {
         public byte[] offerID;
 
@@ -1669,10 +1672,6 @@ public class CommutoSwap extends Contract {
 
     public static class PaymentSentEventResponse extends BaseEventResponse {
         public byte[] swapID;
-    }
-
-    public static class PriceChangedEventResponse extends BaseEventResponse {
-        public byte[] offerID;
     }
 
     public static class PrimaryTimelockChangedEventResponse extends BaseEventResponse {
