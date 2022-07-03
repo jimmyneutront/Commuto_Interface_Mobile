@@ -33,12 +33,14 @@ import javax.inject.Singleton
 class OfferService (
     private val databaseService: DatabaseService,
     private val offerOpenedEventRepository: BlockchainEventRepository<CommutoSwap.OfferOpenedEventResponse>,
+    private val offerEditedEventRepository: BlockchainEventRepository<CommutoSwap.OfferEditedEventResponse>,
     private val offerCanceledEventRepository: BlockchainEventRepository<CommutoSwap.OfferCanceledEventResponse>,
     private val offerTakenEventRepository: BlockchainEventRepository<CommutoSwap.OfferTakenEventResponse>
 ): OfferNotifiable {
 
     @Inject constructor(databaseService: DatabaseService): this(
         databaseService,
+        BlockchainEventRepository(),
         BlockchainEventRepository(),
         BlockchainEventRepository(),
         BlockchainEventRepository()
@@ -142,7 +144,56 @@ class OfferService (
         }
     }
 
-    override suspend fun handleOfferEditedEvent(event: CommutoSwap.OfferEditedEventResponse) {}
+    /**
+     * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
+     * of an [CommutoSwap.OfferEditedEventResponse]. Once notified, [OfferService] saves [event] in
+     * [offerEditedEventRepository], gets updated on-chain offer data by calling [blockchainService]'s
+     * [BlockchainService.getOfferAsync] method, creates an updated [Offer] and with the results, updates the price and
+     * settlement methods of the corresponding persistently stored offer, removes [event] from
+     * [offerEditedEventRepository], and then adds the updated [Offer] to [offerTruthSource] on the main coroutine
+     * dispatcher.
+     *
+     * @param event The [CommutoSwap.OfferEditedEventResponse] of which [OfferService] is being notified.
+     */
+    override suspend fun handleOfferEditedEvent(event: CommutoSwap.OfferEditedEventResponse) {
+        val offerIdByteBuffer = ByteBuffer.wrap(event.offerID)
+        val mostSigBits = offerIdByteBuffer.long
+        val leastSigBits = offerIdByteBuffer.long
+        val offerId = UUID(mostSigBits, leastSigBits)
+        val encoder = Base64.getEncoder()
+        offerEditedEventRepository.append(event)
+        val onChainOffer = blockchainService.getOfferAsync(offerId).await()
+        val offer = Offer(
+            id = offerId,
+            direction = "Buy",
+            price = "1.004",
+            pair = "USD/USDT",
+            isCreated = onChainOffer.isCreated,
+            isTaken = onChainOffer.isTaken,
+            maker = onChainOffer.maker,
+            interfaceId = onChainOffer.interfaceId,
+            stablecoin = onChainOffer.stablecoin,
+            amountLowerBound = onChainOffer.amountLowerBound,
+            amountUpperBound = onChainOffer.amountUpperBound,
+            securityDepositAmount = onChainOffer.securityDepositAmount,
+            serviceFeeRate = onChainOffer.serviceFeeRate,
+            onChainDirection = onChainOffer.direction,
+            onChainPrice = onChainOffer.price,
+            settlementMethods = onChainOffer.settlementMethods,
+            protocolVersion = onChainOffer.protocolVersion
+        )
+        val offerIdString = encoder.encodeToString(offerIdByteBuffer.array())
+        databaseService.updateOfferPrice(offerIdString, encoder.encodeToString(offer.onChainPrice))
+        val settlementMethodStrings = offer.settlementMethods.map {
+            encoder.encodeToString(it)
+        }
+        databaseService.storeSettlementMethods(offerIdString, settlementMethodStrings)
+        offerEditedEventRepository.remove(event)
+        withContext(Dispatchers.Main) {
+            offerTruthSource.removeOffer(offerId)
+            offerTruthSource.addOffer(offer)
+        }
+    }
 
     /**
      * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
