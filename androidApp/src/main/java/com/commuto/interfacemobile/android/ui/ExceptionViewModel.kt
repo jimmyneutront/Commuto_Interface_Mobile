@@ -7,17 +7,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The Exception View Model, used to display a visual notification to the user when unexpected
- * exceptions occur.
+ * The Exception View Model, which is notified of and handles [Exception]s encountered by [BlockchainService] and
+ * [com.commuto.interfacemobile.android.p2p.P2PService].
  */
 @Singleton
 class ExceptionViewModel @Inject constructor(): ViewModel(), BlockchainExceptionNotifiable {
     /**
-     * The method called by [BlockchainService] in order to notify of an [Exception] encountered
-     * by [BlockchainService].
+     * The method called by [BlockchainService] in order to notify of an encountered [Exception].
      *
-     * @param exception The [Exception] encountered by [BlockchainService] about which this method
-     * should notify the user.
+     * @param exception The [Exception] encountered by [BlockchainService] that this method should handle.
      */
     override fun handleBlockchainException(exception: Exception) {
         throw exception

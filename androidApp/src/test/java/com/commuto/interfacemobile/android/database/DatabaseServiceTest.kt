@@ -7,7 +7,7 @@ import org.junit.Before
 import org.junit.Test
 
 class DatabaseServiceTest {
-    private var driver = DatabaseDriverFactory()
+    private var driver = PreviewableDatabaseDriverFactory()
     private var databaseService = DatabaseService(driver)
 
     @Before

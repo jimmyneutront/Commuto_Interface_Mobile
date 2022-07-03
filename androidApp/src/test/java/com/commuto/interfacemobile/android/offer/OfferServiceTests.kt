@@ -7,6 +7,7 @@ import com.commuto.interfacemobile.android.blockchain.BlockchainExceptionNotifia
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
 import com.commuto.interfacemobile.android.database.DatabaseDriverFactory
 import com.commuto.interfacemobile.android.database.DatabaseService
+import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
@@ -76,7 +77,7 @@ class OfferServiceTests {
 
         val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
-        val databaseService = DatabaseService(DatabaseDriverFactory())
+        val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
 
         class TestBlockchainEventRepository: BlockchainEventRepository<CommutoSwap.OfferOpenedEventResponse>() {
@@ -200,7 +201,7 @@ class OfferServiceTests {
 
         val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
-        val databaseService = DatabaseService(DatabaseDriverFactory())
+        val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
 
         class TestBlockchainEventRepository: BlockchainEventRepository<CommutoSwap.OfferCanceledEventResponse>() {
@@ -317,7 +318,7 @@ class OfferServiceTests {
 
         val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
-        val databaseService = DatabaseService(DatabaseDriverFactory())
+        val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
 
         class TestBlockchainEventRepository: BlockchainEventRepository<CommutoSwap.OfferTakenEventResponse>() {
@@ -434,7 +435,7 @@ class OfferServiceTests {
 
         val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
-        val databaseService = DatabaseService(DatabaseDriverFactory())
+        val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
 
         class TestBlockchainEventRepository: BlockchainEventRepository<CommutoSwap.OfferEditedEventResponse>() {

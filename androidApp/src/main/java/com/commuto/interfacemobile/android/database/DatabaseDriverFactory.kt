@@ -1,20 +1,16 @@
 package com.commuto.interfacemobile.android.database
 
 import com.squareup.sqldelight.db.SqlDriver
-import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver
-import javax.inject.Inject
 import javax.inject.Singleton
 
+
 /**
- * Provides [SqlDriver]s.
+ * An interface that a class must implement in order to provide [SqlDriver]s
  */
 @Singleton
-class DatabaseDriverFactory @Inject constructor() {
+interface DatabaseDriverFactory {
     /**
-     * Creates and returns a new [JdbcSqliteDriver] connected to an in-memory database.
-     * @return A new [JdbcSqliteDriver] connected to an in-memory database.
+     * The method by which this class provides [SqlDriver]s.
      */
-    fun createDriver(): SqlDriver {
-        return JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    }
+    fun createDriver(): SqlDriver
 }
