@@ -9,23 +9,23 @@
 import Combine
 
 /**
- The Error View Model, which is notified of `Error` encountered by `BlockchainService` and `P2PService`.
+ The Error View Model, which is notified of and handles `Error`s encountered by `BlockchainService` and `P2PService`.
  */
 class ErrorViewModel: BlockchainErrorNotifiable, P2PErrorNotifiable, ObservableObject {
     
     /**
-     Handle an `Error` encountered by `BlockchainService`.
+     The function called by `BlockchainService` in order to notify of an encountered`Error`.
      
-     - Parameter error: The `Error` encountered by `BlockchainService` that should be handled in this function.
+     - Parameter error: The `Error` encountered by `BlockchainService` that this function should handle.
      */
     func handleBlockchainError(_ error: Error) {
         print(error)
     }
     
     /**
-     Handle an `Error` encountered by `P2PService`.
+     The function called by `P2PService` in order to notify of an encountered`Error`.
      
-     - Parameter error: The `Error` encountered by `P2PService` that should be handled in this function.
+     - Parameter error: The `Error` encountered by `P2PService` that this function should handle.
      */
     func handleP2PError(_ error: Error) {
         print(error)
