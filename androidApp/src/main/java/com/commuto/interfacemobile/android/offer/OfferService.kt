@@ -24,6 +24,8 @@ import javax.inject.Singleton
  * all open offers. If this is not yet initialized, event handling methods will throw the corresponding error.
  * @property offerOpenedEventRepository A repository containing [CommutoSwap.OfferOpenedEventResponse]s for offers that
  * are open and for which complete offer information has not yet been retrieved.
+ * @property offerEditedEventRepository A repository containing [CommutoSwap.OfferEditedEventResponse]s for offers that
+ * are open and for which stored price and payment method information is currently inaccurate.
  * @property offerCanceledEventRepository A repository containing [CommutoSwap.OfferCanceledEventResponse]s for offers
  * that have been canceled but haven't yet been removed from persistent storage or [offerTruthSource].
  * @property offerTakenEventRepository A repository containing [CommutoSwap.OfferTakenEventResponse]s for offers
