@@ -1,5 +1,6 @@
 import SwiftUI
 import Swinject
+import web3swift
 
 /**
  The entrypoint for the iOS Commuto Interface SwiftUI App.
@@ -17,17 +18,21 @@ struct iOSApp: App {
      */
     init() {
         container = Container()
-        /*
-        container.register(OfferService.self) { _ in OfferService() }
-            .inObjectScope(.container)
-         */
-        /*
-        container.register(BlockchainService.self) {r in
-            BlockchainService(offerService: r.resolve(OfferService.self)!)
+        container.register(DatabaseService.self) { _ in try! DatabaseService()  }
+        container.register(OfferService.self) { r in
+            OfferService(databaseService: r.resolve(DatabaseService.self)!)
+            
         }
             .inObjectScope(.container)
-         */
-        /*
+        container.register(BlockchainService.self) {r in
+            BlockchainService(
+                errorHandler: ErrorViewModel(),
+                offerService: r.resolve(OfferService.self)!,
+                web3Instance: web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!),
+                commutoSwapAddress: "0x687F36336FCAB8747be1D41366A416b41E7E1a96"
+            )
+        }
+            .inObjectScope(.container)
         container.register(OffersViewModel.self) { r in
             OffersViewModel(offerService: r.resolve(OfferService.self)!)
             
@@ -36,10 +41,7 @@ struct iOSApp: App {
             .initCompleted { r, viewModel in
                 r.resolve(OfferService.self)!.offerTruthSource = viewModel
             }
-         */
         //container.resolve(BlockchainService.self)!.listen()
-        
-        container.register(OffersViewModel.self) { _ in OffersViewModel() }
     }
     
 	var body: some Scene {
