@@ -71,10 +71,6 @@ struct Offer {
      */
     let onChainDirection: BigUInt
     /**
-     Corresponds to an on-chain Offer's `price` property.
-     */
-    let onChainPrice: Data
-    /**
      Corresponds to an on-chain Offer's `settlementMethods` property.
      */
     let settlementMethods: [Data]
@@ -104,7 +100,7 @@ extension Offer {
             id: sampleOfferIds[0],
             direction: "Buy",
             price: "1.004",
-            pair: "USD/UST",
+            pair: "USD/USDT",
             isCreated: true,
             isTaken: false,
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
@@ -115,7 +111,6 @@ extension Offer {
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.zero,
-            onChainPrice: Data(),
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero
         ),
@@ -123,7 +118,7 @@ extension Offer {
             id: sampleOfferIds[1],
             direction: "Buy",
             price: "1.004",
-            pair: "USD/UST",
+            pair: "USD/USDT",
             isCreated: true,
             isTaken: false,
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
@@ -134,7 +129,6 @@ extension Offer {
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.zero,
-            onChainPrice: Data(),
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero
         ),
@@ -142,7 +136,7 @@ extension Offer {
             id: sampleOfferIds[2],
             direction: "Buy",
             price: "1.004",
-            pair: "USD/UST",
+            pair: "USD/USDT",
             isCreated: true,
             isTaken: false,
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
@@ -153,7 +147,6 @@ extension Offer {
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.zero,
-            onChainPrice: Data(),
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero
         ),

@@ -36,7 +36,6 @@ class DatabaseServiceTests: XCTestCase {
             securityDepositAmount: "security_deposit_amount",
             serviceFeeRate: "service_fee_rate",
             onChainDirection: "direction",
-            onChainPrice: "a_price",
             protocolVersion: "some_version"
         )
         try dbService.storeOffer(offer: offerToStore)
@@ -52,7 +51,6 @@ class DatabaseServiceTests: XCTestCase {
             securityDepositAmount: "another_security_deposit_amount",
             serviceFeeRate: "another_service_fee_rate",
             onChainDirection: "opposite_direction",
-            onChainPrice: "a_different_price",
             protocolVersion: "some_other_version"
         )
         // This should do nothing and not throw
@@ -63,28 +61,6 @@ class DatabaseServiceTests: XCTestCase {
         try dbService.deleteOffers(id: "a_uuid")
         let returnedOfferAfterDeletion = try dbService.getOffer(id: "a_uuid")
         XCTAssertEqual(returnedOfferAfterDeletion, nil)
-    }
-    
-    func testUpdateOfferPrice() throws {
-        let offerToUpdate = DatabaseOffer(
-            id: "a_uuid",
-            isCreated: true,
-            isTaken: false,
-            maker: "maker_address",
-            interfaceId: "interface_id",
-            stablecoin: "stablecoin_address",
-            amountLowerBound: "lower_bound_amount",
-            amountUpperBound: "upper_bound_amount",
-            securityDepositAmount: "security_deposit_amount",
-            serviceFeeRate: "service_fee_rate",
-            onChainDirection: "direction",
-            onChainPrice: "a_price",
-            protocolVersion: "some_version"
-        )
-        try dbService.storeOffer(offer: offerToUpdate)
-        try dbService.updateOfferPrice(id: "a_uuid", price: "an_updated_price")
-        let returnedOffer = try dbService.getOffer(id: "a_uuid")
-        XCTAssertEqual(returnedOffer!.onChainPrice, "an_updated_price")
     }
     
     func testStoreAndGetAndDeleteSettlementMethods() throws {

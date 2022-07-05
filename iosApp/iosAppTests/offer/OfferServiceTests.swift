@@ -132,7 +132,6 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.securityDepositAmount, "1000")
         XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
-        XCTAssertEqual(offerInDatabase!.onChainPrice, Data("a price here".utf8).base64EncodedString())
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
         #warning("TODO: test settlement method storage here")
     }
@@ -486,10 +485,9 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.securityDepositAmount, "1000")
         XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
-        XCTAssertEqual(offerInDatabase!.onChainPrice, Data("an edited price here".utf8).base64EncodedString())
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
         let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(id: expectedOfferID.asData().base64EncodedString())
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
-        XCTAssertEqual(settlementMethodsInDatabase![0], Data("EUR-SEPA".utf8).base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase![0], Data("EUR-SEPA|an edited price here".utf8).base64EncodedString())
     }
 }

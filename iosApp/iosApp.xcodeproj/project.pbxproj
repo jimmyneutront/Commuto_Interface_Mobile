@@ -10,6 +10,7 @@
 		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
 		5054CF2BBC7D8E9FD0274A21 /* Pods_iosApp_iosAppTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 461D331E046A712417E05978 /* Pods_iosApp_iosAppTests.framework */; };
 		6D0886ED28595E2E009B6CF7 /* OfferCanceledEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0886EC28595E2E009B6CF7 /* OfferCanceledEvent.swift */; };
+		6D096CE92872121700A36764 /* OfferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D096CE82872121700A36764 /* OfferView.swift */; };
 		6D0F4D9C2853C4F60089EE9E /* OfferMessageNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F4D9B2853C4F60089EE9E /* OfferMessageNotifiable.swift */; };
 		6D0F4D9F2853C5A10089EE9E /* PublicKeyAnnouncement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F4D9E2853C5A10089EE9E /* PublicKeyAnnouncement.swift */; };
 		6D174E2D27AD7DB800E208F7 /* CINMessageParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */; };
@@ -72,6 +73,7 @@
 		461D331E046A712417E05978 /* Pods_iosApp_iosAppTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp_iosAppTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		63F0BA089535DBA1F307F735 /* Pods-iosApp-iosAppTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp-iosAppTests.release.xcconfig"; path = "Target Support Files/Pods-iosApp-iosAppTests/Pods-iosApp-iosAppTests.release.xcconfig"; sourceTree = "<group>"; };
 		6D0886EC28595E2E009B6CF7 /* OfferCanceledEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCanceledEvent.swift; sourceTree = "<group>"; };
+		6D096CE82872121700A36764 /* OfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferView.swift; sourceTree = "<group>"; };
 		6D0F4D9B2853C4F60089EE9E /* OfferMessageNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferMessageNotifiable.swift; sourceTree = "<group>"; };
 		6D0F4D9E2853C5A10089EE9E /* PublicKeyAnnouncement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyAnnouncement.swift; sourceTree = "<group>"; };
 		6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CINMessageParsers.swift; sourceTree = "<group>"; };
@@ -217,6 +219,7 @@
 				6DA6C04F2847148100F5C1C5 /* OffersViewModel.swift */,
 				6D35BC7C284EA9410046A9F8 /* Localizable.strings */,
 				6D21A3B92871CC0C00B017BC /* ErrorViewModel.swift */,
+				6D096CE82872121700A36764 /* OfferView.swift */,
 			);
 			path = ui;
 			sourceTree = "<group>";
@@ -629,6 +632,7 @@
 				6D6CE885284479490009B815 /* OfferCardView.swift in Sources */,
 				6D91C9812753FA2900D85654 /* DatabasePublicKey.swift in Sources */,
 				6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */,
+				6D096CE92872121700A36764 /* OfferView.swift in Sources */,
 				6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */,
 				6DA19783284A8CAD00D2D073 /* CommutoSwapProvider.swift in Sources */,
 				6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */,

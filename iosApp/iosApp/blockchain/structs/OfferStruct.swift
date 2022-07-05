@@ -55,10 +55,6 @@ struct OfferStruct {
      */
     let direction: BigUInt
     /**
-     Corresponds to an on-chain Offer's `price` property.
-     */
-    let price: Data
-    /**
      Corresponds to an on-chain Offer's `settlementMethods` property.
      */
     let settlementMethods: [Data]
@@ -105,16 +101,13 @@ struct OfferStruct {
         guard let direction = response[9] as? BigUInt else {
             throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "direction"))
         }
-        guard let price = response[10] as? Data else {
-            throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "price"))
-        }
-        guard let settlementMethods: [Data] = response[11] as? [Data] else {
+        guard let settlementMethods: [Data] = response[10] as? [Data] else {
             throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "settlementMethods"))
         }
-        guard let protocolVersion = response[12] as? BigUInt else {
+        guard let protocolVersion = response[11] as? BigUInt else {
             throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "protocolVersion"))
         }
-        return OfferStruct(isCreated: isCreated, isTaken: isTaken, maker: maker, interfaceId: interfaceId, stablecoin: stablecoin, amountLowerBound: amountLowerBound, amountUpperBound: amountUpperBound, securityDepositAmount: securityDepositAmount, serviceFeeRate: serviceFeeRate, direction: direction, price: price, settlementMethods: settlementMethods, protocolVersion: protocolVersion)
+        return OfferStruct(isCreated: isCreated, isTaken: isTaken, maker: maker, interfaceId: interfaceId, stablecoin: stablecoin, amountLowerBound: amountLowerBound, amountUpperBound: amountUpperBound, securityDepositAmount: securityDepositAmount, serviceFeeRate: serviceFeeRate, direction: direction, settlementMethods: settlementMethods, protocolVersion: protocolVersion)
     }
     
     /**

@@ -99,13 +99,9 @@ class DatabaseService {
      */
     let serviceFeeRate = Expression<String>("serviceFeeRate")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `onChainDirection` property.
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `direction` property.
      */
     let onChainDirection = Expression<String>("onChainDirection")
-    /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `onChainPrice` property.
-     */
-    let onChainPrice = Expression<String>("onChainPrice")
     /**
      A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `protocolVersion` property.
      */
@@ -131,7 +127,6 @@ class DatabaseService {
             t.column(securityDepositAmount)
             t.column(serviceFeeRate)
             t.column(onChainDirection)
-            t.column(onChainPrice)
             t.column(protocolVersion)
         })
         try connection.run(settlementMethods.create { t in
@@ -169,27 +164,11 @@ class DatabaseService {
                     securityDepositAmount <- offer.securityDepositAmount,
                     serviceFeeRate <- offer.serviceFeeRate,
                     onChainDirection <- offer.onChainDirection,
-                    onChainPrice <- offer.onChainPrice,
                     protocolVersion <- offer.protocolVersion
                 ))
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
                 // An Offer with the specified id already exists in the database, so we do nothing
             }
-        }
-    }
-    
-    /**
-     Updates the price of a persistently stored `DatabaseOffer`.
-     
-     - Parameters:
-        - id: The ID of the offer with the price to be updated.
-        - price: The new price of the offer.
-     */
-    func updateOfferPrice(id: String, price: String) throws {
-        _ = try databaseQueue.sync {
-            try connection.run(offers.filter(offerId == id).update(
-                onChainPrice <- price
-            ))
         }
     }
     
@@ -240,7 +219,6 @@ class DatabaseService {
                 securityDepositAmount: result[0][securityDepositAmount],
                 serviceFeeRate: result[0][serviceFeeRate],
                 onChainDirection: result[0][onChainDirection],
-                onChainPrice: result[0][onChainPrice],
                 protocolVersion: result[0][protocolVersion]
             )
         } else {

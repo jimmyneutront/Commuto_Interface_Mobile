@@ -99,7 +99,6 @@ class OfferService: OfferNotifiable {
             securityDepositAmount: offerStruct.securityDepositAmount,
             serviceFeeRate: offerStruct.serviceFeeRate,
             onChainDirection: offerStruct.direction,
-            onChainPrice: offerStruct.price,
             settlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion
         )
@@ -115,7 +114,6 @@ class OfferService: OfferNotifiable {
             securityDepositAmount: String(offer.securityDepositAmount),
             serviceFeeRate: String(offer.serviceFeeRate),
             onChainDirection: String(offer.onChainDirection),
-            onChainPrice: offer.onChainPrice.base64EncodedString(),
             protocolVersion: String(offer.protocolVersion)
         )
         try databaseService.storeOffer(offer: offerForDatabase)
@@ -136,7 +134,7 @@ class OfferService: OfferNotifiable {
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`. Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, creates an updated `Offer` with the results, updates the price and settlement methods of the corresponding persistently stored offer, removes `event` from `offerEditedEventsRepository`, and then synchronously maps the offer's ID to the updated `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`. Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, creates an updated `Offer` with the results, updates the settlement methods of the corresponding persistently stored offer, removes `event` from `offerEditedEventsRepository`, and then synchronously maps the offer's ID to the updated `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
      */
     func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {
         offerEditedEventRepository.append(event)
@@ -160,12 +158,10 @@ class OfferService: OfferNotifiable {
             securityDepositAmount: offerStruct.securityDepositAmount,
             serviceFeeRate: offerStruct.serviceFeeRate,
             onChainDirection: offerStruct.direction,
-            onChainPrice: offerStruct.price,
             settlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion
         )
         let offerIdString = offer.id.asData().base64EncodedString()
-        try databaseService.updateOfferPrice(id: offerIdString, price: offer.onChainPrice.base64EncodedString())
         var settlementMethodStrings: [String] = []
         for settlementMethod in offerStruct.settlementMethods {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())

@@ -55,10 +55,6 @@ struct DatabaseOffer: Equatable {
      */
     let onChainDirection: String
     /**
-     The `onChainPrice` property of an `Offer` as a `String`.
-     */
-    let onChainPrice: String
-    /**
      The `protocolVersion` property of an `Offer` as a `String`.
      */
     let protocolVersion: String
