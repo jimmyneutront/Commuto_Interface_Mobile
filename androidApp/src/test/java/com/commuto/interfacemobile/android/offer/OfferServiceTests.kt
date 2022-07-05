@@ -162,7 +162,11 @@ class OfferServiceTests {
                 assertEquals(offerInDatabase.serviceFeeRate, "100")
                 assertEquals(offerInDatabase.onChainDirection, "1")
                 assertEquals(offerInDatabase.protocolVersion, "1")
-                // TODO: test settlement method storage here
+                val settlementMethodsInDatabase = databaseService.getSettlementMethods(encoder
+                    .encodeToString(expectedOfferIdByteArray))
+                assertEquals(settlementMethodsInDatabase!!.size, 1)
+                assertEquals(settlementMethodsInDatabase[0], encoder.encodeToString("USD-SWIFT|a price here"
+                    .encodeToByteArray()))
             }
         }
     }
