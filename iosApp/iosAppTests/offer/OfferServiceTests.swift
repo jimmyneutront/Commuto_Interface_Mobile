@@ -133,7 +133,9 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
-        #warning("TODO: test settlement method storage here")
+        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(id: expectedOfferID.asData().base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
+        XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
     
     /**
