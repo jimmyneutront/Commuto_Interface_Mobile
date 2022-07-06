@@ -8,29 +8,59 @@
 
 import SwiftUI
 
+/**
+ Displays information about a specific [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+ */
 struct OfferView: View {
     
-    @Environment(\.colorScheme) var colorScheme
-    
+    /**
+     Controls whether the `DisclosureGroup` displaying a description of the offer direction is open.
+     */
     @State private var isDirectionDescriptionExpanded = false
+    /**
+     Controls whether the `DisclosureGroup` displaying advanced details about the offer is open.
+     */
     @State private var isAdvancedDetailsDescriptionExpanded = false
     
+    /**
+     The ID of the offer about which this `OfferView` is displaying information.
+     */
     var id: UUID
     
+    /**
+     The direction of the offer in human readable format..
+     */
     let directionString = "Buy"
+    /**
+     The joiner used to create the direction `String`, such as "Buy STBL with FIAT" or "Sell STBL for FIAT".
+     */
     let directionJointer = "with"
+    /**
+     The human readable symbol of the stablecoin for which the offer has been made.
+     */
     let stablecoin = "STBL"
-    let fiat = "FIAT"
     
+    /**
+     The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s minimum amount.
+     */
     let minimumAmount = "10,000"
+    /**
+     The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s maximum amount.
+     */
     let maximumAmount = "20,000"
     
+    /**
+     The settlement methods that the maker is willing to accept.
+     */
     let settlementMethods = [
         SettlementMethod(currency: "EUR", method: "SEPA", price: "0.94", id: "1"),
         SettlementMethod(currency: "USD", method: "SWIFT", price: "1.00", id: "2"),
         SettlementMethod(currency: "BSD", method: "SANDDOLLAR", price: "1.00", id: "3")
     ]
     
+    /**
+     The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) about which this `OfferView` displays information.
+     */
     var offer: Offer? = Offer.sampleOffers[Offer.sampleOfferIds[0]]
     
     var body: some View {
@@ -55,12 +85,18 @@ struct OfferView: View {
                                 .bold()
                         }
                     )
-                    .accentColor(colorScheme == .dark ? .white : .black)
+                    .accentColor(Color.primary)
                     OfferAmountView(minimum: minimumAmount, maximum: maximumAmount)
+                    HStack {
+                        Text("Settlement methods:")
+                            .font(.title2)
+                        Spacer()
+                    }
+                    .padding(.top, 2)
                 }
-                .padding()
+                .padding([.leading, .trailing, .top])
                 SettlementMethodListView(stablecoin: stablecoin, settlementMethods: settlementMethods)
-                    .offset(x: 0, y: -10.0)
+                    .padding(.leading)
                 VStack {
                     DisclosureGroup(
                         isExpanded: $isAdvancedDetailsDescriptionExpanded,
@@ -74,9 +110,9 @@ struct OfferView: View {
                                 .bold()
                         }
                     )
-                    .accentColor(colorScheme == .dark ? .white : .black)
+                    .accentColor(Color.primary)
                 }
-                .offset(x: 0.0, y: -20.0)
+                .offset(x: 0.0, y: -10.0)
                 .padding()
                 Spacer()
             }
@@ -85,18 +121,34 @@ struct OfferView: View {
         .navigationBarTitle(Text("Offer"))
     }
     
+    /**
+     Creates the text for the label of the direction `DisclosureGroup`.
+     */
     func buildDirectionString() -> String {
-        return directionString + " " + stablecoin + " " + directionJointer + " " + fiat
+        return directionString + " " + stablecoin + " " + directionJointer + " fiat"
     }
     
+    /**
+     Creates the text for the direction description within the direction `DisclosureGroup`.
+     */
     func buildDirectionDescriptionString() -> String {
-        return "This is a " + directionString + " offer: The maker of this offer wants to " + directionString.lowercased() + " " + stablecoin + " in exchange for " + fiat + "."
+        return "This is a " + directionString + " offer: The maker of this offer wants to " + directionString.lowercased() + " " + stablecoin + " in exchange for fiat."
     }
 }
 
+/**
+ A view that displays the minimum and maximum amount stablecoin that the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)  is willing to exchange.
+ */
 struct OfferAmountView: View {
+    /**
+     A human readable minimum stablecoin amount.
+     */
     let minimum: String
+    /**
+     A human readable maximum stablecoin amount.
+     */
     let maximum: String
+    
     var body: some View {
         HStack {
             Text("Amount:")
@@ -127,16 +179,41 @@ struct OfferAmountView: View {
     }
 }
 
+/**
+ A settlement method specified by the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) by which they are willing to send/receive payment
+ */
 struct SettlementMethod: Identifiable {
+    /**
+     The currency in which the maker is willing to send/receive payment.
+     */
     let currency: String
+    /**
+     The method by which the currency specified in `currency` will be transferred from the stablecoin buyer to the stablecoin seller.
+     */
     let method: String
+    /**
+     The amount of the currency specified in `currency` that the maker is willing to exchange for one stablecoin unit.
+     */
     let price: String
+    /**
+     An ID that uniquely identifies this settlement method, so it can be consumed by SwiftUI's `ForEach`.
+     */
     var id: String
 }
 
+/**
+ Displays a horizontally scrolling list of `SettlementMethodView`s.
+ */
 struct SettlementMethodListView: View {
+    /**
+     The human readable symbol of the stablecoin for which the offer related to these settlement methods has been made.
+     */
     let stablecoin: String
+    /**
+     The settlement methods to be displayed.
+     */
     let settlementMethods: [SettlementMethod]
+    
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack {
@@ -145,15 +222,23 @@ struct SettlementMethodListView: View {
                 }
                 .padding(5)
             }
-            .padding(.leading)
         }
     }
 }
 
+/**
+ Displays a card containing information about a settlement method.
+ */
 struct SettlementMethodView: View {
-    @Environment(\.colorScheme) var colorScheme
+    /**
+     The human readable symbol of the stablecoin for which the offer related to this settlement method has been made.
+     */
     let stablecoin: String
+    /**
+     The `SettlementMethod` that this card displays.
+     */
     let settlementMethod: SettlementMethod
+    
     var body: some View {
         VStack(alignment: .leading) {
             Text(buildCurrencyDescription())
@@ -164,25 +249,35 @@ struct SettlementMethodView: View {
         .padding(20)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(colorScheme == .dark ? .white : .black, lineWidth: 5)
+                .stroke(Color.primary, lineWidth: 3)
         )
     }
     
+    /**
+     Builds a human readable string describing the currency and transfer method, such as "EUR via SEPA" or "USD via SWIFT"
+     */
     func buildCurrencyDescription() -> String {
         return settlementMethod.currency + " via " + settlementMethod.method
     }
     
+    /**
+     Builds a human readable string describing the price specified for this settlement method, such as "Price: 0.94 EUR/DAI" or "Price: 1.00 USD/USDC"
+     */
     func buildPriceDescription() -> String {
         return "Price: " + settlementMethod.price + " " + settlementMethod.currency + "/" + stablecoin
     }
     
 }
 
+/**
+ Displays previews of `OfferView` in light and dark mode, in German.
+ */
 struct OfferView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            //OfferView(id: UUID())
+            OfferView(id: UUID())
             OfferView(id: UUID()).preferredColorScheme(.dark)
         }
+        .environment(\.locale, .init(identifier: "de"))
     }
 }

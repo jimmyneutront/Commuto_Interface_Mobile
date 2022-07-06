@@ -41,7 +41,7 @@ struct OffersView: View {
 }
 
 /**
- Displays a preview of `OfferView` with sample offers, in German.
+ Displays a preview of `OffersView` with sample offers, in German.
  */
 struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
