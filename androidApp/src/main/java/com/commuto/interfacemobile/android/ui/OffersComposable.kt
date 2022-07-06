@@ -8,25 +8,23 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.commuto.interfacemobile.android.database.DatabaseDriverFactory
-import com.commuto.interfacemobile.android.database.DatabaseService
-import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
-import com.commuto.interfacemobile.android.offer.OfferService
+import com.commuto.interfacemobile.android.offer.OfferTruthSource
+import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
 
 /**
  * Contains the [NavHost] for offers and displays the [Composable] to which the user has navigated.
  *
- * @param viewModel The OffersViewModel that acts as a single source of truth for all offer-related
- * data.
+ * @param offerTruthSource An object implementing [OfferTruthSource] that acts as a single source of truth for all
+ * offer-related data.
  */
 @Composable
-fun OffersComposable(viewModel: OffersViewModel) {
+fun OffersComposable(offerTruthSource: OfferTruthSource) {
 
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "OffersListComposable") {
         composable("OffersListComposable") {
-            OffersListComposable(viewModel, navController)
+            OffersListComposable(offerTruthSource, navController)
         }
         composable(
             "OfferDetailComposable/{id}",
@@ -43,5 +41,5 @@ fun OffersComposable(viewModel: OffersViewModel) {
 @Preview
 @Composable
 fun PreviewOffersComposable() {
-    OffersComposable(OffersViewModel(OfferService(DatabaseService(PreviewableDatabaseDriverFactory()))))
+    OffersComposable(PreviewableOfferTruthSource())
 }

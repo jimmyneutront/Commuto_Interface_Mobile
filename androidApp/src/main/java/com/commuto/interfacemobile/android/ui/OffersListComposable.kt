@@ -15,23 +15,22 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.R
-import com.commuto.interfacemobile.android.database.DatabaseService
-import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
-import com.commuto.interfacemobile.android.offer.OfferService
+import com.commuto.interfacemobile.android.offer.OfferTruthSource
+import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
 
 /**
- * Displays a [OffersNoneFoundComposable] if there are no open offers in [viewModel], or, if there
- * are open offers in [viewModel], displays a list containing an [OfferCardComposable]-labeled
- * [Button] for each open offer in [viewModel] that navigates to "OfferDetailComposable/ + offer id
+ * Displays a [OffersNoneFoundComposable] if there are no open offers in [offerTruthSource], or, if there
+ * are open offers in [offerTruthSource], displays a list containing an [OfferCardComposable]-labeled
+ * [Button] for each open offer in [offerTruthSource] that navigates to "OfferDetailComposable/ + offer id
  * as a [String]" when pressed.
  *
- * @param viewModel The OffersViewModel that acts as a single source of truth for all offer-related
+ * @param offerTruthSource The OffersViewModel that acts as a single source of truth for all offer-related
  * data.
  * @param navController The [NavController] that controls navigation between offer-related
  * [Composable]s.
  */
 @Composable
-fun OffersListComposable(viewModel: OffersViewModel, navController: NavController) {
+fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavController) {
     Column {
         Text(
             text = stringResource(R.string.offers),
@@ -40,11 +39,11 @@ fun OffersListComposable(viewModel: OffersViewModel, navController: NavControlle
             modifier = Modifier.padding(horizontal = 10.dp)
         )
         OffersDividerComposable()
-        if (viewModel.offers.size == 0) {
+        if (offerTruthSource.offers.size == 0) {
             OffersNoneFoundComposable()
         } else {
             LazyColumn {
-                items(viewModel.offers) { offer ->
+                items(offerTruthSource.offers) { offer ->
                     Button(
                         colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
                         contentPadding = PaddingValues(10.dp),
@@ -99,7 +98,7 @@ private fun OffersNoneFoundComposable() {
 @Composable
 fun PreviewOffersListComposable() {
     OffersListComposable(
-        OffersViewModel(OfferService(DatabaseService(PreviewableDatabaseDriverFactory()))),
+        PreviewableOfferTruthSource(),
         rememberNavController()
     )
 }
