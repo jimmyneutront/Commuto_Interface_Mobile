@@ -84,13 +84,10 @@ class OfferService: OfferNotifiable {
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
         let offerStruct = try blockchainService!.getOffer(id: event.id)
-        let offer = Offer(
-            id: event.id,
-            direction: "Buy",
-            price: "1.004",
-            pair: "USD/UST",
+        guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
+            id: event.id,
             maker: offerStruct.maker,
             interfaceId: event.interfaceId,
             stablecoin: offerStruct.stablecoin,
@@ -101,7 +98,9 @@ class OfferService: OfferNotifiable {
             onChainDirection: offerStruct.direction,
             settlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion
-        )
+        ) else {
+            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call")
+        }
         let offerForDatabase = DatabaseOffer(
             id: offer.id.asData().base64EncodedString(),
             isCreated: offer.isCreated,
@@ -143,13 +142,10 @@ class OfferService: OfferNotifiable {
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
         let offerStruct = try blockchainService!.getOffer(id: event.id)
-        let offer = Offer(
-            id: event.id,
-            direction: "Buy",
-            price: "1.004",
-            pair: "USD/UST",
+        guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
+            id: event.id,
             maker: offerStruct.maker,
             interfaceId: offerStruct.interfaceId,
             stablecoin: offerStruct.stablecoin,
@@ -160,7 +156,9 @@ class OfferService: OfferNotifiable {
             onChainDirection: offerStruct.direction,
             settlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion
-        )
+        ) else {
+            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call")
+        }
         let offerIdString = offer.id.asData().base64EncodedString()
         var settlementMethodStrings: [String] = []
         for settlementMethod in offerStruct.settlementMethods {

@@ -19,9 +19,9 @@ struct OfferCardView: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(offer.direction).font(.headline)
+                Text(offer.direction.string).font(.headline)
                 Spacer().frame(height: 5)
-                Text(offer.price + " " + offer.pair)
+                Text("Price Pair")
             }
             Spacer()
         }

@@ -15,22 +15,6 @@ import web3swift
  */
 struct Offer {
     /**
-     The ID that uniquely identifies the offer, as a `UUID`.
-     */
-    var id: UUID
-    /**
-     The direction of the offer, indicating whether the maker is offering to buy stablecoin or sell stablecoin.
-     */
-    var direction: String
-    /**
-     The price at which the maker is offering to buy/sell stablecoin, as the cost in FIAT per one STBL.
-     */
-    var price: String
-    /**
-     A string of the form "FIAT/STBL", where FIAT is the abbreviation of the fiat currency being exchanged, and STBL is the ticker symbol of the stablecoin being exchanged.
-     */
-    var pair: String
-    /**
      Corresponds to an on-chain Offer's `isCreated` property.
      */
     let isCreated: Bool
@@ -38,6 +22,10 @@ struct Offer {
      Corresponds to an on-chain Offer's `isTaken` property.
      */
     let isTaken: Bool
+    /**
+     The ID that uniquely identifies the offer, as a `UUID`.
+     */
+    var id: UUID
     /**
      Corresponds to an on-chain Offer's `maker` property.
      */
@@ -71,6 +59,10 @@ struct Offer {
      */
     let onChainDirection: BigUInt
     /**
+     The direction of the offer, indicating whether the maker is offering to buy stablecoin or sell stablecoin.
+     */
+    var direction: OfferDirection
+    /**
      Corresponds to an on-chain Offer's `settlementMethods` property.
      */
     let settlementMethods: [Data]
@@ -78,6 +70,44 @@ struct Offer {
      Corresponds to an on-chain Offer's `protocolVersion` property.
      */
     let protocolVersion: BigUInt
+    
+    init?(
+        isCreated: Bool,
+        isTaken: Bool,
+        id: UUID,
+        maker: EthereumAddress,
+        interfaceId: Data,
+        stablecoin: EthereumAddress,
+        amountLowerBound: BigUInt,
+        amountUpperBound: BigUInt,
+        securityDepositAmount: BigUInt,
+        serviceFeeRate: BigUInt,
+        onChainDirection: BigUInt,
+        settlementMethods: [Data],
+        protocolVersion: BigUInt
+    ) {
+        self.isCreated = isCreated
+        self.isTaken = isTaken
+        self.id = id
+        self.maker = maker
+        self.interfaceId = interfaceId
+        self.stablecoin = stablecoin
+        self.amountLowerBound = amountLowerBound
+        self.amountUpperBound = amountUpperBound
+        self.securityDepositAmount = securityDepositAmount
+        self.serviceFeeRate = serviceFeeRate
+        self.onChainDirection = onChainDirection
+        if self.onChainDirection == BigUInt.zero {
+            self.direction = .buy
+        } else if self.onChainDirection == BigUInt.init(UInt64(1)) {
+            self.direction = .sell
+        } else {
+            return nil
+        }
+        self.settlementMethods = settlementMethods
+        self.protocolVersion = protocolVersion
+    }
+    
 }
 
 /**
@@ -97,12 +127,9 @@ extension Offer {
      */
     static let sampleOffers: [UUID: Offer] = [
         sampleOfferIds[0]: Offer(
+            isCreated: true,
+            isTaken: false,
             id: sampleOfferIds[0],
-            direction: "Buy",
-            price: "1.004",
-            pair: "USD/USDT",
-            isCreated: true,
-            isTaken: false,
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
             stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
@@ -113,14 +140,11 @@ extension Offer {
             onChainDirection: BigUInt.zero,
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero
-        ),
+        )!,
         sampleOfferIds[1]: Offer(
+            isCreated: true,
+            isTaken: false,
             id: sampleOfferIds[1],
-            direction: "Buy",
-            price: "1.004",
-            pair: "USD/USDT",
-            isCreated: true,
-            isTaken: false,
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
             stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
@@ -128,17 +152,14 @@ extension Offer {
             amountUpperBound: BigUInt.zero,
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
-            onChainDirection: BigUInt.zero,
+            onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero
-        ),
+        )!,
         sampleOfferIds[2]: Offer(
-            id: sampleOfferIds[2],
-            direction: "Buy",
-            price: "1.004",
-            pair: "USD/USDT",
             isCreated: true,
             isTaken: false,
+            id: sampleOfferIds[2],
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
             stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
@@ -146,10 +167,10 @@ extension Offer {
             amountUpperBound: BigUInt.zero,
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
-            onChainDirection: BigUInt.zero,
+            onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero
-        ),
+        )!,
     ]
 }
 
