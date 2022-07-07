@@ -27,18 +27,40 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.util.*
 
+/**
+ * Displays details about a particular [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+ */
 @Composable
 fun OfferComposable() {
 
+    /**
+     * The ID of the offer about which this [OfferComposable] is displaying information.
+     */
     val id = UUID.randomUUID()
 
+    /**
+     * The direction of this offer in human readable format.
+     */
     val directionString = "Buy"
-    val stablecoin = "STBL"
-    val directionJoiner = "with"
 
+    /**
+     * The human readable stablecoin symbol for which the offer has been made.
+     */
+    val stablecoin = "STBL"
+
+    /**
+     * The Offer's minimum amount.
+     */
     val minimumAmount = "10,000"
+
+    /**
+     * The Offer's maximum amount
+     */
     val maximumAmount = "20,000"
 
+    /**
+     * The list of [SettlementMethod]s that the maker is willing to accept.
+     */
     val settlementMethods = listOf(
         SettlementMethod("EUR", "SEPA", "0.94"),
         SettlementMethod("USD", "SWIFT", "1.00"),
@@ -59,14 +81,13 @@ fun OfferComposable() {
             DisclosureComposable(
                 header = {
                     Text(
-                        text = "$directionString $stablecoin $directionJoiner fiat",
+                        text = buildDirectionString(directionString, stablecoin),
                         style = MaterialTheme.typography.h5,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 content = {
-                    // TODO: we should build this string dynamically
-                    Text("This is a Buy offer: the maker of this offer wants to buy STBL in exchange for fiat")
+                    Text(buildDirectionDescriptionString(directionString, stablecoin))
                 }
             )
             OfferAmountComposable(minimumAmount, maximumAmount)
@@ -99,6 +120,39 @@ fun OfferComposable() {
     }
 }
 
+/**
+ * Creates the text for the label of the direction-related [DisclosureComposable].
+ *
+ * @param directionString The offer's direction in human readable format.
+ * @param stablecoin The human readable stablecoin symbol for which the offer has been made.
+ */
+fun buildDirectionString(directionString: String, stablecoin: String): String {
+    val directionJoiner: String = if (directionString.lowercase() == "buy") {
+        "with"
+    } else {
+        "for"
+    }
+    return "$directionString $stablecoin $directionJoiner fiat"
+}
+
+/**
+ * Creates the text for the content of the direction-related [DisclosureComposable]
+ *
+ * @param directionString The offer's direction in human readable format.
+ * @param stablecoin The human readable stablecoin symbol for which the offer has been made.
+ */
+fun buildDirectionDescriptionString(directionString: String, stablecoin: String): String {
+    return "This is a $directionString offer: the maker of this offer wants to ${directionString.lowercase()} " +
+            "$stablecoin in exchange for fiat."
+}
+
+/**
+ * Displays the minimum and maximum amount stablecoin that the maker of an
+ * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)  is willing to exchange.
+ *
+ * @param min The Offer's minimum amount as a human readable string.
+ * @param max The Offer's maximum amount as a human readable string.
+ */
 @Composable
 fun OfferAmountComposable(min: String, max: String) {
     Text(
@@ -125,8 +179,25 @@ fun OfferAmountComposable(min: String, max: String) {
     }
 }
 
+/**
+ * A settlement method specified by the maker of an
+ * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) by which they are willing to
+ * send/receive payment.
+ *
+ * @property currency The human readable symbol of the currency that the maker is willing to send/receive.
+ * @property method The method my which the currency specified in [currency] should be sent.
+ * @property price The amount of currency specified in [currency] that the maker is willing to exchange for one
+ * stablecoin unit.
+ */
 data class SettlementMethod(val currency: String, val method: String, val price: String)
 
+/**
+ * Displays a horizontally scrolling list of [SettlementMethodComposable]s.
+ *
+ * @param stablecoin The human readable symbol of the stablecoin for which the offer related to these settlement methods
+ * has been made.
+ * @param settlementMethods The settlement methods to be displayed.
+ */
 @Composable
 fun SettlementMethodsListComposable(stablecoin: String, settlementMethods: List<SettlementMethod>) {
     Text(
@@ -145,6 +216,13 @@ fun SettlementMethodsListComposable(stablecoin: String, settlementMethods: List<
     }
 }
 
+/**
+ * Displays a card containing information about a settlement method.
+ *
+ * @param stablecoin The human readable symbol of the stablecoin for which the offer related to these settlement methods
+ * has been made.
+ * @param settlementMethod The settlement method that this card displays.
+ */
 @Composable
 fun SettlementMethodComposable(stablecoin: String, settlementMethod: SettlementMethod) {
     Column(
@@ -153,16 +231,46 @@ fun SettlementMethodComposable(stablecoin: String, settlementMethod: SettlementM
             .padding(9.dp)
     ) {
         Text(
-            text = "${settlementMethod.currency} via ${settlementMethod.method}",
+            text = buildCurrencyDescription(settlementMethod),
             modifier = Modifier.padding(3.dp)
         )
         Text(
-            text = "Price: ${settlementMethod.price} ${settlementMethod.currency}/$stablecoin",
+            text = buildPriceDescription(settlementMethod, stablecoin),
             modifier = Modifier.padding(3.dp)
         )
     }
 }
 
+/**
+ * Builds a human readable [String] describing the currency and transfer method, such as "EUR via SEPA" or
+ * "USD via SWIFT".
+ *
+ * @param settlementMethod: THe settlement method for which the currency description should be built.
+ */
+fun buildCurrencyDescription(settlementMethod: SettlementMethod): String {
+    return "${settlementMethod.currency} via ${settlementMethod.method}"
+}
+
+/**
+ * Builds a human readable [String] describing the price specified for this settlement method, such as "Price: 0.94
+ * EUR/DAI" or "Price: 1.00 USD/USDC"
+ *
+ * @param settlementMethod: The settlement method for which the currency description should be built.
+ * @param stablecoin The human readable symbol of the stablecoin for which the offer related to [settlementMethod] has
+ * been made.
+ */
+fun buildPriceDescription(settlementMethod: SettlementMethod, stablecoin: String): String {
+    return "Price: ${settlementMethod.price} ${settlementMethod.currency}/$stablecoin"
+}
+
+/**
+ * A [Composable] that always displays [header], and can expand to display [content] or contract and hide [content] when
+ * tapped.
+ *
+ * @param header A [Composable] that will always be displayed regardless of whether [DisclosureComposable] is expanded
+ * or not.
+ * @param content A [Composable] that will be displayed below [header] when this is expanded.
+ */
 @Composable
 fun DisclosureComposable(header: @Composable () -> Unit, content: @Composable () -> Unit) {
     var isDisclosureExpanded by remember { mutableStateOf(false) }
