@@ -1,6 +1,5 @@
 package com.commuto.interfacemobile.android.ui
 
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavType
@@ -10,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
 import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
+import java.util.*
 
 /**
  * Contains the [NavHost] for offers and displays the [Composable] to which the user has navigated.
@@ -27,10 +27,12 @@ fun OffersComposable(offerTruthSource: OfferTruthSource) {
             OffersListComposable(offerTruthSource, navController)
         }
         composable(
-            "OfferDetailComposable/{id}",
+            "OfferComposable/{id}",
             arguments = listOf(navArgument("id") { type = NavType.StringType })
         ) { backStackEntry ->
-            Text("id: " + backStackEntry.arguments?.getString("id"))
+            val id = try { UUID.fromString(backStackEntry.arguments?.getString("id")) }
+            catch (e: Throwable) { null }
+            OfferComposable(id = id)
         }
     }
 }

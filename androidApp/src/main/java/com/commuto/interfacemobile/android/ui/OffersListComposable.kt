@@ -48,7 +48,7 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
                         colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
                         contentPadding = PaddingValues(10.dp),
                         onClick = {
-                            navController.navigate("OfferDetailComposable/" + offer.id.toString())
+                            navController.navigate("OfferComposable/" + offer.id.toString())
                         }
                     ) {
                         OfferCardComposable(offer)

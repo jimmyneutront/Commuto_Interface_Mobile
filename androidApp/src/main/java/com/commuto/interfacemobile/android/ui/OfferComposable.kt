@@ -29,14 +29,10 @@ import java.util.*
 
 /**
  * Displays details about a particular [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+ * @param id: The ID of the offer about which this [OfferComposable] is displaying information.
  */
 @Composable
-fun OfferComposable() {
-
-    /**
-     * The ID of the offer about which this [OfferComposable] is displaying information.
-     */
-    val id = UUID.randomUUID()
+fun OfferComposable(id: UUID?) {
 
     /**
      * The direction of this offer in human readable format.
@@ -67,55 +63,71 @@ fun OfferComposable() {
         SettlementMethod("BSD", "SANDDOLLAR", "1.00"),
     )
 
-    Column(
-        modifier = Modifier
-            .verticalScroll(rememberScrollState())
-    ) {
-        Column(
-            modifier = Modifier.padding(9.dp)
+    if (id == null) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Text(
-                text = "Direction:",
-                style =  MaterialTheme.typography.h6,
+                text = "This Offer has an invalid ID.",
             )
-            DisclosureComposable(
-                header = {
-                    Text(
-                        text = buildDirectionString(directionString, stablecoin),
-                        style = MaterialTheme.typography.h5,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                content = {
-                    Text(buildDirectionDescriptionString(directionString, stablecoin))
-                }
-            )
-            OfferAmountComposable(minimumAmount, maximumAmount)
         }
-        Row(
-            modifier = Modifier.offset(x = 9.dp)
-        ) {
-            Column {
-                SettlementMethodsListComposable(stablecoin, settlementMethods)
-            }
-        }
+    } else {
         Column(
-            modifier = Modifier.padding(9.dp)
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
         ) {
-            DisclosureComposable(
-                header = {
-                    Text(
-                        text = "Advanced Details",
-                        style = MaterialTheme.typography.h5,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                content = {
-                    Text(
-                        text = "ID: $id"
-                    )
+            Column(
+                modifier = Modifier.padding(9.dp)
+            ) {
+                Text(
+                    text = "Offer",
+                    style = MaterialTheme.typography.h3,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Direction:",
+                    style =  MaterialTheme.typography.h6,
+                )
+                DisclosureComposable(
+                    header = {
+                        Text(
+                            text = buildDirectionString(directionString, stablecoin),
+                            style = MaterialTheme.typography.h5,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    content = {
+                        Text(buildDirectionDescriptionString(directionString, stablecoin))
+                    }
+                )
+                OfferAmountComposable(minimumAmount, maximumAmount)
+            }
+            Row(
+                modifier = Modifier.offset(x = 9.dp)
+            ) {
+                Column {
+                    SettlementMethodsListComposable(stablecoin, settlementMethods)
                 }
-            )
+            }
+            Column(
+                modifier = Modifier.padding(9.dp)
+            ) {
+                DisclosureComposable(
+                    header = {
+                        Text(
+                            text = "Advanced Details",
+                            style = MaterialTheme.typography.h5,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    content = {
+                        Text(
+                            text = "ID: $id"
+                        )
+                    }
+                )
+            }
         }
     }
 }
@@ -312,12 +324,25 @@ fun DisclosureComposable(header: @Composable () -> Unit, content: @Composable ()
 }
 
 /**
- * Displays a preview of [OfferComposable].
+ * Displays a preview of [OfferComposable] with id equal to a new UUID.
  */
 @Preview(
     showBackground = true
 )
 @Composable
-fun PreviewOfferComposable() {
-    OfferComposable()
+fun PreviewOfferComposableWithUUID() {
+    OfferComposable(UUID.randomUUID())
+}
+
+/**
+ * Displays a preview of [OfferComposable] with id equal to null.
+ */
+@Preview(
+    showBackground = true,
+    widthDp = 300,
+    heightDp = 100,
+)
+@Composable
+fun PreviewOfferComposableWithNull() {
+    OfferComposable(null)
 }
