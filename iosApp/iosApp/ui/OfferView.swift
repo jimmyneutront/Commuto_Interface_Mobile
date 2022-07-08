@@ -48,65 +48,61 @@ struct OfferView: View {
     /**
      The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) about which this `OfferView` displays information.
      */
-    var offer: Offer?
+    @ObservedObject var offer: Offer
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack {
-                if offer != nil {
-                    VStack {
-                        HStack {
-                            Text("Direction:")
-                                .font(.title2)
-                            Spacer()
-                        }
-                        .offset(x: 0.0, y: 10.0)
-                        DisclosureGroup(
-                            isExpanded: $isDirectionDescriptionExpanded,
-                            content: {
-                                Text(buildDirectionDescriptionString())
-                                    .padding(.bottom, 1)
-                            },
-                            label: {
-                                Text(buildDirectionString())
-                                    .font(.title)
-                                    .bold()
-                            }
-                        )
-                        .accentColor(Color.primary)
-                        OfferAmountView(minimum: minimumAmount, maximum: maximumAmount)
-                        HStack {
-                            Text("Settlement methods:")
-                                .font(.title2)
-                            Spacer()
-                        }
-                        .padding(.top, 2)
+                VStack {
+                    HStack {
+                        Text("Direction:")
+                            .font(.title2)
+                        Spacer()
                     }
-                    .padding([.leading, .trailing, .top])
-                    SettlementMethodListView(stablecoin: stablecoin, settlementMethods: settlementMethods)
-                        .padding(.leading)
-                    VStack {
-                        DisclosureGroup(
-                            isExpanded: $isAdvancedDetailsDescriptionExpanded,
-                            content: {
-                                // Note that the empty string should never be displayed, since a "not available" message is displayed if offer is nil.
-                                Text("ID: " + (offer?.id.uuidString ?? ""))
-                                    .padding(.bottom, 1)
-                            },
-                            label: {
-                                Text("Advanced Details")
-                                    .font(.title2)
-                                    .bold()
-                            }
-                        )
-                        .accentColor(Color.primary)
+                    .offset(x: 0.0, y: 10.0)
+                    DisclosureGroup(
+                        isExpanded: $isDirectionDescriptionExpanded,
+                        content: {
+                            Text(buildDirectionDescriptionString())
+                                .padding(.bottom, 1)
+                        },
+                        label: {
+                            Text(buildDirectionString())
+                                .font(.title)
+                                .bold()
+                        }
+                    )
+                    .accentColor(Color.primary)
+                    OfferAmountView(minimum: minimumAmount, maximum: maximumAmount)
+                    HStack {
+                        Text("Settlement methods:")
+                            .font(.title2)
+                        Spacer()
                     }
-                    .offset(x: 0.0, y: -10.0)
-                    .padding()
-                    Spacer()
-                } else {
-                    Text("This Offer is not available.")
+                    .padding(.top, 2)
                 }
+                .padding([.leading, .trailing, .top])
+                SettlementMethodListView(stablecoin: stablecoin, settlementMethods: settlementMethods)
+                    .padding(.leading)
+                VStack {
+                    DisclosureGroup(
+                        isExpanded: $isAdvancedDetailsDescriptionExpanded,
+                        content: {
+                            // Note that the empty string should never be displayed, since a "not available" message is displayed if offer is nil.
+                            Text("ID: " + offer.id.uuidString)
+                                .padding(.bottom, 1)
+                        },
+                        label: {
+                            Text("Advanced Details")
+                                .font(.title2)
+                                .bold()
+                        }
+                    )
+                    .accentColor(Color.primary)
+                }
+                .offset(x: 0.0, y: -10.0)
+                .padding()
+                Spacer()
             }
             .offset(x:0.0, y: -30.0)
         }
@@ -118,18 +114,14 @@ struct OfferView: View {
      */
     func buildDirectionString() -> String {
         var directionJoiner: String {
-            switch offer?.direction {
+            switch offer.direction {
             case .buy:
                 return "with"
             case .sell:
                 return "for"
-            case .none:
-                // This should never be returned because no offer information will be displayed if offer is nil
-                return ""
             }
         }
-        // We should never get the empty string here because no offer information will be displayed if offer is nil
-        return (offer?.direction.string ?? "") + " " + stablecoin + " " + directionJoiner + " fiat"
+        return offer.direction.string + " " + stablecoin + " " + directionJoiner + " fiat"
     }
     
     /**
@@ -137,7 +129,7 @@ struct OfferView: View {
      */
     func buildDirectionDescriptionString() -> String {
         // We should never get the empty string here because no offer information will be displayed if offer is nil
-        return "This is a " + (offer?.direction.string ?? "") + " offer: The maker of this offer wants to " + (offer?.direction.string.lowercased() ?? "") + " " + stablecoin + " in exchange for fiat."
+        return "This is a " + offer.direction.string + " offer: The maker of this offer wants to " + offer.direction.string.lowercased() + " " + stablecoin + " in exchange for fiat."
     }
 }
 
@@ -280,9 +272,8 @@ struct SettlementMethodView: View {
 struct OfferView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            OfferView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]])
-            OfferView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]).preferredColorScheme(.dark)
-            OfferView()
+            OfferView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!)
+            OfferView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!).preferredColorScheme(.dark)
         }
         .environment(\.locale, .init(identifier: "de"))
     }

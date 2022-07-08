@@ -13,7 +13,7 @@ import web3swift
 /**
  Represents an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct Offer {
+class Offer: ObservableObject {
     /**
      Corresponds to an on-chain Offer's `isCreated` property.
      */
@@ -25,7 +25,7 @@ struct Offer {
     /**
      The ID that uniquely identifies the offer, as a `UUID`.
      */
-    var id: UUID
+    let id: UUID
     /**
      Corresponds to an on-chain Offer's `maker` property.
      */
@@ -65,7 +65,7 @@ struct Offer {
     /**
      Corresponds to an on-chain Offer's `settlementMethods` property.
      */
-    let settlementMethods: [Data]
+    @Published var settlementMethods: [Data]
     /**
      Corresponds to an on-chain Offer's `protocolVersion` property.
      */

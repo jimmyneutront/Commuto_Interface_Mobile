@@ -20,7 +20,7 @@ enum OfferDirection {
     case sell
     
     /**
-     A direction in human readable format.
+     The direction in human readable format.
      */
     var string: String {
         switch self {
