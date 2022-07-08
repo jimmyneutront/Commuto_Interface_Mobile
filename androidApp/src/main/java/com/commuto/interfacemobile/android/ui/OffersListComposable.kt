@@ -24,10 +24,8 @@ import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
  * [Button] for each open offer in [offerTruthSource] that navigates to "OfferDetailComposable/ + offer id
  * as a [String]" when pressed.
  *
- * @param offerTruthSource The OffersViewModel that acts as a single source of truth for all offer-related
- * data.
- * @param navController The [NavController] that controls navigation between offer-related
- * [Composable]s.
+ * @param offerTruthSource The OffersViewModel that acts as a single source of truth for all offer-related data.
+ * @param navController The [NavController] that controls navigation between offer-related [Composable]s.
  */
 @Composable
 fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavController) {

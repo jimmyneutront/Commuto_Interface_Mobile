@@ -32,7 +32,7 @@ fun OffersComposable(offerTruthSource: OfferTruthSource) {
         ) { backStackEntry ->
             val id = try { UUID.fromString(backStackEntry.arguments?.getString("id")) }
             catch (e: Throwable) { null }
-            OfferComposable(id = id)
+            OfferComposable(offerTruthSource, id)
         }
     }
 }
