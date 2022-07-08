@@ -133,7 +133,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
-        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(id: expectedOfferID.asData().base64EncodedString())
+        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
@@ -488,7 +488,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
-        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(id: expectedOfferID.asData().base64EncodedString())
+        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("EUR-SEPA|an edited price here".utf8).base64EncodedString())
     }

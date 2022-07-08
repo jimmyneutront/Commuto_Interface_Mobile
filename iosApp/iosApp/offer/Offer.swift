@@ -70,6 +70,10 @@ class Offer: ObservableObject {
      Corresponds to an on-chain Offer's `protocolVersion` property.
      */
     let protocolVersion: BigUInt
+    /**
+     The ID of the blockchain on which this Offer exists.
+     */
+    let chainID: BigUInt
     
     init?(
         isCreated: Bool,
@@ -84,7 +88,8 @@ class Offer: ObservableObject {
         serviceFeeRate: BigUInt,
         onChainDirection: BigUInt,
         settlementMethods: [Data],
-        protocolVersion: BigUInt
+        protocolVersion: BigUInt,
+        chainID: BigUInt
     ) {
         self.isCreated = isCreated
         self.isTaken = isTaken
@@ -106,6 +111,7 @@ class Offer: ObservableObject {
         }
         self.settlementMethods = settlementMethods
         self.protocolVersion = protocolVersion
+        self.chainID = chainID
     }
     
 }
@@ -139,7 +145,8 @@ extension Offer {
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.zero,
             settlementMethods: [Data()],
-            protocolVersion: BigUInt.zero
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt.zero
         )!,
         sampleOfferIds[1]: Offer(
             isCreated: true,
@@ -154,7 +161,8 @@ extension Offer {
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
-            protocolVersion: BigUInt.zero
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt.zero
         )!,
         sampleOfferIds[2]: Offer(
             isCreated: true,
@@ -169,7 +177,8 @@ extension Offer {
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
-            protocolVersion: BigUInt.zero
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt.zero
         )!,
     ]
 }

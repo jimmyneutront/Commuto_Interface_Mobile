@@ -82,7 +82,7 @@ class BlockchainService {
     /**
      The web3swift `web3` instance that `BlockchainService` uses to interact with the EVM-compatible blockchain.
      */
-    private var w3: web3
+    private let w3: web3
     
     /**
      The web3swift `web3.contract` instance of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) that `BlockchainService` uses to parse transaction receipts for CommutoSwap events and interact with the CommutoSwap contract on chain.
@@ -176,9 +176,14 @@ class BlockchainService {
      - Parameter id: The id of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to get from the blockchain.
      
      - Returns: The `OfferStruct` corresponding to `id`.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the chain ID is `nil`, if `nil` is returned during read transaction creation, or if `nil` is returned while getting offer data from the read transaction response.
      */
     func getOffer(id: UUID) throws -> OfferStruct {
         let method = "getOffer"
+        guard let chainID = w3.provider.network?.chainID else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil chain ID during getOffer call")
+        }
         guard let readTransaction = commutoSwap.read(
             method,
             parameters: [id.asData()] as [AnyObject],
@@ -190,21 +195,24 @@ class BlockchainService {
         guard let offerData = offerOnChain["0"] as? [AnyObject] else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while getting offer data from getOffer read transaction response")
         }
-        return try OfferStruct.createFromGetOfferResponse(response: offerData)
+        return try OfferStruct.createFromGetOfferResponse(response: offerData, chainID: chainID)
     }
     
     /**
-     Parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events. (Specifically, the events are web3swift `EventParserResultProtocols`.)
+     Gets the current chain ID, parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the currenc chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
      - Note: In order to parse a block, the `EventParserProtocol`s created in this function must query a network node for full transaction receipts.
      
      - Parameter block: The `Block` to be parsed.
      
-     - Throws: `BlockchainServiceError.unexpectedNilError` if `commutoSwap`'s `createEventParser(...)` function returns nil.
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the chain ID is `nil` or `commutoSwap`'s `createEventParser(...)` function returns `nil`.
      */
     private func parseBlock(_ block: Block) throws {
         var events: [EventParserResultProtocol] = []
         let eventFilter = EventFilter(fromBlock: nil, toBlock: nil, addresses: nil, parameterFilters: nil)
+        guard let chainID = w3.provider.network?.chainID else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil chain ID during parseBlock call")
+        }
         guard let offerOpenedEventParser = commutoSwap.createEventParser("OfferOpened", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferOpened event parser")
         }
@@ -221,7 +229,7 @@ class BlockchainService {
         events.append(contentsOf: try offerEditedEventParser.parseBlock(block))
         events.append(contentsOf: try offerCanceledEventParser.parseBlock(block))
         events.append(contentsOf: try offerTakenEventParser.parseBlock(block))
-        try handleEvents(events)
+        try handleEvents(events, chainID: chainID)
     }
     
     /**
@@ -231,25 +239,25 @@ class BlockchainService {
      
      - Throws: `BlockchainServiceError.unexpectedNilError` if we attempt to create an event from an `EventParserResultProtocol` with corresponding event names, but get nil instead.
      */
-    private func handleEvents(_ results: [EventParserResultProtocol]) throws {
+    private func handleEvents(_ results: [EventParserResultProtocol], chainID: BigUInt) throws {
         for result in results {
             if result.eventName == "OfferOpened" {
-                guard let event = OfferOpenedEvent(result) else {
+                guard let event = OfferOpenedEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferOpened event from EventParserResultProtocol")
                 }
                 try offerService.handleOfferOpenedEvent(event)
             } else if result.eventName == "OfferEdited" {
-                guard let event = OfferEditedEvent(result) else {
+                guard let event = OfferEditedEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferEdited event from EventParserResultProtocol")
                 }
                 try offerService.handleOfferEditedEvent(event)
             } else if result.eventName == "OfferCanceled" {
-                guard let event = OfferCanceledEvent(result) else {
+                guard let event = OfferCanceledEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferCanceled event from EventParserResultProtocol")
                 }
                 try offerService.handleOfferCanceledEvent(event)
             } else if result.eventName == "OfferTaken" {
-                guard let event = OfferTakenEvent(result) else {
+                guard let event = OfferTakenEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferTaken event from EventParserResultProtocol")
                 }
                 try offerService.handleOfferTakenEvent(event)

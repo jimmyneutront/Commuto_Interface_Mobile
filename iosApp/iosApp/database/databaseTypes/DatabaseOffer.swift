@@ -58,4 +58,8 @@ struct DatabaseOffer: Equatable {
      The `protocolVersion` property of an `Offer` as a `String`.
      */
     let protocolVersion: String
+    /**
+     The `chainID` property of an `Offer` as a `String`.
+     */
+    let chainID: String
 }

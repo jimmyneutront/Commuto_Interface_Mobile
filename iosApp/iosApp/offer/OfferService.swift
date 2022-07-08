@@ -73,9 +73,11 @@ class OfferService: OfferNotifiable {
     private var offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent>
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, creates a new `Offer` with the results, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, creates a new `Offer` with the results, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferOpenedEvent` of which `OfferService` is being notified.
+     
+     - Throws: `OfferServiceError.unexpectedNilError` or `OfferServiceError.nonmatchingChainIDError`.
      */
     func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {
         offerOpenedEventRepository.append(event)
@@ -84,6 +86,9 @@ class OfferService: OfferNotifiable {
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
         let offerStruct = try blockchainService!.getOffer(id: event.id)
+        guard event.chainID == offerStruct.chainID else {
+            throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in handleOfferOpenedEvent call. OfferOpenedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID))
+        }
         guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
@@ -97,7 +102,8 @@ class OfferService: OfferNotifiable {
             serviceFeeRate: offerStruct.serviceFeeRate,
             onChainDirection: offerStruct.direction,
             settlementMethods: offerStruct.settlementMethods,
-            protocolVersion: offerStruct.protocolVersion
+            protocolVersion: offerStruct.protocolVersion,
+            chainID: offerStruct.chainID
         ) else {
             throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call")
         }
@@ -113,14 +119,15 @@ class OfferService: OfferNotifiable {
             securityDepositAmount: String(offer.securityDepositAmount),
             serviceFeeRate: String(offer.serviceFeeRate),
             onChainDirection: String(offer.onChainDirection),
-            protocolVersion: String(offer.protocolVersion)
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID)
         )
         try databaseService.storeOffer(offer: offerForDatabase)
         var settlementMethodStrings: [String] = []
         for settlementMethod in offer.settlementMethods {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
-        try databaseService.storeSettlementMethods(id: offerForDatabase.id, settlementMethods: settlementMethodStrings)
+        try databaseService.storeSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
         offerOpenedEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
@@ -132,8 +139,13 @@ class OfferService: OfferNotifiable {
         #warning("TODO: try to get public key announcement data. if we have it, update the offer struct and add it to the ViewModel's list")
     }
     
+    #warning("TODO: when we support multiple chains, someone could corrupt the interface's knowledge of settlement methods on Chain A by creating another offer with the same ID on Chain B and then changing the settlement methods of the offer on Chain B. If this interface is listening to both, it will detect the OfferEditedEvent from Chain B and then use the settlement methods from the offer on Chain B to update its local Offer object corresponding to the object from Chain A. We should only update settlement methods if the chainID of the OfferEditedEvent matches that of the already-stored offer")
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`. Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, creates an updated `Offer` with the results, updates the settlement methods of the corresponding persistently stored offer, removes `event` from `offerEditedEventsRepository`, and then synchronously maps the offer's ID to the updated `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`. Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, verifies that the chain ID of the event and the offer data match, creates an updated `Offer` with the results, updates the settlement methods of the corresponding persistently stored offer, removes `event` from `offerEditedEventsRepository`, and then synchronously maps the offer's ID to the updated `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     
+     - Parameter event: The `OfferEditedEvent` of which `OfferService` is being notified.
+     
+     - Throws: `OfferServiceError.unexpectedNilError` or `OfferServiceError.nonmatchingChainIDError`.
      */
     func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {
         offerEditedEventRepository.append(event)
@@ -142,6 +154,9 @@ class OfferService: OfferNotifiable {
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
         let offerStruct = try blockchainService!.getOffer(id: event.id)
+        guard event.chainID == offerStruct.chainID else {
+            throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferEditedEvent did not match chain ID of OfferStruct in handleOfferEditedEvent call. OfferEditedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID))
+        }
         guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
@@ -155,7 +170,8 @@ class OfferService: OfferNotifiable {
             serviceFeeRate: offerStruct.serviceFeeRate,
             onChainDirection: offerStruct.direction,
             settlementMethods: offerStruct.settlementMethods,
-            protocolVersion: offerStruct.protocolVersion
+            protocolVersion: offerStruct.protocolVersion,
+            chainID: offerStruct.chainID
         ) else {
             throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call")
         }
@@ -164,7 +180,7 @@ class OfferService: OfferNotifiable {
         for settlementMethod in offerStruct.settlementMethods {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
-        try databaseService.storeSettlementMethods(id: offerIdString, settlementMethods: settlementMethodStrings)
+        try databaseService.storeSettlementMethods(offerID: offerIdString, _chainID: String(offer.chainID), settlementMethods: settlementMethodStrings)
         offerEditedEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferEditedEvent call")
@@ -176,42 +192,50 @@ class OfferService: OfferNotifiable {
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` saves `event` in `offerCanceledEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerCanceledEventsRepository`, and then synchronously removes the `Offer` mapped to the offer ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` saves `event` in `offerCanceledEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerCanceledEventsRepository`, and then checks that the chain ID of the event matches the chain ID of the `Offer` mapped to the offer ID specified in `event` in `offerTruthSource`;s `offers` dictionary on the main thread. If they do not match, this returns. If they do match, then this synchronously removes the `Offer` from said `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferCanceledEvent` of which `OfferService` is being notified.
+     
+     - Throws: `OfferServiceError.unexpectedNilError`if `offerTruthSource` is nil.
      */
     func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {
         let offerIdString = event.id.asData().base64EncodedString()
         offerCanceledEventRepository.append(event)
-        try databaseService.deleteOffers(id: offerIdString)
-        try databaseService.deleteSettlementMethods(id: offerIdString)
+        try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
+        try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
         offerCanceledEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call")
         }
         // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
-        _ = DispatchQueue.main.sync {
-            offerTruthSource!.offers.removeValue(forKey: event.id)
+        DispatchQueue.main.sync {
+            if offerTruthSource!.offers[event.id]?.chainID == event.chainID {
+                offerTruthSource!.offers.removeValue(forKey: event.id)
+            }
         }
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerTakenEventsRepository`, and then synchronously removes the `Offer` mapped to the offer ID specified in `event` from `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerTakenEventsRepository`, and then checks that the chain ID of the event matches the chain ID of the `Offer` mapped to the offer ID specified in `event` in `offerTruthSource`;s `offers` dictionary on the main thread. If they do not match, this returns. If they do match, then this synchronously removes the `Offer` from said `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferTakenEvent` of which `OfferService` is being notified.
+     
+     - Throws: `OfferServiceError.unexpectedNilError`if `offerTruthSource` is nil.
      */
     func handleOfferTakenEvent(_ event: OfferTakenEvent) throws {
         let offerIdString = event.id.asData().base64EncodedString()
         offerTakenEventRepository.append(event)
-        try databaseService.deleteOffers(id: offerIdString)
-        try databaseService.deleteSettlementMethods(id: offerIdString)
+        try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
+        try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
         offerTakenEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferTakenEvent call")
         }
         // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
-        _ = DispatchQueue.main.sync {
-            offerTruthSource!.offers.removeValue(forKey: event.id)
+        DispatchQueue.main.sync {
+            if offerTruthSource!.offers[event.id]?.chainID == event.chainID {
+                offerTruthSource!.offers.removeValue(forKey: event.id)
+            }
         }
     }
     

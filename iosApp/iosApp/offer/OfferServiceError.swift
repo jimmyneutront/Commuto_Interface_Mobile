@@ -16,6 +16,12 @@ enum OfferServiceError: Error {
      - Parameter desc: A `String` that provides information about the context in which the error was thrown.
      */
     case unexpectedNilError(desc: String)
+    /**
+     Thrown when the chain ID of an `Offer` does not match the chain ID of an event with an ID equal to that of the offer.
+     
+     - Parameter desc: A `String` that provides information about the context in which the error was thrown.
+     */
+    case nonmatchingChainIDError(desc: String)
 
     /**
      A description providing information about the context in which the error was thrown.
@@ -23,6 +29,8 @@ enum OfferServiceError: Error {
     public var errorDescription: String {
         switch self {
         case .unexpectedNilError(let desc):
+            return desc
+        case .nonmatchingChainIDError(let desc):
             return desc
         }
     }

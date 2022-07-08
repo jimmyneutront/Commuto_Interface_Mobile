@@ -62,15 +62,23 @@ struct OfferStruct {
      Corresponds to an on-chain Offer's `protocolVersion` property.
      */
     let protocolVersion: BigUInt
+    /**
+     The ID of the blockchain on which this Offer exists.
+     */
+    let chainID: BigUInt
     
     /**
      Creates an `OfferStruct` from the `[AnyObject]` obtained via a web3swift read transaction call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).
      
-     - Parameter response: The `[AnyObject]` obtained by a read transaction call to getOffer.
+     - Parameters:
+        - response: The `[AnyObject]` obtained by a read transaction call to getOffer.
+        - chainID: The ID of the blockchain from which `response` was obtained.
      
-     - Returns: A new `OfferStruct` with parameter values derived from `response`.
+     - Returns: A new `OfferStruct` with property values derived from `response` and `chainID`.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if an expected parameter in `response` is missing.
      */
-    static func createFromGetOfferResponse(response: [AnyObject]) throws -> OfferStruct {
+    static func createFromGetOfferResponse(response: [AnyObject], chainID: BigUInt) throws -> OfferStruct {
         guard let isCreated = response[0] as? Bool else {
             throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "isCreated"))
         }
@@ -107,7 +115,7 @@ struct OfferStruct {
         guard let protocolVersion = response[11] as? BigUInt else {
             throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "protocolVersion"))
         }
-        return OfferStruct(isCreated: isCreated, isTaken: isTaken, maker: maker, interfaceId: interfaceId, stablecoin: stablecoin, amountLowerBound: amountLowerBound, amountUpperBound: amountUpperBound, securityDepositAmount: securityDepositAmount, serviceFeeRate: serviceFeeRate, direction: direction, settlementMethods: settlementMethods, protocolVersion: protocolVersion)
+        return OfferStruct(isCreated: isCreated, isTaken: isTaken, maker: maker, interfaceId: interfaceId, stablecoin: stablecoin, amountLowerBound: amountLowerBound, amountUpperBound: amountUpperBound, securityDepositAmount: securityDepositAmount, serviceFeeRate: serviceFeeRate, direction: direction, settlementMethods: settlementMethods, protocolVersion: protocolVersion, chainID: chainID)
     }
     
     /**

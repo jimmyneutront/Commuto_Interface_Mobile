@@ -107,6 +107,10 @@ class DatabaseService {
      */
     let protocolVersion = Expression<String>("protocolVersion")
     /**
+     A database structure representing a blockchain ID.
+     */
+    let chainID = Expression<String>("chainID")
+    /**
      A database structure representing a particular settlement method of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      */
     let settlementMethod = Expression<String>("settlementMethod")
@@ -128,9 +132,11 @@ class DatabaseService {
             t.column(serviceFeeRate)
             t.column(onChainDirection)
             t.column(protocolVersion)
+            t.column(chainID)
         })
         try connection.run(settlementMethods.create { t in
             t.column(offerId)
+            t.column(chainID)
             t.column(settlementMethod)
         })
         try connection.run(keyPairs.create { t in
@@ -164,7 +170,8 @@ class DatabaseService {
                     securityDepositAmount <- offer.securityDepositAmount,
                     serviceFeeRate <- offer.serviceFeeRate,
                     onChainDirection <- offer.onChainDirection,
-                    protocolVersion <- offer.protocolVersion
+                    protocolVersion <- offer.protocolVersion,
+                    chainID <- offer.chainID
                 ))
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
                 // An Offer with the specified id already exists in the database, so we do nothing
@@ -173,13 +180,15 @@ class DatabaseService {
     }
     
     /**
-     Removes every `DatabaseOffer` with an offer ID equal to `id` from persistent storage.
+     Removes every `DatabaseOffer` with an offer ID equal to `offerID` and a chain ID equal to `chainID` from persistent storage.
      
-     - Parameter id: The ID of the offers to be removed, as a Base64-`String` of bytes.
+     - Parameters:
+        - offerID: The ID of the offers to be removed, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offers to be removed, as a `String`.
      */
-    func deleteOffers(id: String) throws {
+    func deleteOffers(offerID: String, _chainID: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(offers.filter(offerId == id).delete())
+            try connection.run(offers.filter(offerId == offerID && chainID == _chainID).delete())
         }
     }
     
@@ -219,7 +228,8 @@ class DatabaseService {
                 securityDepositAmount: result[0][securityDepositAmount],
                 serviceFeeRate: result[0][serviceFeeRate],
                 onChainDirection: result[0][onChainDirection],
-                protocolVersion: result[0][protocolVersion]
+                protocolVersion: result[0][protocolVersion],
+                chainID: result[0][chainID]
             )
         } else {
             return nil
@@ -227,18 +237,20 @@ class DatabaseService {
     }
     
     /**
-     Deletes all persistently stored settlement methods associated with the specified ID, and then persistently stores each settlement method in the supplied `Array`, associating each one with the supplied ID.
+     Deletes all persistently stored settlement methods associated with the specified offer ID and chain ID, and then persistently stores each settlement method in the supplied `Array`, associating each one with the supplied offer ID and chain ID.
      
      - Parameters:
-        - id: The ID of the offer or swap to be associated with the settlement methods.
+        - offerID: The ID of the offer or swap to be associated with the settlement methods.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
         - settlementMethods: The settlement methods to be persistently stored.
      */
-    func storeSettlementMethods(id: String, settlementMethods _settlementMethods: [String]) throws {
+    func storeSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [String]) throws {
         _ = try databaseQueue.sync {
-            try connection.run(settlementMethods.filter(offerId == id).delete())
+            try connection.run(settlementMethods.filter(offerId == offerID && chainID == _chainID).delete())
             for _settlementMethod in _settlementMethods {
                 try connection.run(settlementMethods.insert(
-                    offerId <- id,
+                    offerId <- offerID,
+                    chainID <- _chainID,
                     settlementMethod <- _settlementMethod
                 ))
             }
@@ -246,29 +258,33 @@ class DatabaseService {
     }
     
     /**
-     Removes every persistently stored settlement method associated with an offer ID equal to `id`.
+     Removes every persistently stored settlement method associated with an offer ID equal to `offerID` and a chain ID equal to `chainID`.
      
-     - Parameter id: The ID of the offer for which associated settlement methods should be removed.
+     - Parameters:
+        - offerID: The ID of the offer for which associated settlement methods should be removed.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
      */
-    func deleteSettlementMethods(id: String) throws {
+    func deleteSettlementMethods(offerID: String, _chainID: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(settlementMethods.filter(offerId == id).delete())
+            try connection.run(settlementMethods.filter(offerId == offerID && chainID == _chainID).delete())
         }
     }
 
     /**
-     Retrieves the persistently stored settlement methods associated with the specified offer ID, or returns `nil` if no such settlement methods are present.
+     Retrieves the persistently stored settlement methods associated with the specified offer ID and chain ID, or returns `nil` if no such settlement methods are present.
      
-     - Parameter id: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
+     - Parameters:
+        - offerID: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
      
      - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`.
      
      - Returns: An `Array` of `Strings` which are settlement methods associated with `id`, or `nil` if no such settlement  methods are found.
      */
-    func getSettlementMethods(id: String) throws -> [String]? {
+    func getSettlementMethods(offerID: String, _chainID: String) throws -> [String]? {
         var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
-            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(offerId == id))
+            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(offerId == offerID && chainID == _chainID))
         }
         guard rowIterator != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getSettlementMethods call")
