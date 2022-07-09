@@ -4,6 +4,10 @@ import com.commuto.interfacedesktop.db.Offer as DatabaseOffer
 import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainEventRepository
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferCanceledEvent
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferEditedEvent
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferOpenedEvent
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferTakenEvent
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.ui.OffersViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -34,10 +38,10 @@ import javax.inject.Singleton
 @Singleton
 class OfferService (
     private val databaseService: DatabaseService,
-    private val offerOpenedEventRepository: BlockchainEventRepository<CommutoSwap.OfferOpenedEventResponse>,
-    private val offerEditedEventRepository: BlockchainEventRepository<CommutoSwap.OfferEditedEventResponse>,
-    private val offerCanceledEventRepository: BlockchainEventRepository<CommutoSwap.OfferCanceledEventResponse>,
-    private val offerTakenEventRepository: BlockchainEventRepository<CommutoSwap.OfferTakenEventResponse>
+    private val offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent>,
+    private val offerEditedEventRepository: BlockchainEventRepository<OfferEditedEvent>,
+    private val offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent>,
+    private val offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent>
 ): OfferNotifiable {
 
     @Inject constructor(databaseService: DatabaseService): this(
@@ -81,45 +85,55 @@ class OfferService (
 
     /**
      * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
-     * of an [CommutoSwap.OfferOpenedEventResponse]. Once notified, [OfferService] saves [event] in
-     * [offerOpenedEventRepository], gets all on-chain offer data by calling [blockchainService]'s
-     * [BlockchainService.getOfferAsync] method, creates a new [Offer] and list of settlement methods with the results,
+     * of an [OfferOpenedEvent]. Once notified, [OfferService] saves [event] in offerOpenedEventRepository], gets all
+     * on-chain offer data by calling [blockchainService]'s [BlockchainService.getOffer] method, verifies that the chain
+     * ID of the event and the offer data match, creates a new [Offer] and list of settlement methods with the results,
      * persistently stores the new offer and its settlement methods, removes [event] from [offerOpenedEventRepository],
      * and then adds the new [Offer] to [offerTruthSource] on the main coroutine dispatcher.
      *
-     * @param event The [CommutoSwap.OfferOpenedEventResponse] of which [OfferService] is being notified.
+     * @param event The [OfferOpenedEvent] of which [OfferService] is being notified.
+     *
+     * @throws [IllegalStateException] if the chain ID of [event] doesn't match the chain ID of the offer obtained
+     * from [BlockchainService.getOffer] when called with [OfferOpenedEvent.offerID].
      */
+    @Throws(IllegalStateException::class)
     override suspend fun handleOfferOpenedEvent(
-        event: CommutoSwap.OfferOpenedEventResponse
+        event: OfferOpenedEvent
     ) {
-        val offerIdByteBuffer = ByteBuffer.wrap(event.offerID)
-        val mostSigBits = offerIdByteBuffer.long
-        val leastSigBits = offerIdByteBuffer.long
-        val offerId = UUID(mostSigBits, leastSigBits)
         val encoder = Base64.getEncoder()
         offerOpenedEventRepository.append(event)
-        val onChainOffer = blockchainService.getOfferAsync(offerId).await()
+        val offerStruct = blockchainService.getOffer(event.offerID)
+        if (event.chainID != offerStruct.chainID) {
+            throw IllegalStateException("Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in " +
+                    "handleOfferOpenedEvent call. OfferOpenedEvent.chainID: ${event.chainID}, " +
+                    "OfferStruct.chainID: ${offerStruct.chainID}")
+        }
         val offer = Offer(
-            isCreated = onChainOffer.isCreated,
-            isTaken = onChainOffer.isTaken,
-            id = offerId,
-            maker = onChainOffer.maker,
-            interfaceId = onChainOffer.interfaceId,
-            stablecoin = onChainOffer.stablecoin,
-            amountLowerBound = onChainOffer.amountLowerBound,
-            amountUpperBound = onChainOffer.amountUpperBound,
-            securityDepositAmount = onChainOffer.securityDepositAmount,
-            serviceFeeRate = onChainOffer.serviceFeeRate,
-            onChainDirection = onChainOffer.direction,
-            settlementMethods = onChainOffer.settlementMethods,
-            protocolVersion = onChainOffer.protocolVersion
+            isCreated = offerStruct.isCreated,
+            isTaken = offerStruct.isTaken,
+            id = event.offerID,
+            maker = offerStruct.maker,
+            interfaceId = offerStruct.interfaceID,
+            stablecoin = offerStruct.stablecoin,
+            amountLowerBound = offerStruct.amountLowerBound,
+            amountUpperBound = offerStruct.amountUpperBound,
+            securityDepositAmount = offerStruct.securityDepositAmount,
+            serviceFeeRate = offerStruct.serviceFeeRate,
+            onChainDirection = offerStruct.direction,
+            settlementMethods = offerStruct.settlementMethods,
+            protocolVersion = offerStruct.protocolVersion,
+            chainID = offerStruct.chainID
         )
-        val isCreated = if (onChainOffer.isCreated) 1L else 0L
-        val isTaken = if (onChainOffer.isTaken) 1L else 0L
+        val isCreated = if (offerStruct.isCreated) 1L else 0L
+        val isTaken = if (offerStruct.isTaken) 1L else 0L
+        val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
+        offerIDByteBuffer.putLong(offer.id.mostSignificantBits)
+        offerIDByteBuffer.putLong(offer.id.leastSignificantBits)
+        val offerIDByteArray = offerIDByteBuffer.array()
         val offerForDatabase = DatabaseOffer(
-            offerId = encoder.encodeToString(offerIdByteBuffer.array()),
             isCreated = isCreated,
             isTaken = isTaken,
+            offerId = encoder.encodeToString(offerIDByteArray),
             maker = offer.maker,
             interfaceId = encoder.encodeToString(offer.interfaceId),
             stablecoin = offer.stablecoin,
@@ -128,13 +142,15 @@ class OfferService (
             securityDepositAmount = offer.securityDepositAmount.toString(),
             serviceFeeRate = offer.serviceFeeRate.toString(),
             onChainDirection = offer.onChainDirection.toString(),
-            protocolVersion = offer.protocolVersion.toString()
+            protocolVersion = offer.protocolVersion.toString(),
+            chainID = offer.chainID.toString()
         )
         databaseService.storeOffer(offerForDatabase)
         val settlementMethodStrings = offer.settlementMethods.map {
             encoder.encodeToString(it)
         }
-        databaseService.storeSettlementMethods(offerForDatabase.offerId, settlementMethodStrings)
+        databaseService.storeSettlementMethods(offerForDatabase.offerId, offerForDatabase.chainID,
+            settlementMethodStrings)
         offerOpenedEventRepository.remove(event)
         withContext(Dispatchers.Main) {
             offerTruthSource.addOffer(offer)
@@ -143,97 +159,109 @@ class OfferService (
 
     /**
      * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
-     * of an [CommutoSwap.OfferEditedEventResponse]. Once notified, [OfferService] saves [event] in
-     * [offerEditedEventRepository], gets updated on-chain offer data by calling [blockchainService]'s
-     * [BlockchainService.getOfferAsync] method, creates an updated [Offer] and with the results, updates the settlement
-     * methods of the corresponding persistently stored offer, removes [event] from [offerEditedEventRepository], and
-     * then adds the updated [Offer] to [offerTruthSource] on the main coroutine dispatcher.
+     * of a [OfferEditedEvent]. Once notified, [OfferService] saves [event] in [offerEditedEventRepository], gets
+     * updated on-chain offer data by calling [blockchainService]'s [BlockchainService.getOffer] method, verifies that
+     * the chain ID of the event and the offer data match, creates an updated [Offer] and with the results, updates the
+     * settlement methods of the corresponding persistently stored offer, removes [event] from
+     * [offerEditedEventRepository], and then adds the updated [Offer] to [offerTruthSource] on the main coroutine
+     * dispatcher.
      *
-     * @param event The [CommutoSwap.OfferEditedEventResponse] of which [OfferService] is being notified.
+     * @param event The [OfferEditedEvent] of which [OfferService] is being notified.
      */
-    override suspend fun handleOfferEditedEvent(event: CommutoSwap.OfferEditedEventResponse) {
-        val offerIdByteBuffer = ByteBuffer.wrap(event.offerID)
-        val mostSigBits = offerIdByteBuffer.long
-        val leastSigBits = offerIdByteBuffer.long
-        val offerId = UUID(mostSigBits, leastSigBits)
+    override suspend fun handleOfferEditedEvent(event: OfferEditedEvent) {
         val encoder = Base64.getEncoder()
         offerEditedEventRepository.append(event)
-        val onChainOffer = blockchainService.getOfferAsync(offerId).await()
+        val offerStruct = blockchainService.getOffer(event.offerID)
+        if (event.chainID != offerStruct.chainID) {
+            throw IllegalStateException("Chain ID of OfferEditedEvent did not match chain ID of OfferStruct in " +
+                    "handleOfferEditedEvent call. OfferEditedEvent.chainID: ${event.chainID}, " +
+                    "OfferStruct.chainID: ${offerStruct.chainID}")
+        }
         val offer = Offer(
-            isCreated = onChainOffer.isCreated,
-            isTaken = onChainOffer.isTaken,
-            id = offerId,
-            maker = onChainOffer.maker,
-            interfaceId = onChainOffer.interfaceId,
-            stablecoin = onChainOffer.stablecoin,
-            amountLowerBound = onChainOffer.amountLowerBound,
-            amountUpperBound = onChainOffer.amountUpperBound,
-            securityDepositAmount = onChainOffer.securityDepositAmount,
-            serviceFeeRate = onChainOffer.serviceFeeRate,
-            onChainDirection = onChainOffer.direction,
-            settlementMethods = onChainOffer.settlementMethods,
-            protocolVersion = onChainOffer.protocolVersion
+            isCreated = offerStruct.isCreated,
+            isTaken = offerStruct.isTaken,
+            id = event.offerID,
+            maker = offerStruct.maker,
+            interfaceId = offerStruct.interfaceID,
+            stablecoin = offerStruct.stablecoin,
+            amountLowerBound = offerStruct.amountLowerBound,
+            amountUpperBound = offerStruct.amountUpperBound,
+            securityDepositAmount = offerStruct.securityDepositAmount,
+            serviceFeeRate = offerStruct.serviceFeeRate,
+            onChainDirection = offerStruct.direction,
+            settlementMethods = offerStruct.settlementMethods,
+            protocolVersion = offerStruct.protocolVersion,
+            chainID = offerStruct.chainID
         )
-        val offerIdString = encoder.encodeToString(offerIdByteBuffer.array())
+        val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
+        offerIDByteBuffer.putLong(offer.id.mostSignificantBits)
+        offerIDByteBuffer.putLong(offer.id.leastSignificantBits)
+        val offerIDByteArray = offerIDByteBuffer.array()
+        val offerIdString = encoder.encodeToString(offerIDByteArray)
         val settlementMethodStrings = offer.settlementMethods.map {
             encoder.encodeToString(it)
         }
-        databaseService.storeSettlementMethods(offerIdString, settlementMethodStrings)
+        databaseService.storeSettlementMethods(offerIdString, offer.chainID.toString(), settlementMethodStrings)
         offerEditedEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            offerTruthSource.removeOffer(offerId)
+            offerTruthSource.removeOffer(offer.id)
             offerTruthSource.addOffer(offer)
         }
     }
 
     /**
      * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
-     * of an [CommutoSwap.OfferCanceledEventResponse]. Once notified, [OfferService] saves [event] in
-     * [offerCanceledEventRepository], removes the corresponding [Offer] and its settlement methods from persistent
-     * storage, removes [event] from [offerCanceledEventRepository], and then removes the corresponding [Offer] from
-     * [offerTruthSource] on the main coroutine dispatcher.
+     * of an [OfferCanceledEvent]. Once notified, [OfferService] saves [event] in [offerCanceledEventRepository],
+     * removes the corresponding [Offer] and its settlement methods from persistent storage, removes [event] from
+     * [offerCanceledEventRepository], and then checks that the chain ID of the event matches the chain ID of the
+     * [Offer] mapped to the offer ID specified in [event] in the [OfferTruthSource.offers] list on the main coroutine
+     * dispatcher. If they do not match, this returns. If they do match, then this synchronously removes the [Offer]
+     * from said list on the main thread.
      *
-     * @param event The [CommutoSwap.OfferCanceledEventResponse] of which
-     * [OfferService] is being notified.
+     * @param event The [OfferCanceledEvent] of which [OfferService] is being notified.
      */
     override suspend fun handleOfferCanceledEvent(
-        event: CommutoSwap.OfferCanceledEventResponse
+        event: OfferCanceledEvent
     ) {
-        val offerIdByteBuffer = ByteBuffer.wrap(event.offerID)
-        val mostSigBits = offerIdByteBuffer.long
-        val leastSigBits = offerIdByteBuffer.long
-        val offerId = UUID(mostSigBits, leastSigBits)
-        val offerIdString = Base64.getEncoder().encodeToString(event.offerID)
+        val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
+        offerIDByteBuffer.putLong(event.offerID.mostSignificantBits)
+        offerIDByteBuffer.putLong(event.offerID.leastSignificantBits)
+        val offerIDByteArray = offerIDByteBuffer.array()
+        val offerIdString = Base64.getEncoder().encodeToString(offerIDByteArray)
         offerCanceledEventRepository.append(event)
-        databaseService.deleteOffers(offerIdString)
-        databaseService.deleteSettlementMethods(offerIdString)
+        databaseService.deleteOffers(offerIdString, event.chainID.toString())
+        databaseService.deleteSettlementMethods(offerIdString, event.chainID.toString())
         offerCanceledEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            offerTruthSource.removeOffer(offerId)
+            // TODO: This is a security vulnerability at the moment, will be fixed when we use a map in offerTruthSource
+            offerTruthSource.removeOffer(event.offerID)
         }
     }
 
 
     /**
-     * The method called by [BlockchainService] to notify [OfferService] of a [CommutoSwap.OfferTakenEventResponse].
-     * Once notified, [OfferService] saves [event] in [offerTakenEventRepository], removes the corresponding [Offer] and
-     * its settlement methods from persistent storage, removes [event] from [offerTakenEventRepository], and then
-     * removes the corresponding [Offer] from [offerTruthSource] on the main coroutine dispatcher.
+     * The method called by [BlockchainService] to notify [OfferService] of a [OfferTakenEvent]. Once notified,
+     * [OfferService] saves [event] in [offerTakenEventRepository], removes the corresponding [Offer] and its settlement
+     * methods from persistent storage, removes [event] from [offerTakenEventRepository], and then checks that the chain
+     * ID of the event matches the chain ID of the [Offer] mapped to the offer ID specified in [event] in the
+     * [OfferTruthSource.offers] list on the main coroutine dispatcher. If they do not match, this returns. If they do
+     * match, then this synchronously removes the [Offer] from said list on the main thread.
      *
-     * @param event The [CommutoSwap.OfferTakenEventResponse] of which [OfferService] is being notified.
+     * @param event The [OfferTakenEvent] of which [OfferService] is being notified.
      */
-    override suspend fun handleOfferTakenEvent(event: CommutoSwap.OfferTakenEventResponse) {
-        val offerIdByteBuffer = ByteBuffer.wrap(event.offerID)
-        val mostSigBits = offerIdByteBuffer.long
-        val leastSigBits = offerIdByteBuffer.long
-        val offerId = UUID(mostSigBits, leastSigBits)
-        val offerIdString = Base64.getEncoder().encodeToString(event.offerID)
+    override suspend fun handleOfferTakenEvent(event: OfferTakenEvent) {
+        val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
+        offerIDByteBuffer.putLong(event.offerID.mostSignificantBits)
+        offerIDByteBuffer.putLong(event.offerID.leastSignificantBits)
+        val offerIDByteArray = offerIDByteBuffer.array()
+        val offerIdString = Base64.getEncoder().encodeToString(offerIDByteArray)
         offerTakenEventRepository.append(event)
-        databaseService.deleteOffers(offerIdString)
-        databaseService.deleteSettlementMethods(offerIdString)
+        databaseService.deleteOffers(offerIdString, event.chainID.toString())
+        databaseService.deleteSettlementMethods(offerIdString, event.chainID.toString())
         offerTakenEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            offerTruthSource.removeOffer(offerId)
+            // TODO: This is a security vulnerability at the moment, will be fixed when we use a map in offerTruthSource
+            offerTruthSource.removeOffer(event.offerID)
         }
     }
 }

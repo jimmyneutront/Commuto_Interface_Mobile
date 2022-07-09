@@ -31,8 +31,10 @@ import java.util.UUID
  * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s settlementMethods property.
  * @param protocolVersion Corresponds to an on-chain
  * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s protocolVersion property.
- * @property direction The direction of the offer, indicating whether the maker is offering to buy
- * stablecoin or sell stablecoin.
+ * @param chainID The ID of the blockchain on which this Offer exists.
+ *
+ * @property direction The direction of the offer, indicating whether the maker is offering to buy stablecoin or sell
+ * stablecoin.
  */
 data class Offer(
     val isCreated: Boolean,
@@ -46,8 +48,9 @@ data class Offer(
     val securityDepositAmount: BigInteger,
     val serviceFeeRate: BigInteger,
     val onChainDirection: BigInteger,
-    val settlementMethods: List<ByteArray>,
-    val protocolVersion: BigInteger
+    var settlementMethods: List<ByteArray>,
+    val protocolVersion: BigInteger,
+    val chainID: BigInteger,
 ) {
 
     val direction: OfferDirection
@@ -85,7 +88,8 @@ data class Offer(
                 serviceFeeRate = BigInteger.ZERO,
                 onChainDirection = BigInteger.ZERO,
                 settlementMethods = listOf(ByteArray(0)),
-                protocolVersion = BigInteger.ZERO
+                protocolVersion = BigInteger.ZERO,
+                chainID = BigInteger.ZERO
             ),
             Offer(
                 isCreated = true,
@@ -100,7 +104,8 @@ data class Offer(
                 serviceFeeRate = BigInteger.ZERO,
                 onChainDirection = BigInteger.ONE,
                 settlementMethods = listOf(ByteArray(0)),
-                protocolVersion = BigInteger.ZERO
+                protocolVersion = BigInteger.ZERO,
+                chainID = BigInteger.ZERO
             ),
             Offer(
                 isCreated = true,
@@ -115,7 +120,8 @@ data class Offer(
                 serviceFeeRate = BigInteger.ZERO,
                 onChainDirection = BigInteger.ONE,
                 settlementMethods = listOf(ByteArray(0)),
-                protocolVersion = BigInteger.ZERO
+                protocolVersion = BigInteger.ZERO,
+                chainID = BigInteger.ZERO
             ),
         )
     }
@@ -139,6 +145,7 @@ data class Offer(
         if (onChainDirection != other.onChainDirection) return false
         if (settlementMethods != other.settlementMethods) return false
         if (protocolVersion != other.protocolVersion) return false
+        if (chainID != other.chainID) return false
         if (direction != other.direction) return false
 
         return true
@@ -158,6 +165,7 @@ data class Offer(
         result = 31 * result + onChainDirection.hashCode()
         result = 31 * result + settlementMethods.hashCode()
         result = 31 * result + protocolVersion.hashCode()
+        result = 31 * result + chainID.hashCode()
         result = 31 * result + direction.hashCode()
         return result
     }
