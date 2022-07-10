@@ -53,7 +53,7 @@ class DatabaseServiceTests: XCTestCase {
             serviceFeeRate: "another_service_fee_rate",
             onChainDirection: "opposite_direction",
             protocolVersion: "some_other_version",
-            chainID: "a_chain_id"
+            chainID: "another_chain_id"
         )
         // This should do nothing and not throw
         try dbService.storeOffer(offer: anotherOfferToStore)

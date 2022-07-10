@@ -63,8 +63,11 @@ struct OfferView: View {
                     DisclosureGroup(
                         isExpanded: $isDirectionDescriptionExpanded,
                         content: {
-                            Text(buildDirectionDescriptionString())
-                                .padding(.bottom, 1)
+                            HStack {
+                                Text(buildDirectionDescriptionString())
+                                    .padding(.bottom, 1)
+                                Spacer()
+                            }
                         },
                         label: {
                             Text(buildDirectionString())
@@ -89,8 +92,17 @@ struct OfferView: View {
                         isExpanded: $isAdvancedDetailsDescriptionExpanded,
                         content: {
                             // Note that the empty string should never be displayed, since a "not available" message is displayed if offer is nil.
-                            Text("ID: " + offer.id.uuidString)
-                                .padding(.bottom, 1)
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Text("Offer ID: " + offer.id.uuidString)
+                                        .padding(.bottom, 1)
+                                    Spacer()
+                                }
+                                HStack {
+                                    Text("Chain ID: " + String(offer.chainID))
+                                    Spacer()
+                                }
+                            }
                         },
                         label: {
                             Text("Advanced Details")
