@@ -24,16 +24,18 @@ import javax.inject.Singleton
  * [com.commuto.interfacemobile.android.p2p.P2PService] in order to maintain an accurate list of all
  * open [Offer]s in [OffersViewModel].
  *
- * @property offerTruthSource The [OffersViewModel] in which this is responsible for maintaining an accurate list of
+ * @property databaseService The [DatabaseService] used for  persistent storage.
+ * @property offerOpenedEventRepository A repository containing [OfferOpenedEvent]s for offers that are open and for
+ * which complete offer information has not yet been retrieved.
+ * @property offerEditedEventRepository A repository containing [OfferEditedEvent]s for offers that are open and have
+ * been edited by their makers, meaning price and payment method information stored in this interface's persistent
+ * storage is currently inaccurate.
+ * @property offerCanceledEventRepository A repository containing [OfferCanceledEvent]s for offers that have been
+ * canceled but haven't yet been removed from persistent storage or [offerTruthSource].
+ * @property offerTakenEventRepository A repository containing [OfferTakenEvent]s for offers that have been taken but
+ * haven't yet been removed from persistent storage or [offerTruthSource].
+ * @property offerTruthSource The [OfferTruthSource] in which this is responsible for maintaining an accurate list of
  * all open offers. If this is not yet initialized, event handling methods will throw the corresponding error.
- * @property offerOpenedEventRepository A repository containing [CommutoSwap.OfferOpenedEventResponse]s for offers that
- * are open and for which complete offer information has not yet been retrieved.
- * @property offerEditedEventRepository A repository containing [CommutoSwap.OfferEditedEventResponse]s for offers that
- * are open and for which stored price and payment method information is currently inaccurate.
- * @property offerCanceledEventRepository A repository containing [CommutoSwap.OfferCanceledEventResponse]s for offers
- * that have been canceled but haven't yet been removed from persistent storage or [offerTruthSource].
- * @property offerTakenEventRepository A repository containing [CommutoSwap.OfferTakenEventResponse]s for offers
- * that have been taken but haven't yet been removed from persistent storage or [offerTruthSource].
  */
 @Singleton
 class OfferService (
@@ -84,12 +86,12 @@ class OfferService (
     private val scope = CoroutineScope(Dispatchers.Default)
 
     /**
-     * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
-     * of an [OfferOpenedEvent]. Once notified, [OfferService] saves [event] in offerOpenedEventRepository], gets all
-     * on-chain offer data by calling [blockchainService]'s [BlockchainService.getOffer] method, verifies that the chain
-     * ID of the event and the offer data match, creates a new [Offer] and list of settlement methods with the results,
-     * persistently stores the new offer and its settlement methods, removes [event] from [offerOpenedEventRepository],
-     * and then adds the new [Offer] to [offerTruthSource] on the main coroutine dispatcher.
+     * The method called by [BlockchainService] to notify [OfferService] of an [OfferOpenedEvent]. Once notified,
+     * [OfferService] saves [event] in offerOpenedEventRepository], gets all on-chain offer data by calling
+     * [blockchainService]'s [BlockchainService.getOffer] method, verifies that the chain ID of the event and the offer
+     * data match, creates a new [Offer] and list of settlement methods with the results, persistently stores the new
+     * offer and its settlement methods, removes [event] from [offerOpenedEventRepository], and then adds the new
+     * [Offer] to [offerTruthSource] on the main coroutine dispatcher.
      *
      * @param event The [OfferOpenedEvent] of which [OfferService] is being notified.
      *
@@ -158,13 +160,12 @@ class OfferService (
     }
 
     /**
-     * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
-     * of a [OfferEditedEvent]. Once notified, [OfferService] saves [event] in [offerEditedEventRepository], gets
-     * updated on-chain offer data by calling [blockchainService]'s [BlockchainService.getOffer] method, verifies that
-     * the chain ID of the event and the offer data match, creates an updated [Offer] and with the results, updates the
-     * settlement methods of the corresponding persistently stored offer, removes [event] from
-     * [offerEditedEventRepository], and then adds the updated [Offer] to [offerTruthSource] on the main coroutine
-     * dispatcher.
+     * The method called by [BlockchainService] to notify [OfferService] of a [OfferEditedEvent]. Once notified,
+     * [OfferService] saves [event] in [offerEditedEventRepository], gets updated on-chain offer data by calling
+     * [blockchainService]'s [BlockchainService.getOffer] method, verifies that the chain ID of the event and the offer
+     * data match, creates an updated [Offer] and with the results, updates the settlement methods of the corresponding
+     * persistently stored offer, removes [event] from [offerEditedEventRepository], and then adds the updated [Offer]
+     * to [offerTruthSource] on the main coroutine dispatcher.
      *
      * @param event The [OfferEditedEvent] of which [OfferService] is being notified.
      */
@@ -210,13 +211,12 @@ class OfferService (
     }
 
     /**
-     * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] to notify [OfferService]
-     * of an [OfferCanceledEvent]. Once notified, [OfferService] saves [event] in [offerCanceledEventRepository],
-     * removes the corresponding [Offer] and its settlement methods from persistent storage, removes [event] from
-     * [offerCanceledEventRepository], and then checks that the chain ID of the event matches the chain ID of the
-     * [Offer] mapped to the offer ID specified in [event] in the [OfferTruthSource.offers] list on the main coroutine
-     * dispatcher. If they do not match, this returns. If they do match, then this synchronously removes the [Offer]
-     * from said list on the main thread.
+     * The method called by [BlockchainService] to notify [OfferService] of an [OfferCanceledEvent]. Once notified,
+     * [OfferService] saves [event] in [offerCanceledEventRepository], removes the corresponding [Offer] and its
+     * settlement methods from persistent storage, removes [event] from [offerCanceledEventRepository], and then checks
+     * that the chain ID of the event matches the chain ID of the [Offer] mapped to the offer ID specified in [event] in
+     * the [OfferTruthSource.offers] list on the main coroutine dispatcher. If they do not match, this returns. If they
+     * do match, then this synchronously removes the [Offer] from said list on the main thread.
      *
      * @param event The [OfferCanceledEvent] of which [OfferService] is being notified.
      */
