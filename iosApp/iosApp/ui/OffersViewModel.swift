@@ -43,7 +43,7 @@ class OffersViewModel: OfferTruthSource, ObservableObject {
     @Published var offers: [UUID: Offer]
     
     /**
-     The `StablecoinResolver` from `View`s get the name and currency code for a stablecoin.
+     The `StablecoinInformationRepository` from which `View`s get the name and currency code for a stablecoin.
      */
     let stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
     

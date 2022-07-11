@@ -10,17 +10,23 @@ import BigInt
 import web3swift
 
 /**
- A structure that provides currency code and information about a stablecoin, given its contract address and chain ID.
+ A structure that provides currency code and name information about a stablecoin, given its contract address and chain ID.
  */
 struct StablecoinInformationRepository {
     
     /**
-     Nested dictionaries containing stablecoin information. The inner dictionary maps `EthereumAddress`es of stablecoin smart contracts to `StablecoinInformation` structs containing information about the stablecoin corresponding to their `EthereumAddress` key. The outer dictionary maps blockchain IDs to `[EthereumAddress:StablecoinInformation]`s, contianing information about all the supported stablecoin contracts on the blockchain with the specified ID.
+     Nested dictionaries containing stablecoin information. The inner dictionary maps `EthereumAddress`es of stablecoin smart contracts to `StablecoinInformation` structs containing information about the stablecoin corresponding to their `EthereumAddress` key. The outer dictionary maps blockchain IDs to `[EthereumAddress:StablecoinInformation]`s, containingch information about all the supported stablecoin contracts on the blockchain with the specified ID.
      */
     private let stablecoinInformation: [BigUInt:[EthereumAddress:StablecoinInformation]]
     
     /**
      Returns a `StablecoinInformation` for the stablecoin at the specified `contractAddress` on the blockchain with the specified `chainID`, or `nil` if no such `StablecoinInformation` is found.
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the stablecoin for which to get information exists.
+        - contractAddress: The contract address of the stablecoin for which to get information.
+     
+     - Returns: A `StablecoinInformation` for the stablecoin with the specified `chainID` and `contractAddress`, or `nil` if no such `StablecoinInformation` is found.
      */
     func getStablecoinInformation(chainID: BigUInt, contractAddress: EthereumAddress) -> StablecoinInformation? {
         return stablecoinInformation[chainID]?[contractAddress]
@@ -37,7 +43,7 @@ struct StablecoinInformation {
      */
     let currencyCode: String
     /**
-     The stablecoin's name, such as "Liquity USD" or "USD Coin"
+     The stablecoin's name, such as "Liquity USD" or "USD Coin".
      */
     let name: String
     /**

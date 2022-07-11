@@ -187,7 +187,7 @@ extension Offer {
             id: sampleOfferIds[3],
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
-            stablecoin: EthereumAddress("0x1F98431c8aD98523631AE4a59f267346ea31F984")!, // UniswapV3Factory, definitely not a stablecoin contract
+            stablecoin: EthereumAddress("0x1F98431c8aD98523631AE4a59f267346ea31F984")!, // UniswapV3Factory on Ethereum Mainnet, definitely not a stablecoin contract
             amountLowerBound: 10_000 * BigUInt(10).power(18),
             amountUpperBound: 10_000 * BigUInt(10).power(18),
             securityDepositAmount: BigUInt.zero,

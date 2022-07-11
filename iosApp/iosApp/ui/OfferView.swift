@@ -137,9 +137,9 @@ struct OfferView: View {
      - Parameter stablecoinInformation: An optional `StablecoinInformation` for this offer's stablecoin.
      */
     func buildDirectionDescriptionString(stablecoinInformation: StablecoinInformation?) -> String {
-        let stablecoinCode = stablecoinInformation?.name ?? "Unknown Stablecoin"
+        let stablecoinName = stablecoinInformation?.name ?? "Unknown Stablecoin"
         // We should never get the empty string here because no offer information will be displayed if offer is nil
-        return "This is a " + offer.direction.string + " offer: The maker of this offer wants to " + offer.direction.string.lowercased() + " " + stablecoinCode + " in exchange for fiat."
+        return "This is a " + offer.direction.string + " offer: The maker of this offer wants to " + offer.direction.string.lowercased() + " " + stablecoinName + " in exchange for fiat."
     }
 }
 
@@ -159,8 +159,13 @@ struct OfferAmountView: View {
      The maximum stablecoin amount.
      */
     let maximum: BigUInt
-    
+    /**
+     `minimum` divided by ten raised to the power of the stablecoin's decimal count, as a string.
+     */
     let minimumString: String
+    /**
+     `maximum` divided by ten raised to the power of the stablecoin's decimal count, as a string.
+     */
     let maximumString: String
     
     init(stablecoinInformation: StablecoinInformation?, minimum: BigUInt, maximum: BigUInt) {
@@ -173,6 +178,7 @@ struct OfferAmountView: View {
     }
     
     var body: some View {
+        let currencyCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
         HStack {
             let headerString = (stablecoinInformation != nil) ? "Amount: " : "Amount (in token base units):"
             Text(headerString)
@@ -182,19 +188,19 @@ struct OfferAmountView: View {
         .padding(.bottom, 2)
         if minimum == maximum {
             HStack {
-                Text(minimumString + " " + (stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"))
+                Text(minimumString + " " + currencyCode)
                     .font(.title2).bold()
                 Spacer()
             }
         } else {
             HStack {
-                Text("Minimum: " + minimumString + " " + (stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"))
+                Text("Minimum: " + minimumString + " " + currencyCode)
                     .font(.title2).bold()
                 Spacer()
                 
             }
             HStack {
-                Text("Maximum: " + maximumString + " " + (stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"))
+                Text("Maximum: " + maximumString + " " + currencyCode)
                     .font(.title2).bold()
                 Spacer()
             }
