@@ -13,15 +13,22 @@ import SwiftUI
  */
 struct OfferCardView: View {
     
-    /// The `Offer` that this `View` represents.
-    let offer: Offer
+    /**
+     The direction of the offer that this card represents, as a `String`.
+     */
+    let offerDirection: String
+    
+    /**
+     The currency code of the offer's stablecoin.
+     */
+    let stablecoinCode: String
     
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(offer.direction.string).font(.headline)
+                Text(offerDirection).font(.headline)
                 Spacer().frame(height: 5)
-                Text("Price Pair")
+                Text(stablecoinCode)
             }
             Spacer()
         }
@@ -33,7 +40,7 @@ struct OfferCardView: View {
  */
 struct OfferCardView_Previews: PreviewProvider {
     static var previews: some View {
-        OfferCardView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!)
+        OfferCardView(offerDirection: "Buy", stablecoinCode: "DAI")
             .previewLayout(.fixed(width: 400, height: 60))
     }
 }

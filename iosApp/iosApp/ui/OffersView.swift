@@ -16,12 +16,17 @@ struct OffersView: View {
     /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
     @ObservedObject var offersViewModel: OffersViewModel
     
+    let stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
+    
     var body: some View {
         NavigationView {
             List {
                 ForEach(offersViewModel.offers.map { $0.1 }, id: \.id) { offer in
                     NavigationLink(destination: OfferView(offer: offer, offersViewModel: offersViewModel)) {
-                        OfferCardView(offer: offer)
+                        OfferCardView(
+                            offerDirection: offer.direction.string,
+                            stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
+                        )
                     }
                 }
             }
