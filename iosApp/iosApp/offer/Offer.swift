@@ -142,7 +142,7 @@ extension Offer {
             stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!, // DAI on Ethereum Mainnet
             amountLowerBound: 10_000 * BigUInt(10).power(18),
             amountUpperBound: 20_000 * BigUInt(10).power(18),
-            securityDepositAmount: BigUInt.zero,
+            securityDepositAmount: 1_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             onChainDirection: BigUInt.zero,
             settlementMethods: [Data()],
@@ -158,7 +158,7 @@ extension Offer {
             stablecoin: EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!, // USDC on Ethereum Mainnet
             amountLowerBound: 10_000 * BigUInt(10).power(6),
             amountUpperBound: 20_000 * BigUInt(10).power(6),
-            securityDepositAmount: BigUInt.zero,
+            securityDepositAmount: 1_000 * BigUInt(10).power(6),
             serviceFeeRate: BigUInt(10),
             onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
@@ -174,7 +174,7 @@ extension Offer {
             stablecoin: EthereumAddress("0x4Fabb145d64652a948d72533023f6E7A623C7C53")!, // BUSD on Ethereum Mainnet
             amountLowerBound: 10_000 * BigUInt(10).power(18),
             amountUpperBound: 10_000 * BigUInt(10).power(18),
-            securityDepositAmount: BigUInt.zero,
+            securityDepositAmount: 1_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(1),
             onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
@@ -190,7 +190,7 @@ extension Offer {
             stablecoin: EthereumAddress("0x1F98431c8aD98523631AE4a59f267346ea31F984")!, // UniswapV3Factory on Ethereum Mainnet, definitely not a stablecoin contract
             amountLowerBound: 10_000 * BigUInt(10).power(18),
             amountUpperBound: 10_000 * BigUInt(10).power(18),
-            securityDepositAmount: BigUInt.zero,
+            securityDepositAmount: 1_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],

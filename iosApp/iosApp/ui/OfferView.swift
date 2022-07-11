@@ -72,7 +72,7 @@ struct OfferView: View {
                         }
                     )
                     .accentColor(Color.primary)
-                    OfferAmountView(stablecoinInformation: stablecoinInformation, minimum: offer.amountLowerBound, maximum: offer.amountUpperBound)
+                    OfferAmountView(stablecoinInformation: stablecoinInformation, minimum: offer.amountLowerBound, maximum: offer.amountUpperBound, securityDeposit: offer.securityDepositAmount)
                     HStack {
                         Text("Settlement methods:")
                             .font(.title2)
@@ -170,30 +170,26 @@ struct OfferAmountView: View {
      The `StablecoinInformation` struct for the offer's stablecoin, or `nil` if such a struct cannot be resolved from the offer's chain ID and stablecoin address.
      */
     let stablecoinInformation: StablecoinInformation?
+    
     /**
-     The minimum stablecoin amount.
-     */
-    let minimum: BigUInt
-    /**
-     The maximum stablecoin amount.
-     */
-    let maximum: BigUInt
-    /**
-     `minimum` divided by ten raised to the power of the stablecoin's decimal count, as a string.
+     The offer's `amountLowerBound` divided by ten raised to the power of the stablecoin's decimal count, as a string.
      */
     let minimumString: String
     /**
-     `maximum` divided by ten raised to the power of the stablecoin's decimal count, as a string.
+     The offer's `amountUpperBound` divided by ten raised to the power of the stablecoin's decimal count, as a string.
      */
     let maximumString: String
+    /**
+     The offer's `securityDepositAmount` divided by ten raised to the  power of the stablecoin's decimal count, as a string.
+     */
+    let securityDepositString: String
     
-    init(stablecoinInformation: StablecoinInformation?, minimum: BigUInt, maximum: BigUInt) {
+    init(stablecoinInformation: StablecoinInformation?, minimum: BigUInt, maximum: BigUInt, securityDeposit: BigUInt) {
         self.stablecoinInformation = stablecoinInformation
-        self.minimum = minimum
-        self.maximum = maximum
         let stablecoinDecimal = stablecoinInformation?.decimal ?? 1
         minimumString = String(minimum / BigUInt(10).power(stablecoinDecimal))
         maximumString = String(maximum / BigUInt(10).power(stablecoinDecimal))
+        securityDepositString = String(securityDeposit / BigUInt(10).power(stablecoinDecimal))
     }
     
     var body: some View {
@@ -205,7 +201,7 @@ struct OfferAmountView: View {
             Spacer()
         }
         .padding(.bottom, 2)
-        if minimum == maximum {
+        if minimumString == maximumString {
             HStack {
                 Text(minimumString + " " + currencyCode)
                     .font(.title2).bold()
@@ -223,6 +219,11 @@ struct OfferAmountView: View {
                     .font(.title2).bold()
                 Spacer()
             }
+        }
+        HStack {
+            Text("Security Deposit: " + securityDepositString + " " + currencyCode)
+                .font(.title3)
+            Spacer()
         }
     }
 }
