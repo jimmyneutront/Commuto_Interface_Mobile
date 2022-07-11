@@ -126,7 +126,8 @@ extension Offer {
     static let sampleOfferIds = [
         UUID(),
         UUID(),
-        UUID()
+        UUID(),
+        UUID(),
     ]
     /**
      A dictionary mapping the contents of `sampleOfferIds` to `Offer`s. Used for previewing offer-related `View`s.
@@ -139,8 +140,8 @@ extension Offer {
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
             stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!, // DAI on Ethereum Mainnet
-            amountLowerBound: BigUInt.zero,
-            amountUpperBound: BigUInt.zero,
+            amountLowerBound: 10_000 * BigUInt(10).power(18),
+            amountUpperBound: 20_000 * BigUInt(10).power(18),
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.zero,
@@ -155,8 +156,8 @@ extension Offer {
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
             stablecoin: EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!, // USDC on Ethereum Mainnet
-            amountLowerBound: BigUInt.zero,
-            amountUpperBound: BigUInt.zero,
+            amountLowerBound: 10_000 * BigUInt(10).power(6),
+            amountUpperBound: 20_000 * BigUInt(10).power(6),
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.init(UInt64(1)),
@@ -171,8 +172,24 @@ extension Offer {
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
             stablecoin: EthereumAddress("0x4Fabb145d64652a948d72533023f6E7A623C7C53")!, // BUSD on Ethereum Mainnet
-            amountLowerBound: BigUInt.zero,
-            amountUpperBound: BigUInt.zero,
+            amountLowerBound: 10_000 * BigUInt(10).power(18),
+            amountUpperBound: 10_000 * BigUInt(10).power(18),
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.init(UInt64(1)),
+            settlementMethods: [Data()],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
+        )!,
+        sampleOfferIds[3]: Offer(
+            isCreated: true,
+            isTaken: false,
+            id: sampleOfferIds[3],
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: Data(),
+            stablecoin: EthereumAddress("0x1F98431c8aD98523631AE4a59f267346ea31F984")!, // UniswapV3Factory, definitely not a stablecoin contract
+            amountLowerBound: 10_000 * BigUInt(10).power(18),
+            amountUpperBound: 10_000 * BigUInt(10).power(18),
             securityDepositAmount: BigUInt.zero,
             serviceFeeRate: BigUInt.zero,
             onChainDirection: BigUInt.init(UInt64(1)),

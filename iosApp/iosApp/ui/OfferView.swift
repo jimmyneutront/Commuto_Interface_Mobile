@@ -64,6 +64,7 @@ struct OfferView: View {
                             Text(buildDirectionString(stablecoinInformation: stablecoinInformation))
                                 .font(.title)
                                 .bold()
+                                .multilineTextAlignment(.leading)
                         }
                     )
                     .accentColor(Color.primary)
@@ -167,8 +168,8 @@ struct OfferAmountView: View {
         self.minimum = minimum
         self.maximum = maximum
         let stablecoinDecimal = stablecoinInformation?.decimal ?? 1
-        minimumString = String(minimum / BigUInt(stablecoinDecimal))
-        maximumString = String(maximum / BigUInt(stablecoinDecimal))
+        minimumString = String(minimum / BigUInt(10).power(stablecoinDecimal))
+        maximumString = String(maximum / BigUInt(10).power(stablecoinDecimal))
     }
     
     var body: some View {
