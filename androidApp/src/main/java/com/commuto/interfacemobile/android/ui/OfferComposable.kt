@@ -49,21 +49,6 @@ fun OfferComposable(
 ) {
 
     /**
-     * The human readable stablecoin symbol for which the offer has been made.
-     */
-    //val stablecoin = "STBL"
-
-    /**
-     * The Offer's minimum amount.
-     */
-    //val minimumAmount = "10,000"
-
-    /**
-     * The Offer's maximum amount
-     */
-    //val maximumAmount = "20,000"
-
-    /**
      * The list of [SettlementMethod]s that the maker is willing to accept.
      */
     val settlementMethods = listOf(
@@ -370,7 +355,7 @@ fun DisclosureComposable(header: @Composable () -> Unit, content: @Composable ()
 }
 
 /**
- * Displays a preview of [OfferComposable] with id equal that of a sample offer for a known stablecoin.
+ * Displays a preview of [OfferComposable] with id equal that of a sample offer for a known stablecoin: Dai.
  */
 @Preview(
     showBackground = true

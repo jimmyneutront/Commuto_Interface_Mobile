@@ -29,6 +29,7 @@ import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
  */
 @Composable
 fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavController) {
+    val stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
     Column {
         Text(
             text = stringResource(R.string.offers),
@@ -49,7 +50,12 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
                             navController.navigate("OfferComposable/" + offer.id.toString())
                         }
                     ) {
-                        OfferCardComposable(offer)
+                        OfferCardComposable(
+                            offerDirection = offer.direction.string,
+                            stablecoinCode = stablecoinInformationRepository
+                                .getStablecoinInformation(offer.chainID, offer.stablecoin)?.currencyCode
+                                ?: "Unknown Stablecoin"
+                        )
                     }
                     OffersDividerComposable()
                 }
