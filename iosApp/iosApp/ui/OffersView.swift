@@ -20,7 +20,7 @@ struct OffersView: View {
         NavigationView {
             List {
                 ForEach(offersViewModel.offers.map { $0.1 }, id: \.id) { offer in
-                    NavigationLink(destination: OfferView(offer: offer)) {
+                    NavigationLink(destination: OfferView(offer: offer, offersViewModel: offersViewModel)) {
                         OfferCardView(offer: offer)
                     }
                 }

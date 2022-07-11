@@ -138,7 +138,7 @@ extension Offer {
             id: sampleOfferIds[0],
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
-            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!, // DAI on Ethereum Mainnet
             amountLowerBound: BigUInt.zero,
             amountUpperBound: BigUInt.zero,
             securityDepositAmount: BigUInt.zero,
@@ -146,7 +146,7 @@ extension Offer {
             onChainDirection: BigUInt.zero,
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt.zero
+            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
         )!,
         sampleOfferIds[1]: Offer(
             isCreated: true,
@@ -154,7 +154,7 @@ extension Offer {
             id: sampleOfferIds[1],
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
-            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            stablecoin: EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!, // USDC on Ethereum Mainnet
             amountLowerBound: BigUInt.zero,
             amountUpperBound: BigUInt.zero,
             securityDepositAmount: BigUInt.zero,
@@ -162,7 +162,7 @@ extension Offer {
             onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt.zero
+            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
         )!,
         sampleOfferIds[2]: Offer(
             isCreated: true,
@@ -170,7 +170,7 @@ extension Offer {
             id: sampleOfferIds[2],
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
             interfaceId: Data(),
-            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            stablecoin: EthereumAddress("0x4Fabb145d64652a948d72533023f6E7A623C7C53")!, // BUSD on Ethereum Mainnet
             amountLowerBound: BigUInt.zero,
             amountUpperBound: BigUInt.zero,
             securityDepositAmount: BigUInt.zero,
@@ -178,7 +178,7 @@ extension Offer {
             onChainDirection: BigUInt.init(UInt64(1)),
             settlementMethods: [Data()],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt.zero
+            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
         )!,
     ]
 }

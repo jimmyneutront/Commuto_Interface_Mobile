@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BigInt
 
 /**
  Displays information about a specific [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
@@ -23,20 +24,6 @@ struct OfferView: View {
     @State private var isAdvancedDetailsDescriptionExpanded = false
     
     /**
-     The human readable symbol of the stablecoin for which the offer has been made.
-     */
-    let stablecoin = "STBL"
-    
-    /**
-     The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s minimum amount.
-     */
-    let minimumAmount = "10,000"
-    /**
-     The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s maximum amount.
-     */
-    let maximumAmount = "20,000"
-    
-    /**
      The settlement methods that the maker is willing to accept.
      */
     let settlementMethods = [
@@ -50,7 +37,11 @@ struct OfferView: View {
      */
     @ObservedObject var offer: Offer
     
+    /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
+    @ObservedObject var offersViewModel: OffersViewModel
+    
     var body: some View {
+        let stablecoinInformation = offersViewModel.stablecoinInformationRepository.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
         ScrollView(.vertical, showsIndicators: false) {
             VStack {
                 VStack {
@@ -64,19 +55,19 @@ struct OfferView: View {
                         isExpanded: $isDirectionDescriptionExpanded,
                         content: {
                             HStack {
-                                Text(buildDirectionDescriptionString())
+                                Text(buildDirectionDescriptionString(stablecoinInformation: stablecoinInformation))
                                     .padding(.bottom, 1)
                                 Spacer()
                             }
                         },
                         label: {
-                            Text(buildDirectionString())
+                            Text(buildDirectionString(stablecoinInformation: stablecoinInformation))
                                 .font(.title)
                                 .bold()
                         }
                     )
                     .accentColor(Color.primary)
-                    OfferAmountView(minimum: minimumAmount, maximum: maximumAmount)
+                    OfferAmountView(stablecoinInformation: stablecoinInformation, minimum: offer.amountLowerBound, maximum: offer.amountUpperBound)
                     HStack {
                         Text("Settlement methods:")
                             .font(.title2)
@@ -85,7 +76,7 @@ struct OfferView: View {
                     .padding(.top, 2)
                 }
                 .padding([.leading, .trailing, .top])
-                SettlementMethodListView(stablecoin: stablecoin, settlementMethods: settlementMethods)
+                SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: settlementMethods)
                     .padding(.leading)
                 VStack {
                     DisclosureGroup(
@@ -123,8 +114,11 @@ struct OfferView: View {
     
     /**
      Creates the text for the label of the direction `DisclosureGroup`.
+     
+     - Parameter stablecoinInformation: An optional `StablecoinInformation` for this offer's stablecoin.
      */
-    func buildDirectionString() -> String {
+    func buildDirectionString(stablecoinInformation: StablecoinInformation?) -> String {
+        let stablecoinCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
         var directionJoiner: String {
             switch offer.direction {
             case .buy:
@@ -133,15 +127,18 @@ struct OfferView: View {
                 return "for"
             }
         }
-        return offer.direction.string + " " + stablecoin + " " + directionJoiner + " fiat"
+        return offer.direction.string + " " + stablecoinCode + " " + directionJoiner + " fiat"
     }
     
     /**
      Creates the text for the direction description within the direction `DisclosureGroup`.
+     
+     - Parameter stablecoinInformation: An optional `StablecoinInformation` for this offer's stablecoin.
      */
-    func buildDirectionDescriptionString() -> String {
+    func buildDirectionDescriptionString(stablecoinInformation: StablecoinInformation?) -> String {
+        let stablecoinCode = stablecoinInformation?.name ?? "Unknown Stablecoin"
         // We should never get the empty string here because no offer information will be displayed if offer is nil
-        return "This is a " + offer.direction.string + " offer: The maker of this offer wants to " + offer.direction.string.lowercased() + " " + stablecoin + " in exchange for fiat."
+        return "This is a " + offer.direction.string + " offer: The maker of this offer wants to " + offer.direction.string.lowercased() + " " + stablecoinCode + " in exchange for fiat."
     }
 }
 
@@ -150,41 +147,57 @@ struct OfferView: View {
  */
 struct OfferAmountView: View {
     /**
-     A human readable minimum stablecoin amount.
+     The `StablecoinInformation` struct for the offer's stablecoin, or `nil` if such a struct cannot be resolved from the offer's chain ID and stablecoin address.
      */
-    let minimum: String
+    let stablecoinInformation: StablecoinInformation?
     /**
-     A human readable maximum stablecoin amount.
+     The minimum stablecoin amount.
      */
-    let maximum: String
+    let minimum: BigUInt
+    /**
+     The maximum stablecoin amount.
+     */
+    let maximum: BigUInt
+    
+    let minimumString: String
+    let maximumString: String
+    
+    init(stablecoinInformation: StablecoinInformation?, minimum: BigUInt, maximum: BigUInt) {
+        self.stablecoinInformation = stablecoinInformation
+        self.minimum = minimum
+        self.maximum = maximum
+        let stablecoinDecimal = stablecoinInformation?.decimal ?? 1
+        minimumString = String(minimum / BigUInt(stablecoinDecimal))
+        maximumString = String(maximum / BigUInt(stablecoinDecimal))
+    }
     
     var body: some View {
         HStack {
-            Text("Amount:")
+            let headerString = (stablecoinInformation != nil) ? "Amount: " : "Amount (in token base units):"
+            Text(headerString)
                 .font(.title2)
             Spacer()
         }
         .padding(.bottom, 2)
         if minimum == maximum {
             HStack {
-                Text(minimum + " STBL")
+                Text(minimumString + " " + (stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"))
                     .font(.title2).bold()
                 Spacer()
             }
         } else {
             HStack {
-                Text("Minimum: " + minimum + " STBL")
+                Text("Minimum: " + minimumString + " " + (stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"))
                     .font(.title2).bold()
                 Spacer()
                 
             }
             HStack {
-                Text("Maximum: " + maximum + " STBL")
+                Text("Maximum: " + maximumString + " " + (stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"))
                     .font(.title2).bold()
                 Spacer()
             }
         }
-        
     }
 }
 
@@ -215,19 +228,21 @@ struct SettlementMethod: Identifiable {
  */
 struct SettlementMethodListView: View {
     /**
-     The human readable symbol of the stablecoin for which the offer related to these settlement methods has been made.
+     The `StablecoinInformation` struct for the offer's stablecoin, or `nil` if such a struct cannot be resolved from the offer's chain ID and stablecoin address.
      */
-    let stablecoin: String
+    let stablecoinInformation: StablecoinInformation?
     /**
      The settlement methods to be displayed.
      */
     let settlementMethods: [SettlementMethod]
     
     var body: some View {
+        let stablecoinCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+        
         ScrollView(.horizontal, showsIndicators: false) {
             HStack {
                 ForEach(settlementMethods) { settlementMethod in
-                    SettlementMethodView(stablecoin: stablecoin, settlementMethod: settlementMethod)
+                    SettlementMethodView(stablecoin: stablecoinCode, settlementMethod: settlementMethod)
                 }
                 .padding(5)
             }
@@ -284,8 +299,18 @@ struct SettlementMethodView: View {
 struct OfferView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            OfferView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!)
-            OfferView(offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!).preferredColorScheme(.dark)
+            OfferView(
+                offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
+                offersViewModel: OffersViewModel(
+                    offerService: OfferService(databaseService: try! DatabaseService())
+                )
+            )
+            OfferView(
+                offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
+                offersViewModel: OffersViewModel(
+                    offerService: OfferService(databaseService: try! DatabaseService())
+                )
+            ).preferredColorScheme(.dark)
         }
         .environment(\.locale, .init(identifier: "de"))
     }
