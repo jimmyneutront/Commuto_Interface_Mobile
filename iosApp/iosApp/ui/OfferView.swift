@@ -22,6 +22,10 @@ struct OfferView: View {
      Controls whether the `DisclosureGroup` displaying advanced details about the offer is open.
      */
     @State private var isAdvancedDetailsDescriptionExpanded = false
+    /**
+     Controls whether the `DisclosureGroup` displaying service fee rate details is open.
+     */
+    @State private var isServiceFeeRateDescriptionExpanded = false
     
     /**
      The settlement methods that the maker is willing to accept.
@@ -80,6 +84,21 @@ struct OfferView: View {
                 SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: settlementMethods)
                     .padding(.leading)
                 VStack {
+                    DisclosureGroup(
+                        isExpanded: $isServiceFeeRateDescriptionExpanded,
+                        content: {
+                            HStack {
+                                Text("To take this offer, you must pay a fee equal to " + String(Double(offer.serviceFeeRate) / 100.0) + " percent of the amount to be exchanged.")
+                                Spacer()
+                            }
+                        },
+                        label: {
+                            Text("Service Fee Rate: " + String(Double(offer.serviceFeeRate) / 100.0) + "%")
+                                .font(.title2)
+                                .bold()
+                        }
+                    )
+                    .accentColor(Color.primary)
                     DisclosureGroup(
                         isExpanded: $isAdvancedDetailsDescriptionExpanded,
                         content: {
