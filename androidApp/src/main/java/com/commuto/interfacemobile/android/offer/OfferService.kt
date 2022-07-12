@@ -121,7 +121,7 @@ class OfferService (
             securityDepositAmount = offerStruct.securityDepositAmount,
             serviceFeeRate = offerStruct.serviceFeeRate,
             onChainDirection = offerStruct.direction,
-            settlementMethods = offerStruct.settlementMethods,
+            onChainSettlementMethods = offerStruct.settlementMethods,
             protocolVersion = offerStruct.protocolVersion,
             chainID = offerStruct.chainID
         )
@@ -147,7 +147,7 @@ class OfferService (
             chainID = offer.chainID.toString()
         )
         databaseService.storeOffer(offerForDatabase)
-        val settlementMethodStrings = offer.settlementMethods.map {
+        val settlementMethodStrings = offer.onChainSettlementMethods.map {
             encoder.encodeToString(it)
         }
         databaseService.storeSettlementMethods(offerForDatabase.offerId, offerForDatabase.chainID,
@@ -189,7 +189,7 @@ class OfferService (
             securityDepositAmount = offerStruct.securityDepositAmount,
             serviceFeeRate = offerStruct.serviceFeeRate,
             onChainDirection = offerStruct.direction,
-            settlementMethods = offerStruct.settlementMethods,
+            onChainSettlementMethods = offerStruct.settlementMethods,
             protocolVersion = offerStruct.protocolVersion,
             chainID = offerStruct.chainID
         )
@@ -198,7 +198,7 @@ class OfferService (
         offerIDByteBuffer.putLong(offer.id.leastSignificantBits)
         val offerIDByteArray = offerIDByteBuffer.array()
         val offerIdString = encoder.encodeToString(offerIDByteArray)
-        val settlementMethodStrings = offer.settlementMethods.map {
+        val settlementMethodStrings = offer.onChainSettlementMethods.map {
             encoder.encodeToString(it)
         }
         databaseService.storeSettlementMethods(offerIdString, offer.chainID.toString(), settlementMethodStrings)

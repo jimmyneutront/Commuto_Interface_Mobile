@@ -16,7 +16,7 @@ import java.math.BigInteger
  * @param securityDepositAmount Corresponds to an on-chain Offer's `securityDepositAmount` property.
  * @param serviceFeeRate Corresponds to an on-chain Offer's `serviceFeeRate` property.
  * @param direction Corresponds to an on-chain Offer's `direction` property.
- * @param settlementMethods Corresponds to an on-chain Offer's `settlementMethods` property.
+ * @param settlementMethods Corresponds to an on-chain Offer's `onChainSettlementMethods` property.
  * @param protocolVersion Corresponds to an on-chain Offer's `protocolVersion` property.
  * @param chainID Corresponds to an on-chain Offer's `chainID` property.
  */
