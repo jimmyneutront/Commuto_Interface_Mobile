@@ -33,15 +33,6 @@ struct OfferView<TruthSource>: View where TruthSource: OfferTruthSource {
     @State private var isServiceFeeRateDescriptionExpanded = false
     
     /**
-     The settlement methods that the maker is willing to accept.
-     */
-    let settlementMethods = [
-        SettlementMethod(currency: "EUR", method: "SEPA", price: "0.94", id: "1"),
-        SettlementMethod(currency: "USD", method: "SWIFT", price: "1.00", id: "2"),
-        SettlementMethod(currency: "BSD", method: "SANDDOLLAR", price: "1.00", id: "3")
-    ]
-    
-    /**
      The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) about which this `OfferView` displays information.
      */
     @ObservedObject var offer: Offer
@@ -86,7 +77,7 @@ struct OfferView<TruthSource>: View where TruthSource: OfferTruthSource {
                     .padding(.top, 2)
                 }
                 .padding([.leading, .trailing, .top])
-                SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: settlementMethods)
+                SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: offer.settlementMethods)
                     .padding(.leading)
                 VStack {
                     DisclosureGroup(
@@ -234,28 +225,6 @@ struct OfferAmountView: View {
 }
 
 /**
- A settlement method specified by the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) by which they are willing to send/receive payment
- */
-struct SettlementMethod: Identifiable {
-    /**
-     The currency in which the maker is willing to send/receive payment.
-     */
-    let currency: String
-    /**
-     The method by which the currency specified in `currency` will be transferred from the stablecoin buyer to the stablecoin seller.
-     */
-    let method: String
-    /**
-     The amount of the currency specified in `currency` that the maker is willing to exchange for one stablecoin unit.
-     */
-    let price: String
-    /**
-     An ID that uniquely identifies this settlement method, so it can be consumed by SwiftUI's `ForEach`.
-     */
-    var id: String
-}
-
-/**
  Displays a horizontally scrolling list of `SettlementMethodView`s.
  */
 struct SettlementMethodListView: View {
@@ -271,12 +240,19 @@ struct SettlementMethodListView: View {
     var body: some View {
         let stablecoinCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
         
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                ForEach(settlementMethods) { settlementMethod in
-                    SettlementMethodView(stablecoin: stablecoinCode, settlementMethod: settlementMethod)
+        if settlementMethods.count > 0 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack {
+                    ForEach(settlementMethods) { settlementMethod in
+                        SettlementMethodView(stablecoin: stablecoinCode, settlementMethod: settlementMethod)
+                    }
+                    .padding(5)
                 }
-                .padding(5)
+            }
+        } else {
+            HStack {
+                Text("No settlement methods found")
+                Spacer()
             }
         }
     }

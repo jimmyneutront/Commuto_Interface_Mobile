@@ -61,11 +61,15 @@ class Offer: ObservableObject {
     /**
      The direction of the offer, indicating whether the maker is offering to buy stablecoin or sell stablecoin.
      */
-    var direction: OfferDirection
+    let direction: OfferDirection
     /**
      Corresponds to an on-chain Offer's `settlementMethods` property.
      */
-    @Published var settlementMethods: [Data]
+    let onChainSettlementMethods: [Data]
+    /**
+     An `Array` of `SettlementMethods` derived from parsing `onChainSettlementMethods`.
+     */
+    @Published var settlementMethods: [SettlementMethod]
     /**
      Corresponds to an on-chain Offer's `protocolVersion` property.
      */
@@ -87,7 +91,7 @@ class Offer: ObservableObject {
         securityDepositAmount: BigUInt,
         serviceFeeRate: BigUInt,
         onChainDirection: BigUInt,
-        settlementMethods: [Data],
+        onChainSettlementMethods: [Data],
         protocolVersion: BigUInt,
         chainID: BigUInt
     ) {
@@ -109,7 +113,10 @@ class Offer: ObservableObject {
         } else {
             return nil
         }
-        self.settlementMethods = settlementMethods
+        self.onChainSettlementMethods = onChainSettlementMethods
+        self.settlementMethods = onChainSettlementMethods.compactMap { onChainSettlementMethod in
+            return try? JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+        }
         self.protocolVersion = protocolVersion
         self.chainID = chainID
     }
@@ -145,7 +152,15 @@ extension Offer {
             securityDepositAmount: 1_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             onChainDirection: BigUInt.zero,
-            settlementMethods: [Data()],
+            onChainSettlementMethods: [
+                """
+                {
+                    "f": "EUR",
+                    "p": "0.94",
+                    "m": "SEPA"
+                }
+                """.data(using: .utf8)!,
+            ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
         )!,
@@ -161,7 +176,15 @@ extension Offer {
             securityDepositAmount: 1_000 * BigUInt(10).power(6),
             serviceFeeRate: BigUInt(10),
             onChainDirection: BigUInt.init(UInt64(1)),
-            settlementMethods: [Data()],
+            onChainSettlementMethods: [
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
+            ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
         )!,
@@ -177,7 +200,15 @@ extension Offer {
             securityDepositAmount: 1_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(1),
             onChainDirection: BigUInt.init(UInt64(1)),
-            settlementMethods: [Data()],
+            onChainSettlementMethods: [
+                """
+                {
+                    "f": "BUSD",
+                    "p": "1.00",
+                    "m": "SANDDOLLAR"
+                }
+                """.data(using: .utf8)!,
+            ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
         )!,
@@ -193,7 +224,7 @@ extension Offer {
             securityDepositAmount: 1_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             onChainDirection: BigUInt.init(UInt64(1)),
-            settlementMethods: [Data()],
+            onChainSettlementMethods: [],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
         )!,

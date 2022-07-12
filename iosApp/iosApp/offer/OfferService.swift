@@ -101,7 +101,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             securityDepositAmount: offerStruct.securityDepositAmount,
             serviceFeeRate: offerStruct.serviceFeeRate,
             onChainDirection: offerStruct.direction,
-            settlementMethods: offerStruct.settlementMethods,
+            onChainSettlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion,
             chainID: offerStruct.chainID
         ) else {
@@ -124,7 +124,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
         )
         try databaseService.storeOffer(offer: offerForDatabase)
         var settlementMethodStrings: [String] = []
-        for settlementMethod in offer.settlementMethods {
+        for settlementMethod in offer.onChainSettlementMethods {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
         try databaseService.storeSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
@@ -169,7 +169,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             securityDepositAmount: offerStruct.securityDepositAmount,
             serviceFeeRate: offerStruct.serviceFeeRate,
             onChainDirection: offerStruct.direction,
-            settlementMethods: offerStruct.settlementMethods,
+            onChainSettlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion,
             chainID: offerStruct.chainID
         ) else {
