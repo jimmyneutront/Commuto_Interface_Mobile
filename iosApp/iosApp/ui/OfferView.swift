@@ -12,7 +12,12 @@ import BigInt
 /**
  Displays information about a specific [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct OfferView: View {
+struct OfferView<TruthSource>: View where TruthSource: OfferTruthSource {
+    
+    /**
+     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo` if no other value is provided.
+     */
+    let stablecoinInfoRepo = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
     
     /**
      Controls whether the `DisclosureGroup` displaying a description of the offer direction is open.
@@ -42,10 +47,10 @@ struct OfferView: View {
     @ObservedObject var offer: Offer
     
     /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
-    @ObservedObject var offersViewModel: OffersViewModel
+    @ObservedObject var offerTruthSource: TruthSource
     
     var body: some View {
-        let stablecoinInformation = offersViewModel.stablecoinInformationRepository.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
+        let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
         ScrollView(.vertical, showsIndicators: false) {
             VStack {
                 VStack {
@@ -328,13 +333,13 @@ struct OfferView_Previews: PreviewProvider {
         Group {
             OfferView(
                 offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
-                offersViewModel: OffersViewModel(
+                offerTruthSource: OffersViewModel(
                     offerService: OfferService(databaseService: try! DatabaseService())
                 )
             )
             OfferView(
                 offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
-                offersViewModel: OffersViewModel(
+                offerTruthSource: OffersViewModel(
                     offerService: OfferService(databaseService: try! DatabaseService())
                 )
             ).preferredColorScheme(.dark)

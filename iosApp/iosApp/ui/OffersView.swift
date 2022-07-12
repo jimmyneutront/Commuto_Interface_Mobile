@@ -11,18 +11,23 @@ import SwiftUI
 /**
  Displays the main list of offers as `OfferCardView`s in a `List` within a `NavigationView`.
  */
-struct OffersView: View {
+struct OffersView<TruthSource>: View where TruthSource: OfferTruthSource {
     
-    /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
-    @ObservedObject var offersViewModel: OffersViewModel
+    /**
+     An object adopting the `OfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
+     */
+    @ObservedObject var offerTruthSource: TruthSource
     
+    /**
+     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo` if no other value is provided.
+     */
     let stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
     
     var body: some View {
         NavigationView {
             List {
-                ForEach(offersViewModel.offers.map { $0.1 }, id: \.id) { offer in
-                    NavigationLink(destination: OfferView(offer: offer, offersViewModel: offersViewModel)) {
+                ForEach(offerTruthSource.offers.map { $0.1 }, id: \.id) { offer in
+                    NavigationLink(destination: OfferView(offer: offer, offerTruthSource: offerTruthSource)) {
                         OfferCardView(
                             offerDirection: offer.direction.string,
                             stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
@@ -52,8 +57,8 @@ struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             OffersView(
-                offersViewModel: OffersViewModel(
-                    offerService: OfferService(databaseService: try! DatabaseService())
+                offerTruthSource: OffersViewModel(
+                    offerService: OfferService<OffersViewModel>(databaseService: try! DatabaseService())
                 )
             )
         }

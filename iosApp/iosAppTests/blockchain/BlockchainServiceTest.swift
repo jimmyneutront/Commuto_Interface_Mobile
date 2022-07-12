@@ -40,9 +40,10 @@ class BlockchainServiceTest: XCTestCase {
         
         let databaseService = try! DatabaseService()
         
+        #warning("TODO: use previewable offer truth source here")
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
-            offerService: OfferService(databaseService: databaseService),
+            offerService: OfferService<OffersViewModel>(databaseService: databaseService),
             web3Instance: w3,
             commutoSwapAddress: ""
         )

@@ -19,7 +19,7 @@ struct iOSApp: App {
     init() {
         container = Container()
         container.register(DatabaseService.self) { _ in try! DatabaseService()  }
-        container.register(OfferService.self) { r in
+        container.register(OfferService<OffersViewModel>.self) { r in
             OfferService(databaseService: r.resolve(DatabaseService.self)!)
             
         }
@@ -27,14 +27,14 @@ struct iOSApp: App {
         container.register(BlockchainService.self) {r in
             BlockchainService(
                 errorHandler: ErrorViewModel(),
-                offerService: r.resolve(OfferService.self)!,
+                offerService: r.resolve(OfferService<OffersViewModel>.self)!,
                 web3Instance: web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!),
                 commutoSwapAddress: "0x687F36336FCAB8747be1D41366A416b41E7E1a96"
             )
         }
             .inObjectScope(.container)
         container.register(OffersViewModel.self) { r in
-            OffersViewModel(offerService: r.resolve(OfferService.self)!)
+            OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel>.self)!)
             
         }
             .inObjectScope(.container)
@@ -46,7 +46,7 @@ struct iOSApp: App {
     
 	var body: some Scene {
 		WindowGroup {
-            OffersView(offersViewModel: container.resolve(OffersViewModel.self)!)
+            OffersView(offerTruthSource: container.resolve(OffersViewModel.self)!)
         }
 	}
 }

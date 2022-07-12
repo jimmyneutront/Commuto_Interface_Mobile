@@ -11,7 +11,7 @@ import Foundation
 /**
  The Offers View Model, the single source of truth for all offer related data. It is observed by offer-related views.
  */
-class OffersViewModel: OfferTruthSource, ObservableObject {
+class OffersViewModel: OfferTruthSource {
     
     /**
      A temporary initializer for use during development.
@@ -27,7 +27,7 @@ class OffersViewModel: OfferTruthSource, ObservableObject {
      
      - Parameter offerService: An `OfferService` that adds and removes `Offer`s from this class's `offers` dictionary as offers are created, canceled and taken.
      */
-    init(offerService: OfferService) {
+    init(offerService: OfferService<OffersViewModel>) {
         self.offerService = offerService
         offers = Offer.sampleOffers
     }
@@ -35,7 +35,7 @@ class OffersViewModel: OfferTruthSource, ObservableObject {
     /**
      The `OfferService` responsible for adding and removing `Offer`s from this class's `offers` dictionary as offers are created, canceled and taken.
      */
-    let offerService: OfferService
+    let offerService: OfferService<OffersViewModel>
     
     /**
      A dictionary mapping offer IDs (as `UUID`s) to `Offer`s, which is the single source of truth for all open-offer-related data.

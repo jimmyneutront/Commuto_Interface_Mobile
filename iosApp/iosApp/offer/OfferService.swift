@@ -13,7 +13,7 @@ import web3swift
 /**
  The main Offer Service. It is responsible for processing and organizing offer-related data that it receives from `BlockchainService` and `P2PService` in order to maintain an accurate list of all open offers in `OffersViewModel`.
  */
-class OfferService: OfferNotifiable {
+class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: OfferTruthSource {
     
     /**
      Initializes a new OfferService object.
@@ -40,7 +40,7 @@ class OfferService: OfferNotifiable {
     /**
      An object adopting `OfferTruthSource` in which this is responsible for maintaining an accurate list of all open offers.
      */
-    var offerTruthSource: OfferTruthSource? = nil
+    var offerTruthSource: _OfferTruthSource? = nil
     
     /**
      The `BlockchainService` that this uses for interacting with the blockchain.
