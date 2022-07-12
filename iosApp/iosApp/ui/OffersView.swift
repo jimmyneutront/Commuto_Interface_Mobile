@@ -57,9 +57,7 @@ struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             OffersView(
-                offerTruthSource: OffersViewModel(
-                    offerService: OfferService<OffersViewModel>(databaseService: try! DatabaseService())
-                )
+                offerTruthSource: PreviewableOfferTruthSource()
             )
         }
         .environment(\.locale, .init(identifier: "de"))

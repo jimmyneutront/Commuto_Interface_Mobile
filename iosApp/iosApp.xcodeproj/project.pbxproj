@@ -30,6 +30,7 @@
 		6D6B0FC228504926003A24B3 /* BlockchainServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6B0FC128504926003A24B3 /* BlockchainServiceError.swift */; };
 		6D6CE882284478040009B815 /* Offer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CE881284478040009B815 /* Offer.swift */; };
 		6D6CE885284479490009B815 /* OfferCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CE884284479490009B815 /* OfferCardView.swift */; };
+		6D6F190B287DFD7F00B9BCA1 /* PreviewableOfferTruthSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6F190A287DFD7E00B9BCA1 /* PreviewableOfferTruthSource.swift */; };
 		6D70A5CA28665E50003FEDF3 /* OfferTruthSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */; };
 		6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */; };
 		6D70A5CE2866A64E003FEDF3 /* DatabaseServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5CD2866A64E003FEDF3 /* DatabaseServiceError.swift */; };
@@ -96,6 +97,7 @@
 		6D6B0FC128504926003A24B3 /* BlockchainServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainServiceError.swift; sourceTree = "<group>"; };
 		6D6CE881284478040009B815 /* Offer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Offer.swift; sourceTree = "<group>"; };
 		6D6CE884284479490009B815 /* OfferCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCardView.swift; sourceTree = "<group>"; };
+		6D6F190A287DFD7E00B9BCA1 /* PreviewableOfferTruthSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewableOfferTruthSource.swift; sourceTree = "<group>"; };
 		6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTruthSource.swift; sourceTree = "<group>"; };
 		6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainEventRepository.swift; sourceTree = "<group>"; };
 		6D70A5CD2866A64E003FEDF3 /* DatabaseServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseServiceError.swift; sourceTree = "<group>"; };
@@ -212,6 +214,7 @@
 				6D56891D28656D1000BDE490 /* OfferServiceError.swift */,
 				6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */,
 				6DC2BF41287762CF00E5C3D7 /* OfferDirection.swift */,
+				6D6F190A287DFD7E00B9BCA1 /* PreviewableOfferTruthSource.swift */,
 			);
 			path = offer;
 			sourceTree = "<group>";
@@ -627,6 +630,7 @@
 				6D6B0FC028504603003A24B3 /* BlockchainErrorNotifiable.swift in Sources */,
 				6D0886ED28595E2E009B6CF7 /* OfferCanceledEvent.swift in Sources */,
 				6D56891E28656D1000BDE490 /* OfferServiceError.swift in Sources */,
+				6D6F190B287DFD7F00B9BCA1 /* PreviewableOfferTruthSource.swift in Sources */,
 				6DC2BF42287762CF00E5C3D7 /* OfferDirection.swift in Sources */,
 				6D6CE882284478040009B815 /* Offer.swift in Sources */,
 				6D91C9862754329B00D85654 /* KeyPair.swift in Sources */,

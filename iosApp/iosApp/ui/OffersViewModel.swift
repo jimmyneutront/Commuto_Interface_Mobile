@@ -14,15 +14,6 @@ import Foundation
 class OffersViewModel: OfferTruthSource {
     
     /**
-     A temporary initializer for use during development.
-     */
-    /*
-    init() {
-        offers = Offer.sampleOffers
-    }
-     */
-    
-    /**
      Initializes a new `OffersViewModel`.
      
      - Parameter offerService: An `OfferService` that adds and removes `Offer`s from this class's `offers` dictionary as offers are created, canceled and taken.
@@ -41,10 +32,5 @@ class OffersViewModel: OfferTruthSource {
      A dictionary mapping offer IDs (as `UUID`s) to `Offer`s, which is the single source of truth for all open-offer-related data.
      */
     @Published var offers: [UUID: Offer]
-    
-    /**
-     The `StablecoinInformationRepository` from which `View`s get the name and currency code for a stablecoin.
-     */
-    let stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
     
 }

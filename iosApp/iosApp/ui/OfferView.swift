@@ -333,15 +333,11 @@ struct OfferView_Previews: PreviewProvider {
         Group {
             OfferView(
                 offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
-                offerTruthSource: OffersViewModel(
-                    offerService: OfferService(databaseService: try! DatabaseService())
-                )
+                offerTruthSource: PreviewableOfferTruthSource()
             )
             OfferView(
                 offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
-                offerTruthSource: OffersViewModel(
-                    offerService: OfferService(databaseService: try! DatabaseService())
-                )
+                offerTruthSource: PreviewableOfferTruthSource()
             ).preferredColorScheme(.dark)
         }
         .environment(\.locale, .init(identifier: "de"))
