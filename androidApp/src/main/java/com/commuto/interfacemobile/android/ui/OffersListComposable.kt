@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +31,7 @@ import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
 @Composable
 fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavController) {
     val stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
+    val offers = remember { offerTruthSource.offers }
     Column {
         Text(
             text = stringResource(R.string.offers),
@@ -42,22 +44,24 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
             OffersNoneFoundComposable()
         } else {
             LazyColumn {
-                items(offerTruthSource.offers) { offer ->
-                    Button(
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                        contentPadding = PaddingValues(10.dp),
-                        onClick = {
-                            navController.navigate("OfferComposable/" + offer.id.toString())
+                for (entry in offers) {
+                    item {
+                        Button(
+                            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
+                            contentPadding = PaddingValues(10.dp),
+                            onClick = {
+                                navController.navigate("OfferComposable/" + entry.key.toString())
+                            }
+                        ) {
+                            OfferCardComposable(
+                                offerDirection = entry.value.direction.string,
+                                stablecoinCode = stablecoinInformationRepository
+                                    .getStablecoinInformation(entry.value.chainID, entry.value.stablecoin)?.currencyCode
+                                    ?: "Unknown Stablecoin"
+                            )
                         }
-                    ) {
-                        OfferCardComposable(
-                            offerDirection = offer.direction.string,
-                            stablecoinCode = stablecoinInformationRepository
-                                .getStablecoinInformation(offer.chainID, offer.stablecoin)?.currencyCode
-                                ?: "Unknown Stablecoin"
-                        )
+                        OffersDividerComposable()
                     }
-                    OffersDividerComposable()
                 }
             }
         }

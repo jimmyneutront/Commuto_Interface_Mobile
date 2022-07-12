@@ -1,7 +1,6 @@
 package com.commuto.interfacemobile.android.offer
 
 import com.commuto.interfacedesktop.db.Offer as DatabaseOffer
-import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainEventRepository
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferCanceledEvent
@@ -233,8 +232,9 @@ class OfferService (
         databaseService.deleteSettlementMethods(offerIdString, event.chainID.toString())
         offerCanceledEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            // TODO: This is a security vulnerability at the moment, will be fixed when we use a map in offerTruthSource
-            offerTruthSource.removeOffer(event.offerID)
+            if (offerTruthSource.offers[event.offerID]?.chainID == event.chainID) {
+                offerTruthSource.removeOffer(event.offerID)
+            }
         }
     }
 
@@ -260,8 +260,9 @@ class OfferService (
         databaseService.deleteSettlementMethods(offerIdString, event.chainID.toString())
         offerTakenEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            // TODO: This is a security vulnerability at the moment, will be fixed when we use a map in offerTruthSource
-            offerTruthSource.removeOffer(event.offerID)
+            if (offerTruthSource.offers[event.offerID]?.chainID == event.chainID) {
+                offerTruthSource.removeOffer(event.offerID)
+            }
         }
     }
 }

@@ -100,7 +100,7 @@ data class Offer(
                 stablecoin = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum Mainnet
                 amountLowerBound = BigInteger.valueOf(10_000) * BigInteger.TEN.pow(6),
                 amountUpperBound = BigInteger.valueOf(20_000) * BigInteger.TEN.pow(6),
-                securityDepositAmount = BigInteger.valueOf(1_000) * BigInteger.TEN.pow(18),
+                securityDepositAmount = BigInteger.valueOf(1_000) * BigInteger.TEN.pow(6),
                 serviceFeeRate = BigInteger.valueOf(10),
                 onChainDirection = BigInteger.ONE,
                 settlementMethods = listOf(ByteArray(0)),
@@ -117,7 +117,7 @@ data class Offer(
                 amountLowerBound = BigInteger.valueOf(10_000) * BigInteger.TEN.pow(18),
                 amountUpperBound = BigInteger.valueOf(10_000) * BigInteger.TEN.pow(18),
                 securityDepositAmount = BigInteger.valueOf(1_000) * BigInteger.TEN.pow(18),
-                serviceFeeRate = BigInteger.valueOf(10),
+                serviceFeeRate = BigInteger.valueOf(1),
                 onChainDirection = BigInteger.ONE,
                 settlementMethods = listOf(ByteArray(0)),
                 protocolVersion = BigInteger.ZERO,
