@@ -10,35 +10,34 @@ import Foundation
 import XCTest
 @testable import iosApp
 
-class KMServiceTest: XCTestCase {
+class KeyManagerServiceTest: XCTestCase {
     
-    let dbService = try! DatabaseService()
-    var kmService: KMService?
-     
+    let databaseService = try! DatabaseService()
+    var keyManagerService: KeyManagerService?
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
-        kmService = KMService(dbService: dbService)
-        try dbService.createTables()
+        keyManagerService = KeyManagerService(databaseService: databaseService)
+        try databaseService.createTables()
     }
 
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
-    func testGenerateAndRetrieveKeyPair() throws {
-        let keyPair = try kmService!.generateKeyPair()
-        let retrievedKeyPair = try kmService!.getKeyPair(interfaceId: keyPair.interfaceId)
+    func testGenerateAndGetKeyPair() throws {
+        let keyPair = try keyManagerService!.generateKeyPair()
+        let retrievedKeyPair = try keyManagerService!.getKeyPair(interfaceId: keyPair.interfaceId)
         XCTAssertEqual(keyPair.interfaceId, retrievedKeyPair!.interfaceId)
         XCTAssertEqual(keyPair.publicKey, retrievedKeyPair!.publicKey)
         XCTAssertEqual(keyPair.privateKey, retrievedKeyPair!.privateKey)
     }
     
-    func testStoreAndRetrievePublicKey() throws {
-        let keyPair = try kmService!.generateKeyPair()
+    func testStoreAndGetPublicKey() throws {
+        let keyPair = try keyManagerService!.generateKeyPair()
         let publicKey = try PublicKey(publicKey: keyPair.publicKey)
-        try kmService!.storePublicKey(pubKey: publicKey)
-        let retrievedPublicKey = try kmService!.getPublicKey(interfaceId: publicKey.interfaceId)
+        try keyManagerService!.storePublicKey(pubKey: publicKey)
+        let retrievedPublicKey = try keyManagerService!.getPublicKey(interfaceId: publicKey.interfaceId)
         XCTAssertEqual(publicKey.interfaceId, retrievedPublicKey?.interfaceId)
         XCTAssertEqual(publicKey.publicKey, publicKey.publicKey)
     }

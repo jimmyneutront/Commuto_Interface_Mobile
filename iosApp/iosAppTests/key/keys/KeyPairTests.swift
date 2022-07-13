@@ -1,43 +1,37 @@
 //
-//  KMServiceUtilsTest.swift
+//  KeyPairTests.swift
 //  iosAppTests
 //
-//  Created by jimmyt on 11/30/21.
-//  Copyright © 2021 orgName. All rights reserved.
+//  Created by jimmyt on 7/13/22.
+//  Copyright © 2022 orgName. All rights reserved.
 //
 
 import XCTest
 @testable import iosApp
 
-class KMTypesTest: XCTestCase {
+class KeyPairTests: XCTestCase {
     
-    let dbService: DatabaseService = try! DatabaseService()
-    var kmService: KMService?
+    let databaseService: DatabaseService = try! DatabaseService()
+    var keyManagerService: KeyManagerService?
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
-        kmService = KMService(dbService: dbService)
-        try dbService.createTables()
+        keyManagerService = KeyManagerService(databaseService: databaseService)
+        try databaseService.createTables()
     }
 
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
-    func testSymmetricEncryption() throws {
-        let key = try newSymmetricKey()
-        let encryptedData = try key.encrypt(data: "test".data(using: .utf16)!)
-        XCTAssertEqual("test".data(using: .utf16)!, try key.decrypt(data: encryptedData))
-    }
-    
     func testSignatureUtils() throws {
-        let keyPair = try kmService!.generateKeyPair()
+        let keyPair = try keyManagerService!.generateKeyPair()
         let signature = try keyPair.sign(data: "test".data(using: .utf16)!)
         XCTAssert(try keyPair.verifySignature(signedData: "test".data(using: .utf16)!, signature: signature))
     }
     
     func testAsymmetricEncryption() throws {
-        let keyPair = try kmService!.generateKeyPair()
+        let keyPair = try keyManagerService!.generateKeyPair()
         let originalString = "test"
         let originalMessage = originalString.data(using: .utf16)
         let encryptedMessage = try keyPair.encrypt(clearData: originalMessage!)
@@ -47,3 +41,4 @@ class KMTypesTest: XCTestCase {
     }
 
 }
+

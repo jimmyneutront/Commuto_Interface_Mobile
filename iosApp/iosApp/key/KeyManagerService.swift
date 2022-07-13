@@ -15,20 +15,20 @@ import Security
  
  This is responsible for generating, persistently storing and retrieving key pairs, and for storing and retrieving public keys.
  */
-class KMService {
+class KeyManagerService {
     
     /**
      The `DatabaseService` that `KeyManagerService` uses for persistent storage.
      */
-    var dbService: DatabaseService
+    var databaseService: DatabaseService
     
     /**
      Creates a new `KeyManagerService`.
      
-     - Parameter dbService: The `DatabaseService` that this `KeyManagerService` uses for persistent storage.
+     - Parameter databaseService: The `DatabaseService` that this `KeyManagerService` uses for persistent storage.
      */
-    init(dbService: DatabaseService) {
-        self.dbService = dbService
+    init(databaseService: DatabaseService) {
+        self.databaseService = databaseService
     }
     
     /**
@@ -44,7 +44,7 @@ class KMService {
             let interfaceIdB64Str = keyPair.interfaceId.base64EncodedString()
             let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
             let privKeyB64Str = try keyPair.privKeyToPkcs1Bytes().base64EncodedString()
-            try dbService.storeKeyPair(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str, privateKey: privKeyB64Str)
+            try databaseService.storeKeyPair(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str, privateKey: privKeyB64Str)
         }
         return keyPair
     }
@@ -58,7 +58,7 @@ class KMService {
      */
     func getKeyPair(interfaceId: Data) throws -> KeyPair? {
         let interfaceIdB64Str = interfaceId.base64EncodedString()
-        let databaseKeyPair: DatabaseKeyPair? = try dbService.getKeyPair(interfaceId: interfaceIdB64Str)
+        let databaseKeyPair: DatabaseKeyPair? = try databaseService.getKeyPair(interfaceId: interfaceIdB64Str)
         if databaseKeyPair != nil {
             let pubKeyBytes = Data(base64Encoded: databaseKeyPair!.publicKey)!
             let privKeyBytes = Data(base64Encoded: databaseKeyPair!.privateKey)!
@@ -76,7 +76,7 @@ class KMService {
     func storePublicKey(pubKey: PublicKey) throws {
         let interfaceIdB64Str = pubKey.interfaceId.base64EncodedString()
         let pubKeyB64Str = try pubKey.toPkcs1Bytes().base64EncodedString()
-        try dbService.storePublicKey(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str)
+        try databaseService.storePublicKey(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str)
     }
     
     /**
@@ -88,7 +88,7 @@ class KMService {
      */
     func getPublicKey(interfaceId: Data) throws -> PublicKey? {
         let interfaceIdB64Str = interfaceId.base64EncodedString()
-        let dbPubKey: DatabasePublicKey? = try dbService.getPublicKey(interfaceId: interfaceIdB64Str)
+        let dbPubKey: DatabasePublicKey? = try databaseService.getPublicKey(interfaceId: interfaceIdB64Str)
         if dbPubKey != nil {
             let pubKeyBytes: Data = Data(base64Encoded: dbPubKey!.publicKey)!
             return try PublicKey(publicKeyBytes: pubKeyBytes)

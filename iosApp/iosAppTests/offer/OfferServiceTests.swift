@@ -57,6 +57,7 @@ class OfferServiceTests: XCTestCase {
         
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent> {
             
@@ -77,7 +78,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerOpenedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerOpenedEventRepository: offerOpenedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerOpenedEventRepository: offerOpenedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -178,6 +179,7 @@ class OfferServiceTests: XCTestCase {
         
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferCanceledEvent> {
             
@@ -198,7 +200,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerCanceledEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerCanceledEventRepository: offerCanceledEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerCanceledEventRepository: offerCanceledEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -293,6 +295,7 @@ class OfferServiceTests: XCTestCase {
         
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferTakenEvent> {
             
@@ -313,7 +316,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerTakenEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerTakenEventRepository: offerTakenEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerTakenEventRepository: offerTakenEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -407,6 +410,7 @@ class OfferServiceTests: XCTestCase {
         
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferEditedEvent> {
             
@@ -427,7 +431,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerEditedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerEditedEventRepository: offerEditedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerEditedEventRepository: offerEditedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
