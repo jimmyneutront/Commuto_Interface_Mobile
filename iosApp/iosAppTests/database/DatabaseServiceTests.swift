@@ -67,6 +67,29 @@ class DatabaseServiceTests: XCTestCase {
         XCTAssertEqual(returnedOfferAfterDeletion, nil)
     }
     
+    func testUpdateOfferHavePublicKey() throws {
+        let offerToStore = DatabaseOffer(
+            id: "a_uuid",
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: "interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            protocolVersion: "some_version",
+            chainID: "a_chain_id",
+            havePublicKey: false
+        )
+        try dbService.storeOffer(offer: offerToStore)
+        try dbService.updateOfferHavePublicKey(offerID: "a_uuid", _chainID: "a_chain_id", _havePublicKey: true)
+        let returnedOffer = try dbService.getOffer(id: "a_uuid")
+        XCTAssertTrue(returnedOffer!.havePublicKey)
+    }
+    
     func testStoreAndGetAndDeleteSettlementMethods() throws {
         let offerId = "an_offer_id"
         let chainID = "a_chain_id"

@@ -116,7 +116,7 @@ class P2PService {
                 }.then { [self] response in
                     getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000).map { ($0, response.nextBatchToken)  }
                 }.done { [self] response, newToken in
-                    parseEvents(response.chunk)
+                    try parseEvents(response.chunk)
                     updateLastNonEmptyBatchToken(newToken)
                 }.catch { [self] error in
                     errorHandler.handleP2PError(error)
@@ -189,13 +189,13 @@ class P2PService {
      
      - Parameter events: a list of `SwitrixClientEvent`s.
      */
-    private func parseEvents(_ events: [SwitrixClientEvent]) {
+    private func parseEvents(_ events: [SwitrixClientEvent]) throws {
         let messageEvents = events.filter { event in
             return event.type == "m.room.message"
         }
         for event in messageEvents {
             if let pka = parsePublicKeyAnnouncement(messageString: (event.content as? SwitrixMessageEventContent)?.body) {
-                offerService.handlePublicKeyAnnouncement(pka)
+                try offerService.handlePublicKeyAnnouncement(pka)
             }
         }
     

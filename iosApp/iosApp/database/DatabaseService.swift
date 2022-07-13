@@ -186,6 +186,20 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseOffer`'s `havePublicKey` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - havePublicKey: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `havePublicKey` field.
+     */
+    func updateOfferHavePublicKey(offerID: String, _chainID: String, _havePublicKey: Bool) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(offerId == offerID && chainID == _chainID).update(havePublicKey <- _havePublicKey))
+        }
+    }
+    
+    /**
      Removes every `DatabaseOffer` with an offer ID equal to `offerID` and a chain ID equal to `chainID` from persistent storage.
      
      - Parameters:

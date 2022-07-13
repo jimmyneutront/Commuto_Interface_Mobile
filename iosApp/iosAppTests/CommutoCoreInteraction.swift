@@ -162,7 +162,7 @@ class CommutoCoreInteraction: XCTestCase {
         
         //Setup DatabaseService and KMService
         let dbService = try! DatabaseService()
-        let kmService: KMService = KMService(dbService: dbService)
+        let kmService: KeyManagerService = KeyManagerService(databaseService: dbService)
         try dbService.createTables()
         
         //Create key pair

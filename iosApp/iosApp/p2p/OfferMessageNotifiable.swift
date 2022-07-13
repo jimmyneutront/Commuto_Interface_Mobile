@@ -15,5 +15,5 @@ protocol OfferMessageNotifiable {
      
      - Parameter message: the new `PublicKeyAnnouncement` of which the structure or class adopting this protocol is being notified, and should handle in the implementation of this function.
      */
-    func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement)
+    func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) throws
 }
