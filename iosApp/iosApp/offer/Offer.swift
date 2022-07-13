@@ -79,6 +79,10 @@ class Offer: ObservableObject {
      The ID of the blockchain on which this Offer exists.
      */
     let chainID: BigUInt
+    /**
+     Indicates whether this interface has a copy of the public key specified by the `interfaceId` field
+     */
+    var havePublicKey: Bool
     
     init?(
         isCreated: Bool,
@@ -94,7 +98,8 @@ class Offer: ObservableObject {
         onChainDirection: BigUInt,
         onChainSettlementMethods: [Data],
         protocolVersion: BigUInt,
-        chainID: BigUInt
+        chainID: BigUInt,
+        havePublicKey: Bool
     ) {
         self.isCreated = isCreated
         self.isTaken = isTaken
@@ -120,6 +125,7 @@ class Offer: ObservableObject {
         }
         self.protocolVersion = protocolVersion
         self.chainID = chainID
+        self.havePublicKey = havePublicKey
     }
     
 }
@@ -163,7 +169,8 @@ extension Offer {
                 """.data(using: .utf8)!,
             ],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
+            chainID: BigUInt(1), // Ethereum Mainnet blockchain ID
+            havePublicKey: false
         )!,
         sampleOfferIds[1]: Offer(
             isCreated: true,
@@ -187,7 +194,8 @@ extension Offer {
                 """.data(using: .utf8)!,
             ],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
+            chainID: BigUInt(1), // Ethereum Mainnet blockchain ID
+            havePublicKey: false
         )!,
         sampleOfferIds[2]: Offer(
             isCreated: true,
@@ -211,7 +219,8 @@ extension Offer {
                 """.data(using: .utf8)!,
             ],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
+            chainID: BigUInt(1), // Ethereum Mainnet blockchain ID
+            havePublicKey: false
         )!,
         sampleOfferIds[3]: Offer(
             isCreated: true,
@@ -227,7 +236,8 @@ extension Offer {
             onChainDirection: BigUInt.init(UInt64(1)),
             onChainSettlementMethods: [],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt(1) // Ethereum Mainnet blockchain ID
+            chainID: BigUInt(1), // Ethereum Mainnet blockchain ID
+            havePublicKey: false
         )!,
     ]
 }

@@ -37,7 +37,8 @@ class DatabaseServiceTests: XCTestCase {
             serviceFeeRate: "service_fee_rate",
             onChainDirection: "direction",
             protocolVersion: "some_version",
-            chainID: "a_chain_id"
+            chainID: "a_chain_id",
+            havePublicKey: false
         )
         try dbService.storeOffer(offer: offerToStore)
         let anotherOfferToStore = DatabaseOffer(
@@ -53,7 +54,8 @@ class DatabaseServiceTests: XCTestCase {
             serviceFeeRate: "another_service_fee_rate",
             onChainDirection: "opposite_direction",
             protocolVersion: "some_other_version",
-            chainID: "another_chain_id"
+            chainID: "another_chain_id",
+            havePublicKey: false
         )
         // This should do nothing and not throw
         try dbService.storeOffer(offer: anotherOfferToStore)

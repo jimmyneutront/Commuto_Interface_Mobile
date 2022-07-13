@@ -114,6 +114,10 @@ class DatabaseService {
      A database structure representing a particular settlement method of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      */
     let settlementMethod = Expression<String>("settlementMethod")
+    /**
+     A database structure  representing an Offer's `havePublicKey` property.
+     */
+    let havePublicKey = Expression<Bool>("havePublicKey")
     
     /**
      Creates all necessary database tables.
@@ -133,6 +137,7 @@ class DatabaseService {
             t.column(onChainDirection)
             t.column(protocolVersion)
             t.column(chainID)
+            t.column(havePublicKey)
         })
         try connection.run(settlementMethods.create { t in
             t.column(offerId)
@@ -171,7 +176,8 @@ class DatabaseService {
                     serviceFeeRate <- offer.serviceFeeRate,
                     onChainDirection <- offer.onChainDirection,
                     protocolVersion <- offer.protocolVersion,
-                    chainID <- offer.chainID
+                    chainID <- offer.chainID,
+                    havePublicKey <- offer.havePublicKey
                 ))
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
                 // An Offer with the specified id already exists in the database, so we do nothing
@@ -229,7 +235,8 @@ class DatabaseService {
                 serviceFeeRate: result[0][serviceFeeRate],
                 onChainDirection: result[0][onChainDirection],
                 protocolVersion: result[0][protocolVersion],
-                chainID: result[0][chainID]
+                chainID: result[0][chainID],
+                havePublicKey: result[0][havePublicKey]
             )
         } else {
             return nil

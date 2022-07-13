@@ -29,7 +29,7 @@ class BlockchainServiceTest: XCTestCase {
      Runs the listen loop in the current thread. This doesn't actually test anything.
      */
     func runBlockchainService() {
-        let w3 = web3(provider: Web3HttpProvider(URL(string: "")!)!)
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
             var gotError = false
             func handleBlockchainError(_ error: Error) {

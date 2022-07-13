@@ -10,10 +10,11 @@ import Foundation
 import PromiseKit
 import web3swift
 
+#warning("TODO: check if we have the public key in all blockchain event handlers")
 /**
  The main Offer Service. It is responsible for processing and organizing offer-related data that it receives from `BlockchainService` and `P2PService` in order to maintain an accurate list of all open offers in `OffersViewModel`.
  */
-class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: OfferTruthSource {
+class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable where _OfferTruthSource: OfferTruthSource {
     
     /**
      Initializes a new OfferService object.
@@ -21,7 +22,9 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
      - Parameters:
         - databaseService: The `DatabaseService` that the `OfferService` will use for persistent storage.
         - offerOpenedEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferOpenedEvent`s during `handleOfferOpenedEvent` calls.
+        - offerEditedEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferEditedEvent`s during `handleOfferEditedEvent` calls.
         - offerCanceledEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferCanceledEvent`s during `handleOfferCanceledEvent` calls.
+        - offerTakenEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferTakenEvent`s during `handleOfferTakenEvent` calls.
      */
     init(
         databaseService: DatabaseService,
@@ -105,7 +108,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             onChainDirection: offerStruct.direction,
             onChainSettlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion,
-            chainID: offerStruct.chainID
+            chainID: offerStruct.chainID,
+            havePublicKey: false
         ) else {
             throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
         }
@@ -122,7 +126,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             serviceFeeRate: String(offer.serviceFeeRate),
             onChainDirection: String(offer.onChainDirection),
             protocolVersion: String(offer.protocolVersion),
-            chainID: String(offer.chainID)
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey
         )
         try databaseService.storeOffer(offer: offerForDatabase)
         var settlementMethodStrings: [String] = []
@@ -138,7 +143,6 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
         DispatchQueue.main.sync {
             offerTruthSource!.offers[offer.id] = offer
         }
-        #warning("TODO: try to get public key announcement data. if we have it, update the offer struct and add it to the ViewModel's list")
     }
     
     #warning("TODO: when we support multiple chains, someone could corrupt the interface's knowledge of settlement methods on Chain A by creating another offer with the same ID on Chain B and then changing the settlement methods of the offer on Chain B. If this interface is listening to both, it will detect the OfferEditedEvent from Chain B and then use the settlement methods from the offer on Chain B to update its local Offer object corresponding to the object from Chain A. We should only update settlement methods if the chainID of the OfferEditedEvent matches that of the already-stored offer")
@@ -175,7 +179,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             onChainDirection: offerStruct.direction,
             onChainSettlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion,
-            chainID: offerStruct.chainID
+            chainID: offerStruct.chainID,
+            havePublicKey: false
         ) else {
             throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
         }

@@ -62,4 +62,8 @@ struct DatabaseOffer: Equatable {
      The `chainID` property of an `Offer` as a `String`.
      */
     let chainID: String
+    /**
+     Corresponds to an Offer's `havePublicKey` property.
+     */
+    let havePublicKey: Bool
 }
