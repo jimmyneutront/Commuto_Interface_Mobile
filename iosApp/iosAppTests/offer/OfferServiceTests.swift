@@ -77,7 +77,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerOpenedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService(databaseService: databaseService, offerOpenedEventRepository: offerOpenedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerOpenedEventRepository: offerOpenedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -198,7 +198,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerCanceledEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService(databaseService: databaseService, offerCanceledEventRepository: offerCanceledEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerCanceledEventRepository: offerCanceledEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -313,7 +313,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerTakenEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService(databaseService: databaseService, offerTakenEventRepository: offerTakenEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerTakenEventRepository: offerTakenEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -427,7 +427,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerEditedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService(databaseService: databaseService, offerEditedEventRepository: offerEditedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, offerEditedEventRepository: offerEditedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             

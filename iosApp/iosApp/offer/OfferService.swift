@@ -85,9 +85,11 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during handleOfferOpenedEvent call")
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
-        let offerStruct = try blockchainService!.getOffer(id: event.id)
+        guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
+            throw OfferServiceError.unexpectedNilError(desc: "No on-chain offer was found with ID specified in OfferOpenedEvent in handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
+        }
         guard event.chainID == offerStruct.chainID else {
-            throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in handleOfferOpenedEvent call. OfferOpenedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID))
+            throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in handleOfferOpenedEvent call. OfferOpenedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID) + ", OfferOpenedEvent.id: " + event.id.uuidString)
         }
         guard let offer = Offer(
             isCreated: offerStruct.isCreated,
@@ -105,7 +107,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             protocolVersion: offerStruct.protocolVersion,
             chainID: offerStruct.chainID
         ) else {
-            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call")
+            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
         }
         let offerForDatabase = DatabaseOffer(
             id: offer.id.asData().base64EncodedString(),
@@ -153,7 +155,9 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during handleOfferEditedEvent call")
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
-        let offerStruct = try blockchainService!.getOffer(id: event.id)
+        guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
+            throw OfferServiceError.unexpectedNilError(desc: "No on-chain offer was found with ID specified in OfferEditedEvent in handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
+        }
         guard event.chainID == offerStruct.chainID else {
             throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferEditedEvent did not match chain ID of OfferStruct in handleOfferEditedEvent call. OfferEditedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID))
         }
@@ -173,7 +177,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
             protocolVersion: offerStruct.protocolVersion,
             chainID: offerStruct.chainID
         ) else {
-            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call")
+            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
         }
         let offerIdString = offer.id.asData().base64EncodedString()
         var settlementMethodStrings: [String] = []
@@ -205,7 +209,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable where _OfferTruthSource: 
         try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
         offerCanceledEventRepository.remove(event)
         guard offerTruthSource != nil else {
-            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call")
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call. ")
         }
         // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
         DispatchQueue.main.sync {

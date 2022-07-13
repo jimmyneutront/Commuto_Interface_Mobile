@@ -66,6 +66,7 @@ class Offer: ObservableObject {
      Corresponds to an on-chain Offer's `settlementMethods` property.
      */
     let onChainSettlementMethods: [Data]
+    #warning("TODO: every time this is changed, settlementMethods should be re-deserialized from the new values")
     /**
      An `Array` of `SettlementMethods` derived from parsing `onChainSettlementMethods`.
      */

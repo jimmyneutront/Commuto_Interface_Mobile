@@ -74,13 +74,16 @@ struct OfferStruct {
         - response: The `[AnyObject]` obtained by a read transaction call to getOffer.
         - chainID: The ID of the blockchain from which `response` was obtained.
      
-     - Returns: A new `OfferStruct` with property values derived from `response` and `chainID`.
+     - Returns: A new `OfferStruct` with property values derived from `response` and `chainID`, or `nil` if `response`'s `isCreated` property is `false`.
      
      - Throws: `BlockchainServiceError.unexpectedNilError` if an expected parameter in `response` is missing.
      */
-    static func createFromGetOfferResponse(response: [AnyObject], chainID: BigUInt) throws -> OfferStruct {
+    static func createFromGetOfferResponse(response: [AnyObject], chainID: BigUInt) throws -> OfferStruct? {
         guard let isCreated = response[0] as? Bool else {
             throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "isCreated"))
+        }
+        if !isCreated {
+            return nil
         }
         guard let isTaken: Bool = response[1] as? Bool else {
             throw BlockchainServiceError.unexpectedNilError(desc: makeCreationErrorMessage(valueName: "isTaken"))

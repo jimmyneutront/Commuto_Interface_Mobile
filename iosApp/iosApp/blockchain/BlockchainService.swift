@@ -175,11 +175,11 @@ class BlockchainService {
      
      - Parameter id: The id of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to get from the blockchain.
      
-     - Returns: The `OfferStruct` corresponding to `id`.
+     - Returns: The `OfferStruct` corresponding to `id`, or `nil` if no offer with an id equal to `id` exists.
      
      - Throws: `BlockchainServiceError.unexpectedNilError` if the chain ID is `nil`, if `nil` is returned during read transaction creation, or if `nil` is returned while getting offer data from the read transaction response.
      */
-    func getOffer(id: UUID) throws -> OfferStruct {
+    func getOffer(id: UUID) throws -> OfferStruct? {
         let method = "getOffer"
         guard let chainID = w3.provider.network?.chainID else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Got nil chain ID during getOffer call")
