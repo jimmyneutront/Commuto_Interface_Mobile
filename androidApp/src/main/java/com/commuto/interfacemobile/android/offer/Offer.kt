@@ -32,13 +32,15 @@ import java.util.UUID
  * @param onChainDirection Corresponds to an on-chain
  * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s direction property.
  * @param onChainSettlementMethods Corresponds to an on-chain
- * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s onChainSettlementMethods property.
+ * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s settlementMethods property.
  * @param protocolVersion Corresponds to an on-chain
  * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s protocolVersion property.
  * @param chainID The ID of the blockchain on which this Offer exists.
  *
  * @property direction The direction of the offer, indicating whether the maker is offering to buy stablecoin or sell
  * stablecoin.
+ * @property settlementMethods A [SnapshotStateList] of [SettlementMethod]s derived from parsing
+ * [onChainSettlementMethods].
  */
 data class Offer(
     val isCreated: Boolean,
@@ -76,7 +78,7 @@ data class Offer(
         onChainSettlementMethods.forEach {
             try {
                 settlementMethods.add(Json.decodeFromString(it.decodeToString()))
-            } catch(exception: Exception) { }
+            } catch(_: Exception) { }
         }
         this.settlementMethods = settlementMethods
     }
@@ -202,6 +204,7 @@ data class Offer(
         if (protocolVersion != other.protocolVersion) return false
         if (chainID != other.chainID) return false
         if (direction != other.direction) return false
+        if (settlementMethods != other.settlementMethods) return false
 
         return true
     }
@@ -222,6 +225,7 @@ data class Offer(
         result = 31 * result + protocolVersion.hashCode()
         result = 31 * result + chainID.hashCode()
         result = 31 * result + direction.hashCode()
+        result = 31 * result + settlementMethods.hashCode()
         return result
     }
 
