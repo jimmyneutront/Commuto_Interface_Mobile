@@ -30,7 +30,8 @@ class DatabaseServiceTest {
             "service_fee_rate",
             "direction",
             "some_version",
-            "a_chain_id"
+            "a_chain_id",
+            0L
         )
         databaseService.storeOffer(offerToStore)
         val anotherOfferToStore = Offer(
@@ -46,7 +47,8 @@ class DatabaseServiceTest {
             "another_service_fee_rate",
             "opposite_direction",
             "some_other_version",
-            "another_chain_id"
+            "another_chain_id",
+            0L
         )
         // This should do nothing and not throw
         databaseService.storeOffer(anotherOfferToStore)

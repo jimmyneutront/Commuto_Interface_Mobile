@@ -126,10 +126,12 @@ class OfferService (
             onChainDirection = offerStruct.direction,
             onChainSettlementMethods = offerStruct.settlementMethods,
             protocolVersion = offerStruct.protocolVersion,
-            chainID = offerStruct.chainID
+            chainID = offerStruct.chainID,
+            havePublicKey = false,
         )
         val isCreated = if (offerStruct.isCreated) 1L else 0L
         val isTaken = if (offerStruct.isTaken) 1L else 0L
+        val havePublicKey = if (offer.havePublicKey) 1L else 0L
         val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
         offerIDByteBuffer.putLong(offer.id.mostSignificantBits)
         offerIDByteBuffer.putLong(offer.id.leastSignificantBits)
@@ -147,7 +149,8 @@ class OfferService (
             serviceFeeRate = offer.serviceFeeRate.toString(),
             onChainDirection = offer.onChainDirection.toString(),
             protocolVersion = offer.protocolVersion.toString(),
-            chainID = offer.chainID.toString()
+            chainID = offer.chainID.toString(),
+            havePublicKey = havePublicKey,
         )
         databaseService.storeOffer(offerForDatabase)
         val settlementMethodStrings = offer.onChainSettlementMethods.map {
@@ -200,7 +203,8 @@ class OfferService (
             onChainDirection = offerStruct.direction,
             onChainSettlementMethods = offerStruct.settlementMethods,
             protocolVersion = offerStruct.protocolVersion,
-            chainID = offerStruct.chainID
+            chainID = offerStruct.chainID,
+            havePublicKey = false
         )
         val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
         offerIDByteBuffer.putLong(offer.id.mostSignificantBits)

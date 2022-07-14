@@ -109,10 +109,10 @@ data class OfferStruct(
          * if false.
          */
         fun createFromGetOfferResponse(offer: CommutoSwap.Offer, chainID: BigInteger): OfferStruct? {
-            if (!offer.isCreated) {
-                return null
+            return if (!offer.isCreated) {
+                null
             } else {
-                return OfferStruct(offer, chainID)
+                OfferStruct(offer, chainID)
             }
         }
     }
