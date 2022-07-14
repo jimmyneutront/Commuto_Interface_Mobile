@@ -6,11 +6,12 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import BigInt
+import Switrix
+import web3swift
 import XCTest
 
 @testable import iosApp
-@testable import web3swift
-import SwiftUI
 
 /**
  Tests for OfferService
@@ -496,4 +497,90 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("EUR-SEPA|an edited price here".utf8).base64EncodedString())
     }
+    
+    /**
+     Ensures that `OfferService` handles [Public Key Announcements](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) properly.
+     */
+    func testHandlePublicKeyAnnouncement() {
+        
+        class TestDatabaseService: DatabaseService {
+            
+            let offerHavePublicKeyUpdatedExpectation = XCTestExpectation(description: "Fulfilled when updateOfferHavePublicKey is called")
+            
+            override func updateOfferHavePublicKey(offerID: String, _chainID: String, _havePublicKey: Bool) throws {
+                try super.updateOfferHavePublicKey(offerID: offerID, _chainID: _chainID, _havePublicKey: _havePublicKey)
+                offerHavePublicKeyUpdatedExpectation.fulfill()
+            }
+        }
+        
+        let databaseService = try! TestDatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let offerService = OfferService<PreviewableOfferTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        
+        let offerTruthSource = PreviewableOfferTruthSource()
+        offerService.offerTruthSource = offerTruthSource
+        
+        let keyPair = try! keyManagerService.generateKeyPair(storeResult: false)
+        let publicKey = try! PublicKey(publicKey: keyPair.publicKey)
+        
+        let offerID = UUID()
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: offerID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: publicKey.interfaceId,
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.zero,
+            onChainSettlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt.zero,
+            havePublicKey: false
+        )!
+        offerTruthSource.offers[offerID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let publicKeyAnnouncement = PublicKeyAnnouncement(
+            offerId: offerID,
+            pubKey: publicKey
+        )
+        
+        // handlePublicKeyAnnouncement runs code synchronously on the main DispatchQueue, so we must call it like this to avoid deadlock
+        DispatchQueue.global().async {
+            try! offerService.handlePublicKeyAnnouncement(publicKeyAnnouncement)
+        }
+        
+        wait(for: [databaseService.offerHavePublicKeyUpdatedExpectation], timeout: 20)
+        XCTAssertTrue(offerTruthSource.offers[offerID]!.havePublicKey)
+        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())
+        XCTAssertTrue(offerInDatabase!.havePublicKey)
+        let keyInDatabase = try! keyManagerService.getPublicKey(interfaceId: publicKey.interfaceId)
+        XCTAssertEqual(keyInDatabase?.publicKey, publicKey.publicKey)
+    }
+    
 }

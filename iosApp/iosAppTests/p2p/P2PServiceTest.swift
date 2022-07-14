@@ -81,9 +81,9 @@ class P2PServiceTest: XCTestCase {
      */
     func testListen() {
         #warning("TODO: migrate to SwitrixSDK in this test")
-        let dbService = try! DatabaseService()
-        let kmService: KMService = KMService(dbService: dbService)
-        let keyPair = try! kmService.generateKeyPair(storeResult: false)
+        let databaseService = try! DatabaseService()
+        let keyManagerService: KeyManagerService = KeyManagerService(databaseService: databaseService)
+        let keyPair = try! keyManagerService.generateKeyPair(storeResult: false)
         var error: Unmanaged<CFError>?
         let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error)!
         
@@ -167,9 +167,7 @@ class P2PServiceTest: XCTestCase {
         class TestOfferService : OfferMessageNotifiable {
             func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
-
-        // For some reason, uncommenting the following line causes a EXC_BAD_ACCESS error
-        // self.creds!.accessToken = "not-a-real-token"
+        
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         let p2pService = P2PService(errorHandler: errorHandler, offerService: TestOfferService(), switrixClient: switrixClient)
         p2pService.listen()

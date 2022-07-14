@@ -21,6 +21,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      
      - Parameters:
         - databaseService: The `DatabaseService` that the `OfferService` will use for persistent storage.
+        - keyManagerService: The `KeyManagerService` that the `OfferService`will use for managing keys.
         - offerOpenedEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferOpenedEvent`s during `handleOfferOpenedEvent` calls.
         - offerEditedEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferEditedEvent`s during `handleOfferEditedEvent` calls.
         - offerCanceledEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferCanceledEvent`s during `handleOfferCanceledEvent` calls.
@@ -28,12 +29,14 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      */
     init(
         databaseService: DatabaseService,
+        keyManagerService: KeyManagerService,
         offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>(),
         offerEditedEventRepository: BlockchainEventRepository<OfferEditedEvent> = BlockchainEventRepository<OfferEditedEvent>(),
         offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent> = BlockchainEventRepository<OfferCanceledEvent>(),
         offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent> = BlockchainEventRepository<OfferTakenEvent>()
     ) {
         self.databaseService = databaseService
+        self.keyManagerService = keyManagerService
         self.offerOpenedEventRepository = offerOpenedEventRepository
         self.offerEditedEventRepository = offerEditedEventRepository
         self.offerCanceledEventRepository = offerCanceledEventRepository
@@ -54,6 +57,11 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      The `DatabaseService` that this uses for persistent storage.
      */
     private let databaseService: DatabaseService
+    
+    /**
+     The `KeyManagerService` that this uses for managing keys.
+     */
+    private let keyManagerService: KeyManagerService
     
     /**
      A repository containing `OfferOpenedEvent`s for offers that are open and for which complete offer information has not yet been retrieved.
@@ -245,6 +253,34 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             if offerTruthSource!.offers[event.id]?.chainID == event.chainID {
                 offerTruthSource!.offers.removeValue(forKey: event.id)
             }
+        }
+    }
+    
+    /**
+     The function called by `P2PService` to notify `OfferService` of a `PublicKeyAnnouncement`. Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker.
+     */
+    func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) throws {
+        if try keyManagerService.getPublicKey(interfaceId: message.publicKey.interfaceId) == nil {
+            try keyManagerService.storePublicKey(pubKey: message.publicKey)
+        }
+        guard offerTruthSource != nil else {
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handlePublicKeyAnnouncement call")
+        }
+        guard let offer = DispatchQueue.main.sync(execute: {
+            offerTruthSource!.offers[message.offerId]
+        }) else {
+            #warning("TODO: log that we got a public key announcement for a nonexistent offer here")
+            return
+        }
+        if offer.interfaceId == message.publicKey.interfaceId {
+            DispatchQueue.main.sync {
+                offerTruthSource!.offers[message.offerId]?.havePublicKey = true
+            }
+            let offerIDString = message.offerId.asData().base64EncodedString()
+            let chainIDString = String(offer.chainID)
+            try databaseService.updateOfferHavePublicKey(offerID: offerIDString, _chainID: chainIDString, _havePublicKey: true)
+        } else {
+            #warning("TODO: log that we got a possibly forged public key announcement")
         }
     }
     
