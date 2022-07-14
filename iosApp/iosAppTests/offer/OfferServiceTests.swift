@@ -140,6 +140,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
     
+    #warning("TODO: fix this test")
     /**
      Ensures that `OfferService` handles [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) events properly.
      */
