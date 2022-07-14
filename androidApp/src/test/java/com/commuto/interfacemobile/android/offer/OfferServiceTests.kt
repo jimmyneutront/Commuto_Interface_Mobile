@@ -175,6 +175,7 @@ class OfferServiceTests {
         }
     }
 
+    // TODO: fix this test
     /**
      * Ensures that [OfferService] handles
      * [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) events properly.
