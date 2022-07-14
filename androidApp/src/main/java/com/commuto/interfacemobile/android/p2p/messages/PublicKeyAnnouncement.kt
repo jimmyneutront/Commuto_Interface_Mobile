@@ -1,6 +1,6 @@
 package com.commuto.interfacemobile.android.p2p.messages
 
-import com.commuto.interfacemobile.android.keymanager.types.PublicKey
+import com.commuto.interfacemobile.android.key.keys.PublicKey
 import java.util.*
 
 /**

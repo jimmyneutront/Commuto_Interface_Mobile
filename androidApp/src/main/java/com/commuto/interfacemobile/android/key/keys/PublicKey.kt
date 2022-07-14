@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.keymanager.types
+package com.commuto.interfacemobile.android.key.keys
 
 import org.bouncycastle.asn1.ASN1Primitive
 import org.bouncycastle.asn1.DERNull
@@ -57,9 +57,8 @@ class PublicKey {
             .digest(toPkcs1Bytes())
     }
 
-    //TODO: make these private but make public getters
-    private val interfaceId: ByteArray
-    private val publicKey: JavaSecPublicKey
+    val interfaceId: ByteArray
+    val publicKey: JavaSecPublicKey
 
     /**
      * Verifies a signature using this [PublicKey].
@@ -95,7 +94,7 @@ class PublicKey {
      *
      * @return The PKCS#1 byte representation of this [PublicKey], as a [ByteArray].
      */
-    private fun toPkcs1Bytes(): ByteArray {
+    fun toPkcs1Bytes(): ByteArray {
         val pubKeyX509Bytes = this.publicKey.encoded
         val sPubKeyInfo: SubjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pubKeyX509Bytes)
         val pubKeyPrimitive: ASN1Primitive = sPubKeyInfo.parsePublicKey()

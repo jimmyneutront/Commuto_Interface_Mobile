@@ -1,7 +1,7 @@
 package com.commuto.interfacemobile.android.p2p
 
-import com.commuto.interfacemobile.android.keymanager.types.KeyPair
-import com.commuto.interfacemobile.android.keymanager.types.PublicKey
+import com.commuto.interfacemobile.android.key.keys.KeyPair
+import com.commuto.interfacemobile.android.key.keys.PublicKey
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.p2p.serializable.messages.SerializablePublicKeyAnnouncementMessage
 import com.commuto.interfacemobile.android.p2p.serializable.payloads.SerializablePublicKeyAnnouncementPayload

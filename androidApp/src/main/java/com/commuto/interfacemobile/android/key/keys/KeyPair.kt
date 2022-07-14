@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.keymanager.types
+package com.commuto.interfacemobile.android.key.keys
 
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1Primitive
