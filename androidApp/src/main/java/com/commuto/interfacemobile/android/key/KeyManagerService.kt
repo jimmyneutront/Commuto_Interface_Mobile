@@ -5,6 +5,8 @@ import com.commuto.interfacemobile.android.key.keys.KeyPair
 import com.commuto.interfacemobile.android.key.keys.PublicKey
 import java.security.MessageDigest
 import java.util.*
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * The Key Manager Service Class.
@@ -14,7 +16,8 @@ import java.util.*
  *
  * @property databaseService The Database Service used to store and retrieve data
  */
-class KeyManagerService(private var databaseService: DatabaseService) {
+@Singleton
+class KeyManagerService @Inject constructor(private var databaseService: DatabaseService) {
 
     /**
      * Generates an 2048-bit RSA key pair and computes the key pair's interface ID, which is the SHA-256 hash of the

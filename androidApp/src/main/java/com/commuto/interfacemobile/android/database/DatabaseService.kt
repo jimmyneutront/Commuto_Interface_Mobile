@@ -77,7 +77,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
      * @param havePublicKey The new value of the offer's [Offer.havePublicKey] property.
      */
     @OptIn(DelicateCoroutinesApi::class)
-    suspend fun updateOfferHavePublicKey(offerID: String, chainID: String, havePublicKey: Boolean) {
+    open suspend fun updateOfferHavePublicKey(offerID: String, chainID: String, havePublicKey: Boolean) {
         val havePublicKeyLong = if (havePublicKey) 1L else 0L
         withContext(databaseServiceContext) {
             database.updateOfferHavePublicKey(offerID, chainID, havePublicKeyLong)

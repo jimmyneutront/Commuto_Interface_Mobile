@@ -43,7 +43,7 @@ class P2PServiceTest {
             }
         }
         class TestOfferService : OfferMessageNotifiable {
-            override fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {
+            override suspend fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {
             }
         }
         val p2pService = P2PService(TestP2PExceptionHandler(), TestOfferService(), mxClient)
@@ -78,12 +78,10 @@ class P2PServiceTest {
         }
         class TestOfferService constructor(val expectedPKA: PublicKeyAnnouncement) : OfferMessageNotifiable {
             val publicKeyAnnouncementChannel = Channel<PublicKeyAnnouncement>()
-            override fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {
+            override suspend fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {
                 //TODO: compare interface ids
                 if (message.id == expectedPKA.id) {
-                    runBlocking {
-                        publicKeyAnnouncementChannel.send(message)
-                    }
+                    publicKeyAnnouncementChannel.send(message)
                 }
             }
         }
@@ -141,7 +139,7 @@ class P2PServiceTest {
         }
         val p2pExceptionHandler = TestP2PExceptionHandler()
         class TestOfferService : OfferMessageNotifiable {
-            override fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {}
+            override suspend fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {}
         }
         val p2pService = P2PService(p2pExceptionHandler, TestOfferService(), mxClient)
         p2pService.listen()

@@ -8,6 +8,9 @@ import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferEd
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferOpenedEvent
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferTakenEvent
 import com.commuto.interfacemobile.android.database.DatabaseService
+import com.commuto.interfacemobile.android.key.KeyManagerService
+import com.commuto.interfacemobile.android.p2p.OfferMessageNotifiable
+import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.ui.OffersViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +26,8 @@ import javax.inject.Singleton
  * [com.commuto.interfacemobile.android.p2p.P2PService] in order to maintain an accurate list of all
  * open [Offer]s in [OffersViewModel].
  *
- * @property databaseService The [DatabaseService] used for  persistent storage.
+ * @property databaseService The [DatabaseService] used for persistent storage.
+ * @property keyManagerService The [KeyManagerService] that the [OfferService] will use for managing keys.
  * @property offerOpenedEventRepository A repository containing [OfferOpenedEvent]s for offers that are open and for
  * which complete offer information has not yet been retrieved.
  * @property offerEditedEventRepository A repository containing [OfferEditedEvent]s for offers that are open and have
@@ -39,14 +43,16 @@ import javax.inject.Singleton
 @Singleton
 class OfferService (
     private val databaseService: DatabaseService,
+    private val keyManagerService: KeyManagerService,
     private val offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent>,
     private val offerEditedEventRepository: BlockchainEventRepository<OfferEditedEvent>,
     private val offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent>,
     private val offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent>
-): OfferNotifiable {
+): OfferNotifiable, OfferMessageNotifiable {
 
-    @Inject constructor(databaseService: DatabaseService): this(
+    @Inject constructor(databaseService: DatabaseService, keyManagerService: KeyManagerService): this(
         databaseService,
+        keyManagerService,
         BlockchainEventRepository(),
         BlockchainEventRepository(),
         BlockchainEventRepository(),
@@ -278,4 +284,41 @@ class OfferService (
             }
         }
     }
+
+    /**
+     * The method called by [com.commuto.interfacemobile.android.p2p.P2PService] to notify [OfferService] of a
+     * [PublicKeyAnnouncement]. Once notified, [OfferService] checks that the public key in [message] is not already
+     * saved in persistent storage via [keyManagerService], and does so if it is not. Then this checks
+     * [offerTruthSource] for an offer with the ID specified in [message] and an interface ID equal to that of the
+     * public key in [message]. If it finds such an offer, it updates the offer's [Offer.havePublicKey] property to
+     * true, to indicate that we have the public key necessary to take the offer and communicate with its maker.
+     */
+    override suspend fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {
+        if (keyManagerService.getPublicKey(message.publicKey.interfaceId) == null) {
+            keyManagerService.storePublicKey(message.publicKey)
+        }
+        val offer = withContext(Dispatchers.Main) {
+            offerTruthSource.offers[message.id]
+        }
+        if (offer == null) {
+            // TODO: log that we got a public key announcement for a nonexistent offer here
+            return
+        }
+        if (offer.interfaceId.contentEquals(message.publicKey.interfaceId)) {
+            withContext(Dispatchers.Main) {
+                offerTruthSource.offers[message.id]?.havePublicKey = true
+            }
+            val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
+            offerIDByteBuffer.putLong(message.id.mostSignificantBits)
+            offerIDByteBuffer.putLong(message.id.leastSignificantBits)
+            val offerIDByteArray = offerIDByteBuffer.array()
+            val offerIDString = Base64.getEncoder().encodeToString(offerIDByteArray)
+            val chainIDString = offer.chainID.toString()
+            databaseService.updateOfferHavePublicKey(offerIDString, chainIDString, true)
+        } else {
+            // TODO: log that we got a public key announcement for a nonexistent offer here
+            return
+        }
+    }
+
 }

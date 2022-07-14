@@ -6,6 +6,7 @@ import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferOp
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferTakenEvent
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
+import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.ui.OffersViewModel
@@ -45,7 +46,8 @@ class BlockchainServiceTest {
                 throw exception
             }
         }
-        val offersService = OfferService(DatabaseService(PreviewableDatabaseDriverFactory()))
+        val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
+        val offersService = OfferService(databaseService, KeyManagerService(databaseService))
         OffersViewModel(offersService)
         val blockchainService = BlockchainService(
             TestBlockchainExceptionHandler(),
