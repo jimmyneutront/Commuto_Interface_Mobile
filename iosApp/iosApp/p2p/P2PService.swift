@@ -8,6 +8,7 @@
 
 import CryptoKit
 import Foundation
+import os
 import PromiseKit
 import Switrix
 
@@ -31,6 +32,11 @@ class P2PService {
         self.offerService = offerService
         self.switrixClient = switrixClient
     }
+    
+    /**
+     P2PService's `Logger`.
+     */
+    private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "P2PService")
     
     /**
      An object to which `P2PService` will pass errors when they occur.
@@ -80,18 +86,22 @@ class P2PService {
      Creates a new  `Thread` to run `listenLoop()`, updates `listenThread` with a reference to the new `Thread`, and starts it.
      */
     func listen() {
+        logger.notice("Starting listen loop in new thread")
         listenThread = Thread { [self] in
             listenLoop()
         }
         listenThread!.start()
+        logger.notice("Started listen loop in new thread")
     }
     
     /**
      Invalidates the `Timer` resposible for repeatedly starting the listening process and cancels `listenThread`.
      */
     func stopListening() {
+        logger.notice("Invalidating listen loop timer and canceling listen loop thread")
         timer?.invalidate()
         listenThread?.cancel()
+        logger.notice("Invalidated listen loop timer and canceled listen loop thread")
     }
     
     /**
@@ -110,24 +120,33 @@ class P2PService {
     func listenLoop() {
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] _ in
             if (!isDoingListening) {
+                logger.notice("Beginning iteration of listen loop")
                 isDoingListening = true
                 firstly {
                     self.syncPromise()
-                }.then { [self] response in
-                    getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000).map { ($0, response.nextBatchToken)  }
+                }.then { [self] response -> Promise<(SwitrixGetEventsResponse, String)> in
+                    self.logger.notice("Synced with Matrix homeserver, got nextBatchToken: \(response.nextBatchToken)")
+                    return getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000).map { ($0, response.nextBatchToken)  }
                 }.done { [self] response, newToken in
+                    self.logger.notice("Got new messages from Matrix homeserver from lastNonEmptyBatchToken: \(self.lastNonEmptyBatchToken)")
                     try parseEvents(response.chunk)
+                    self.logger.notice("Finished parsing new events from chunk of size \(response.chunk.count)")
                     updateLastNonEmptyBatchToken(newToken)
+                    self.logger.notice("Updated lastNonEmptyBatchToken with new token: \(newToken)")
                 }.catch { [self] error in
+                    self.logger.error("Got an error during listen loop, calling error handler. Error: \(error.localizedDescription)")
                     errorHandler.handleP2PError(error)
                     if (error as NSError).domain == "NSURLErrorDomain" {
+                        self.logger.error("Detected error with internet connection; stopping listen loop.")
                         // There is a problem with the internet connection, so there is no point in continuing to listen for new events.
                         stopListening()
                     } else if let switrixError = error as? SwitrixError {
                         switch switrixError {
                         case .unknownToken:
+                            self.logger.error("Got unknown token error, stopping listen loop.")
                             stopListening()
                         case .missingToken:
+                            self.logger.error("Got missing token error, stopping listen loop.")
                             stopListening()
                         default:
                             break
@@ -135,6 +154,7 @@ class P2PService {
                     }
                 }.finally {
                     self.isDoingListening = false
+                    self.logger.info("Completed iteration of listen loop.")
                 }
             }
         }
@@ -144,7 +164,7 @@ class P2PService {
     }
     
     /**
-     A `Promise` wrapper around Switrix's `SwitrixSyncClient().sync()` method.
+    A `Promise` wrapper around Switrix's `SwitrixSyncClient().sync()` method.
      
      - Returns: A `Promise<SwitrixSyncResponse>`, in which the `SwitrixSyncResponse` is from the Commuto Interface Network test room.
      */
@@ -163,7 +183,7 @@ class P2PService {
     
     #warning("TODO: would be nice to specify to parameter here")
     /**
-     A `Promise` wrapper around Switrix's `SwitrixEventsClient().getEvents(...)` method. This method gets message events only from the Commuto Interface Network test room.
+    A `Promise` wrapper around Switrix's `SwitrixEventsClient().getEvents(...)` method. This method gets message events only from the Commuto Interface Network test room.
      
      - Parameters:
         - from: The batch token from which to start returning events.
@@ -185,7 +205,7 @@ class P2PService {
     }
     
     /**
-     Parses an array of `SwitrixClientEvent`s, filters out all non-message events, attempts to create message objects from the content bodies of message events, if present, and then passes any created offer-related message objects to `offerService`.
+    Parses an array of `SwitrixClientEvent`s, filters out all non-message events, attempts to create message objects from the content bodies of message events, if present, and then passes any created offer-related message objects to `offerService`.
      
      - Parameter events: a list of `SwitrixClientEvent`s.
      */
@@ -193,8 +213,10 @@ class P2PService {
         let messageEvents = events.filter { event in
             return event.type == "m.room.message"
         }
+        self.logger.notice("parseEvents: parsing \(messageEvents.count) m.room.message events")
         for event in messageEvents {
             if let pka = parsePublicKeyAnnouncement(messageString: (event.content as? SwitrixMessageEventContent)?.body) {
+                self.logger.notice("parseEvents: got Public Key Announcement message in event with Matrix event ID: \(event.eventId)")
                 try offerService.handlePublicKeyAnnouncement(pka)
             }
         }
@@ -202,7 +224,7 @@ class P2PService {
     }
     
     /**
-     Attempts to restore a PublicKeyAnnouncement from a given `String`.
+    Attempts to restore a PublicKeyAnnouncement from a given `String`.
      
      - Parameter messageString: A `String?` from which to try to restore a `PublicKeyAnnouncement`. If `messageString` is nil, `parsePublicKeyAnnouncement(...)` immediately returns nil.
      
