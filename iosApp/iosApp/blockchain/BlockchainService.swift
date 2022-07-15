@@ -8,6 +8,7 @@
 
 import BigInt
 import Foundation
+import os
 import PromiseKit
 import web3swift
 
@@ -33,6 +34,11 @@ class BlockchainService {
         w3 = web3Instance
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
     }
+    
+    /**
+     BlockchainService's `Logger`.
+     */
+    private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "BlockchainService")
     
     /**
      An object to which `BlockchainService` will pass errors when they occur.
@@ -93,19 +99,23 @@ class BlockchainService {
      Creates a new `Thread` to run `listenLoop()`,  updates `listenThread` with a reference to the new `Thread`, and starts it.
      */
     func listen() {
+        logger.notice("Starting listen loop in new thread")
         listenThread = Thread { [self] in
             runLoop = true
             listenLoop()
         }
         listenThread!.start()
+        logger.notice("Started listen loop in new thread")
     }
     
     /**
      Sets `runLoop` from false to prevent the listen loop from being executed again and cancels `listenThread`.
      */
     func stopListening() {
+        logger.notice("Stopping listen loop and canceling listen loop thread")
         runLoop = false
         listenThread?.cancel()
+        logger.notice("Stopped listen loop and canceled listen loop thread")
     }
     
     /**
@@ -122,29 +132,39 @@ class BlockchainService {
     func listenLoop() {
         while (runLoop) {
             do {
+                logger.notice("Beginning iteration of listen loop, last parsed block number: \(self.lastParsedBlockNum)")
                 newestBlockNum = UInt64(try getNewestBlockNumberPromise().wait())
                 if newestBlockNum > lastParsedBlockNum {
+                    logger.notice("Newest block number \(self.newestBlockNum) > last parsed block number \(self.lastParsedBlockNum)")
                     let blockToParseNumber = lastParsedBlockNum + UInt64(1)
                     let block = try getBlockPromise(blockToParseNumber).wait()
+                    logger.notice("Got block \(blockToParseNumber)")
                     try parseBlock(block)
+                    logger.notice("Parsed block \(blockToParseNumber)")
                     setLastParsedBlockNumber(blockToParseNumber)
+                    logger.notice("Updated last parsed block number as \(blockToParseNumber)")
                 } else {
+                    logger.notice("Newest block number \(self.newestBlockNum) <= last parsed block number \(self.lastParsedBlockNum), sleeping for \(self.listenInterval) sec")
                     sleep(listenInterval)
                 }
             } catch {
+                logger.error("Got an error during listen loop, calling error handler. Error: \(error.localizedDescription)")
                 errorHandler.handleBlockchainError(error)
                 if (error as NSError).domain == "NSURLErrorDomain" {
+                    logger.error("Detected error with internet connection; stopping listen loop.")
                     // There is a problem with the internet connection, so there is no point in continuing to listen to the blockchain.
                     stopListening()
                 } else {
                     switch error {
                     case Web3Error.connectionError:
+                        logger.error("Caught Web3Error.connectionError; stopping listen loop.")
                         stopListening()
                     default:
                         break
                     }
                 }
             }
+            logger.notice("Completed iteration of listen loop")
         }
     }
     
@@ -240,26 +260,31 @@ class BlockchainService {
      - Throws: `BlockchainServiceError.unexpectedNilError` if we attempt to create an event from an `EventParserResultProtocol` with corresponding event names, but get nil instead.
      */
     private func handleEvents(_ results: [EventParserResultProtocol], chainID: BigUInt) throws {
+        logger.info("handleEvents: handling \(results.count) events")
         for result in results {
             if result.eventName == "OfferOpened" {
                 guard let event = OfferOpenedEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferOpened event from EventParserResultProtocol")
                 }
+                logger.info("handleEvents: handling OfferOpened event")
                 try offerService.handleOfferOpenedEvent(event)
             } else if result.eventName == "OfferEdited" {
                 guard let event = OfferEditedEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferEdited event from EventParserResultProtocol")
                 }
+                logger.info("handleEvents: handling OfferEdited event")
                 try offerService.handleOfferEditedEvent(event)
             } else if result.eventName == "OfferCanceled" {
                 guard let event = OfferCanceledEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferCanceled event from EventParserResultProtocol")
                 }
                 try offerService.handleOfferCanceledEvent(event)
+                logger.info("handleEvents: handling OfferCanceled event")
             } else if result.eventName == "OfferTaken" {
                 guard let event = OfferTakenEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferTaken event from EventParserResultProtocol")
                 }
+                logger.info("handleEvents: handling OfferTaken event")
                 try offerService.handleOfferTakenEvent(event)
             }
         }
