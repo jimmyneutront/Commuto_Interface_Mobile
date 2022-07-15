@@ -33,6 +33,7 @@ import javax.inject.Singleton
  * @constructor Creates a new [P2PService] with the specified [P2PExceptionNotifiable],
  * [OfferMessageNotifiable] and [MatrixClientServerApiClient].
  *
+ * @property logTag The tag passed to [Log] calls.
  * @property exceptionHandler An object to which [P2PService] will pass errors when they occur.
  * @property offerService An object to which [P2PService] will pass offer-related messages when they
  * occur.
@@ -46,7 +47,6 @@ import javax.inject.Singleton
  * of Matrix events.
  * @property runLoop Boolean that indicates whether [listenLoop] should continue to execute its
  * loop.
- * @property logTag The tag passed to [Log] calls.
  */
 @Singleton
 class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiable,
