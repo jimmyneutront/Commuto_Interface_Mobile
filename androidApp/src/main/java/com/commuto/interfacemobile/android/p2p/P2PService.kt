@@ -1,5 +1,6 @@
 package com.commuto.interfacemobile.android.p2p
 
+import android.util.Log
 import com.commuto.interfacemobile.android.key.keys.PublicKey
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.p2p.serializable.messages.SerializablePublicKeyAnnouncementMessage
@@ -45,11 +46,14 @@ import javax.inject.Singleton
  * of Matrix events.
  * @property runLoop Boolean that indicates whether [listenLoop] should continue to execute its
  * loop.
+ * @property logTag The tag passed to [Log] calls.
  */
 @Singleton
 class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiable,
                              private val offerService: OfferMessageNotifiable,
                              private val mxClient: MatrixClientServerApiClient) {
+
+    private val logTag = "P2PService"
 
     private var lastNonEmptyBatchToken =
         "t1-2607497254_757284974_11441483_1402797642_1423439559_3319206_507472245_4060289024_0"
@@ -75,10 +79,12 @@ class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiabl
      */
     @OptIn(DelicateCoroutinesApi::class)
     fun listen() {
+        Log.i(logTag, "Starting listen loop in global coroutine scope")
         listenJob = GlobalScope.launch {
             runLoop = true
             listenLoop()
         }
+        Log.i(logTag, "Started listen loop in global coroutine scope")
     }
 
     /**
@@ -86,8 +92,10 @@ class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiabl
      * [listenJob].
      */
     fun stopListening() {
+        Log.i(logTag, "Stopping listen loop and canceling listen job")
         runLoop = false
         listenJob.cancel()
+        Log.i(logTag, "Stopped listen loop and canceled listen job")
     }
 
     /**
@@ -110,19 +118,28 @@ class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiabl
         while (runLoop) {
             try {
                 // TODO: This works for now, but it may skip messages. replace it with something better.
-                val syncResponse = mxClient.sync.sync(timeout = 60_000)
-                parseEvents(mxClient.rooms.getEvents(
+                Log.i(logTag, "Beginning iteration of listen loop")
+                val syncResponse = mxClient.sync.sync(timeout = 60_000).getOrThrow()
+                Log.i(logTag, "Synced with Matrix homeserver, got nextBatchToken: ${syncResponse.nextBatch}")
+                val eventsToParse = mxClient.rooms.getEvents(
                     roomId = RoomId(full = "!WEuJJHaRpDvkbSveLu:matrix.org"),
                     from = lastNonEmptyBatchToken,
                     dir = GetEvents.Direction.FORWARDS,
                     limit = 1_000_000_000_000L
-                ).getOrThrow().chunk!!)
-                updateLastNonEmptyBatchToken(syncResponse.getOrThrow().nextBatch)
+                ).getOrThrow().chunk!!
+                Log.i(logTag, "Got new messages from Matrix homeserver from lastNonEmptyBatchToken: " +
+                        lastNonEmptyBatchToken)
+                parseEvents(eventsToParse)
+                Log.i(logTag, "Finished parsing new events from chunk of size ${eventsToParse.size}")
+                updateLastNonEmptyBatchToken(syncResponse.nextBatch)
+                Log.i(logTag, "Updated lastNonEmptyBatchToken with new token: ${syncResponse.nextBatch}")
             } catch (e: Exception) {
+                Log.e(logTag, "Got an exception during listen loop, calling exception handler", e)
                 exceptionHandler.handleP2PException(e)
                 if (e is ConnectException ||
                     (e as? MatrixServerException)?.errorResponse is ErrorResponse.UnknownToken ||
                     (e as? MatrixServerException)?.errorResponse is ErrorResponse.MissingToken) {
+                    Log.i(logTag, "Stopping listen loop for exception", e)
                     stopListening()
                 }
             }
@@ -137,12 +154,15 @@ class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiabl
      * @param events A [List] of [Event.RoomEvent]s.
      */
     private suspend fun parseEvents(events: List<Event.RoomEvent<*>>) {
-        val testMessageEvents = events.filterIsInstance<Event.MessageEvent<*>>().filter {
+        val textMessageEvents = events.filterIsInstance<Event.MessageEvent<*>>().filter {
             it.content is RoomMessageEventContent.TextMessageEventContent
         }
-        for (event in testMessageEvents) {
+        Log.i(logTag, "parseEvents: parsing ${textMessageEvents.size} text message events")
+        for (event in textMessageEvents) {
             parsePublicKeyAnnouncement((event.content as RoomMessageEventContent.
             TextMessageEventContent).body)?.let {
+                Log.i(logTag, "parseEvents: got Public Key Announcement message in event with Matrix event ID: " +
+                        event.id.full)
                 offerService.handlePublicKeyAnnouncement(it)
             }
         }
