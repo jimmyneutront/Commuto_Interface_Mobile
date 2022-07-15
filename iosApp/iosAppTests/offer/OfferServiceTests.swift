@@ -140,7 +140,6 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
     
-    #warning("TODO: fix this test")
     /**
      Ensures that `OfferService` handles [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) events properly.
      */
@@ -150,32 +149,32 @@ class OfferServiceTests: XCTestCase {
             let commutoSwapAddress: String
             let offerId: String
         }
-        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        let openOfferResponseExpectation = XCTestExpectation(description: "Get response from testing server")
         var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_handleOfferCanceledEvent")!
         testingServerUrlComponents.queryItems = [
-            URLQueryItem(name: "events", value: "offer-opened-canceled")
+            URLQueryItem(name: "events", value: "offer-opened")
         ]
-        var request = URLRequest(url: testingServerUrlComponents.url!)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var offerOpenRequest = URLRequest(url: testingServerUrlComponents.url!)
+        offerOpenRequest.httpMethod = "GET"
+        offerOpenRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         var testingServerResponse: TestingServerResponse? = nil
-        var gotError = false
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+        var gotErrorForOpenRequest = false
+        let offerOpenRequestTask = URLSession.shared.dataTask(with: offerOpenRequest) { data, response, error in
             if let error = error {
                 print(error)
-                gotError = true
+                gotErrorForOpenRequest = true
             } else if let data = data {
                 testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
-                responseExpectation.fulfill()
+                openOfferResponseExpectation.fulfill()
             } else {
                 print(response!)
-                gotError = true
+                gotErrorForOpenRequest = true
             }
         }
-        task.resume()
-        wait(for: [responseExpectation], timeout: 60.0)
+        offerOpenRequestTask.resume()
+        wait(for: [openOfferResponseExpectation], timeout: 60.0)
         let expectedOfferID = UUID(uuidString: testingServerResponse!.offerId)!
-        XCTAssertTrue(!gotError)
+        XCTAssertTrue(!gotErrorForOpenRequest)
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
@@ -183,24 +182,24 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        class TestBlockchainEventRepository: BlockchainEventRepository<OfferCanceledEvent> {
+        class TestBlockchainEventRepository<Event: Equatable>: BlockchainEventRepository<Event> {
             
-            var appendedEvent: OfferCanceledEvent? = nil
-            var removedEvent: OfferCanceledEvent? = nil
+            var appendedEvent: Event? = nil
+            var removedEvent: Event? = nil
             
-            override func append(_ element: OfferCanceledEvent) {
-                appendedEvent = element
+            override func append(_ element: Event) {
                 super.append(element)
+                appendedEvent = element
             }
             
-            override func remove(_ elementToRemove: OfferCanceledEvent) {
-                removedEvent = elementToRemove
+            override func remove(_ elementToRemove: Event) {
                 super.remove(elementToRemove)
+                removedEvent = elementToRemove
             }
             
         }
         
-        let offerCanceledEventRepository = TestBlockchainEventRepository()
+        let offerCanceledEventRepository = TestBlockchainEventRepository<OfferCanceledEvent>()
         
         let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerCanceledEventRepository: offerCanceledEventRepository)
         
@@ -210,6 +209,7 @@ class OfferServiceTests: XCTestCase {
                 offers = [:]
             }
             
+            let offerAddedExpectation = XCTestExpectation(description: "Fulfuilled when an offer is added to the offers dictionary")
             let offerRemovedExpectation = XCTestExpectation(description: "Fulfilled when an offer is removed to the offers dictionary")
             var hasOfferBeenAdded = false
             
@@ -218,6 +218,7 @@ class OfferServiceTests: XCTestCase {
                     // We want to ignore initialization and offer addition and only fulfill when a new offer is actually removed
                     if offers.keys.count != 0 {
                         hasOfferBeenAdded = true
+                        offerAddedExpectation.fulfill()
                     } else {
                         if hasOfferBeenAdded {
                             offerRemovedExpectation.fulfill()
@@ -247,7 +248,34 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
-        wait(for: [offerTruthSource.offerRemovedExpectation], timeout: 60.0)
+        
+        wait(for: [offerTruthSource.offerAddedExpectation], timeout: 60.0)
+        
+        let cancelOfferResponseExpectation = XCTestExpectation(description: "Fulfilled when testing server responds to request for offer cancellation")
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-canceled"),
+            URLQueryItem(name: "commutoSwapAddress", value: testingServerResponse!.commutoSwapAddress)
+        ]
+        var offerCancellationRequest = URLRequest(url: testingServerUrlComponents.url!)
+        offerCancellationRequest.httpMethod = "GET"
+        offerCancellationRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var gotErrorForCancellationRequest = false
+        let cancellationRequestTask = URLSession.shared.dataTask(with: offerCancellationRequest) { data, response, error in
+            if let error = error {
+                print(error)
+                gotErrorForCancellationRequest = true
+            } else if data != nil {
+                cancelOfferResponseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotErrorForCancellationRequest = true
+            }
+        }
+        cancellationRequestTask.resume()
+        wait(for: [cancelOfferResponseExpectation], timeout: 10.0)
+        XCTAssertTrue(!gotErrorForCancellationRequest)
+        
+        wait(for: [offerTruthSource.offerRemovedExpectation], timeout: 20.0)
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 0)
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID] == nil)
