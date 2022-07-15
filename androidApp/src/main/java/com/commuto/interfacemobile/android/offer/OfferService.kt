@@ -101,8 +101,8 @@ class OfferService (
      *
      * @param event The [OfferOpenedEvent] of which [OfferService] is being notified.
      *
-     * @throws [IllegalStateException] if no offer is found with the ID specified in [event], or if the chain ID of [event]
-     * doesn't match the chain ID of the offer obtained from [BlockchainService.getOffer] when called with
+     * @throws [IllegalStateException] if no offer is found with the ID specified in [event], or if the chain ID of
+     * [event] doesn't match the chain ID of the offer obtained from [BlockchainService.getOffer] when called with
      * [OfferOpenedEvent.offerID].
      */
     @Throws(IllegalStateException::class)
