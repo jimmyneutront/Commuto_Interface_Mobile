@@ -103,7 +103,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
         guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
-            throw OfferServiceError.unexpectedNilError(desc: "No on-chain offer was found with ID specified in OfferOpenedEvent in handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
+            logger.notice("handleOfferOpenedEvent: no on-chain offer was found with ID specified in OfferOpenedEvent in handleOfferOpenedEvent call. OfferOpenedEvent.id: \(event.id.uuidString)")
+            return
         }
         logger.notice("handleOfferOpenedEvent: got offer \(event.id.uuidString)")
         guard event.chainID == offerStruct.chainID else {
@@ -181,7 +182,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
         guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
-            throw OfferServiceError.unexpectedNilError(desc: "No on-chain offer was found with ID specified in OfferEditedEvent in handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
+            logger.notice("handleOfferEditedEvent: no on-chain offer was found with ID specified in OfferOpenedEvent in handleOfferOpenedEvent call. OfferOpenedEvent.id: \(event.id.uuidString)")
+            return
         }
         logger.notice("handleOfferEditedEvent: got offer \(event.id.uuidString)")
         guard event.chainID == offerStruct.chainID else {
