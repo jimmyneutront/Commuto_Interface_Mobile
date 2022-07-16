@@ -7,6 +7,7 @@
 
 import CryptoKit
 import Foundation
+import os
 import Security
 
 #warning("TODO: rename this as KeyManagerService")
@@ -18,11 +19,6 @@ import Security
 class KeyManagerService {
     
     /**
-     The `DatabaseService` that `KeyManagerService` uses for persistent storage.
-     */
-    var databaseService: DatabaseService
-    
-    /**
      Creates a new `KeyManagerService`.
      
      - Parameter databaseService: The `DatabaseService` that this `KeyManagerService` uses for persistent storage.
@@ -30,6 +26,16 @@ class KeyManagerService {
     init(databaseService: DatabaseService) {
         self.databaseService = databaseService
     }
+    
+    /**
+     KeyManagerService's `Logger`.
+     */
+    private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "KeyManagerService")
+    
+    /**
+     The `DatabaseService` that `KeyManagerService` uses for persistent storage.
+     */
+    var databaseService: DatabaseService
     
     /**
      Generates an 2048-bit RSA key pair and computes the key pair's interface ID, which is the SHA-256 hash of the PKCS#1 byte array encoded representation of the public key.
@@ -45,7 +51,9 @@ class KeyManagerService {
             let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
             let privKeyB64Str = try keyPair.privKeyToPkcs1Bytes().base64EncodedString()
             try databaseService.storeKeyPair(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str, privateKey: privKeyB64Str)
+            logger.info("generateKeyPair: stored new key pair with interface id \(interfaceIdB64Str)")
         }
+        logger.info("generateKeyPair: returning new key pair \(keyPair.interfaceId.base64EncodedString())")
         return keyPair
     }
     
@@ -62,8 +70,10 @@ class KeyManagerService {
         if databaseKeyPair != nil {
             let pubKeyBytes = Data(base64Encoded: databaseKeyPair!.publicKey)!
             let privKeyBytes = Data(base64Encoded: databaseKeyPair!.privateKey)!
+            logger.info("getKeyPair: trying to return key pair \(interfaceIdB64Str)")
             return try KeyPair(publicKeyBytes: pubKeyBytes, privateKeyBytes: privKeyBytes)
         } else {
+            logger.info("getKeyPair: key pair \(interfaceIdB64Str) not found")
             return nil
         }
     }
@@ -77,6 +87,7 @@ class KeyManagerService {
         let interfaceIdB64Str = pubKey.interfaceId.base64EncodedString()
         let pubKeyB64Str = try pubKey.toPkcs1Bytes().base64EncodedString()
         try databaseService.storePublicKey(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str)
+        logger.info("storePublicKey: stored public key \(interfaceIdB64Str)")
     }
     
     /**
@@ -91,8 +102,10 @@ class KeyManagerService {
         let dbPubKey: DatabasePublicKey? = try databaseService.getPublicKey(interfaceId: interfaceIdB64Str)
         if dbPubKey != nil {
             let pubKeyBytes: Data = Data(base64Encoded: dbPubKey!.publicKey)!
+            logger.info("getPublicKey: trying to return public key \(interfaceIdB64Str)")
             return try PublicKey(publicKeyBytes: pubKeyBytes)
         } else {
+            logger.info("getPublicKey: public key \(interfaceIdB64Str) not found")
             return nil
         }
     }
