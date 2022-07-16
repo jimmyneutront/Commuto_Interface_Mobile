@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 import SQLite
 
 /**
@@ -22,6 +23,11 @@ class DatabaseService {
     init() throws {
         connection = try Connection(.inMemory)
     }
+    
+    /**
+     DatabaseService's `Logger`.
+     */
+    private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "DatabaseService")
     
     /**
      The connection to the SQLite database.
@@ -179,8 +185,10 @@ class DatabaseService {
                     chainID <- offer.chainID,
                     havePublicKey <- offer.havePublicKey
                 ))
+                logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
                 // An Offer with the specified id already exists in the database, so we do nothing
+                logger.notice("storeOffer: offer with B64 ID \(offer.id) already exists in database")
             }
         }
     }
@@ -197,6 +205,7 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             try connection.run(offers.filter(offerId == offerID && chainID == _chainID).update(havePublicKey <- _havePublicKey))
         }
+        logger.notice("updateOfferHavePublicKey: set value to \(_havePublicKey) for offer with B64 ID \(offerID), if present")
     }
     
     /**
@@ -210,6 +219,7 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             try connection.run(offers.filter(offerId == offerID && chainID == _chainID).delete())
         }
+        logger.notice("deleteOffers: deleted offers with B64 ID \(offerID) and chain ID \(_chainID), if present")
     }
     
     /**
@@ -236,6 +246,7 @@ class DatabaseService {
             guard result[0][offerId] == id else {
                 throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned Offer did not match specified offer ID " + id)
             }
+            logger.notice("getOffer: returning offer with B64 ID \(id)")
             return DatabaseOffer(
                 id: result[0][offerId],
                 isCreated: result[0][isCreated],
@@ -253,6 +264,7 @@ class DatabaseService {
                 havePublicKey: result[0][havePublicKey]
             )
         } else {
+            logger.notice("getOffer: no offer found with B64 ID \(id)")
             return nil
         }
     }
@@ -276,6 +288,7 @@ class DatabaseService {
                 ))
             }
         }
+        logger.notice("storeSettlementMethods: stored \(_settlementMethods.count) for offer with B64 ID \(offerID)")
     }
     
     /**
@@ -289,6 +302,7 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             try connection.run(settlementMethods.filter(offerId == offerID && chainID == _chainID).delete())
         }
+        logger.notice("deleteSettlementMethods: deleted for offer with B64 ID \(offerID)")
     }
 
     /**
@@ -316,8 +330,10 @@ class DatabaseService {
             for (index, _) in result.enumerated() {
                 settlementMethodsArray.append(result[index][settlementMethod])
             }
+            logger.notice("getSettlementMethods: returning \(settlementMethodsArray.count) for offer with B64 ID \(offerID)")
             return settlementMethodsArray
         } else {
+            logger.notice("getSettlementMethods: none found for offer with B64 ID \(offerID)")
             return nil
         }
     }
@@ -336,8 +352,10 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             do {
                 try connection.run(keyPairs.insert(interfaceId <- interf_id, publicKey <- pub_key, privateKey <- priv_key))
+                logger.notice("storeKeyPair: stored with interface ID \(interf_id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: KeyPair.interfaceId" {
                 // A KeyPair with the specified interface ID already exists in the database, so we do nothing
+                logger.notice("storeKeyPair: key pair with interface ID \(interf_id) already exists in database")
             }
         }
     }
@@ -366,8 +384,10 @@ class DatabaseService {
             guard result[0][interfaceId] == interfId else {
                 throw DatabaseServiceError.unexpectedQueryResult(message: "Returned interface id " + result[0][interfaceId] + " did not match specified interface id " + interfId)
             }
+            logger.notice("getKeyPair: returning key pair with interface ID \(interfId)")
             return DatabaseKeyPair(interfaceId: result[0][interfaceId], publicKey: result[0][publicKey], privateKey: result[0][privateKey])
         } else {
+            logger.notice("getKeyPair: no key pair found with interface ID \(interfId)")
             return nil
         }
     }
@@ -383,8 +403,10 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             do {
                 try connection.run(publicKeys.insert(interfaceId <- interf_id, publicKey <- pub_key))
+                logger.notice("storePublicKey: stored with interface ID \(interf_id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: PublicKey.interfaceId" {
                 // A PublicKey with the specified interface ID already exists in the database, so we do nothing
+                logger.notice("storePublicKey: public key with interface ID \(interf_id) already exists in database")
             }
         }
     }
@@ -412,8 +434,10 @@ class DatabaseService {
             guard result[0][interfaceId] == interfId else {
                 throw DatabaseServiceError.unexpectedQueryResult(message: "Returned interface id " + result[0][interfaceId] + " did not match specified interface id " + interfId)
             }
+            logger.notice("getPublicKey: returning public key with interface ID \(interfId)")
             return DatabasePublicKey(interfaceId: result[0][interfaceId], publicKey: result[0][publicKey])
         } else {
+            logger.notice("getPublicKey: no public key found with interface ID \(interfId)")
             return nil
         }
     }
