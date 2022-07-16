@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 import PromiseKit
 import web3swift
 
@@ -41,6 +42,11 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         self.offerCanceledEventRepository = offerCanceledEventRepository
         self.offerTakenEventRepository = offerTakenEventRepository
     }
+    
+    /**
+     OfferService's `Logger`.
+     */
+    private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "OfferService")
     
     /**
      An object adopting `OfferTruthSource` in which this is responsible for maintaining an accurate list of all open offers.
@@ -90,6 +96,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      - Throws: `OfferServiceError.unexpectedNilError` or `OfferServiceError.nonmatchingChainIDError`.
      */
     func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {
+        logger.notice("handleOfferOpenedEvent: handling event for offer \(event.id.uuidString)")
         offerOpenedEventRepository.append(event)
         guard blockchainService != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during handleOfferOpenedEvent call")
@@ -98,10 +105,12 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
             throw OfferServiceError.unexpectedNilError(desc: "No on-chain offer was found with ID specified in OfferOpenedEvent in handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
         }
+        logger.notice("handleOfferOpenedEvent: got offer \(event.id.uuidString)")
         guard event.chainID == offerStruct.chainID else {
             throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in handleOfferOpenedEvent call. OfferOpenedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID) + ", OfferOpenedEvent.id: " + event.id.uuidString)
         }
         let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
+        logger.notice("handleOfferOpenedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
         guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
@@ -138,11 +147,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             havePublicKey: offer.havePublicKey
         )
         try databaseService.storeOffer(offer: offerForDatabase)
+        logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
         var settlementMethodStrings: [String] = []
         for settlementMethod in offer.onChainSettlementMethods {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
         try databaseService.storeSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
+        logger.notice("handleOfferOpenedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
         offerOpenedEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
@@ -151,6 +162,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         DispatchQueue.main.sync {
             offerTruthSource!.offers[offer.id] = offer
         }
+        logger.notice("handleOfferOpenedEvent: added offer \(offer.id.uuidString) to offerTruthSource")
     }
     
     #warning("TODO: when we support multiple chains, someone could corrupt the interface's knowledge of settlement methods on Chain A by creating another offer with the same ID on Chain B and then changing the settlement methods of the offer on Chain B. If this interface is listening to both, it will detect the OfferEditedEvent from Chain B and then use the settlement methods from the offer on Chain B to update its local Offer object corresponding to the object from Chain A. We should only update settlement methods if the chainID of the OfferEditedEvent matches that of the already-stored offer")
@@ -162,6 +174,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      - Throws: `OfferServiceError.unexpectedNilError` or `OfferServiceError.nonmatchingChainIDError`.
      */
     func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {
+        logger.notice("handleOfferEditedEvent: handling event for offer \(event.id.uuidString)")
         offerEditedEventRepository.append(event)
         guard blockchainService != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during handleOfferEditedEvent call")
@@ -170,10 +183,12 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
             throw OfferServiceError.unexpectedNilError(desc: "No on-chain offer was found with ID specified in OfferEditedEvent in handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
         }
+        logger.notice("handleOfferEditedEvent: got offer \(event.id.uuidString)")
         guard event.chainID == offerStruct.chainID else {
             throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferEditedEvent did not match chain ID of OfferStruct in handleOfferEditedEvent call. OfferEditedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID))
         }
         let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
+        logger.notice("handleOfferEditedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
         guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
@@ -196,11 +211,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         let offerIdString = offer.id.asData().base64EncodedString()
         let chainIDString = String(offer.chainID)
         try databaseService.updateOfferHavePublicKey(offerID: offerIdString, _chainID: chainIDString, _havePublicKey: offer.havePublicKey)
+        logger.notice("handleOfferEditedEvent: persistently updated havePublicKey for offer \(offer.id.uuidString)")
         var settlementMethodStrings: [String] = []
         for settlementMethod in offerStruct.settlementMethods {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
         try databaseService.storeSettlementMethods(offerID: offerIdString, _chainID: chainIDString, settlementMethods: settlementMethodStrings)
+        logger.notice("handleOfferEditedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
         offerEditedEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferEditedEvent call")
@@ -209,6 +226,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         DispatchQueue.main.sync {
             offerTruthSource!.offers[offer.id] = offer
         }
+        logger.notice("handleOfferEditedEvent: added updated offer \(offer.id.uuidString) to offerTruthSource")
     }
     
     /**
@@ -219,13 +237,16 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      - Throws: `OfferServiceError.unexpectedNilError`if `offerTruthSource` is nil.
      */
     func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {
+        logger.notice("handleOfferCanceledEvent: handling event for offer \(event.id.uuidString)")
         let offerIdString = event.id.asData().base64EncodedString()
         offerCanceledEventRepository.append(event)
         try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
+        logger.notice("handleOfferCanceledEvent: deleted offer \(event.id.uuidString) from persistent storage")
         try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
+        logger.notice("handleOfferCanceledEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
         offerCanceledEventRepository.remove(event)
         guard offerTruthSource != nil else {
-            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call. ")
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call")
         }
         // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
         DispatchQueue.main.sync {
@@ -233,6 +254,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 offerTruthSource!.offers.removeValue(forKey: event.id)
             }
         }
+        logger.notice("handleOfferCanceledEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
     }
     
     /**
@@ -243,10 +265,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      - Throws: `OfferServiceError.unexpectedNilError`if `offerTruthSource` is nil.
      */
     func handleOfferTakenEvent(_ event: OfferTakenEvent) throws {
+        logger.notice("handleOfferTakenEvent: handling event for offer \(event.id.uuidString)")
         let offerIdString = event.id.asData().base64EncodedString()
         offerTakenEventRepository.append(event)
         try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
+        logger.notice("handleOfferTakenEvent: deleted offer \(event.id.uuidString) from persistent storage")
         try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
+        logger.notice("handleOfferTakenEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
         offerTakenEventRepository.remove(event)
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferTakenEvent call")
@@ -257,14 +282,19 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 offerTruthSource!.offers.removeValue(forKey: event.id)
             }
         }
+        logger.notice("handleOfferTakenEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
     }
     
     /**
      The function called by `P2PService` to notify `OfferService` of a `PublicKeyAnnouncement`. Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker.
      */
     func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) throws {
+        logger.notice("handlePublicKeyAnnouncement: handling announcement for offer \(message.offerId.uuidString)")
         if try keyManagerService.getPublicKey(interfaceId: message.publicKey.interfaceId) == nil {
             try keyManagerService.storePublicKey(pubKey: message.publicKey)
+            logger.notice("handlePublicKeyAnnouncement: persistently stored new public key with interface ID \(message.publicKey.interfaceId.base64EncodedString()) for offer \(message.offerId.uuidString)")
+        } else {
+            logger.notice("handlePublicKeyAnnouncement: already had public key in announcement in persistent storage. Interface ID: \(message.publicKey.interfaceId.base64EncodedString())")
         }
         guard offerTruthSource != nil else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handlePublicKeyAnnouncement call")
@@ -272,18 +302,20 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         guard let offer = DispatchQueue.main.sync(execute: {
             offerTruthSource!.offers[message.offerId]
         }) else {
-            #warning("TODO: log that we got a public key announcement for a nonexistent offer here")
+            logger.notice("handlePublicKeyAnnouncement: got announcement for offer not in offerTruthSource: \(message.offerId.uuidString)")
             return
         }
         if offer.interfaceId == message.publicKey.interfaceId {
             DispatchQueue.main.sync {
                 offerTruthSource!.offers[message.offerId]?.havePublicKey = true
             }
+            logger.notice("handlePublicKeyAnnouncement: set havePublicKey true for offer \(message.offerId.uuidString)")
             let offerIDString = message.offerId.asData().base64EncodedString()
             let chainIDString = String(offer.chainID)
             try databaseService.updateOfferHavePublicKey(offerID: offerIDString, _chainID: chainIDString, _havePublicKey: true)
+            logger.notice("handlePublicKeyAnnouncement: persistently set havePublicKeyTrue for offer \(message.offerId.uuidString)")
         } else {
-            #warning("TODO: log that we got a possibly forged public key announcement")
+            logger.notice("handlePublicKeyAnnouncement: interface ID of public key did not match that of offer \(message.offerId.uuidString) specified in announcement. Offer interface id: \(offer.interfaceId.base64EncodedString()), announcement interface id: \(message.publicKey.interfaceId.base64EncodedString())")
         }
     }
     
