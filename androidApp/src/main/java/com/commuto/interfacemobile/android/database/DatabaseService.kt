@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.database
 
 // TODO: Figure out why these are interfacedesktop instaed of interfacemobile.android
+import android.util.Log
 import com.commuto.interfacedesktop.db.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.newSingleThreadContext
@@ -16,12 +17,15 @@ import javax.inject.Singleton
  * add and remove data from storage.
  *
  * @property databaseDriverFactory the DatabaseDriverFactory that DBService will use to interact with the database.
+ * @property logTag The tag passed to [Log] calls.
  * @property database The [Database] holding Commuto Interface data.
  * @property databaseServiceContext The single-threaded CoroutineContext in which all database read and write operations
  * are run, in order to prevent data races.
  */
 @Singleton
 open class DatabaseService @Inject constructor(private val databaseDriverFactory: DatabaseDriverFactory) {
+
+    private val logTag = "DatabaseService"
 
     private val database = Database(databaseDriverFactory)
     // We want to run all database operations on a single thread to prevent data races.
@@ -56,6 +60,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             withContext(databaseServiceContext) {
                 database.insertOffer(offer)
             }
+            Log.i(logTag, "storeOffer: stored offer with B64 ID ${offer.offerId}")
         } catch (exception: SQLiteException) {
             /*
             The result code for a UNIQUE constraint failure; see here: https://www.sqlite.org/rescode.html
@@ -64,6 +69,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             if (exception.resultCode.code != 2067) {
                 throw exception
             }
+            Log.i(logTag, "storeOffer: offer with B64 ID ${offer.offerId} already exists in database")
         }
     }
 
@@ -82,6 +88,8 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
         withContext(databaseServiceContext) {
             database.updateOfferHavePublicKey(offerID, chainID, havePublicKeyLong)
         }
+        Log.i(logTag, "updateOfferHavePublicKey: set value to $havePublicKey for offer with B64 ID $offerID, if " +
+                "present")
     }
 
     /**
@@ -98,6 +106,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
         withContext(databaseServiceContext) {
             database.deleteOffer(offerID, chainID)
         }
+        Log.i(logTag, "deleteOffers: deleted offers with B64 ID $offerID and chain ID $chainID, if present")
     }
 
     /**
@@ -120,8 +129,10 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             check(dbOffers[0].offerId == id) {
                 "Returned offer id $id did not match specified offer id $id"
             }
+            Log.i(logTag, "getOffer: returning offer with B64 ID $id")
             dbOffers[0]
         } else {
+            Log.i(logTag, "getOffer: no offer found with B64 ID $id")
             null
         }
     }
@@ -143,6 +154,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
                 database.insertSettlementMethod(SettlementMethod(offerID, chainID, settlementMethod))
             }
         }
+        Log.i(logTag, "storeSettlementMethods: stored ${settlementMethods.size} for offer with B64 ID $offerID")
     }
 
     /**
@@ -161,6 +173,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
         withContext(databaseServiceContext) {
             database.deleteSettlementMethods(offerID, chainID)
         }
+        Log.i(logTag, "deleteSettlementMethods: deleted for offer with B64 ID $offerID")
     }
 
     /**
@@ -182,10 +195,14 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             database.selectSettlementMethodByOfferIdAndChainID(offerID, chainID)
         }
         return if (dbSettlementMethods.isNotEmpty()) {
+            Log.i(logTag, "getSettlementMethods: returning ${dbSettlementMethods.size} for offer with B64 ID " +
+                    offerID
+            )
             dbSettlementMethods.map {
                 it.settlementMethod
             }
         } else {
+            Log.i(logTag, "getSettlementMethods: none found for offer with B64 ID $offerID")
             null
         }
     }
@@ -207,6 +224,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             withContext(databaseServiceContext) {
                 database.insertKeyPair(keyPair)
             }
+            Log.i(logTag, "storeKeyPair: stored with interface ID $interfaceId")
         } catch (exception: SQLiteException) {
             /*
             The result code for a UNIQUE constraint failure; see here: https://www.sqlite.org/rescode.html
@@ -215,6 +233,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             if (exception.resultCode.code != 2067) {
                 throw exception
             }
+            Log.i(logTag, "storeKeyPair: key pair with interface ID $interfaceId already exists in database")
         }
     }
 
@@ -242,8 +261,10 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
                 "Returned interface id " + dbKeyPairs[0].interfaceId + " did not match specified interface id " +
                         interfaceId
             }
+            Log.i(logTag, "getKeyPair: returning key pair with interface ID $interfaceId")
             KeyPair(interfaceId, dbKeyPairs[0].publicKey, dbKeyPairs[0].privateKey)
         } else {
+            Log.i(logTag, "getKeyPair: no key pair found with interface ID $interfaceId")
             null
         }
     }
@@ -263,6 +284,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             withContext(databaseServiceContext) {
                 database.insertPublicKey(databasePublicKey)
             }
+            Log.i(logTag, "storePublicKey: stored with interface ID $interfaceId")
         } catch (exception: SQLiteException) {
             /*
             The result code for a UNIQUE constraint failure; see here: https://www.sqlite.org/rescode.html
@@ -271,6 +293,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             if (exception.resultCode.code != 2067) {
                 throw exception
             }
+            Log.i(logTag, "storePublicKey: public key with interface ID $interfaceId already exists in database")
         }
     }
 
@@ -298,8 +321,10 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
                 "Returned interface id " + dbPublicKeys[0].interfaceId + " did not match specified interface id " +
                         interfaceId
             }
+            Log.i(logTag, "getPublicKey: returning public key with interface ID $interfaceId")
             PublicKey(interfaceId, dbPublicKeys[0].publicKey)
         } else {
+            Log.i(logTag, "getPublicKey: no public key found with interface ID $interfaceId")
             null
         }
     }
