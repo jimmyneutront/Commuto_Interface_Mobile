@@ -1,5 +1,6 @@
 package com.commuto.interfacemobile.android.key
 
+import android.util.Log
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.key.keys.KeyPair
 import com.commuto.interfacemobile.android.key.keys.PublicKey
@@ -15,9 +16,12 @@ import javax.inject.Singleton
  * public keys.
  *
  * @property databaseService The Database Service used to store and retrieve data
+ * @property logTag The tag passed to [Log] calls.
  */
 @Singleton
 class KeyManagerService @Inject constructor(private var databaseService: DatabaseService) {
+
+    private val logTag = "KeyManagerService"
 
     /**
      * Generates an 2048-bit RSA key pair and computes the key pair's interface ID, which is the SHA-256 hash of the
@@ -32,13 +36,16 @@ class KeyManagerService @Inject constructor(private var databaseService: Databas
     suspend fun generateKeyPair(storeResult: Boolean = true): KeyPair {
         val keyPair = KeyPair()
         val encoder = Base64.getEncoder()
+        val interfaceIDString = encoder.encodeToString(keyPair.interfaceId)
         if (storeResult) {
             databaseService.storeKeyPair(
-                encoder.encodeToString(keyPair.interfaceId),
+                interfaceIDString,
                 encoder.encodeToString(keyPair.pubKeyToPkcs1Bytes()),
                 encoder.encodeToString(keyPair.privKeyToPkcs1Bytes())
             )
+            Log.i(logTag, "generateKeyPair: stored new key pair with interface id $interfaceIDString")
         }
+        Log.i(logTag, "generateKeyPair: returning new key pair $interfaceIDString")
         return keyPair
     }
 
@@ -54,12 +61,14 @@ class KeyManagerService @Inject constructor(private var databaseService: Databas
      */
     suspend fun getKeyPair(interfaceId: ByteArray): KeyPair? {
         val encoder = Base64.getEncoder()
-        val dbKeyPair: com.commuto.interfacedesktop.db.KeyPair? = databaseService.getKeyPair(encoder
-            .encodeToString(interfaceId))
+        val interfaceIDString = encoder.encodeToString(interfaceId)
+        val dbKeyPair: com.commuto.interfacedesktop.db.KeyPair? = databaseService.getKeyPair(interfaceIDString)
         val decoder = Base64.getDecoder()
         return if (dbKeyPair != null) {
+            Log.i(logTag, "getKeyPair: trying to return key pair ${dbKeyPair.interfaceId}")
             KeyPair(decoder.decode(dbKeyPair.publicKey), decoder.decode(dbKeyPair.privateKey))
         } else {
+            Log.i(logTag, "getKeyPair: key pair $interfaceIDString not found")
             null
         }
     }
@@ -75,10 +84,12 @@ class KeyManagerService @Inject constructor(private var databaseService: Databas
         val interfaceId: ByteArray = MessageDigest.getInstance("SHA-256")
             .digest(pubKey.toPkcs1Bytes())
         val encoder = Base64.getEncoder()
+        val interfaceIDString = encoder.encodeToString(interfaceId)
         databaseService.storePublicKey(
-            encoder.encodeToString(interfaceId),
+            interfaceIDString,
             encoder.encodeToString(pubKey.toPkcs1Bytes())
         )
+        Log.i(logTag, "storePublicKey: stored public key $interfaceIDString")
     }
 
     /**
@@ -93,12 +104,14 @@ class KeyManagerService @Inject constructor(private var databaseService: Databas
      */
     suspend fun getPublicKey(interfaceId: ByteArray): PublicKey? {
         val encoder = Base64.getEncoder()
-        val dbPubKey: com.commuto.interfacedesktop.db.PublicKey? = databaseService.getPublicKey(encoder
-            .encodeToString(interfaceId))
+        val interfaceIDString = encoder.encodeToString(interfaceId)
+        val dbPubKey: com.commuto.interfacedesktop.db.PublicKey? = databaseService.getPublicKey(interfaceIDString)
         val decoder = Base64.getDecoder()
         return if (dbPubKey != null) {
+            Log.i(logTag, "getPublicKey: trying to return public key ${dbPubKey.interfaceId}")
             PublicKey(decoder.decode(dbPubKey.publicKey))
         } else {
+            Log.i(logTag, "getPublicKey: public key $interfaceIDString not found")
             null
         }
     }
