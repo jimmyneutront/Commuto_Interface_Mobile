@@ -10,5 +10,5 @@ target 'iosApp' do
   #pod 'trixnity_clientserverapi_client', :path => '../../trixnity/trixnity-clientserverapi/trixnity-clientserverapi-client'
   target :iosAppTests
     pod 'Switrix', :path => '../../Switrix'
-    pod 'MatrixSDK'
+    pod 'MatrixSDK', '0.23.8'
 end
