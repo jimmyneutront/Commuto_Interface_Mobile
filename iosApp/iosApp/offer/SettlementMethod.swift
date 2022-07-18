@@ -19,7 +19,7 @@ struct SettlementMethod: Identifiable, Decodable {
     /**
      The amount of the currency specified in `currency` that the maker is willing to exchange for one stablecoin unit.
      */
-    let price: String
+    var price: String
     /**
      The method by which the currency specified in `currency` will be transferred from the stablecoin buyer to the stablecoin seller.
      */

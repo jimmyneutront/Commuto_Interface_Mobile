@@ -45,7 +45,9 @@ struct CreateOfferView: View {
     
     private var serviceFeeRate = 100
     
-    private var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethods
+    private var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethodsEmptyPrices
+    
+    @State private var selectedSettlementMethods: [SettlementMethod] = []
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -155,7 +157,10 @@ struct CreateOfferView: View {
                         .font(.title2)
                     Spacer()
                 }
-                SettlementMethodSelector(settlementMethods: settlementMethods)
+                SettlementMethodSelector(
+                    settlementMethods: settlementMethods,
+                    selectedSettlementMethods: $selectedSettlementMethods
+                )
             }
             .padding([.leading, .trailing])
         }
@@ -238,6 +243,7 @@ struct StablecoinCard: View {
  */
 struct StablecoinAmountField: View {
     
+    #warning("TODO: make sure this label parameter does nothing and then get rid of it")
     let label: String
     @Binding var value: Int
     let formatter: NumberFormatter
@@ -262,37 +268,97 @@ struct SettlementMethodSelector: View {
     
     let settlementMethods: [SettlementMethod]
     
+    @Binding var selectedSettlementMethods: [SettlementMethod]
+    
     var body: some View {
         ForEach(settlementMethods) { settlementMethod in
-            SettlementMethodCard(settlementMethod: settlementMethod, stablecoinCurrencyCode: "STBL")
+            SettlementMethodCard(
+                settlementMethod: settlementMethod,
+                stablecoinCurrencyCode: "STBL",
+                selectedSettlementMethods: $selectedSettlementMethods
+            )
         }
     }
     
 }
 
+/**
+ Displays a card containing settlement method information. The "Price" button on the card can be tapped to specify the price of the
+ */
 struct SettlementMethodCard: View {
     
-    let settlementMethod: SettlementMethod
+    @State var settlementMethod: SettlementMethod
     
     let stablecoinCurrencyCode: String
     
+    @Binding var selectedSettlementMethods: [SettlementMethod]
+    
+    @State var isSelected = false
+    
+    @State var isEditingPrice = false
+    
+    @State var priceValue: Double = 0.0
+    
+    @State var priceValueAsDecimal: Decimal = NSNumber(floatLiteral: 0.0).decimalValue
+    
     var body: some View {
+        let color: Color = {
+            if isSelected == true {
+                return Color.green
+            } else {
+                return Color.primary
+            }
+        }()
         HStack {
             VStack(alignment: .leading) {
                 Text(buildCurrencyDescription())
                     .bold()
+                    .foregroundColor(color)
                     .padding(1)
-                Text(buildPriceDescription())
-                    .bold()
-                    .padding(1)
+                Button {
+                    isEditingPrice = !isEditingPrice
+                } label: {
+                    Text(buildPriceDescription())
+                        .bold()
+                        .padding(1)
+                }
+                .accentColor(Color.primary)
+                if isEditingPrice {
+                    SettlementMethodPriceField(value: $priceValue, formatter: createPriceFormatter())
+                        .onChange(of: priceValue) { newPriceValue in
+                            priceValueAsDecimal = NSNumber(floatLiteral: newPriceValue).decimalValue
+                            // If this settlement is selected, we update its price value in the selected settlement methods list.
+                            if let index = selectedSettlementMethods.firstIndex(where: {
+                                selectedSettlementMethod in
+                                    settlementMethod.id == selectedSettlementMethod.id
+                            }) {
+                                settlementMethod.price = String(describing: priceValue)
+                                selectedSettlementMethods[index] = settlementMethod
+                            }
+                            
+                        }
+                }
             }
-            Spacer()
+           Spacer()
         }
         .padding(15)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.primary, lineWidth: 1)
+                .stroke(color, lineWidth: 1)
         )
+        .accentColor(.primary)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if (isSelected) {
+                selectedSettlementMethods.removeAll { settlementMethodToCheck in
+                    return settlementMethodToCheck.method == settlementMethod.method && settlementMethodToCheck.currency == settlementMethod.currency
+                }
+                isSelected = false
+            } else {
+                selectedSettlementMethods.append(settlementMethod)
+                isSelected = true
+            }
+        }
     }
     
     /**
@@ -313,6 +379,36 @@ struct SettlementMethodCard: View {
         }
     }
     
+    /**
+     Returns a NumberFormatter
+     */
+    func createPriceFormatter() -> NumberFormatter {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 6
+        return formatter
+    }
+    
+}
+
+/**
+ A custom `TextField` for specifying settlement method prices.
+ */
+struct SettlementMethodPriceField: View {
+    
+    @Binding var value: Double
+    let formatter: NumberFormatter
+    
+    var body: some View {
+        HStack {
+            TextField("0.00", value: $value, formatter: formatter)
+                .font(.largeTitle)
+                .keyboardType(.numbersAndPunctuation)
+                .padding(6)
+            Spacer()
+        }
+    }
+    
 }
 
 /**
@@ -320,6 +416,8 @@ struct SettlementMethodCard: View {
  */
 struct CreateOfferView_Previews: PreviewProvider {
     static var previews: some View {
-        CreateOfferView()
+        Group {
+            CreateOfferView()
+        }
     }
 }
