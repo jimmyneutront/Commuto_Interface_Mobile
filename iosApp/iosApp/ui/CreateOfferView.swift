@@ -161,8 +161,24 @@ struct CreateOfferView: View {
                     settlementMethods: settlementMethods,
                     selectedSettlementMethods: $selectedSettlementMethods
                 )
+                Button(
+                    action: {},
+                    label: {
+                        Text("Create Offer")
+                            .font(.largeTitle)
+                            .bold()
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.primary, lineWidth: 3)
+                            )
+                    }
+                )
+                .accentColor(Color.primary)
+                .padding([.top], 10)
             }
-            .padding([.leading, .trailing])
+            .padding([.leading, .trailing, .bottom])
         }
         .navigationBarTitle(Text("Create Offer"))
 
