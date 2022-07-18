@@ -39,3 +39,19 @@ struct SettlementMethod: Identifiable, Decodable {
     }
     
 }
+
+extension SettlementMethod {
+    
+    static let sampleSettlementMethods: [SettlementMethod] = [
+        SettlementMethod(currency: "EUR", price: "0.94", method: "SEPA"),
+        SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT"),
+        SettlementMethod(currency: "BUSD", price: "1.00", method: "SANDDOLLAR"),
+    ]
+    
+    static let sampleSettlementMethodsEmptyPrices: [SettlementMethod] = [
+        SettlementMethod(currency: "EUR", price: "", method: "SEPA"),
+        SettlementMethod(currency: "USD", price: "", method: "SWIFT"),
+        SettlementMethod(currency: "BUSD", price: "", method: "SANDDOLLAR"),
+    ]
+    
+}

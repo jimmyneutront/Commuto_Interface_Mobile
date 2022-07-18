@@ -9,7 +9,7 @@
 /**
  Describes the direction of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), which specifies whether the maker wants to buy or sell stablecoin.
  */
-enum OfferDirection {
+enum OfferDirection: CaseIterable, Identifiable {
     /**
      Indicates that the maker wants to buy stablecoin.
      */
@@ -30,4 +30,10 @@ enum OfferDirection {
             return "Sell"
         }
     }
+    
+    /**
+     An identity for an instance of this enum, required for adoption of `Identifiable` protocol
+     */
+    var id: Self { self }
+    
 }

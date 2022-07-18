@@ -17,7 +17,7 @@ struct StablecoinInformationRepository {
     /**
      Nested dictionaries containing stablecoin information. The inner dictionary maps `EthereumAddress`es of stablecoin smart contracts to `StablecoinInformation` structs containing information about the stablecoin corresponding to their `EthereumAddress` key. The outer dictionary maps blockchain IDs to `[EthereumAddress:StablecoinInformation]`s, containingch information about all the supported stablecoin contracts on the blockchain with the specified ID.
      */
-    private let stablecoinInformation: [BigUInt:[EthereumAddress:StablecoinInformation]]
+    let stablecoinInformation: [BigUInt:[EthereumAddress:StablecoinInformation]]
     
     /**
      Returns a `StablecoinInformation` for the stablecoin at the specified `contractAddress` on the blockchain with the specified `chainID`, or `nil` if no such `StablecoinInformation` is found.
