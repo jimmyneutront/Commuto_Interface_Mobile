@@ -1,27 +1,17 @@
 package com.commuto.interfacemobile.android.ui
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -321,54 +311,6 @@ fun buildCurrencyDescription(settlementMethod: SettlementMethod): String {
  */
 fun buildPriceDescription(settlementMethod: SettlementMethod, stablecoin: String): String {
     return "Price: ${settlementMethod.price} ${settlementMethod.currency}/$stablecoin"
-}
-
-/**
- * A [Composable] that always displays [header], and can expand to display [content] or contract and hide [content] when
- * tapped.
- *
- * @param header A [Composable] that will always be displayed regardless of whether [DisclosureComposable] is expanded
- * or not.
- * @param content A [Composable] that will be displayed below [header] when this is expanded.
- */
-@Composable
-fun DisclosureComposable(header: @Composable () -> Unit, content: @Composable () -> Unit) {
-    var isDisclosureExpanded by remember { mutableStateOf(false) }
-    val arrowRotationState by animateFloatAsState(if (isDisclosureExpanded) 180f else 0f)
-    Column(
-        modifier = Modifier
-            .animateContentSize(
-                animationSpec = tween(
-                    durationMillis = 200,
-                    easing = LinearEasing,
-                )
-            )
-            .clickable {
-                isDisclosureExpanded = !isDisclosureExpanded
-            }
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            header()
-            IconButton(
-                modifier = Modifier.rotate(arrowRotationState),
-                onClick = {
-                    isDisclosureExpanded = !isDisclosureExpanded
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Drop Down Arrow"
-                )
-            }
-        }
-        if (isDisclosureExpanded) {
-            content()
-        }
-    }
 }
 
 /**
