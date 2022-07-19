@@ -23,7 +23,11 @@ import java.math.BigDecimal
 import java.math.BigInteger
 
 /**
- * Used to create new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)s.
+ * The screen for creating a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+ *
+ * @param chainID The ID of the blockchain on which the new offer will be created.
+ * @param stablecoins A [StablecoinInformationRepository] for all supported stablecoins on the blockchain specified by
+ * [chainID].
  */
 @Composable
 fun CreateOfferComposable(
@@ -31,29 +35,70 @@ fun CreateOfferComposable(
     stablecoins: StablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
 ) {
 
+    /**
+     * The direction of the new offer, or null if the user has not specified a direction.
+     */
     val direction = remember { mutableStateOf<OfferDirection?>(null) }
 
+    /**
+     * The contract address of the stablecoin that the user is offering to swap, or null if the user has not specified
+     * a stablecoin.
+     */
     val selectedStablecoin = remember { mutableStateOf<String?>(null) }
 
+    /**
+     * The currency code of the specified stablecoin, or "Stablecoin" if the user has not specified a stablecoin.
+     */
     val stablecoinCurrencyCode = stablecoins
         .getStablecoinInformation(chainID, selectedStablecoin.value ?: "")?.currencyCode ?: "Stablecoin"
 
+    /**
+     * The specified minimum stablecoin amount as a [String], or "0.00" if the user has not specified an amount.
+     */
     val minimumAmountString = remember { mutableStateOf("0.00") }
 
+    /**
+     * The specified minimum stablecoin amount as a [BigDecimal], or [BigDecimal.ZERO] if the user has not specified an
+     * amount.
+     */
     val minimumAmount = remember { mutableStateOf(BigDecimal.ZERO) }
 
+    /**
+     * The specified maximum stablecoin amount as a [String], or "0.00" if the user has not specified an amount.
+     */
     val maximumAmountString = remember { mutableStateOf("0.00") }
 
+    /**
+     * The specified maximum stablecoin amount as a [BigDecimal], or [BigDecimal.ZERO] if the user has not specified an
+     * amount.
+     */
     val maximumAmount = remember { mutableStateOf(BigDecimal.ZERO) }
 
+    /**
+     * The specified security deposit amount as a [String], or "0.00" if the user has not specified an amount.
+     */
     val securityDepositAmountString = remember { mutableStateOf("0.00") }
 
+    /**
+     * The specified security deposit amount as a [BigDecimal], or [BigDecimal.ZERO] if the user has not specified an
+     * amount.
+     */
     val securityDepositAmount = remember { mutableStateOf(BigDecimal.ZERO) }
 
+    /**
+     * The current
+     * [service fee rate](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt).
+     */
     val serviceFeeRate = BigInteger.valueOf(100L)
 
+    /**
+     * The list of [SettlementMethod]s from which the user can choose.
+     */
     val settlementMethods = remember { SettlementMethod.sampleSettlementMethodsEmptyPrices }
 
+    /**
+     * The [SettlementMethod]s that the user has selected.
+     */
     val selectedSettlementMethods = remember { mutableStateListOf<SettlementMethod>() }
 
     Column(
@@ -196,7 +241,13 @@ fun CreateOfferComposable(
 }
 
 /**
- * Displays a button that represents an offer direction.
+ * Displays a button that represents an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)
+ * direction (Buy or Sell).
+ *
+ * @param isSelected Indicates whether this button represents the currently selected offer direction.
+ * @param text The text to display on this button.
+ * @param onClick The action to perform when this button is clicked.
+ * @param modifier The [Modifier] to apply to this button.
  */
 @Composable
 fun DirectionButtonComposable(isSelected: Boolean, text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -222,6 +273,11 @@ fun DirectionButtonComposable(isSelected: Boolean, text: String, onClick: () -> 
 /**
  * Displays a vertical list of Stablecoin cards, one for each stablecoin with the specified chain ID in the specified
  * [StablecoinInformationRepository]. Only one stablecoin card can be selected at a time.
+ *
+ * @param chainID The blockchain ID of the stablecoins to be displayed.
+ * @param stablecoins A [StablecoinInformationRepository] from which this will obtain a list of stablecoins.
+ * @param selectedStablecoin The contract address of the currently selected stablecoin, or null if the user has not
+ * selected a stablecoin.
  */
 @Composable
 fun StablecoinListComposable(
@@ -229,6 +285,10 @@ fun StablecoinListComposable(
     stablecoins: StablecoinInformationRepository,
     selectedStablecoin: MutableState<String?>
 ) {
+
+    /**
+     * Key-value pairs of stablecoin addresses and [StablecoinInformation] objects obtained from [stablecoins]
+     */
     val stablecoinInformationEntries = (stablecoins.stablecoinInformation[chainID] ?: mapOf()).entries
 
     Column {
@@ -260,7 +320,11 @@ fun StablecoinListComposable(
 }
 
 /**
- * Displays a [TextField] customized to accept positive stablecoin amounts with up to six decimal places of precision
+ * Displays a [TextField] customized to accept positive stablecoin amounts with up to six decimal places of precision.
+ * The user cannot type characters that are not numbers or decimal points, and cannot type negative numbers.
+ *
+ * @param amountString The current amount as a [String].
+ * @param amount The current amount as a [BigDecimal].
  */
 @Composable
 fun StablecoinAmountComposable(
@@ -293,6 +357,10 @@ fun StablecoinAmountComposable(
  * Displays a vertical list of settlement method cards, one for each settlement method that the offer has created. These
  * cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being
  * created.
+ *
+ * @param settlementMethods A [List] of [SettlementMethod]s to be displayed.
+ * @param stablecoinCurrencyCode The currency code of the currently selected stablecoin.
+ * @param selectedSettlementMethods A [SnapshotStateList] of [SettlementMethod]s that the user has selected.
  */
 @Composable
 fun SettlementMethodSelector(
@@ -311,6 +379,16 @@ fun SettlementMethodSelector(
     }
 }
 
+/**
+ * Displays information about a particular settlement method. If the settlement method that this represents is present
+ * in [selectedSettlementMethods], the outline and currency description become green. The user can tap on the price
+ * description to expose a text field in which they can specify a positive price for this settlement method with up to
+ * six decimal places of precision.
+ *
+ * @param settlementMethod The [SettlementMethod] that this represents.
+ * @param stablecoinCurrencyCode The currency code of the stablecoin selected by the user.
+ * @param selectedSettlementMethods A [SnapshotStateList] of [SettlementMethod]s that the user has selected.
+ */
 @Composable
 fun SettlementMethodCardComposable(
     settlementMethod: SettlementMethod,
@@ -407,8 +485,11 @@ fun SettlementMethodCardComposable(
 }
 
 /**
- * Builds a human readable string describing the price specified for this settlement method, such as
- * "Price: 0.94 EUR/DAI" or "Price: 1.00 USD/USDC", or "Price: Tap to specify" if no
+ * Builds a human readable string describing the price specified for a settlement method, such as "Price: 0.94 EUR/DAI"
+ * or "Price: 1.00 USD/USDC", or "Price: Tap to specify" if no price has been specified.
+ *
+ * @param settlementMethod The [SettlementMethod] for which this price description is being built.
+ * @param stablecoinCurrencyCode The currency code of the stablecoin that the user has selected.
  */
 fun buildCreateOfferPriceDescription(
     settlementMethod: SettlementMethod,
