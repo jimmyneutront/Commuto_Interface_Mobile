@@ -6,17 +6,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.OfferDirection
+import com.commuto.interfacemobile.android.offer.SettlementMethod
 import java.lang.NumberFormatException
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -50,6 +51,10 @@ fun CreateOfferComposable(
     val securityDepositAmount = remember { mutableStateOf(BigDecimal.ZERO) }
 
     val serviceFeeRate = BigInteger.valueOf(100L)
+
+    val settlementMethods = remember { SettlementMethod.sampleSettlementMethodsEmptyPrices }
+
+    val selectedSettlementMethods = remember { mutableStateListOf<SettlementMethod>() }
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState())
@@ -160,6 +165,33 @@ fun CreateOfferComposable(
             text = "${BigDecimal(serviceFeeRate).divide(BigDecimal.valueOf(100L)).setScale(2)} %",
             style = MaterialTheme.typography.h4
         )
+        Text(
+            text = "Settlement Methods:",
+            style =  MaterialTheme.typography.h6,
+        )
+        SettlementMethodSelector(
+            settlementMethods = settlementMethods,
+            stablecoinCurrencyCode = stablecoinCurrencyCode,
+            selectedSettlementMethods = selectedSettlementMethods
+        )
+        Button(
+            onClick = {},
+            content = {
+                Text(
+                    text = "Create Offer",
+                    style = MaterialTheme.typography.h4,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(400.dp),
+                    textAlign = TextAlign.Center
+                )
+            },
+            border = BorderStroke(3.dp, Color.Black),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor =  Color.Transparent,
+                contentColor = Color.Black,
+            ),
+            elevation = null,
+        )
     }
 }
 
@@ -258,10 +290,143 @@ fun StablecoinAmountComposable(
 }
 
 /**
+ * Displays a vertical list of settlement method cards, one for each settlement method that the offer has created. These
+ * cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being
+ * created.
+ */
+@Composable
+fun SettlementMethodSelector(
+    settlementMethods: List<SettlementMethod>,
+    stablecoinCurrencyCode: String,
+    selectedSettlementMethods: SnapshotStateList<SettlementMethod>
+) {
+    Column {
+        for (settlementMethod in settlementMethods) {
+            SettlementMethodCardComposable(
+                settlementMethod = settlementMethod,
+                stablecoinCurrencyCode = stablecoinCurrencyCode,
+                selectedSettlementMethods = selectedSettlementMethods
+            )
+        }
+    }
+}
+
+@Composable
+fun SettlementMethodCardComposable(
+    settlementMethod: SettlementMethod,
+    stablecoinCurrencyCode: String,
+    selectedSettlementMethods: SnapshotStateList<SettlementMethod>,
+) {
+
+    val isSelected = remember { mutableStateOf(false) }
+
+    val color = if (isSelected.value) Color.Green else Color.Black
+
+    val isEditingPrice = remember { mutableStateOf(false) }
+
+    val price = remember { mutableStateOf(BigDecimal.ZERO) }
+
+    Button(
+        onClick = {
+            if (isSelected.value) {
+                selectedSettlementMethods.removeIf {
+                    it.method == settlementMethod.method && it.currency == settlementMethod.currency
+                }
+                isSelected.value = false
+            } else {
+                selectedSettlementMethods.add(settlementMethod)
+                isSelected.value = true
+            }
+        },
+        content = {
+            if (price.value == BigDecimal.ZERO) {
+                settlementMethod.price = ""
+            } else {
+                settlementMethod.price = price.value.toString()
+            }
+            Row {
+                Column(
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        text = buildCurrencyDescription(settlementMethod),
+                        color = color,
+                        modifier = Modifier.padding(PaddingValues(top = 10.dp))
+                    )
+                    Button(
+                        onClick = {
+                            isEditingPrice.value = !isEditingPrice.value
+                        },
+                        content = {
+                            Text(
+                                text = buildCreateOfferPriceDescription(settlementMethod, stablecoinCurrencyCode)
+                            )
+                        },
+                        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color.Transparent,
+                            contentColor = Color.Black
+                        ),
+                        elevation = null
+                    )
+                    if (isEditingPrice.value) {
+                        TextField(
+                            label = { Text("Price (${stablecoinCurrencyCode}/${settlementMethod.currency})") },
+                            value = settlementMethod.price,
+                            onValueChange = {
+                                try {
+                                    val newPrice = BigDecimal(it)
+                                    // Don't allow negative values, and limit to 6 decimal places
+                                    if (newPrice >= BigDecimal.ZERO && newPrice.scale() <= 6) {
+                                        price.value = newPrice
+                                        settlementMethod.price = it
+                                    }
+                                } catch (exception: NumberFormatException) {
+                                    /*
+                                    If the change prevents us from creating a BigDecimal minimum amount value, then we
+                                    don't allow that change
+                                     */
+                                }
+                            }
+                        )
+                    }
+                }
+                Spacer(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        border = BorderStroke(1.dp, color),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = Color.Transparent,
+            contentColor = Color.Black
+        ),
+        modifier = Modifier.padding(PaddingValues(bottom = 6.dp)).width(400.dp),
+        elevation = null,
+    )
+}
+
+/**
+ * Builds a human readable string describing the price specified for this settlement method, such as
+ * "Price: 0.94 EUR/DAI" or "Price: 1.00 USD/USDC", or "Price: Tap to specify" if no
+ */
+fun buildCreateOfferPriceDescription(
+    settlementMethod: SettlementMethod,
+    stablecoinCurrencyCode: String,
+): String {
+    return if (settlementMethod.price == "") {
+        "Price: Tap to specify"
+    } else {
+        "Price: ${settlementMethod.price} + ${settlementMethod.currency}/${stablecoinCurrencyCode}"
+    }
+}
+
+/**
  * Displays a preview of [CreateOfferComposable]
  */
 @Preview(
-    showBackground = true
+    showBackground = true,
+    heightDp = 1200
 )
 @Composable
 fun PreviewCreateOfferComposable() {
