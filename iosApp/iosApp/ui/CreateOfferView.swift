@@ -11,7 +11,7 @@ import BigInt
 import web3swift
 
 /**
- Used to create new [Offer]s(https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+ The screen for creating a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
 struct CreateOfferView: View {
     
@@ -21,32 +21,69 @@ struct CreateOfferView: View {
         stablecoinFormatter.maximumFractionDigits = 3
     }
     
-    @Environment(\.defaultMinListRowHeight) var minRowHeight
-    
+    /**
+     The ID of the blockchain on which the new offer will be created.
+     */
     private var chainID = BigUInt(1)
     
-    @State private var selectedDirection: OfferDirection = .buy
-    
+    /**
+     A `StablecoinInformationRepository` for all supported stablecoins on the blockchain specified by `chainID`
+     */
     private var stablecoins = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
     
+    /**
+     The direction of the new offer, or null if the user has not specified a direction.
+     */
+    @State private var selectedDirection: OfferDirection = .buy
+    
+    /**
+     The contract address of the stablecoin that the user is offering to swap, or null if the user has not specified a stablecoin.
+     */
     @State private var selectedStablecoin: EthereumAddress? = nil
     
+    /**
+     A `NumberFormatter` for formatting stablecoin amounts.
+     */
     private let stablecoinFormatter: NumberFormatter
     
+    /**
+     The minimum stablecoin amount that the user will offer to swap.
+     */
     @State private var minimumAmount = 0
     
+    /**
+     The maximum stablecoin amount that the user will offer to swap.
+     */
     @State private var maximumAmount = 0
     
+    /**
+     The specified security  deposit amount.
+     */
     @State private var securityDepositAmount = 0
     
+    /**
+     Indicates whether the security deposit description disclosure group is expanded.
+     */
     @State private var isSecurityDepositDescriptionExpanded = false
     
+    /**
+     Indicates whether the service fee rate description disclosure group is expanded.
+     */
     @State private var isServiceFeeRateDescriptionExpanded = false
     
+    /**
+     The current [service fee rate](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt).
+     */
     private var serviceFeeRate = 100
     
+    /**
+     An `Array` of `SettlementMethod`s from which the user can choose.
+     */
     private var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethodsEmptyPrices
     
+    /**
+     The `SettlementMethod`s that the user has selected.
+     */
     @State private var selectedSettlementMethods: [SettlementMethod] = []
     
     var body: some View {
@@ -83,13 +120,13 @@ struct CreateOfferView: View {
                         .font(.title2)
                     Spacer()
                 }
-                StablecoinAmountField(label: "Minimum", value: $minimumAmount, formatter: stablecoinFormatter)
+                StablecoinAmountField(value: $minimumAmount, formatter: stablecoinFormatter)
                 HStack {
                     Text("Maximum \(currencyCode ?? "Stablecoin") Amount:")
                         .font(.title2)
                     Spacer()
                 }
-                StablecoinAmountField(label: "Maximum", value: $maximumAmount, formatter: stablecoinFormatter)
+                StablecoinAmountField(value: $maximumAmount, formatter: stablecoinFormatter)
                 // If the user sets a minimum amount greater than the maximum amount, we set the maximum amount equal to this new minimum
                     .onChange(of: minimumAmount) { newMinimumAmount in
                         if (newMinimumAmount > maximumAmount) {
@@ -114,7 +151,7 @@ struct CreateOfferView: View {
                     }
                 )
                 .accentColor(.primary)
-                StablecoinAmountField(label: "Security Deposit", value: $securityDepositAmount, formatter: stablecoinFormatter)
+                StablecoinAmountField(value: $securityDepositAmount, formatter: stablecoinFormatter)
                 // If the user sets a new maximum amount of which current security deposit amount is less than ten percent, call fixSecurityDeposit with the current maximum amount.
                     .onChange(of: maximumAmount) { newMaximumAmount in
                         if (newMaximumAmount > securityDepositAmount * 10) {
@@ -159,6 +196,7 @@ struct CreateOfferView: View {
                 }
                 SettlementMethodSelector(
                     settlementMethods: settlementMethods,
+                    stablecoinCurrencyCode: currencyCode ?? "Stablecoin",
                     selectedSettlementMethods: $selectedSettlementMethods
                 )
                 Button(
@@ -201,10 +239,19 @@ struct CreateOfferView: View {
  */
 struct StablecoinList: View {
     
+    /**
+     The blockchain ID of the stablecoins to be displayed.
+     */
     let chainID: BigUInt
     
+    /**
+     A `StablecoinInformationRepository` from which this will obtain stablecoin information.
+     */
     let stablecoins: StablecoinInformationRepository
     
+    /**
+     The contract address of the currently selected stablecoin, or `nil` if the user has not selected a stablecoin.
+     */
     @Binding var selectedStablecoin: EthereumAddress?
     
     var body: some View {
@@ -235,8 +282,14 @@ struct StablecoinList: View {
  */
 struct StablecoinCard: View {
     
+    /**
+     The currency code of the stablecoin this card represents.
+     */
     let stablecoinCode: String
     
+    /**
+     The color of the rounded rectangle stroke around this card.
+     */
     let strokeColor: Color
     
     var body: some View {
@@ -259,9 +312,14 @@ struct StablecoinCard: View {
  */
 struct StablecoinAmountField: View {
     
-    #warning("TODO: make sure this label parameter does nothing and then get rid of it")
-    let label: String
+    /**
+     The specified stablecoin amount.
+     */
     @Binding var value: Int
+    
+    /**
+     A `NumberFormatter` used for formatting the stablecoin amount.
+     */
     let formatter: NumberFormatter
     
     var body: some View {
@@ -278,19 +336,30 @@ struct StablecoinAmountField: View {
 }
 
 /**
- Displays a vertical list of `SettlementMethodCard`s, one for each settlement method that the offer has created. These cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being created.
+ Displays a vertical list of settlement method cards one for each settlement method that the offer has created. These cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being created.
  */
 struct SettlementMethodSelector: View {
     
+    /**
+     An `Array` of `SettlementMethod`s to be displayed.
+     */
     let settlementMethods: [SettlementMethod]
     
+    /**
+     The currency code of the currently selected stablecoin.
+     */
+    let stablecoinCurrencyCode: String
+    
+    /**
+     An `Array` containing the `SettlementMethod`s  that the user has selected.
+     */
     @Binding var selectedSettlementMethods: [SettlementMethod]
     
     var body: some View {
         ForEach(settlementMethods) { settlementMethod in
             SettlementMethodCard(
                 settlementMethod: settlementMethod,
-                stablecoinCurrencyCode: "STBL",
+                stablecoinCurrencyCode: stablecoinCurrencyCode,
                 selectedSettlementMethods: $selectedSettlementMethods
             )
         }
@@ -303,18 +372,39 @@ struct SettlementMethodSelector: View {
  */
 struct SettlementMethodCard: View {
     
+    /**
+     The `SettlementMethod`  that this card represents.
+     */
     @State var settlementMethod: SettlementMethod
     
+    /**
+     The currency code of the currently selected stablecoin.
+     */
     let stablecoinCurrencyCode: String
     
+    /**
+     The `SettlementMethod`s that the user has selected.
+     */
     @Binding var selectedSettlementMethods: [SettlementMethod]
     
+    /**
+     Indicates whether the  user has selected the `SettlementMethod` that this  card represents.
+     */
     @State var isSelected = false
     
+    /**
+     Indicates whether the user is currently editing this `SettlementMethod`'s price.
+     */
     @State var isEditingPrice = false
     
+    /**
+     The price that the user has specified for this `SettlementMethod`, as a `Double`.
+     */
     @State var priceValue: Double = 0.0
     
+    /**
+     The price that the user has specified for this `SettlementMethod`, as a `Decimal`.
+     */
     @State var priceValueAsDecimal: Decimal = NSNumber(floatLiteral: 0.0).decimalValue
     
     var body: some View {
@@ -378,14 +468,14 @@ struct SettlementMethodCard: View {
     }
     
     /**
-     Builds a human readable string describing the currency and transfer method, such as "EUR via SEPA" or "USD via SWIFT"
+     Builds a human readable string describing the currency and transfer method, such as "EUR via SEPA" or "USD via SWIFT".
      */
     func buildCurrencyDescription() -> String {
         return settlementMethod.currency + " via " + settlementMethod.method
     }
     
     /**
-     Builds a human readable string describing the price specified for this settlement method, such as "Price: 0.94 EUR/DAI" or "Price: 1.00 USD/USDC"
+     Builds a human readable string describing the price specified for this settlement method, such as "Price: 0.94 EUR/DAI" or "Price: 1.00 USD/USDC", or "Price: Tap to specify" of this settlement method's price is empty.
      */
     func buildPriceDescription() -> String {
         if settlementMethod.price == "" {
@@ -396,7 +486,7 @@ struct SettlementMethodCard: View {
     }
     
     /**
-     Returns a NumberFormatter
+     Returns a NumberFormatter with up to six decimal places of precision for formatting prices.
      */
     func createPriceFormatter() -> NumberFormatter {
         let formatter = NumberFormatter()
@@ -412,7 +502,14 @@ struct SettlementMethodCard: View {
  */
 struct SettlementMethodPriceField: View {
     
+    /**
+     The current price value.
+     */
     @Binding var value: Double
+    
+    /**
+     The `NumberFormatter` used for formatting `value`.
+     */
     let formatter: NumberFormatter
     
     var body: some View {
