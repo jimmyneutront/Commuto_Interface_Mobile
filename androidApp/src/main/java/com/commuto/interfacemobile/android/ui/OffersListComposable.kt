@@ -1,8 +1,8 @@
 package com.commuto.interfacemobile.android.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -33,12 +33,36 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
     val stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
     val offers = remember { offerTruthSource.offers }
     Column {
-        Text(
-            text = stringResource(R.string.offers),
-            style = MaterialTheme.typography.h2,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 10.dp)
-        )
+        Box {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.offers),
+                    style = MaterialTheme.typography.h2,
+                    fontWeight = FontWeight.Bold,
+                )
+                Button(
+                    onClick = {
+                        navController.navigate("CreateOfferComposable")
+                    },
+                    content = {
+                        Text(
+                            text = "Create",
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.Transparent,
+                        contentColor = Color.Black,
+                    ),
+                    border = BorderStroke(1.dp, Color.Black),
+                    elevation = null
+                )
+            }
+        }
         OffersDividerComposable()
         if (offerTruthSource.offers.size == 0) {
             OffersNoneFoundComposable()
@@ -102,6 +126,7 @@ private fun OffersNoneFoundComposable() {
 @Preview(
     showBackground = true,
     heightDp = 600,
+    widthDp = 375,
 )
 @Composable
 fun PreviewOffersListComposable() {

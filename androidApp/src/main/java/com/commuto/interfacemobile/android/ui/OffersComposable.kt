@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
 import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
+import java.math.BigInteger
 import java.util.*
 
 /**
@@ -25,6 +26,11 @@ fun OffersComposable(offerTruthSource: OfferTruthSource) {
     NavHost(navController = navController, startDestination = "OffersListComposable") {
         composable("OffersListComposable") {
             OffersListComposable(offerTruthSource, navController)
+        }
+        composable(
+            "CreateOfferComposable",
+        ) {
+            CreateOfferComposable(chainID = BigInteger.ONE)
         }
         composable(
             "OfferComposable/{id}",
