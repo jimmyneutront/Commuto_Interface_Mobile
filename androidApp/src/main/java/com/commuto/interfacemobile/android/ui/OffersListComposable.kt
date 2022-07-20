@@ -71,11 +71,18 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
                 for (entry in offers) {
                     item {
                         Button(
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                            contentPadding = PaddingValues(10.dp),
                             onClick = {
                                 navController.navigate("OfferComposable/" + entry.key.toString())
-                            }
+                            },
+                            border = BorderStroke(1.dp, Color.Black),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color.Transparent
+                            ),
+                            modifier = Modifier
+                                .padding(PaddingValues(top = 5.dp))
+                                .padding(horizontal = 5.dp),
+                            contentPadding = PaddingValues(10.dp),
+                            elevation = null,
                         ) {
                             OfferCardComposable(
                                 offerDirection = entry.value.direction.string,
@@ -84,7 +91,6 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
                                     ?: "Unknown Stablecoin"
                             )
                         }
-                        OffersDividerComposable()
                     }
                 }
             }
