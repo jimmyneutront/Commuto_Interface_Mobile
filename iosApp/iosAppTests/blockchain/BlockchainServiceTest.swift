@@ -6,11 +6,12 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import BigInt
+import PromiseKit
+import web3swift
 import XCTest
 
 @testable import iosApp
-@testable import PromiseKit
-@testable import web3swift
 
 /**
  Tests for `BlockchainService`.
@@ -49,6 +50,77 @@ class BlockchainServiceTest: XCTestCase {
             commutoSwapAddress: ""
         )
         blockchainService.listenLoop()
+    }
+    
+    /**
+     Ensure `BlockchainService`'s `getServiceFeeRate`  method works properly.
+     */
+    func testGetServiceFeeRate() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get new CommutoSwap contract address from testing server")
+        let testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_blockchainservice_getServiceFeeRate")!
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertFalse(gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        class TestOfferService: OfferNotifiable {
+            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
+            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
+            func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
+        }
+        let offerService = TestOfferService()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+        )
+        
+        let serviceFeeRateExpectation = XCTestExpectation(description: "Get current Service Fee Rate from CommutoSwap")
+        
+        firstly {
+            blockchainService.getServiceFeeRate()
+        }.done { serviceFeeRate in
+            if (serviceFeeRate == BigUInt(100)) {
+                serviceFeeRateExpectation.fulfill()
+            }
+        }.cauterize()
+        
+        wait(for: [serviceFeeRateExpectation], timeout: 10.0)
+        
     }
     
     /**

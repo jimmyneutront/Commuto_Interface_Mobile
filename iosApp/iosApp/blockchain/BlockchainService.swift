@@ -219,6 +219,32 @@ class BlockchainService {
     }
     
     /**
+     A `Promise` wrapper around CommutoSwap's [getServiceFeeRate](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-service-fee-rate) function, via web3swift.
+     
+     - Returns: A `Promise` that will be fulfilled with the current service fee rate (which is a percentage times 100) as a `BigUInt`.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if `nil` is returned during read transaction creation or while getting data from the read transaction response. Note that because this function returns a promise these errors aren't thrown, but instead they are passed to the call of `seal.reject`.
+     */
+    func getServiceFeeRate() -> Promise<BigUInt> {
+        return Promise { seal in
+            let method = "getServiceFeeRate"
+            guard let readTransaction = commutoSwap.read(
+                method,
+                transactionOptions: .defaultOptions
+            ) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating getServiceFeeRate read transaction"))
+                return
+            }
+            let readTransactionResponse = try readTransaction.call()
+            guard let serviceFeeRate = readTransactionResponse["0"] as? BigUInt else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Got nil while getting service fee rate from getServiceFeeRate read transaction response"))
+                return
+            }
+            seal.fulfill(serviceFeeRate)
+        }
+    }
+    
+    /**
      Gets the current chain ID, parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the currenc chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
      - Note: In order to parse a block, the `EventParserProtocol`s created in this function must query a network node for full transaction receipts.
