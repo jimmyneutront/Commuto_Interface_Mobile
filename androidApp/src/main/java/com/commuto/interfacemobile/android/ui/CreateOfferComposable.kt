@@ -21,6 +21,7 @@ import com.commuto.interfacemobile.android.offer.SettlementMethod
 import java.lang.NumberFormatException
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.RoundingMode
 
 /**
  * The screen for creating a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
@@ -152,8 +153,8 @@ fun CreateOfferComposable(
         amount
          */
         if (minimumAmount.value > maximumAmount.value) {
-            minimumAmount.value = maximumAmount.value
-            minimumAmountString.value = minimumAmount.value.toString()
+            maximumAmount.value = minimumAmount.value
+            maximumAmountString.value = maximumAmount.value.toString()
         }
         Text(
             text = "Minimum $stablecoinCurrencyCode Amount:",
@@ -173,7 +174,8 @@ fun CreateOfferComposable(
         )
         if (maximumAmount.value > securityDepositAmount.value * BigDecimal.TEN) {
             securityDepositAmount.value = maximumAmount.value.divide(BigDecimal.TEN)
-                .setScale(6, BigDecimal.ROUND_UP)
+                .setScale(6, RoundingMode.UP)
+            securityDepositAmountString.value = securityDepositAmount.value.toString()
         }
         DisclosureComposable(
             header = {
@@ -226,7 +228,6 @@ fun CreateOfferComposable(
                     text = "Create Offer",
                     style = MaterialTheme.typography.h4,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(400.dp),
                     textAlign = TextAlign.Center
                 )
             },
@@ -236,6 +237,7 @@ fun CreateOfferComposable(
                 contentColor = Color.Black,
             ),
             elevation = null,
+            modifier = Modifier.width(400.dp),
         )
     }
 }
@@ -334,18 +336,23 @@ fun StablecoinAmountComposable(
     TextField(
         value = amountString.value,
         onValueChange = {
-            try {
-                val newAmount = BigDecimal(it)
-                // Don't allow negative values, and limit to 6 decimal places
-                if (newAmount >= BigDecimal.ZERO && newAmount.scale() <= 6) {
-                    amount.value = newAmount
-                    amountString.value = it
+            if (it == "") {
+                amount.value = BigDecimal.ZERO
+                amountString.value = ""
+            } else {
+                try {
+                    val newAmount = BigDecimal(it)
+                    // Don't allow negative values, and limit to 6 decimal places
+                    if (newAmount >= BigDecimal.ZERO && newAmount.scale() <= 6) {
+                        amount.value = newAmount
+                        amountString.value = it
+                    }
+                } catch (exception: NumberFormatException) {
+                    /*
+                    If the change prevents us from creating a BigDecimal minimum amount value, then we don't allow that
+                    change
+                     */
                 }
-            } catch (exception: NumberFormatException) {
-                /*
-                If the change prevents us from creating a BigDecimal minimum amount value, then we don't allow that
-                change
-                 */
             }
         },
         textStyle = MaterialTheme.typography.h5,
@@ -402,6 +409,8 @@ fun SettlementMethodCardComposable(
 
     val isEditingPrice = remember { mutableStateOf(false) }
 
+    val priceString = remember { mutableStateOf(settlementMethod.price) }
+
     val price = remember { mutableStateOf(BigDecimal.ZERO) }
 
     Button(
@@ -450,20 +459,26 @@ fun SettlementMethodCardComposable(
                     if (isEditingPrice.value) {
                         TextField(
                             label = { Text("Price (${stablecoinCurrencyCode}/${settlementMethod.currency})") },
-                            value = settlementMethod.price,
+                            value = priceString.value,
                             onValueChange = {
-                                try {
-                                    val newPrice = BigDecimal(it)
-                                    // Don't allow negative values, and limit to 6 decimal places
-                                    if (newPrice >= BigDecimal.ZERO && newPrice.scale() <= 6) {
-                                        price.value = newPrice
-                                        settlementMethod.price = it
+                                if (it == "") {
+                                    price.value = BigDecimal.ZERO
+                                    settlementMethod.price = ""
+                                } else {
+                                    try {
+                                        val newPrice = BigDecimal(it)
+                                        // Don't allow negative values, and limit to 6 decimal places
+                                        if (newPrice >= BigDecimal.ZERO && newPrice.scale() <= 6) {
+                                            price.value = newPrice
+                                            settlementMethod.price = it
+                                            priceString.value = it
+                                        }
+                                    } catch (exception: NumberFormatException) {
+                                        /*
+                                        If the change prevents us from creating a BigDecimal minimum amount value, then we
+                                        don't allow that change
+                                         */
                                     }
-                                } catch (exception: NumberFormatException) {
-                                    /*
-                                    If the change prevents us from creating a BigDecimal minimum amount value, then we
-                                    don't allow that change
-                                     */
                                 }
                             }
                         )
@@ -498,7 +513,7 @@ fun buildCreateOfferPriceDescription(
     return if (settlementMethod.price == "") {
         "Price: Tap to specify"
     } else {
-        "Price: ${settlementMethod.price} + ${settlementMethod.currency}/${stablecoinCurrencyCode}"
+        "Price: ${settlementMethod.price} ${settlementMethod.currency}/${stablecoinCurrencyCode}"
     }
 }
 
