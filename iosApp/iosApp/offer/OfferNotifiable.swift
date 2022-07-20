@@ -38,4 +38,11 @@ protocol OfferNotifiable {
      */
     func handleOfferTakenEvent(_ event: OfferTakenEvent) throws
     
+    /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `ServiceFeeRateChangedEvent`.
+     
+     - Parameter event: The `ServiceFeeRateChangedEvent` of which the structure or class adopting this protocol is being notified and should handle in the implementation of this function.
+     */
+    func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) throws
+    
 }

@@ -99,6 +99,7 @@ class BlockchainServiceTest: XCTestCase {
             func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
             func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) {}
         }
         let offerService = TestOfferService()
         
@@ -182,6 +183,7 @@ class BlockchainServiceTest: XCTestCase {
             var offerTakenEventPromise: Promise<OfferTakenEvent>? = nil
             var gotOfferEditedEvent = false
             var gotOfferCanceledEvent = false
+            var gotServiceFeeRateChangedEvent = false
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -204,6 +206,9 @@ class BlockchainServiceTest: XCTestCase {
                     self.offerTakenExpectation.fulfill()
                 }
             }
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) throws {
+                gotServiceFeeRateChangedEvent = true
+            }
         }
         
         let offerOpenedExpectation = XCTestExpectation(description: "handleOfferOpenedEvent was called")
@@ -222,6 +227,7 @@ class BlockchainServiceTest: XCTestCase {
         XCTAssertEqual(expectedOfferId, try! offerService.offerTakenEventPromise!.wait().id)
         XCTAssertFalse(offerService.gotOfferEditedEvent)
         XCTAssertFalse(offerService.gotOfferCanceledEvent)
+        XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
         XCTAssertFalse(errorHandler.gotError)
     }
     
@@ -284,6 +290,7 @@ class BlockchainServiceTest: XCTestCase {
             var offerCanceledEventPromise: Promise<OfferCanceledEvent>? = nil
             var gotOfferEditedEvent = false
             var gotOfferTakenEvent = false
+            var gotServiceFeeRateChangedEvent = false
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -306,6 +313,9 @@ class BlockchainServiceTest: XCTestCase {
             func handleOfferTakenEvent(_ event: OfferTakenEvent) {
                 gotOfferTakenEvent = true
             }
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) throws {
+                gotServiceFeeRateChangedEvent = true
+            }
         }
         
         let offerOpenedExpectation = XCTestExpectation(description: "handleOfferOpenedEvent was called")
@@ -324,6 +334,7 @@ class BlockchainServiceTest: XCTestCase {
         XCTAssertEqual(expectedOfferId, try! offerService.offerCanceledEventPromise!.wait().id)
         XCTAssertFalse(offerService.gotOfferEditedEvent)
         XCTAssertFalse(offerService.gotOfferTakenEvent)
+        XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
         XCTAssertFalse(errorHandler.gotError)
         
     }
@@ -387,6 +398,7 @@ class BlockchainServiceTest: XCTestCase {
             var offerEditedEventPromise: Promise<OfferEditedEvent>? = nil
             var gotOfferCanceledEvent = false
             var gotOfferTakenEvent = false
+            var gotServiceFeeRateChangedEvent = false
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -409,6 +421,9 @@ class BlockchainServiceTest: XCTestCase {
             func handleOfferTakenEvent(_ event: OfferTakenEvent) {
                 gotOfferTakenEvent = true
             }
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) throws {
+                gotServiceFeeRateChangedEvent = true
+            }
         }
         
         let offerOpenedExpectation = XCTestExpectation(description: "handleOfferOpenedEvent was called")
@@ -427,6 +442,7 @@ class BlockchainServiceTest: XCTestCase {
         XCTAssertEqual(expectedOfferId, try! offerService.offerEditedEventPromise!.wait().id)
         XCTAssertFalse(offerService.gotOfferCanceledEvent)
         XCTAssertFalse(offerService.gotOfferTakenEvent)
+        XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
         XCTAssertFalse(errorHandler.gotError)
         
     }
@@ -461,6 +477,7 @@ class BlockchainServiceTest: XCTestCase {
             func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
             func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) {}
         }
         
         let blockchainService = BlockchainService(

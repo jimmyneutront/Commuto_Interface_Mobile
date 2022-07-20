@@ -88,6 +88,7 @@ class OfferServiceTests: XCTestCase {
             }
             
             let offerAddedExpectation = XCTestExpectation(description: "Fulfilled when an offer is added to the offers dictionary")
+            var serviceFeeRate: BigUInt?
             
             var offers: [UUID: Offer] {
                 didSet {
@@ -212,6 +213,7 @@ class OfferServiceTests: XCTestCase {
             let offerAddedExpectation = XCTestExpectation(description: "Fulfuilled when an offer is added to the offers dictionary")
             let offerRemovedExpectation = XCTestExpectation(description: "Fulfilled when an offer is removed to the offers dictionary")
             var hasOfferBeenAdded = false
+            var serviceFeeRate: BigUInt?
             
             var offers: [UUID: Offer] {
                 didSet {
@@ -356,6 +358,7 @@ class OfferServiceTests: XCTestCase {
             
             let offerRemovedExpectation = XCTestExpectation(description: "Fulfilled when an offer is removed to the offers dictionary")
             var hasOfferBeenAdded = false
+            var serviceFeeRate: BigUInt?
             
             var offers: [UUID: Offer] {
                 didSet {
@@ -470,6 +473,7 @@ class OfferServiceTests: XCTestCase {
             }
             
             let editedOfferAddedExpectation = XCTestExpectation(description: "Fulfilled when the edited offer is added to the offers dictionary")
+            var serviceFeeRate: BigUInt?
             
             var offersAddedCounter = 0
             
@@ -610,6 +614,92 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(offerInDatabase!.havePublicKey)
         let keyInDatabase = try! keyManagerService.getPublicKey(interfaceId: publicKey.interfaceId)
         XCTAssertEqual(keyInDatabase?.publicKey, publicKey.publicKey)
+    }
+    
+    /**
+     Ensures that `OfferService` handles [ServiceFeeRateChanged](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#servicefeeratechanged) events properly.
+     */
+    func testHandleServiceFeeRateChangedEvent() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_handleServiceFeeRateChangedEvent")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "ServiceFeeRateChanged")
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 40.0)
+        XCTAssertFalse(gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        
+        class TestOfferTruthSource: OfferTruthSource {
+            
+            init() {
+                offers = [:]
+            }
+            
+            var offers: [UUID : Offer] = [:]
+            
+            let serviceFeeRateSetExpectation = XCTestExpectation(description: "Fulfilled when the service fee rate is set")
+            
+            var serviceFeeRate: BigUInt? {
+                didSet {
+                    serviceFeeRateSetExpectation.fulfill()
+                }
+            }
+            
+        }
+        
+        let offerTruthSource = TestOfferTruthSource()
+        offerService.offerTruthSource = offerTruthSource
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+        )
+        offerService.blockchainService = blockchainService
+        blockchainService.listen()
+        wait(for: [offerTruthSource.serviceFeeRateSetExpectation], timeout: 60.0)
+        XCTAssertFalse(errorHandler.gotError)
+        XCTAssertEqual(offerTruthSource.serviceFeeRate, BigUInt(200))
+        
     }
     
 }

@@ -271,13 +271,18 @@ class BlockchainService {
         guard let offerTakenEventParser = commutoSwap.createEventParser("OfferTaken", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping OfferTaken event parser")
         }
+        guard let serviceFeeRateChangedParser = commutoSwap.createEventParser("ServiceFeeRateChanged", filter: eventFilter) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping ServiceFeeRateChanged event parser")
+        }
         events.append(contentsOf: try offerOpenedEventParser.parseBlock(block))
         events.append(contentsOf: try offerEditedEventParser.parseBlock(block))
         events.append(contentsOf: try offerCanceledEventParser.parseBlock(block))
         events.append(contentsOf: try offerTakenEventParser.parseBlock(block))
+        events.append(contentsOf: try serviceFeeRateChangedParser.parseBlock(block))
         try handleEvents(events, chainID: chainID)
     }
     
+    #warning("TODO: The logger.info calls here should be logger.notice")
     /**
      Iterates through `results` in search of relevant `EventParserResultProtocol`s, attempts to create event objects from said relevant `EventParserResultProtocol`s, and passes resulting event objects to the proper service.
      
@@ -312,6 +317,12 @@ class BlockchainService {
                 }
                 logger.info("handleEvents: handling OfferTaken event")
                 try offerService.handleOfferTakenEvent(event)
+            } else if result.eventName == "ServiceFeeRateChanged" {
+                guard let event = ServiceFeeRateChangedEvent(result) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating ServiceFeeRateChanged event from EventParserResultProtocol")
+                }
+                logger.info("handleEvents: handling ServiceFeeRateChanged event")
+                try offerService.handleServiceFeeRateChangedEvent(event)
             }
         }
     }

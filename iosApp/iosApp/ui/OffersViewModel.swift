@@ -6,6 +6,7 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import BigInt
 import Foundation
 
 /**
@@ -27,6 +28,11 @@ class OffersViewModel: OfferTruthSource {
      The `OfferService` responsible for adding and removing `Offer`s from this class's `offers` dictionary as offers are created, canceled and taken.
      */
     let offerService: OfferService<OffersViewModel>
+    
+    /**
+     The current service fee rate, or `nil` if the current service fee rate is not known.
+     */
+    @Published var serviceFeeRate: BigUInt?
     
     /**
      A dictionary mapping offer IDs (as `UUID`s) to `Offer`s, which is the single source of truth for all open-offer-related data.

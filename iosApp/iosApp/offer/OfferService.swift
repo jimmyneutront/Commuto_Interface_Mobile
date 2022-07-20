@@ -287,6 +287,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         logger.notice("handleOfferTakenEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
     }
     
+    #warning("TODO: document message parameter here")
     /**
      The function called by `P2PService` to notify `OfferService` of a `PublicKeyAnnouncement`. Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker.
      */
@@ -319,6 +320,24 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         } else {
             logger.notice("handlePublicKeyAnnouncement: interface ID of public key did not match that of offer \(message.offerId.uuidString) specified in announcement. Offer interface id: \(offer.interfaceId.base64EncodedString()), announcement interface id: \(message.publicKey.interfaceId.base64EncodedString())")
         }
+    }
+    
+    /**
+     The function called by `BlockchainService` to notify `OfferService` of a `ServiceFeeRateChangedEvent`. Once notified, `OfferService` updates `offerTruthSource`'s `serviceFeeRate` with the value specified in `event`on the main thread.
+     
+     - Parameter event: The `ServiceFeeRateChangedEvent` of which `OfferService` is being notified.
+     
+     - Throws: `OfferServiceError.unexpectedNilError` if `offerTruthSource` is `nil`.
+     */
+    func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) throws {
+        logger.notice("handleServiceFeeRateChangedEvent: handling event. New rate: \(event.newServiceFeeRate)")
+        guard offerTruthSource != nil else {
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handlePublicKeyAnnouncement call")
+        }
+        DispatchQueue.main.sync {
+            offerTruthSource!.serviceFeeRate = event.newServiceFeeRate
+        }
+        logger.notice("handleServiceFeeRateChangedEvent: finished handling event. New rate: \(event.newServiceFeeRate)")
     }
     
 }

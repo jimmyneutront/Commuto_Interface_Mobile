@@ -6,6 +6,7 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import BigInt
 import Foundation
 
 /**
@@ -16,4 +17,8 @@ protocol OfferTruthSource: ObservableObject {
      A dictionary mapping offer IDs (as `UUID`s) to `Offer`s, which is the single source of truth for all open-offer-related data.
      */
     var offers: [UUID: Offer] { get set }
+    /**
+     The current [service fee rate](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt) as a percentage times 100, or `nil` if the current service fee rate is not known.
+     */
+    var serviceFeeRate: BigUInt? { get set }
 }
