@@ -30,7 +30,10 @@ fun OffersComposable(offerTruthSource: OfferTruthSource) {
         composable(
             "CreateOfferComposable",
         ) {
-            CreateOfferComposable(chainID = BigInteger.ONE)
+            CreateOfferComposable(
+                offerTruthSource = offerTruthSource,
+                chainID = BigInteger.ONE
+            )
         }
         composable(
             "OfferComposable/{id}",
