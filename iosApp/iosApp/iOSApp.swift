@@ -28,7 +28,7 @@ struct iOSApp: App {
             
         }
             .inObjectScope(.container)
-        container.register(BlockchainService.self) {r in
+        container.register(BlockchainService.self) { r in
             BlockchainService(
                 errorHandler: ErrorViewModel(),
                 offerService: r.resolve(OfferService<OffersViewModel>.self)!,
@@ -37,6 +37,7 @@ struct iOSApp: App {
             )
         }
             .inObjectScope(.container)
+        container.resolve(OfferService<OffersViewModel>.self)!.blockchainService = container.resolve(BlockchainService.self)!
         container.register(OffersViewModel.self) { r in
             OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel>.self)!)
             

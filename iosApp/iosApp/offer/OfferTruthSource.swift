@@ -21,4 +21,12 @@ protocol OfferTruthSource: ObservableObject {
      The current [service fee rate](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt) as a percentage times 100, or `nil` if the current service fee rate is not known.
      */
     var serviceFeeRate: BigUInt? { get set }
+    /**
+     Indicates whether this is currently getting the current service fee rate.
+     */
+    var isGettingServiceFeeRate: Bool { get set }
+    /**
+     Attempts to get the current service fee rate and set `serviceFeeRate` equal to the result.
+     */
+    func updateServiceFeeRate()
 }

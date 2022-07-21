@@ -31,4 +31,14 @@ class PreviewableOfferTruthSource: OfferTruthSource {
      */
     @Published var serviceFeeRate: BigUInt?
     
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `OfferTruthSource`.
+     */
+    var isGettingServiceFeeRate: Bool = false
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `OfferTruthSource`.
+     */
+    func updateServiceFeeRate() {}
+    
 }

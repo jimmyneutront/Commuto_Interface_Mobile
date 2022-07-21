@@ -223,7 +223,7 @@ class BlockchainService {
      
      - Returns: A `Promise` that will be fulfilled with the current service fee rate (which is a percentage times 100) as a `BigUInt`.
      
-     - Throws: `BlockchainServiceError.unexpectedNilError` if `nil` is returned during read transaction creation or while getting data from the read transaction response. Note that because this function returns a promise these errors aren't thrown, but instead they are passed to the call of `seal.reject`.
+     - Throws: `BlockchainServiceError.unexpectedNilError` if `nil` is returned during read transaction creation or while getting data from the read transaction response. Note that because this function returns a `Promise` these errors aren't thrown, but instead they are passed to the call of `seal.reject`.
      */
     func getServiceFeeRate() -> Promise<BigUInt> {
         return Promise { seal in

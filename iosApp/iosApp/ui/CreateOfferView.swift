@@ -186,28 +186,34 @@ struct CreateOfferView<TruthSource>: View where TruthSource: OfferTruthSource {
                 )
                 .accentColor(.primary)
                 HStack {
-                    if offerTruthSource.serviceFeeRate != nil {
-                        Text(String(format:"%.2f", Double(offerTruthSource.serviceFeeRate!)/100) + " %")
-                            .font(.largeTitle)
+                    if offerTruthSource.isGettingServiceFeeRate {
+                        Text("Getting Service Fee Rate...")
                         Spacer()
                     } else {
-                        Text("Could not get service fee rate.")
-                        Spacer()
-                        Button(
-                            action: {},
-                            label: {
-                                Text("Retry")
-                                    .font(.title2)
-                                    .bold()
-                                    .padding(10)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10).stroke(Color.primary, lineWidth: 3)
-                                    )
-                            }
-                        )
-                        .accentColor(Color.primary)
+                        if offerTruthSource.serviceFeeRate != nil {
+                            Text(String(format:"%.2f", Double(offerTruthSource.serviceFeeRate!)/100) + " %")
+                                .font(.largeTitle)
+                            Spacer()
+                        } else {
+                            Text("Could not get service fee rate.")
+                            Spacer()
+                            Button(
+                                action: {
+                                    offerTruthSource.updateServiceFeeRate()
+                                },
+                                label: {
+                                    Text("Retry")
+                                        .font(.title2)
+                                        .bold()
+                                        .padding(10)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10).stroke(Color.primary, lineWidth: 3)
+                                        )
+                                }
+                            )
+                            .accentColor(Color.primary)
+                        }
                     }
-                    
                 }
                 HStack {
                     Text("Settlement Methods:")

@@ -99,6 +99,9 @@ class OfferServiceTests: XCTestCase {
                 }
             }
             
+            var isGettingServiceFeeRate: Bool = false
+            func updateServiceFeeRate() {}
+            
         }
         
         let offerTruthSource = TestOfferTruthSource()
@@ -228,6 +231,9 @@ class OfferServiceTests: XCTestCase {
                     }
                 }
             }
+            
+            var isGettingServiceFeeRate: Bool = false
+            func updateServiceFeeRate() {}
             
         }
         
@@ -373,6 +379,9 @@ class OfferServiceTests: XCTestCase {
                 }
             }
             
+            var isGettingServiceFeeRate: Bool = false
+            func updateServiceFeeRate() {}
+            
         }
         
         let offerTruthSource = TestOfferTruthSource()
@@ -488,6 +497,9 @@ class OfferServiceTests: XCTestCase {
                     }
                 }
             }
+            
+            var isGettingServiceFeeRate: Bool = false
+            func updateServiceFeeRate() {}
             
         }
         
@@ -674,6 +686,9 @@ class OfferServiceTests: XCTestCase {
                     serviceFeeRateSetExpectation.fulfill()
                 }
             }
+            
+            var isGettingServiceFeeRate: Bool = false
+            func updateServiceFeeRate() {}
             
         }
         

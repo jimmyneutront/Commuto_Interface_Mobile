@@ -6,6 +6,7 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import BigInt
 import Foundation
 import os
 import PromiseKit
@@ -87,6 +88,21 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      A repository containing `OfferTakenEvent`s for offers that have been taken but haven't yet been removed from persistent storage or `offerTruthSource`.
      */
     private var offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent>
+    
+    /**
+     Returns the result of calling `blockchainService.getServiceFeeRate`, or throws an `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`.
+     
+     - Returns: The result of calling `blockchainService.getServiceFeeRate`
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise` these errors aren't thrown, but instead a rejected `Promise` is returned..
+     */
+    func getServiceFeeRate() -> Promise<BigUInt> {
+        if blockchainService != nil {
+            return blockchainService!.getServiceFeeRate()
+        } else {
+            return Promise(error: OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during getServiceFeeRate call"))
+        }
+    }
     
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, creates a new `Offer` with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` property accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
