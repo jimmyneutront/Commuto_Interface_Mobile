@@ -6,10 +6,12 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import Foundation
+
 /**
  An `Error` thrown by `BlockchainService` functions.
  */
-enum BlockchainServiceError: Error {
+enum BlockchainServiceError: LocalizedError {
     /**
     Thrown when a `BlockchainService` function receives `nil` from a call that should return a non-`nil` result.
      
@@ -20,10 +22,11 @@ enum BlockchainServiceError: Error {
     /**
      A description providing information about the context in which the error was thrown.
      */
-    public var errorDescription: String {
+    public var errorDescription: String? {
         switch self {
         case .unexpectedNilError(let desc):
             return desc
         }
     }
+    
 }

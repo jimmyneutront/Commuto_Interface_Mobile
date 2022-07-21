@@ -6,10 +6,12 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import Foundation
+
 /**
  An `Error` thrown by `DatabaseService` functions.
  */
-enum DatabaseServiceError: Error {
+enum DatabaseServiceError: LocalizedError {
     #warning("TODO rename message as desc")
     /**
      Thrown when `DatabaseService` receives an unexpected result from a database query.
@@ -23,4 +25,16 @@ enum DatabaseServiceError: Error {
      - Parameter desc: A `String` that provides information about the context in which the error was thrown.
      */
     case unexpectedNilError(desc: String)
+    
+    /**
+     A description providing information about the context in which the error was thrown.
+     */
+    public var errorDescription: String? {
+        switch self {
+        case .unexpectedQueryResult(let message):
+            return message
+        case .unexpectedNilError(let desc):
+            return desc
+        }
+    }
 }

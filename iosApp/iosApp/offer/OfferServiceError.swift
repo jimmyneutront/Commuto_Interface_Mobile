@@ -6,10 +6,12 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import Foundation
+
 /**
  An `Error` thrown by `OfferService` functions.
  */
-enum OfferServiceError: Error {
+enum OfferServiceError: LocalizedError {
     /**
      Thrown when `OfferService` unexpectedly encounters a `nil` value, either by calling a function or attempting to use an optional property of a class or structure.
      
@@ -26,7 +28,7 @@ enum OfferServiceError: Error {
     /**
      A description providing information about the context in which the error was thrown.
      */
-    public var errorDescription: String {
+    public var errorDescription: String? {
         switch self {
         case .unexpectedNilError(let desc):
             return desc
