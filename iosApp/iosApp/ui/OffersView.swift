@@ -39,7 +39,7 @@ struct OffersView<TruthSource>: View where TruthSource: OfferTruthSource {
             .toolbar {
                 HStack {
                     Button(action: {}) {
-                        NavigationLink(destination: CreateOfferView()) {
+                        NavigationLink(destination: CreateOfferView(offerTruthSource: offerTruthSource)) {
                             Text("Create", comment: "The label of the button to create a new offer")
 
                         }

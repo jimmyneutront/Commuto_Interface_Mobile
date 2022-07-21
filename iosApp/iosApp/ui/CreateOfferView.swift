@@ -13,13 +13,19 @@ import web3swift
 /**
  The screen for creating a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct CreateOfferView: View {
+struct CreateOfferView<TruthSource>: View where TruthSource: OfferTruthSource {
     
-    init() {
+    init(offerTruthSource: TruthSource) {
+        self.offerTruthSource = offerTruthSource
         stablecoinFormatter = NumberFormatter()
         stablecoinFormatter.numberStyle = .currency
         stablecoinFormatter.maximumFractionDigits = 3
     }
+    
+    /**
+     An object adopting the `OfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
+     */
+    @ObservedObject var offerTruthSource: TruthSource
     
     /**
      The ID of the blockchain on which the new offer will be created.
@@ -70,11 +76,6 @@ struct CreateOfferView: View {
      Indicates whether the service fee rate description disclosure group is expanded.
      */
     @State private var isServiceFeeRateDescriptionExpanded = false
-    
-    /**
-     The current [service fee rate](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt).
-     */
-    private var serviceFeeRate = 100
     
     /**
      An `Array` of `SettlementMethod`s from which the user can choose.
@@ -185,9 +186,28 @@ struct CreateOfferView: View {
                 )
                 .accentColor(.primary)
                 HStack {
-                    Text(String(format:"%.2f", Double(serviceFeeRate)/100) + " %")
-                        .font(.largeTitle)
-                    Spacer()
+                    if offerTruthSource.serviceFeeRate != nil {
+                        Text(String(format:"%.2f", Double(offerTruthSource.serviceFeeRate!)/100) + " %")
+                            .font(.largeTitle)
+                        Spacer()
+                    } else {
+                        Text("Could not get service fee rate.")
+                        Spacer()
+                        Button(
+                            action: {},
+                            label: {
+                                Text("Retry")
+                                    .font(.title2)
+                                    .bold()
+                                    .padding(10)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10).stroke(Color.primary, lineWidth: 3)
+                                    )
+                            }
+                        )
+                        .accentColor(Color.primary)
+                    }
+                    
                 }
                 HStack {
                     Text("Settlement Methods:")
@@ -530,7 +550,9 @@ struct SettlementMethodPriceField: View {
 struct CreateOfferView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            CreateOfferView()
+            CreateOfferView<PreviewableOfferTruthSource>(
+                offerTruthSource: PreviewableOfferTruthSource()
+            )
         }
     }
 }
