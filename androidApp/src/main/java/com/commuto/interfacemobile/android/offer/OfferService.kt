@@ -4,10 +4,7 @@ import android.util.Log
 import com.commuto.interfacedesktop.db.Offer as DatabaseOffer
 import com.commuto.interfacemobile.android.blockchain.BlockchainEventRepository
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferCanceledEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferEditedEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferOpenedEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferTakenEvent
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.p2p.OfferMessageNotifiable
@@ -39,6 +36,7 @@ import javax.inject.Singleton
  * canceled but haven't yet been removed from persistent storage or [offerTruthSource].
  * @property offerTakenEventRepository A repository containing [OfferTakenEvent]s for offers that have been taken but
  * haven't yet been removed from persistent storage or [offerTruthSource].
+ * @property serviceFeeRateChangedEventRepository A repository containing [ServiceFeeRateChangedEvent]s
  * @property offerTruthSource The [OfferTruthSource] in which this is responsible for maintaining an accurate list of
  * all open offers. If this is not yet initialized, event handling methods will throw the corresponding error.
  */
@@ -49,12 +47,14 @@ class OfferService (
     private val offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent>,
     private val offerEditedEventRepository: BlockchainEventRepository<OfferEditedEvent>,
     private val offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent>,
-    private val offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent>
+    private val offerTakenEventRepository: BlockchainEventRepository<OfferTakenEvent>,
+    private val serviceFeeRateChangedEventRepository: BlockchainEventRepository<ServiceFeeRateChangedEvent>
 ): OfferNotifiable, OfferMessageNotifiable {
 
     @Inject constructor(databaseService: DatabaseService, keyManagerService: KeyManagerService): this(
         databaseService,
         keyManagerService,
+        BlockchainEventRepository(),
         BlockchainEventRepository(),
         BlockchainEventRepository(),
         BlockchainEventRepository(),
@@ -294,7 +294,7 @@ class OfferService (
 
 
     /**
-     * The method called by [BlockchainService] to notify [OfferService] of a [OfferTakenEvent]. Once notified,
+     * The method called by [BlockchainService] to notify [OfferService] of an [OfferTakenEvent]. Once notified,
      * [OfferService] saves [event] in [offerTakenEventRepository], removes the corresponding [Offer] and its settlement
      * methods from persistent storage, removes [event] from [offerTakenEventRepository], and then checks that the chain
      * ID of the event matches the chain ID of the [Offer] mapped to the offer ID specified in [event] in the
@@ -373,6 +373,22 @@ class OfferService (
                         .interfaceId)}")
             return
         }
+    }
+
+    /**
+     * The method called by [BlockchainService] to notify [OfferService] of a [ServiceFeeRateChangedEvent]. Once
+     * notified, [OfferService] updates [offerTruthSource]'s `serviceFeeRate` property with the value specified in
+     * [event] on the main coroutine dispatcher.
+     */
+    override suspend fun handleServiceFeeRateChangedEvent(event: ServiceFeeRateChangedEvent) {
+        Log.i(logTag, "handleServiceFeeRateChangedEvent: handling event. New rate: ${event.newServiceFeeRate}")
+        serviceFeeRateChangedEventRepository.append(event)
+        withContext(Dispatchers.Main) {
+            offerTruthSource.serviceFeeRate.value = event.newServiceFeeRate
+        }
+        serviceFeeRateChangedEventRepository.remove(event)
+        Log.i(logTag, "handleServiceFeeRateChangedEvent: finished handling event. New rate: " +
+                "${event.newServiceFeeRate}")
     }
 
 }

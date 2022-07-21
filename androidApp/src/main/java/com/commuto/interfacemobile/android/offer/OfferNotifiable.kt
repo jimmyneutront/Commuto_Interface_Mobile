@@ -1,9 +1,6 @@
 package com.commuto.interfacemobile.android.offer
 
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferCanceledEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferEditedEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferOpenedEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferTakenEvent
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import javax.inject.Singleton
 
 /**
@@ -47,4 +44,12 @@ interface OfferNotifiable {
      * handle in the implementation of this method.
      */
     suspend fun handleOfferTakenEvent(event: OfferTakenEvent)
+
+    /**
+     * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] in order to notify the
+     * class implementing this interface of a [ServiceFeeRateChangedEvent].
+     *
+     * @param event the [ServiceFeeRateChangedEvent] of which
+     */
+    suspend fun handleServiceFeeRateChangedEvent(event: ServiceFeeRateChangedEvent)
 }

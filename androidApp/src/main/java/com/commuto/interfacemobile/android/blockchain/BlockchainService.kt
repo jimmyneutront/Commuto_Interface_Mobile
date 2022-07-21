@@ -1,10 +1,7 @@
 package com.commuto.interfacemobile.android.blockchain
 
 import android.util.Log
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferCanceledEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferEditedEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferOpenedEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferTakenEvent
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.blockchain.structs.OfferStruct
 import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
@@ -325,6 +322,7 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
             eventResponses.add(commutoSwap.getOfferEditedEvents(receipt))
             eventResponses.add(commutoSwap.getOfferCanceledEvents(receipt))
             eventResponses.add(commutoSwap.getOfferTakenEvents(receipt))
+            eventResponses.add(commutoSwap.getServiceFeeRateChangedEvents(receipt))
         }
         return eventResponses.flatten()
     }
@@ -359,6 +357,12 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
                 is CommutoSwap.OfferTakenEventResponse -> {
                     Log.i(logTag, "handleEventResponses: handling OfferTakenEvent")
                     offerService.handleOfferTakenEvent(OfferTakenEvent.fromEventResponse(eventResponse, chainID))
+                }
+                is CommutoSwap.ServiceFeeRateChangedEventResponse -> {
+                    Log.i(logTag, "handleEventResponses: handling ServiceFeeRateChangedEvent")
+                    offerService.handleServiceFeeRateChangedEvent(
+                        ServiceFeeRateChangedEvent.fromEventResponse(eventResponse)
+                    )
                 }
             }
         }
