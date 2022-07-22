@@ -11,7 +11,7 @@ import SwiftUI
 /**
  Displays the main list of offers as `OfferCardView`s in a `List` within a `NavigationView`.
  */
-struct OffersView<TruthSource>: View where TruthSource: OfferTruthSource {
+struct OffersView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     /**
      An object adopting the `OfferTruthSource` protocol that acts as a single source of truth for all offer-related data.

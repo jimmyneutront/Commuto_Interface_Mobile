@@ -13,7 +13,7 @@ import web3swift
 /**
  The screen for creating a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct CreateOfferView<TruthSource>: View where TruthSource: OfferTruthSource {
+struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     init(offerTruthSource: TruthSource) {
         self.offerTruthSource = offerTruthSource

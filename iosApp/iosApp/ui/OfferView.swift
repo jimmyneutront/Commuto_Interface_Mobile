@@ -12,7 +12,7 @@ import BigInt
 /**
  Displays information about a specific [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct OfferView<TruthSource>: View where TruthSource: OfferTruthSource {
+struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     /**
      The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo` if no other value is provided.

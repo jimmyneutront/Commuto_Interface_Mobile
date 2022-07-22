@@ -10,9 +10,9 @@ import BigInt
 import Foundation
 
 /**
- An `OfferTruthSource` implementation used for previewing user interfaces.
+ A `UIOfferTruthSource` implementation used for previewing user interfaces.
  */
-class PreviewableOfferTruthSource: OfferTruthSource {
+class PreviewableOfferTruthSource: UIOfferTruthSource {
     
     /**
      Initializes a new `PreviewableOfferTruthSource` with sample offers.

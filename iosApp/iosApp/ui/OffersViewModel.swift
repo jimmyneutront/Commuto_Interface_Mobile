@@ -15,7 +15,7 @@ import web3swift
 /**
  The Offers View Model, the single source of truth for all offer related data. It is observed by offer-related views.
  */
-class OffersViewModel: OfferTruthSource {
+class OffersViewModel: UIOfferTruthSource {
     
     /**
      Initializes a new `OffersViewModel`.
