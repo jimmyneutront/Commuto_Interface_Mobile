@@ -37,7 +37,7 @@ struct StablecoinInformationRepository {
 /**
  A structure containing information about a specific stablecoin.
  */
-struct StablecoinInformation {
+struct StablecoinInformation: Equatable {
     /**
      The stablecoin's currency code, such as "DAI" or "LUSD".
      */

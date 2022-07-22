@@ -10,7 +10,7 @@ import BigInt
 import web3swift
 
 /**
- This class represents an [ServiceFeeRateChanged](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#servicefeeratechanged) event, emitted by the CommutoSwap smart contract when the service fee rate is changed.
+ This class represents a [ServiceFeeRateChanged](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#servicefeeratechanged) event, emitted by the CommutoSwap smart contract when the service fee rate is changed.
  */
 class ServiceFeeRateChangedEvent {
     /**

@@ -10,6 +10,7 @@ import BigInt
 import Foundation
 import os
 import PromiseKit
+import web3swift
 
 /**
  The Offers View Model, the single source of truth for all offer related data. It is observed by offer-related views.

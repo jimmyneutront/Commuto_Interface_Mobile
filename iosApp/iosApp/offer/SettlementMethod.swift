@@ -11,7 +11,7 @@ import Foundation
 /**
  A settlement method specified by the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) by which they are willing to send/receive payment
  */
-struct SettlementMethod: Identifiable, Decodable {
+struct SettlementMethod: Identifiable, Decodable, Equatable {
     /**
      The currency in which the maker is willing to send/receive payment.
      */

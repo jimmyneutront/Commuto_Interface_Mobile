@@ -303,9 +303,10 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         logger.notice("handleOfferTakenEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
     }
     
-    #warning("TODO: document message parameter here")
     /**
      The function called by `P2PService` to notify `OfferService` of a `PublicKeyAnnouncement`. Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker.
+     
+     - Parameter message: The `PublicKeyAnnouncement` of which `OfferService` is being notified.
      */
     func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) throws {
         logger.notice("handlePublicKeyAnnouncement: handling announcement for offer \(message.offerId.uuidString)")

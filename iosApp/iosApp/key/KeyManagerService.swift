@@ -10,7 +10,6 @@ import Foundation
 import os
 import Security
 
-#warning("TODO: rename this as KeyManagerService")
 /**
  The Key Manager Service Class.
  
