@@ -76,7 +76,7 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
      */
     override fun updateServiceFeeRate() {
         isGettingServiceFeeRate.value = true
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             Log.i(logTag, "updateServiceFeeRate: getting value")
             try {
                 val newServiceFeeRate = offerService.getServiceFeeRateAsync().await()
