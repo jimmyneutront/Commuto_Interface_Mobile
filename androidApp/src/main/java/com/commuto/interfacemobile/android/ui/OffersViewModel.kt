@@ -79,14 +79,14 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
         viewModelScope.launch {
             Log.i(logTag, "updateServiceFeeRate: getting value")
             try {
-                val newServiceFeeRate = offerService.getServiceFeeRate().await()
+                val newServiceFeeRate = offerService.getServiceFeeRateAsync().await()
                 Log.i(logTag, "updateServiceFeeRate: got value")
                 withContext(Dispatchers.Main) {
                     serviceFeeRate.value = newServiceFeeRate
                 }
                 Log.i(logTag, "updateServiceFeeRate: updated value")
             } catch (e: Exception) {
-                Log.e(logTag, "updateServiceFeeRate: got exception during getServiceFeeRate call", e)
+                Log.e(logTag, "updateServiceFeeRate: got exception during getServiceFeeRateAsync call", e)
             }
             delay(700L)
             withContext(Dispatchers.Main) {

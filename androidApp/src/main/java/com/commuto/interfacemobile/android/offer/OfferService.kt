@@ -93,15 +93,12 @@ class OfferService (
         blockchainService = newBlockchainService
     }
 
-    //TODO: Document this if we end up using it
-    private val scope = CoroutineScope(Dispatchers.Default)
-
     /**
-     * Returns the result of calling [blockchainService]'s [getServiceFeeRate] method.
+     * Returns the result of calling [blockchainService]'s [getServiceFeeRateAsync] method.
      *
      * @return A [Deferred] with a [BigInteger] result, which is the current service fee rate.
      */
-    fun getServiceFeeRate(): Deferred<BigInteger> {
+    fun getServiceFeeRateAsync(): Deferred<BigInteger> {
         return blockchainService.getServiceFeeRateAsync()
     }
 
