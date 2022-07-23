@@ -71,4 +71,56 @@ class OffersViewModel: UIOfferTruthSource {
         }
     }
     
+    /**
+     Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the offer will be created.
+        - stablecoin: The contract address of the stablecoin for which the offer will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which the offer will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer.
+        - maximumAmount: The maximum `Decimal` amount of the new offer.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer.
+        - direction: The direction of the new offer.
+        - settlementMethods: The settlement methods of the new offer.
+     */
+    func openOffer(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod]
+    ) {
+        Promise<ValidatedNewOfferData> { seal in
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.logger.notice("createOffer: validating new offer data")
+                guard let serviceFeeRateForOffer = self.serviceFeeRate else {
+                    seal.reject(NewOfferDataValidationError(desc: "Unable to determine service fee rate"))
+                    return
+                }
+                do {
+                    let validatedOfferData = try validateNewOfferData(
+                        chainID: chainID,
+                        stablecoin: stablecoin,
+                        stablecoinInformation: stablecoinInformation,
+                        minimumAmount: minimumAmount,
+                        maximumAmount: maximumAmount,
+                        securityDepositAmount: securityDepositAmount,
+                        serviceFeeRate: serviceFeeRateForOffer,
+                        direction: direction,
+                        settlementMethods: settlementMethods
+                    )
+                    seal.fulfill(validatedOfferData)
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+            self.logger.error("createOffer: got error during createOffer call. Error: \(error.localizedDescription)")
+        }
+    }
+    
 }

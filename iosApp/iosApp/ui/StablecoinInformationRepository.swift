@@ -28,8 +28,13 @@ struct StablecoinInformationRepository {
      
      - Returns: A `StablecoinInformation` for the stablecoin with the specified `chainID` and `contractAddress`, or `nil` if no such `StablecoinInformation` is found.
      */
-    func getStablecoinInformation(chainID: BigUInt, contractAddress: EthereumAddress) -> StablecoinInformation? {
-        return stablecoinInformation[chainID]?[contractAddress]
+    func getStablecoinInformation(chainID: BigUInt, contractAddress: EthereumAddress?) -> StablecoinInformation? {
+        if contractAddress != nil {
+            return stablecoinInformation[chainID]?[contractAddress ?? EthereumAddress("0x0000000000000000000000000000000000000000")!]
+        } else {
+            return nil
+        }
+        
     }
     
 }

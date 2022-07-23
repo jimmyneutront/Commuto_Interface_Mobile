@@ -8,12 +8,12 @@
 
 import BigInt
 import Foundation
+import web3swift
 
 /**
  A `UIOfferTruthSource` implementation used for previewing user interfaces.
  */
 class PreviewableOfferTruthSource: UIOfferTruthSource {
-    
     /**
      Initializes a new `PreviewableOfferTruthSource` with sample offers.
      */
@@ -32,13 +32,18 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     @Published var serviceFeeRate: BigUInt?
     
     /**
-     Not used since this class is for previewing user interfaces, but required for adoption of `OfferTruthSource`.
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
     var isGettingServiceFeeRate: Bool = false
     
     /**
-     Not used since this class is for previewing user interfaces, but required for adoption of `OfferTruthSource`.
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
     func updateServiceFeeRate() {}
+    
+    /**
+     Not used since this class is for previewing usser interfaces, but required for adoption of `UIOfferTruthSource`
+     */
+    func createOffer(chainID: BigUInt, stablecoin: EthereumAddress?, stablecoinInformation: StablecoinInformation?, minimumAmount: Decimal, maximumAmount: Decimal, securityDepositAmount: Decimal, direction: OfferDirection, settlementMethods: [SettlementMethod]) {}
     
 }

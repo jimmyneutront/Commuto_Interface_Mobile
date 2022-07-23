@@ -6,7 +6,9 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import BigInt
 import Foundation
+import web3swift
 
 /**
  A protocol that a structure or class must adopt in order to act as a single source of truth for open-offer-related data in an application with a graphical user interface..
@@ -20,4 +22,17 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
      Attempts to get the current service fee rate and set `serviceFeeRate` equal to the result.
      */
     func updateServiceFeeRate()
+    /**
+     Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     */
+    func openOffer(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod]
+    )
 }

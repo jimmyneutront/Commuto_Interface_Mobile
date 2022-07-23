@@ -13,7 +13,7 @@ import web3swift
  Validates the data that the user has specified for the creation of a new offer, so that the offer creation transaction does not revert.
  
  This function ensures that:
- - the user has selected a valid
+ - the user has selected a valid stablecoin
  - the minimum stablecoin amount is greater than zero
  - the maximum stablecoin amount is greater than or equal to the minimum amount
  - the security deposit amount is at least 10% of the maximum stablecoin amount
@@ -28,8 +28,8 @@ import web3swift
  */
 func validateNewOfferData(
     chainID: BigUInt,
-    stablecoin: EthereumAddress,
-    stablecoinInformation: StablecoinInformation,
+    stablecoin: EthereumAddress?,
+    stablecoinInformation: StablecoinInformation?,
     minimumAmount: Decimal,
     maximumAmount: Decimal,
     securityDepositAmount: Decimal,
@@ -37,15 +37,18 @@ func validateNewOfferData(
     direction: OfferDirection,
     settlementMethods: [SettlementMethod]
 ) throws -> ValidatedNewOfferData {
-    let minimumAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: minimumAmount, stablecoinInformation: stablecoinInformation)
+    guard stablecoin != nil && stablecoinInformation != nil else {
+        throw NewOfferDataValidationError(desc: "You must select a valid stablecoin.")
+    }
+    let minimumAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: minimumAmount, stablecoinInformation: stablecoinInformation!)
     guard minimumAmountBaseUnits > BigUInt.zero else {
         throw NewOfferDataValidationError(desc: "Minimum amount must be greater than zero.")
     }
-    let maximumAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: maximumAmount, stablecoinInformation: stablecoinInformation)
+    let maximumAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: maximumAmount, stablecoinInformation: stablecoinInformation!)
     guard maximumAmountBaseUnits >= minimumAmountBaseUnits else {
         throw NewOfferDataValidationError(desc: "Maximum amount must not be less than the minimum amount.")
     }
-    let securityDepositAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: securityDepositAmount, stablecoinInformation: stablecoinInformation)
+    let securityDepositAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: securityDepositAmount, stablecoinInformation: stablecoinInformation!)
     guard securityDepositAmountBaseUnits * BigUInt(10) >= maximumAmountBaseUnits else {
         throw NewOfferDataValidationError(desc: "The security deposit amount must be at least 10% of the maximum amount.")
     }
@@ -63,8 +66,8 @@ func validateNewOfferData(
         }
     }
     return ValidatedNewOfferData(
-        stablecoin: stablecoin,
-        stablecoinInformation: stablecoinInformation,
+        stablecoin: stablecoin!,
+        stablecoinInformation: stablecoinInformation!,
         minimumAmount: minimumAmountBaseUnits,
         maximumAmount: maximumAmountBaseUnits,
         securityDepositAmount: securityDepositAmountBaseUnits,

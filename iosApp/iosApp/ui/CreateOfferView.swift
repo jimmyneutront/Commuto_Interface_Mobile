@@ -226,7 +226,18 @@ struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource 
                     selectedSettlementMethods: $selectedSettlementMethods
                 )
                 Button(
-                    action: {},
+                    action: {
+                        offerTruthSource.openOffer(
+                            chainID: chainID,
+                            stablecoin: selectedStablecoin,
+                            stablecoinInformation: stablecoins.getStablecoinInformation(chainID: chainID, contractAddress: selectedStablecoin),
+                            minimumAmount: Decimal(minimumAmount),
+                            maximumAmount: Decimal(maximumAmount),
+                            securityDepositAmount: Decimal(securityDepositAmount),
+                            direction: selectedDirection,
+                            settlementMethods: selectedSettlementMethods
+                        )
+                    },
                     label: {
                         Text("Create Offer")
                             .font(.largeTitle)
