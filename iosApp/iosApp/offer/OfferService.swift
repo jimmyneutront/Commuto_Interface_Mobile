@@ -104,6 +104,104 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         }
     }
     
+    #warning("TODO: add logging")
+    /**
+     Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     
+     On the global `DispatchQueue`, this creates and persistently stores a new key pair, creates a new offer ID and a new `Offer` from the information contained in `offerData`. Then, still on the global `DispatchQueue`, this persistently stores the new `Offer`. Then, on the main `DispatchQueue`, the new `Offer` is added to `offerTruthSource`. Then, on the global `DispatchQueue`, this approves token transfer to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, and then calls the CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, passing the new offer ID and `Offer`.
+     
+     - Parameter offerData: A `ValidatedNewOfferData` containing the data for the new offer to be opened.
+     
+     - Returns: An empty promise that will be fulfilled when the new Offer is opened.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `offerTruthSource` is `nil` or if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func openOffer(offerData: ValidatedNewOfferData) -> Promise<Void> {
+        return Promise { seal in
+            Promise<Offer> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    do {
+                        // Generate a new 2056 bit RSA key pair for the new offer
+                        let newKeyPairForOffer = try keyManagerService.generateKeyPair(storeResult: true)
+                        // Generate the a new ID for the offer
+                        let newOfferID = UUID()
+                        // Create a new Offer
+                        let newOffer = Offer(
+                            isCreated: true,
+                            isTaken: false,
+                            id: newOfferID,
+                            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!, // It is safe to use the zero address here, because the maker address will be automatically set to that of the function caller by CommutoSwap
+                            interfaceID: newKeyPairForOffer.interfaceId,
+                            stablecoin: offerData.stablecoin,
+                            amountLowerBound: offerData.minimumAmount,
+                            amountUpperBound: offerData.maximumAmount,
+                            securityDepositAmount: offerData.securityDepositAmount,
+                            serviceFeeRate: offerData.serviceFeeRate,
+                            direction: offerData.direction,
+                            settlementMethods: offerData.settlementMethods,
+                            protocolVersion: BigUInt.zero,
+                            chainID: BigUInt(1),
+                            havePublicKey: true
+                        )
+                        seal.fulfill(newOffer)
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer in
+                do {
+                    // Persistently store the new offer
+                    let newOfferForDatabase = DatabaseOffer(
+                        id: newOffer.id.asData().base64EncodedString(),
+                        isCreated: newOffer.isCreated,
+                        isTaken: newOffer.isTaken,
+                        maker: newOffer.maker.addressData.toHexString(),
+                        interfaceId: newOffer.interfaceId.base64EncodedString(),
+                        stablecoin: newOffer.stablecoin.addressData.toHexString(),
+                        amountLowerBound: String(newOffer.amountLowerBound),
+                        amountUpperBound: String(newOffer.amountUpperBound),
+                        securityDepositAmount: String(newOffer.securityDepositAmount),
+                        serviceFeeRate: String(newOffer.serviceFeeRate),
+                        onChainDirection: String(newOffer.onChainDirection),
+                        protocolVersion: String(newOffer.protocolVersion),
+                        chainID: String(newOffer.chainID),
+                        havePublicKey: newOffer.havePublicKey
+                    )
+                    try databaseService.storeOffer(offer: newOfferForDatabase)
+                } catch {
+                    throw error
+                }
+            }.get(on: DispatchQueue.main) { [self] newOffer in
+                guard offerTruthSource != nil else {
+                    throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during openOffer call")
+                }
+                offerTruthSource!.offers[newOffer.id] = newOffer
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer -> Promise<(Void, Offer)> in
+                // Authorize token transfer to CommutoSwap contract
+                let tokenAmountForOpeningOffer = newOffer.securityDepositAmount + newOffer.serviceFeeAmountUpperBound
+                guard blockchainService != nil else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call")
+                }
+                // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
+                #warning("TODO: get CommutoSwap contract address from BlockchainService")
+                return blockchainService!.approveTokenTransfer(tokenAddress: newOffer.stablecoin, destinationAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!, amount: tokenAmountForOpeningOffer).map { ($0, newOffer) }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newOffer -> Promise<Void> in
+                guard blockchainService != nil else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call")
+                }
+                let newOfferStruct = newOffer.toOfferStruct()
+                // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
+                return blockchainService!.openOffer(offerID: newOffer.id, offerStruct: newOfferStruct)
+            }.done { _ in
+                #warning("TODO: we should probably wait until we get here to add the offer to offerTruthSource")
+                seal.fulfill(())
+            }.catch { error in
+                seal.reject(error)
+            }
+            
+        }
+    }
+    
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, creates a new `Offer` with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` property accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
      

@@ -55,6 +55,14 @@ class Offer: ObservableObject {
      */
     let serviceFeeRate: BigUInt
     /**
+     The minimum service fee for the new offer.
+     */
+    let serviceFeeAmountLowerBound: BigUInt
+    /**
+     The maximum service fee for the new offer.
+     */
+    let serviceFeeAmountUpperBound: BigUInt
+    /**
      Corresponds to an on-chain Offer's `direction` property.
      */
     let onChainDirection: BigUInt
@@ -84,6 +92,26 @@ class Offer: ObservableObject {
      */
     var havePublicKey: Bool
     
+    /**
+     Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).
+     
+     - Parameters:
+        - isCreated: Corresponds to an `OfferStruct`'s `isCreated` property.
+        - isTaken: Corresponds to an `OfferStruct`'s `isCreated` property.
+        - id: The ID of this offer, as a `UUID`.
+        - maker: The offer maker's blockchain address.
+        - interfaceId: The offer maker's interface ID.
+        - stablecoin: The contract address of the offer's stablecoin.
+        - amountLowerBound: Corresponds to an `OfferStruct`'s `amountLowerBound` property.
+        - amountUpperBound: Corresponds to an `OfferStruct`'s `amountUpperBound` property.
+        - securityDepositAmount: Corresponds to an `OfferStruct`'s `securityDepositAmount` property.
+        - serviceFeeRate: Corresponds to an `OfferStruct`'s `serviceFeeRate` property.
+        - onChainDirection: Corresponds to an `OfferStruct`'s `direction` property.
+        - onChainSettlementMethods: Corresponds to an `OfferStruct`'s `settlementMethods` property.
+        - protocolVersion: Corresponds to an `OfferStruct`'s `protocolVersion` property.
+        - chainID: Corresponds to an `OfferStruct`'s `chainID` property.
+        - havePublicKey: Indicates whether this interface has, in persistent storage, the public key specified by the `interfaceId` parameter.
+     */
     init?(
         isCreated: Bool,
         isTaken: Bool,
@@ -111,6 +139,8 @@ class Offer: ObservableObject {
         self.amountUpperBound = amountUpperBound
         self.securityDepositAmount = securityDepositAmount
         self.serviceFeeRate = serviceFeeRate
+        self.serviceFeeAmountLowerBound = serviceFeeRate * (amountLowerBound / BigUInt(10_000))
+        self.serviceFeeAmountUpperBound = serviceFeeRate * (amountUpperBound / BigUInt(10_000))
         self.onChainDirection = onChainDirection
         if self.onChainDirection == BigUInt.zero {
             self.direction = .buy
@@ -126,6 +156,96 @@ class Offer: ObservableObject {
         self.protocolVersion = protocolVersion
         self.chainID = chainID
         self.havePublicKey = havePublicKey
+    }
+    
+    /**
+     Creates a new `Offer`.
+     
+     - Parameters:
+        - isCreated: Indicates whether this offer currently exists on-chain.
+        - isTaken: Indicates whether this offer has been taken.
+        - id: The ID of this offer, as a `UUID`.
+        - maker: The offer maker's blockchain address.
+        - interfaceID: The offer maker's interface ID.
+        - stablecoin: The contract address of the offer's stablecoin.
+        - amountLowerBound: The minimum amount of stablecoin that the offer maker is willing to exchange.
+        - amountUpperBound: The maximum amount of stablecoin that the offer maker is willing to exchange.
+        - securityDepositAmount: The amount of stablecoin that the offer maker is locking in escrow as a security deposit, and the amount of stablecoin that one must lock up in escrow in order to take this offer.
+        - serviceFeeRate: The percentage of the amount of stablecoin exchanged that the offer maker and taker must pay as a service fee,
+        - direction: The direction of the offer, either `buy` or `sell`.
+        - settlementMethods: The settlement methods by which the maker of the offer is willing to accept payment.
+        - protocolVersion: Indicates the minimum Commuto Interface version that one must have in order to take this offer.
+        - chainID: The ID of the blockchain on which this offer exists.
+        - havePublicKey: Indicates whether this interface has, in persistent storage, the public key specified by the `interfaceID` parameter.
+     */
+    init(
+        isCreated: Bool,
+        isTaken: Bool,
+        id: UUID,
+        maker: EthereumAddress,
+        interfaceID: Data,
+        stablecoin: EthereumAddress,
+        amountLowerBound: BigUInt,
+        amountUpperBound: BigUInt,
+        securityDepositAmount: BigUInt,
+        serviceFeeRate: BigUInt,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod],
+        protocolVersion: BigUInt,
+        chainID: BigUInt,
+        havePublicKey: Bool
+    ) {
+        self.isCreated = isCreated
+        self.isTaken = isTaken
+        self.id = id
+        self.maker = maker
+        self.interfaceId = interfaceID
+        self.stablecoin = stablecoin
+        self.amountLowerBound = amountLowerBound
+        self.amountUpperBound = amountUpperBound
+        self.securityDepositAmount = securityDepositAmount
+        self.serviceFeeRate = serviceFeeRate
+        self.serviceFeeAmountLowerBound = serviceFeeRate * (amountLowerBound / BigUInt(10_000))
+        self.serviceFeeAmountUpperBound = serviceFeeRate * (amountUpperBound / BigUInt(10_000))
+        self.onChainDirection = {
+            switch direction {
+            case .buy:
+                return BigUInt(0)
+            case .sell:
+                return BigUInt(1)
+            }
+        }()
+        self.direction = direction
+        self.onChainSettlementMethods = settlementMethods.compactMap { settlementMethod in
+            return try? JSONEncoder().encode(settlementMethod)
+        }
+        self.settlementMethods = settlementMethods
+        self.protocolVersion = protocolVersion
+        self.chainID = chainID
+        self.havePublicKey = havePublicKey
+    }
+    
+    /**
+     Creates an `OfferStruct` derived from this `Offer`.
+     
+     - Returns: An `OfferStruct` derived from this `Offer`.
+     */
+    func toOfferStruct() -> OfferStruct {
+        return OfferStruct(
+            isCreated: self.isCreated,
+            isTaken: self.isTaken,
+            maker: self.maker,
+            interfaceId: self.interfaceId,
+            stablecoin: self.stablecoin,
+            amountLowerBound: self.amountLowerBound,
+            amountUpperBound: self.amountUpperBound,
+            securityDepositAmount: self.securityDepositAmount,
+            serviceFeeRate: self.serviceFeeRate,
+            direction: self.onChainDirection,
+            settlementMethods: self.onChainSettlementMethods,
+            protocolVersion: self.protocolVersion,
+            chainID: self.chainID
+        )
     }
     
 }

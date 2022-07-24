@@ -128,4 +128,21 @@ struct OfferStruct {
         return "Got nil while getting " + valueName + " value from getOffer response"
     }
     
+    func toOfferDataArray() -> [AnyObject] {
+        return [
+            isCreated,
+            isTaken,
+            maker,
+            [UInt8](interfaceId),
+            stablecoin,
+            amountLowerBound,
+            amountUpperBound,
+            securityDepositAmount,
+            serviceFeeRate,
+            direction,
+            settlementMethods,
+            protocolVersion
+        ] as [AnyObject]
+    }
+    
 }

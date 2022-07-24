@@ -14,6 +14,7 @@ import web3swift
  A `UIOfferTruthSource` implementation used for previewing user interfaces.
  */
 class PreviewableOfferTruthSource: UIOfferTruthSource {
+    
     /**
      Initializes a new `PreviewableOfferTruthSource` with sample offers.
      */
@@ -42,8 +43,13 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     func updateServiceFeeRate() {}
     
     /**
-     Not used since this class is for previewing usser interfaces, but required for adoption of `UIOfferTruthSource`
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`
      */
     func createOffer(chainID: BigUInt, stablecoin: EthereumAddress?, stablecoinInformation: StablecoinInformation?, minimumAmount: Decimal, maximumAmount: Decimal, securityDepositAmount: Decimal, direction: OfferDirection, settlementMethods: [SettlementMethod]) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`
+     */
+    func openOffer(chainID: BigUInt, stablecoin: EthereumAddress?, stablecoinInformation: StablecoinInformation?, minimumAmount: Decimal, maximumAmount: Decimal, securityDepositAmount: Decimal, direction: OfferDirection, settlementMethods: [SettlementMethod]) {}
     
 }

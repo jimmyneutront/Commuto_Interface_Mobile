@@ -33,7 +33,23 @@ class BlockchainService {
         self.offerService = offerService
         w3 = web3Instance
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
+        
+        #warning("TODO: we temporarily create a wallet here until WalletService is implemented.")
+        let ethPassword = "web3swift"
+        let ethPrivateKey = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+        let ethFormattedPrivateKey = ethPrivateKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ethPrivateKeyData = Data.fromHex(ethFormattedPrivateKey)!
+        let ethKeyStore = try! EthereumKeystoreV3(privateKey: ethPrivateKeyData, password: ethPassword)!
+        let ethKeyStoreManager = KeystoreManager([ethKeyStore])
+        w3.addKeystoreManager(ethKeyStoreManager)
+        self.ethPassword = ethPassword
+        self.ethKeyStore = ethKeyStore
+        
     }
+    
+    #warning("TODO: This is temporary, will move to WalletService when it is implemented")
+    let ethPassword: String
+    let ethKeyStore: EthereumKeystoreV3
     
     /**
      BlockchainService's `Logger`.
@@ -241,6 +257,79 @@ class BlockchainService {
                 return
             }
             seal.fulfill(serviceFeeRate)
+        }
+    }
+    
+    /**
+     A `Promise` wrapper around the ERC20 (https://eips.ethereum.org/EIPS/eip-20) `approve` function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     
+     - Parameters:
+        - tokenAddress: The contract address of the stablecoin for which a transfer will be approved.
+        - destinationAddress: The address to which a transfer will be approved.
+        - amount: The transfer amount that will be approved.
+     
+     - Returns: An empty `Promise` that will be fulfilled when the token transfer is approved.
+     
+     - Throws `BlockchainServiceError.unexpectedNilError` if `nil` is returned during ERC20 contract creation, or if `nil` is returned during write transaction creation.
+     */
+    func approveTokenTransfer(tokenAddress: EthereumAddress, destinationAddress: EthereumAddress, amount: BigUInt) -> Promise<Void> {
+        return Promise { seal in
+            let method = "approve"
+            guard let tokenContract = w3.contract(Web3.Utils.erc20ABI, at: tokenAddress, abiVersion: 2) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating token contract object"))
+                return
+            }
+            guard let writeTransaction = tokenContract.write(
+                method,
+                parameters: [destinationAddress, amount] as [AnyObject],
+                transactionOptions: .defaultOptions
+            ) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating token transfer approval write transaction"))
+                return
+            }
+            #warning("TODO: this is temporary, will be improved when WalletService is implemented")
+            writeTransaction.transactionOptions.from = ethKeyStore.addresses!.first!
+            writeTransaction.transactionOptions.gasLimit = .manual(BigUInt(30000000))
+            writeTransaction.transactionOptions.gasPrice = .manual(BigUInt(30000000))
+            writeTransaction.sendPromise(password: ethPassword).done { transactionSendingResult in
+                seal.fulfill(())
+            }.catch { error in
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     A `Promise` wrapper around CommutoSwap's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     
+     - Parameters:
+        - offerID: The ID of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be opened.
+        - offerStruct: The OfferStruct containing the data of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be opened.
+     
+     - Returns: An empty `Promise` that will be fulfilled when the offer is opened.
+     
+     - Throws `BlockchainServiceError.unexpectedNilError` if `nil` is returned during write transaction creation.
+     */
+    func openOffer(offerID: UUID, offerStruct: OfferStruct) -> Promise<Void> {
+        return Promise { seal in
+            let method = "openOffer"
+            guard let writeTransaction = commutoSwap.write(
+                method,
+                parameters: [offerID.asData(), offerStruct.toOfferDataArray()] as [AnyObject],
+                transactionOptions: .defaultOptions
+            ) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Found nil while creating openOffer write transaction"))
+                return
+            }
+            #warning("TODO: this is temporary, will be improved when WalletService is implemented")
+            writeTransaction.transactionOptions.from = ethKeyStore.addresses!.first!
+            writeTransaction.transactionOptions.gasLimit = .manual(BigUInt(30000000))
+            writeTransaction.transactionOptions.gasPrice = .manual(BigUInt(30000000))
+            writeTransaction.sendPromise(password: ethPassword).done { TransactionSendingResult in
+                seal.fulfill_()
+            }.catch { error in
+                seal.reject(error)
+            }
         }
     }
     

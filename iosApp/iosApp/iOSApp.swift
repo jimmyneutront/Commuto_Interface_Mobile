@@ -19,6 +19,8 @@ struct iOSApp: App {
     init() {
         container = Container()
         container.register(DatabaseService.self) { _ in try! DatabaseService()  }
+            .inObjectScope(.container)
+        try! container.resolve(DatabaseService.self)!.createTables()
         container.register(KeyManagerService.self) { r in
             KeyManagerService(databaseService: r.resolve(DatabaseService.self)!)
             

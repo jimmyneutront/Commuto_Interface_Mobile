@@ -74,6 +74,8 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      
+     First, this validates the data for the new offer using `validateNewOfferData`, and then passes the validated data to `offerService.openOffer`.
+     
      - Parameters:
         - chainID: The ID of the blockchain on which the offer will be created.
         - stablecoin: The contract address of the stablecoin for which the offer will be created.
@@ -83,6 +85,8 @@ class OffersViewModel: UIOfferTruthSource {
         - securityDepositAmount: The security deposit `Decimal` amount for the new offer.
         - direction: The direction of the new offer.
         - settlementMethods: The settlement methods of the new offer.
+     
+     - Throws: A `NewOfferDataValidationError` if this is unable to get the current service fee rate. Note that this offer aren't thrown, but is instead passed to  `seal.reject`.
      */
     func openOffer(
         chainID: BigUInt,
@@ -118,8 +122,12 @@ class OffersViewModel: UIOfferTruthSource {
                     seal.reject(error)
                 }
             }
+        }.then { validatedNewOfferData in
+            self.offerService.openOffer(offerData: validatedNewOfferData)
+        }.done {
+            
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-            self.logger.error("createOffer: got error during createOffer call. Error: \(error.localizedDescription)")
+            self.logger.error("openOffer: got error during openOffer call. Error: \(error.localizedDescription)")
         }
     }
     

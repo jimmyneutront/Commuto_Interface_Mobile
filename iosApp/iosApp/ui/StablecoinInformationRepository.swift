@@ -64,11 +64,21 @@ extension StablecoinInformationRepository {
     static let ethereumMainnetStablecoinInfoRepo = StablecoinInformationRepository(
         stablecoinInformation: [
             // Ethereum Mainnet blockchain ID
+            // Ethereum Mainnet blockchain addresses
+            /*
             BigUInt(1): [
                 EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!: StablecoinInformation(currencyCode: "DAI", name: "Dai", decimal: 18),
                 EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!: StablecoinInformation(currencyCode: "USDC", name: "USD Coin", decimal: 6),
                 EthereumAddress("0x4Fabb145d64652a948d72533023f6E7A623C7C53")!: StablecoinInformation(currencyCode: "BUSD", name: "Binance USD", decimal: 18),
                 EthereumAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")!: StablecoinInformation(currencyCode: "USDT", name: "USD Tether", decimal: 6),
+            ]
+             */
+            // Hardhat test network contract addresses
+            BigUInt(1): [
+                EthereumAddress("0x663F3ad617193148711d28f5334eE4Ed07016602")!: StablecoinInformation(currencyCode: "DAI", name: "Dai", decimal: 18),
+                EthereumAddress("0x2E983A1Ba5e8b38AAAeC4B440B9dDcFBf72E15d1")!: StablecoinInformation(currencyCode: "USDC", name: "USD Coin", decimal: 6),
+                EthereumAddress("0x8438Ad1C834623CfF278AB6829a248E37C2D7E3f")!: StablecoinInformation(currencyCode: "BUSD", name: "Binance USD", decimal: 18),
+                EthereumAddress("0xBC9129Dc0487fc2E169941C75aABC539f208fb01")!: StablecoinInformation(currencyCode: "USDT", name: "USD Tether", decimal: 6),
             ]
         ]
     )
