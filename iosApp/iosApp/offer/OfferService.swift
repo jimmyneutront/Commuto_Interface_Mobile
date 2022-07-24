@@ -120,11 +120,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         return Promise { seal in
             Promise<Offer> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("openOffer: creating new ID, Offer object and creating and persistently storing new key pair for new offer")
                     do {
                         // Generate a new 2056 bit RSA key pair for the new offer
                         let newKeyPairForOffer = try keyManagerService.generateKeyPair(storeResult: true)
                         // Generate the a new ID for the offer
                         let newOfferID = UUID()
+                        logger.notice("openOffer: created ID \(newOfferID.uuidString) for new offer")
                         // Create a new Offer
                         let newOffer = Offer(
                             isCreated: true,
@@ -149,6 +151,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                     }
                 }
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer in
+                logger.notice("openOffer: persistently storing \(newOffer.id.uuidString)")
                 do {
                     // Persistently store the new offer
                     let newOfferForDatabase = DatabaseOffer(
@@ -171,6 +174,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 } catch {
                     throw error
                 }
+                logger.notice("openOffer: adding \(newOffer.id.uuidString) to offerTruthSource")
             }.get(on: DispatchQueue.main) { [self] newOffer in
                 guard offerTruthSource != nil else {
                     throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during openOffer call")
@@ -179,23 +183,27 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer -> Promise<(Void, Offer)> in
                 // Authorize token transfer to CommutoSwap contract
                 let tokenAmountForOpeningOffer = newOffer.securityDepositAmount + newOffer.serviceFeeAmountUpperBound
+                logger.notice("openOffer: authorizing transfer for \(newOffer.id.uuidString). Amount: \(String(tokenAmountForOpeningOffer))")
                 guard blockchainService != nil else {
                     throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call")
                 }
                 // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
                 #warning("TODO: get CommutoSwap contract address from BlockchainService")
                 return blockchainService!.approveTokenTransfer(tokenAddress: newOffer.stablecoin, destinationAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!, amount: tokenAmountForOpeningOffer).map { ($0, newOffer) }
-            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newOffer -> Promise<Void> in
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newOffer -> Promise<(Void, Offer)> in
+                logger.notice("openOffer: opening \(newOffer.id.uuidString)")
                 guard blockchainService != nil else {
                     throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call")
                 }
                 let newOfferStruct = newOffer.toOfferStruct()
                 // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
-                return blockchainService!.openOffer(offerID: newOffer.id, offerStruct: newOfferStruct)
-            }.done { _ in
+                return blockchainService!.openOffer(offerID: newOffer.id, offerStruct: newOfferStruct).map { ($0, newOffer) }
+            }.done { [self] _, newOffer in
+                logger.notice("openOffer: opened \(newOffer.id.uuidString)")
                 #warning("TODO: we should probably wait until we get here to add the offer to offerTruthSource")
                 seal.fulfill(())
-            }.catch { error in
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("offerOpened: encountered error: \(error.localizedDescription)")
                 seal.reject(error)
             }
             

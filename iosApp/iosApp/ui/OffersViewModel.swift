@@ -99,9 +99,9 @@ class OffersViewModel: UIOfferTruthSource {
         settlementMethods: [SettlementMethod]
     ) {
         Promise<ValidatedNewOfferData> { seal in
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.logger.notice("createOffer: validating new offer data")
-                guard let serviceFeeRateForOffer = self.serviceFeeRate else {
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("openOffer: validating new offer data")
+                guard let serviceFeeRateForOffer = serviceFeeRate else {
                     seal.reject(NewOfferDataValidationError(desc: "Unable to determine service fee rate"))
                     return
                 }
@@ -122,10 +122,11 @@ class OffersViewModel: UIOfferTruthSource {
                     seal.reject(error)
                 }
             }
-        }.then { validatedNewOfferData in
-            self.offerService.openOffer(offerData: validatedNewOfferData)
-        }.done {
-            
+        }.then { [self] validatedNewOfferData -> Promise<Void> in
+            logger.notice("openOffer: opening new offer with validated data")
+            return offerService.openOffer(offerData: validatedNewOfferData)
+        }.done { _ in
+            self.logger.notice("openOffer: successfully opened offer")
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
             self.logger.error("openOffer: got error during openOffer call. Error: \(error.localizedDescription)")
         }
