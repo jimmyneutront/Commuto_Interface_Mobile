@@ -104,7 +104,6 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         }
     }
     
-    #warning("TODO: add logging")
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
@@ -188,8 +187,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                     throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call")
                 }
                 // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
-                #warning("TODO: get CommutoSwap contract address from BlockchainService")
-                return blockchainService!.approveTokenTransfer(tokenAddress: newOffer.stablecoin, destinationAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!, amount: tokenAmountForOpeningOffer).map { ($0, newOffer) }
+                return blockchainService!.approveTokenTransfer(tokenAddress: newOffer.stablecoin, destinationAddress: blockchainService!.commutoSwapAddress, amount: tokenAmountForOpeningOffer).map { ($0, newOffer) }
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newOffer -> Promise<(Void, Offer)> in
                 logger.notice("openOffer: opening \(newOffer.id.uuidString)")
                 guard blockchainService != nil else {

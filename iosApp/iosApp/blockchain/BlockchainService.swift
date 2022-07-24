@@ -24,16 +24,16 @@ class BlockchainService {
         - errorHandler: An object that conforms to the `BlockchainErrorNotifiable` protocol, to which this will pass errors when they occur.
         - offerService: An object that comforms to the `OfferMessageNotifiable` protocol, to which this will pass offer-related events.
         - web3Instance: A web3swift `web3` instance that this will use to interact with the EVM-compatible blockchain.
-        - commutoSwapAddress: A `String` containing the address of the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol)
+        - commutoSwapAddress: The `EthereumAddress` of the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol)
      
      - Returns: A new `BlockchainService` instance.
      */
-    init(errorHandler: BlockchainErrorNotifiable, offerService: OfferNotifiable, web3Instance: web3, commutoSwapAddress: String) {
+    init(errorHandler: BlockchainErrorNotifiable, offerService: OfferNotifiable, web3Instance: web3, commutoSwapAddress: EthereumAddress) {
         self.errorHandler = errorHandler
         self.offerService = offerService
         w3 = web3Instance
+        self.commutoSwapAddress = commutoSwapAddress
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
-        
         #warning("TODO: we temporarily create a wallet here until WalletService is implemented.")
         let ethPassword = "web3swift"
         let ethPrivateKey = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
@@ -105,6 +105,11 @@ class BlockchainService {
      The web3swift `web3` instance that `BlockchainService` uses to interact with the EVM-compatible blockchain.
      */
     private let w3: web3
+    
+    /**
+     The blockchain address of the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract.
+     */
+    let commutoSwapAddress: EthereumAddress
     
     /**
      The web3swift `web3.contract` instance of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) that `BlockchainService` uses to parse transaction receipts for CommutoSwap events and interact with the CommutoSwap contract on chain.
