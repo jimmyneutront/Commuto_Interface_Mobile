@@ -30,12 +30,12 @@ struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource 
     /**
      The ID of the blockchain on which the new offer will be created.
      */
-    private var chainID = BigUInt(1)
+    private var chainID = BigUInt(31337)
     
     /**
      A `StablecoinInformationRepository` for all supported stablecoins on the blockchain specified by `chainID`
      */
-    private var stablecoins = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
+    private var stablecoins = StablecoinInformationRepository.hardhatStablecoinInfoRepo
     
     /**
      The direction of the new offer, or null if the user has not specified a direction.

@@ -19,9 +19,9 @@ struct OffersView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     @ObservedObject var offerTruthSource: TruthSource
     
     /**
-     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo` if no other value is provided.
+     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.hardhatStablecoinInfoRepo` if no other value is provided.
      */
-    let stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
+    let stablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
     
     var body: some View {
         NavigationView {

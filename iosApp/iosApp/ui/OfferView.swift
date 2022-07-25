@@ -15,9 +15,9 @@ import BigInt
 struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     /**
-     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo` if no other value is provided.
+     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.hardhatStablecoinInfoRepo` if no other value is provided.
      */
-    let stablecoinInfoRepo = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
+    let stablecoinInfoRepo = StablecoinInformationRepository.hardhatStablecoinInfoRepo
     
     /**
      Controls whether the `DisclosureGroup` displaying a description of the offer direction is open.

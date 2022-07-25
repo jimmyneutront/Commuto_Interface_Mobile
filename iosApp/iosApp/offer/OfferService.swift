@@ -138,6 +138,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                         let newOfferID = UUID()
                         logger.notice("openOffer: created ID \(newOfferID.uuidString) for new offer")
                         // Create a new Offer
+                        #warning("TODO: get proper chain ID here")
                         let newOffer = Offer(
                             isCreated: true,
                             isTaken: false,
@@ -152,7 +153,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                             direction: offerData.direction,
                             settlementMethods: offerData.settlementMethods,
                             protocolVersion: BigUInt.zero,
-                            chainID: BigUInt(1),
+                            chainID: BigUInt(31337),
                             havePublicKey: true
                         )
                         if let afterObjectCreation = afterObjectCreation {
