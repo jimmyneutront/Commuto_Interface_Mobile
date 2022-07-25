@@ -107,7 +107,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
-     On the global `DispatchQueue`, this creates and persistently stores a new key pair, creates a new offer ID and a new `Offer` from the information contained in `offerData`. Then, still on the global `DispatchQueue`, this persistently stores the new `Offer`. Then, on the main `DispatchQueue`, the new `Offer` is added to `offerTruthSource`. Then, on the global `DispatchQueue`, this approves token transfer to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, and then calls the CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, passing the new offer ID and `Offer`.
+     On the global `DispatchQueue`, this creates and persistently stores a new key pair, creates a new offer ID and a new `Offer` from the information contained in `offerData`. Then, still on the global `DispatchQueue`, this persistently stores the new `Offer`,  approves token transfer to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, and then calls the CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, passing the new offer ID and `Offer`. Then, on the main `DispatchQueue`, the new `Offer` is added to `offerTruthSource`.
      
      - Parameters:
         - offerData: A `ValidatedNewOfferData` containing the data for the new offer to be opened.
@@ -191,11 +191,6 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                     throw error
                 }
                 logger.notice("openOffer: adding \(newOffer.id.uuidString) to offerTruthSource")
-            }.get(on: DispatchQueue.main) { [self] newOffer in
-                guard offerTruthSource != nil else {
-                    throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during openOffer call")
-                }
-                offerTruthSource!.offers[newOffer.id] = newOffer
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer -> Promise<(Void, Offer)> in
                 // Authorize token transfer to CommutoSwap contract
                 let tokenAmountForOpeningOffer = newOffer.securityDepositAmount + newOffer.serviceFeeAmountUpperBound
@@ -216,12 +211,16 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 let newOfferStruct = newOffer.toOfferStruct()
                 // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
                 return blockchainService!.openOffer(offerID: newOffer.id, offerStruct: newOfferStruct).map { ($0, newOffer) }
-            }.done { [self] _, newOffer in
+            }.get(on: DispatchQueue.main) { [self] _, newOffer in
+                guard offerTruthSource != nil else {
+                    throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during openOffer call")
+                }
+                offerTruthSource!.offers[newOffer.id] = newOffer
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _, newOffer in
+                self.logger.notice("openOffer: opened \(newOffer.id.uuidString)")
                 if let afterOpen = afterOpen {
                     afterOpen()
                 }
-                logger.notice("openOffer: opened \(newOffer.id.uuidString)")
-                #warning("TODO: we should probably wait until we get here to add the offer to offerTruthSource")
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("offerOpened: encountered error: \(error.localizedDescription)")
