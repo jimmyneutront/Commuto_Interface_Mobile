@@ -47,7 +47,7 @@ class BlockchainServiceTest: XCTestCase {
             errorHandler: errorHandler,
             offerService: OfferService<OffersViewModel>(databaseService: databaseService, keyManagerService: keyManagerService),
             web3Instance: w3,
-            commutoSwapAddress: ""
+            commutoSwapAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!
         )
         blockchainService.listenLoop()
     }
@@ -107,7 +107,7 @@ class BlockchainServiceTest: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         
         let serviceFeeRateExpectation = XCTestExpectation(description: "Get current Service Fee Rate from CommutoSwap")
@@ -219,7 +219,7 @@ class BlockchainServiceTest: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         blockchainService.listen()
         wait(for: [offerOpenedExpectation, offerTakenExpectation], timeout: 60.0)
@@ -326,7 +326,7 @@ class BlockchainServiceTest: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         blockchainService.listen()
         wait(for: [offerOpenedExpectation, offerCanceledExpectation], timeout: 60.0)
@@ -434,7 +434,7 @@ class BlockchainServiceTest: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         blockchainService.listen()
         wait(for: [offerOpenedExpectation, offerEditedExpectation], timeout: 60.0)
@@ -484,7 +484,7 @@ class BlockchainServiceTest: XCTestCase {
             errorHandler: errorHandler,
             offerService: TestOfferService(),
             web3Instance: w3,
-            commutoSwapAddress: "0x0000000000000000000000000000000000000000"
+            commutoSwapAddress: EthereumAddress("0x0000000000000000000000000000000000000000")!
         )
         blockchainService.listen()
         wait(for: [errorExpectation], timeout: 20.0)

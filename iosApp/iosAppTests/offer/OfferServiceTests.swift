@@ -116,7 +116,7 @@ class OfferServiceTests: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
@@ -246,7 +246,7 @@ class OfferServiceTests: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
@@ -390,7 +390,7 @@ class OfferServiceTests: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
@@ -506,7 +506,7 @@ class OfferServiceTests: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
@@ -692,13 +692,171 @@ class OfferServiceTests: XCTestCase {
             errorHandler: errorHandler,
             offerService: offerService,
             web3Instance: w3,
-            commutoSwapAddress: testingServerResponse!.commutoSwapAddress
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
         wait(for: [offerTruthSource.serviceFeeRateSetExpectation], timeout: 60.0)
         XCTAssertFalse(errorHandler.gotError)
         XCTAssertEqual(offerTruthSource.serviceFeeRate, BigUInt(200))
+        
+    }
+    
+    /**
+     Ensures that `OfferService.openOffer` functions properly.
+     */
+    func testOpenOffer() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let stablecoinAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        let testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_openOffer")!
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 40.0)
+        XCTAssertFalse(gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        
+        class TestOfferTruthSource: OfferTruthSource {
+            init() {
+                offers = [:]
+            }
+            let offerAddedExpectation = XCTestExpectation(description: "Fulfilled when an offer is added to the offers dictionary")
+            var offers: [UUID : Offer] = [:] {
+                didSet {
+                    // We want to ignore initialization and only fulfill when a new offer is actually added
+                    if offers.keys.count != 0 {
+                        offerAddedExpectation.fulfill()
+                    }
+                }
+            }
+            var serviceFeeRate: BigUInt?
+        }
+        
+        let offerTruthSource = TestOfferTruthSource()
+        offerService.offerTruthSource = offerTruthSource
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
+        
+        let settlementMethods = [SettlementMethod(currency: "FIAT", price: "1.00", method: "Bank Transfer")]
+        let offerData = try! validateNewOfferData(
+            chainID: BigUInt(1),
+            stablecoin: EthereumAddress(testingServerResponse!.stablecoinAddress)!,
+            stablecoinInformation: StablecoinInformation(currencyCode: "STBL", name: "Basic Stablecoin", decimal: 3),
+            minimumAmount: NSNumber(floatLiteral: 100.00).decimalValue,
+            maximumAmount: NSNumber(floatLiteral: 200.00).decimalValue,
+            securityDepositAmount: NSNumber(floatLiteral: 20.00).decimalValue,
+            serviceFeeRate: BigUInt(100),
+            direction: .sell,
+            settlementMethods: settlementMethods
+        )
+        _ = offerService.openOffer(offerData: offerData)
+        
+        wait(for: [offerTruthSource.offerAddedExpectation], timeout: 20.0)
+        
+        let offerID = offerTruthSource.offers.keys.first!
+        let offerInTruthSource = offerTruthSource.offers[offerID]!
+        XCTAssertTrue(offerInTruthSource.isCreated)
+        XCTAssertFalse(offerInTruthSource.isTaken)
+        XCTAssertEqual(offerInTruthSource.id, offerID)
+        #warning("TODO: check proper maker address once WalletService is implemented")
+        //XCTAssertEqual(offerInTruthSource.maker, blockchainService.ethKeyStore.addresses!.first!)
+        XCTAssertEqual(offerInTruthSource.stablecoin, EthereumAddress(testingServerResponse!.stablecoinAddress)!)
+        XCTAssertEqual(offerInTruthSource.amountLowerBound, BigUInt(100_000))
+        XCTAssertEqual(offerInTruthSource.amountUpperBound, BigUInt(200_000))
+        XCTAssertEqual(offerInTruthSource.securityDepositAmount, BigUInt(20_000))
+        XCTAssertEqual(offerInTruthSource.serviceFeeRate, BigUInt(100))
+        XCTAssertEqual(offerInTruthSource.serviceFeeAmountLowerBound, BigUInt(1_000))
+        XCTAssertEqual(offerInTruthSource.serviceFeeAmountUpperBound, BigUInt(2_000))
+        XCTAssertEqual(offerInTruthSource.onChainDirection, BigUInt(1))
+        XCTAssertEqual(offerInTruthSource.direction, .sell)
+        XCTAssertEqual(
+            offerInTruthSource.onChainSettlementMethods,
+            settlementMethods.compactMap { settlementMethod in
+                return try? JSONEncoder().encode(settlementMethod)
+            }
+        )
+        XCTAssertEqual(offerInTruthSource.settlementMethods, settlementMethods)
+        XCTAssertEqual(offerInTruthSource.protocolVersion, BigUInt.zero)
+        XCTAssertTrue(offerInTruthSource.havePublicKey)
+        
+        XCTAssertNotNil(try! keyManagerService.getKeyPair(interfaceId: offerInTruthSource.interfaceId))
+        
+        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())!
+        #warning("TODO: check proper maker address once WalletService is implemented")
+        let expectedOfferInDatabase = DatabaseOffer(
+            id: offerInTruthSource.id.asData().base64EncodedString(),
+            isCreated: true,
+            isTaken: false,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!.addressData.toHexString(),
+            interfaceId: offerInTruthSource.interfaceId.base64EncodedString(),
+            stablecoin: offerInTruthSource.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offerInTruthSource.amountLowerBound),
+            amountUpperBound: String(offerInTruthSource.amountUpperBound),
+            securityDepositAmount: String(offerInTruthSource.securityDepositAmount),
+            serviceFeeRate: String(offerInTruthSource.serviceFeeRate),
+            onChainDirection: String(BigUInt(1)),
+            protocolVersion: String(BigUInt.zero),
+            chainID: String(BigUInt(1)),
+            havePublicKey: true
+        )
+        XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
+        
+        let offerStructOnChain = try! blockchainService.getOffer(id: offerInTruthSource.id)!
+        XCTAssertTrue(offerStructOnChain.isCreated)
+        XCTAssertFalse(offerStructOnChain.isTaken)
+        #warning("TODO: check proper maker address once WalletService is implemented")
+        XCTAssertEqual(offerStructOnChain.interfaceId, offerInTruthSource.interfaceId)
+        XCTAssertEqual(offerStructOnChain.stablecoin, offerInTruthSource.stablecoin)
+        XCTAssertEqual(offerStructOnChain.amountLowerBound, offerInTruthSource.amountLowerBound)
+        XCTAssertEqual(offerStructOnChain.amountUpperBound, offerInTruthSource.amountUpperBound)
+        XCTAssertEqual(offerStructOnChain.securityDepositAmount, offerInTruthSource.securityDepositAmount)
+        XCTAssertEqual(offerStructOnChain.serviceFeeRate, offerInTruthSource.serviceFeeRate)
+        XCTAssertEqual(offerStructOnChain.direction, offerInTruthSource.onChainDirection)
+        XCTAssertEqual(offerStructOnChain.settlementMethods, offerInTruthSource.onChainSettlementMethods)
+        XCTAssertEqual(offerStructOnChain.protocolVersion, offerInTruthSource.protocolVersion)
+        #warning("TODO: re-enable this once we get accurate chain IDs")
+        //XCTAssertEqual(offerStructOnChain.chainID, offerInTruthSource.chainID)
         
     }
     
