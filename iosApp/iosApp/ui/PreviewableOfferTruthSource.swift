@@ -14,7 +14,6 @@ import web3swift
  A `UIOfferTruthSource` implementation used for previewing user interfaces.
  */
 class PreviewableOfferTruthSource: UIOfferTruthSource {
-    
     /**
      Initializes a new `PreviewableOfferTruthSource` with sample offers.
      */
@@ -41,6 +40,16 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
      Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
     func updateServiceFeeRate() {}
+    
+    /**
+     Indicates whether we are currently opening an offer, and if so, the point of the [offer opening process](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) we are currently in.
+     */
+    var openingOfferState: OpeningOfferState = .none
+
+    /**
+     The `Error` that occured during the offer creation process, or `nil` if no such error has occured.
+     */
+    var openingOfferError: Error?
     
     /**
      Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`

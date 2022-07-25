@@ -53,6 +53,27 @@ class OffersViewModel: UIOfferTruthSource {
     @Published var isGettingServiceFeeRate: Bool = false
     
     /**
+     Indicates whether we are currently opening an offer, and if so, the point of the [offer opening process](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) we are currently in.
+     */
+    @Published var openingOfferState = OpeningOfferState.none
+    
+    /**
+     The `Error` that occured during the offer creation process, or `nil` if no such error has occured.
+     */
+    var openingOfferError: Error? = nil
+    
+    /**
+     Sets `openingOfferState`.
+     
+     - Parameter state: The new value to which `openingOfferState` will be set.
+     */
+    func setOpeningOfferState(state: OpeningOfferState) {
+        DispatchQueue.main.async {
+            self.openingOfferState = state
+        }
+    }
+    
+    /**
      Gets the current service fee rate via `offerService` on  the global DispatchQueue and sets `serviceFeeRate` equal to the result on the main DispatchQueue.
      */
     func updateServiceFeeRate() {
@@ -74,7 +95,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      
-     First, this validates the data for the new offer using `validateNewOfferData`, and then passes the validated data to `offerService.openOffer`.
+     First, this validates the data for the new offer using `validateNewOfferData`, and then passes the validated data to `offerService.openOffer`. This also passes several closures to `offerService.openOffer`, which will call `setOpeningOfferState` with the current state of the offer opening process.
      
      - Parameters:
         - chainID: The ID of the blockchain on which the offer will be created.
@@ -101,6 +122,7 @@ class OffersViewModel: UIOfferTruthSource {
         Promise<ValidatedNewOfferData> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("openOffer: validating new offer data")
+                setOpeningOfferState(state: .validating)
                 guard let serviceFeeRateForOffer = serviceFeeRate else {
                     seal.reject(NewOfferDataValidationError(desc: "Unable to determine service fee rate"))
                     return
@@ -122,13 +144,22 @@ class OffersViewModel: UIOfferTruthSource {
                     seal.reject(error)
                 }
             }
-        }.then { [self] validatedNewOfferData -> Promise<Void> in
+        }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] validatedNewOfferData -> Promise<Void> in
             logger.notice("openOffer: opening new offer with validated data")
-            return offerService.openOffer(offerData: validatedNewOfferData)
-        }.done { _ in
-            self.logger.notice("openOffer: successfully opened offer")
-        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-            self.logger.error("openOffer: got error during openOffer call. Error: \(error.localizedDescription)")
+            setOpeningOfferState(state: .creating)
+            return offerService.openOffer(
+                offerData: validatedNewOfferData,
+                afterObjectCreation: { self.setOpeningOfferState(state: .storing) },
+                afterPersistentStorage: { self.setOpeningOfferState(state: .approving) },
+                afterTransferApproval: { self.setOpeningOfferState(state: .opening) }
+            )
+        }.done { [self] _ in
+            logger.notice("openOffer: successfully opened offer")
+            setOpeningOfferState(state: .completed)
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+            logger.error("openOffer: got error during openOffer call. Error: \(error.localizedDescription)")
+            openingOfferError = error
+            setOpeningOfferState(state: .error)
         }
     }
     

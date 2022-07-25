@@ -109,13 +109,24 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      
      On the global `DispatchQueue`, this creates and persistently stores a new key pair, creates a new offer ID and a new `Offer` from the information contained in `offerData`. Then, still on the global `DispatchQueue`, this persistently stores the new `Offer`. Then, on the main `DispatchQueue`, the new `Offer` is added to `offerTruthSource`. Then, on the global `DispatchQueue`, this approves token transfer to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, and then calls the CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, passing the new offer ID and `Offer`.
      
-     - Parameter offerData: A `ValidatedNewOfferData` containing the data for the new offer to be opened.
+     - Parameters:
+        - offerData: A `ValidatedNewOfferData` containing the data for the new offer to be opened.
+        - afterObjectCreation: A closure that will be executed after the new key pair, offer ID and `Offer` object are created.
+        - afterPersistentStorage: A closure that will be executed after the `Offer` is persistently stored.
+        - afterTransferApproval: A closure that will be run after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
+        - afterOpen: A closure that will be run after the offer is opened, via a call to [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
      
      - Returns: An empty promise that will be fulfilled when the new Offer is opened.
      
      - Throws: An `OfferServiceError.unexpectedNilError` if `offerTruthSource` is `nil` or if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
-    func openOffer(offerData: ValidatedNewOfferData) -> Promise<Void> {
+    func openOffer(
+        offerData: ValidatedNewOfferData,
+        afterObjectCreation: (() -> Void)? = nil,
+        afterPersistentStorage: (() -> Void)? = nil,
+        afterTransferApproval: (() -> Void)? = nil,
+        afterOpen: (() -> Void)? = nil
+    ) -> Promise<Void> {
         return Promise { seal in
             Promise<Offer> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
@@ -144,6 +155,9 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                             chainID: BigUInt(1),
                             havePublicKey: true
                         )
+                        if let afterObjectCreation = afterObjectCreation {
+                            afterObjectCreation()
+                        }
                         seal.fulfill(newOffer)
                     } catch {
                         seal.reject(error)
@@ -170,6 +184,9 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                         havePublicKey: newOffer.havePublicKey
                     )
                     try databaseService.storeOffer(offer: newOfferForDatabase)
+                    if let afterPersistentStorage = afterPersistentStorage {
+                        afterPersistentStorage()
+                    }
                 } catch {
                     throw error
                 }
@@ -189,6 +206,9 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
                 return blockchainService!.approveTokenTransfer(tokenAddress: newOffer.stablecoin, destinationAddress: blockchainService!.commutoSwapAddress, amount: tokenAmountForOpeningOffer).map { ($0, newOffer) }
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newOffer -> Promise<(Void, Offer)> in
+                if let afterTransferApproval = afterTransferApproval {
+                    afterTransferApproval()
+                }
                 logger.notice("openOffer: opening \(newOffer.id.uuidString)")
                 guard blockchainService != nil else {
                     throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call")
@@ -197,6 +217,9 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
                 return blockchainService!.openOffer(offerID: newOffer.id, offerStruct: newOfferStruct).map { ($0, newOffer) }
             }.done { [self] _, newOffer in
+                if let afterOpen = afterOpen {
+                    afterOpen()
+                }
                 logger.notice("openOffer: opened \(newOffer.id.uuidString)")
                 #warning("TODO: we should probably wait until we get here to add the offer to offerTruthSource")
                 seal.fulfill(())

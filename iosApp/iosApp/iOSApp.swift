@@ -35,7 +35,7 @@ struct iOSApp: App {
                 errorHandler: ErrorViewModel(),
                 offerService: r.resolve(OfferService<OffersViewModel>.self)!,
                 web3Instance: web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!),
-                commutoSwapAddress: "0x687F36336FCAB8747be1D41366A416b41E7E1a96"
+                commutoSwapAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!
             )
         }
             .inObjectScope(.container)

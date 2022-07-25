@@ -19,9 +19,17 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
      */
     var isGettingServiceFeeRate: Bool { get set }
     /**
+     Indicates whether we are currently opening an offer, and if so, the point of the [offer opening process](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) we are currently in.
+     */
+    var openingOfferState: OpeningOfferState { get set }
+    /**
      Attempts to get the current service fee rate and set `serviceFeeRate` equal to the result.
      */
     func updateServiceFeeRate()
+    /**
+     The `Error` that occured during the offer creation process, or `nil` if no such error has occured.
+     */
+    var openingOfferError: Error? { get set }
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      */

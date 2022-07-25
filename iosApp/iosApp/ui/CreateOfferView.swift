@@ -225,37 +225,80 @@ struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource 
                     stablecoinCurrencyCode: currencyCode ?? "Stablecoin",
                     selectedSettlementMethods: $selectedSettlementMethods
                 )
-                Button(
-                    action: {
-                        offerTruthSource.openOffer(
-                            chainID: chainID,
-                            stablecoin: selectedStablecoin,
-                            stablecoinInformation: stablecoins.getStablecoinInformation(chainID: chainID, contractAddress: selectedStablecoin),
-                            minimumAmount: Decimal(minimumAmount),
-                            maximumAmount: Decimal(maximumAmount),
-                            securityDepositAmount: Decimal(securityDepositAmount),
-                            direction: selectedDirection,
-                            settlementMethods: selectedSettlementMethods
-                        )
-                    },
-                    label: {
-                        Text("Create Offer")
-                            .font(.largeTitle)
-                            .bold()
-                            .padding(10)
-                            .frame(maxWidth: .infinity)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.primary, lineWidth: 3)
-                            )
+                /*
+                 We don't want to display a description of the offer opening process state if an offer isn't being opened. We also don't want to do this if we encounter an error; we should display the actual error message instead.
+                 */
+                if (offerTruthSource.openingOfferState != .none && offerTruthSource.openingOfferState != .error) {
+                    HStack {
+                        Text(offerTruthSource.openingOfferState.description)
+                            .font(.title2)
+                        Spacer()
                     }
-                )
-                .accentColor(Color.primary)
-                .padding([.top], 10)
+                }
+                if (offerTruthSource.openingOfferState == .error) {
+                    HStack {
+                        Text(offerTruthSource.openingOfferError?.localizedDescription ?? "An unknown error occured")
+                            .foregroundColor(Color.red)
+                        Spacer()
+                    }
+                }
+                if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
+                    Button(
+                        action: {
+                            // Don't let the user create a new offer if one is currently being created, or if the user has just created one
+                            if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
+                                offerTruthSource.openOffer(
+                                    chainID: chainID,
+                                    stablecoin: selectedStablecoin,
+                                    stablecoinInformation: stablecoins.getStablecoinInformation(chainID: chainID, contractAddress: selectedStablecoin),
+                                    minimumAmount: Decimal(minimumAmount),
+                                    maximumAmount: Decimal(maximumAmount),
+                                    securityDepositAmount: Decimal(securityDepositAmount),
+                                    direction: selectedDirection,
+                                    settlementMethods: selectedSettlementMethods
+                                )
+                            }
+                        },
+                        label: {
+                            Text("Open Offer")
+                                .font(.largeTitle)
+                                .bold()
+                                .padding(10)
+                                .frame(maxWidth: .infinity)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.primary, lineWidth: 3)
+                                )
+                        }
+                    )
+                    .accentColor(Color.primary)
+                    .padding([.top], 10)
+                } else if offerTruthSource.openingOfferState == .completed {
+                    Text("Offer Opened")
+                        .font(.largeTitle)
+                        .bold()
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.gray, lineWidth: 1)
+                        )
+                } else {
+                    Text("Opening Offer")
+                        .font(.largeTitle)
+                        .bold()
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.gray, lineWidth: 1)
+                        )
+                }
+                
             }
             .padding([.leading, .trailing, .bottom])
         }
-        .navigationBarTitle(Text("Create Offer"))
+        .navigationBarTitle(Text("Open Offer"))
 
     }
     
