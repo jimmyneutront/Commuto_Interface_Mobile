@@ -17,7 +17,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.OfferDirection
-import com.commuto.interfacemobile.android.offer.OfferTruthSource
 import com.commuto.interfacemobile.android.offer.SettlementMethod
 import java.lang.NumberFormatException
 import java.math.BigDecimal
@@ -105,7 +104,7 @@ fun CreateOfferComposable(
             .padding(horizontal = 10.dp).padding(PaddingValues(bottom = 10.dp))
     ) {
         Text(
-            text = "Create Offer",
+            text = "Open Offer",
             style = MaterialTheme.typography.h3,
             fontWeight = FontWeight.Bold,
         )
@@ -257,10 +256,21 @@ fun CreateOfferComposable(
             selectedSettlementMethods = selectedSettlementMethods
         )
         Button(
-            onClick = {},
+            onClick = {
+                offerTruthSource.openOffer(
+                    chainID = chainID,
+                    stablecoin = selectedStablecoin.value,
+                    stablecoinInformation = stablecoins.getStablecoinInformation(chainID, selectedStablecoin.value),
+                    minimumAmount = minimumAmount.value,
+                    maximumAmount =  maximumAmount.value,
+                    securityDepositAmount = securityDepositAmount.value,
+                    direction = direction.value,
+                    settlementMethods = selectedSettlementMethods,
+                )
+            },
             content = {
                 Text(
-                    text = "Create Offer",
+                    text = "Open Offer",
                     style = MaterialTheme.typography.h4,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
