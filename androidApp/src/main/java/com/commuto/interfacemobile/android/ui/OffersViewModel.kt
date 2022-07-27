@@ -34,7 +34,7 @@ import javax.inject.Singleton
  * @property isGettingServiceFeeRate Indicates whether this is currently getting the current service fee rate.
  */
 @Singleton
-class OffersViewModel @Inject constructor(private val offerService: OfferService): ViewModel(), OfferTruthSource {
+class OffersViewModel @Inject constructor(private val offerService: OfferService): ViewModel(), UIOfferTruthSource {
 
     init {
         offerService.setOfferTruthSource(this)

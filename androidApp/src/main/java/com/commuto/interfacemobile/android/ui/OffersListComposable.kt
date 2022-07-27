@@ -17,7 +17,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.R
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
-import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
 
 /**
  * Displays a [OffersNoneFoundComposable] if there are no open offers in [offerTruthSource], or, if there

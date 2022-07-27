@@ -18,7 +18,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
-import com.commuto.interfacemobile.android.offer.PreviewableOfferTruthSource
 import com.commuto.interfacemobile.android.offer.SettlementMethod
 import java.lang.NumberFormatException
 import java.math.BigDecimal
@@ -35,7 +34,7 @@ import java.math.RoundingMode
  */
 @Composable
 fun CreateOfferComposable(
-    offerTruthSource: OfferTruthSource,
+    offerTruthSource: UIOfferTruthSource,
     chainID: BigInteger,
     stablecoins: StablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
 ) {
