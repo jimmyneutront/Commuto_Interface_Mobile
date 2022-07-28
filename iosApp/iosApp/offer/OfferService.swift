@@ -166,37 +166,33 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 }
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer in
                 logger.notice("openOffer: persistently storing \(newOffer.id.uuidString)")
-                do {
-                    // Persistently store the new offer
-                    let newOfferForDatabase = DatabaseOffer(
-                        id: newOffer.id.asData().base64EncodedString(),
-                        isCreated: newOffer.isCreated,
-                        isTaken: newOffer.isTaken,
-                        maker: newOffer.maker.addressData.toHexString(),
-                        interfaceId: newOffer.interfaceId.base64EncodedString(),
-                        stablecoin: newOffer.stablecoin.addressData.toHexString(),
-                        amountLowerBound: String(newOffer.amountLowerBound),
-                        amountUpperBound: String(newOffer.amountUpperBound),
-                        securityDepositAmount: String(newOffer.securityDepositAmount),
-                        serviceFeeRate: String(newOffer.serviceFeeRate),
-                        onChainDirection: String(newOffer.onChainDirection),
-                        protocolVersion: String(newOffer.protocolVersion),
-                        chainID: String(newOffer.chainID),
-                        havePublicKey: newOffer.havePublicKey
-                    )
-                    try databaseService.storeOffer(offer: newOfferForDatabase)
-                    if let afterPersistentStorage = afterPersistentStorage {
-                        afterPersistentStorage()
-                    }
-                    var settlementMethodStrings: [String] = []
-                    for settlementMethod in newOffer.onChainSettlementMethods {
-                        settlementMethodStrings.append(settlementMethod.base64EncodedString())
-                    }
-                    logger.notice("openOffer: persistently storing \(settlementMethodStrings.count) settlement methods for offer \(newOffer.id.uuidString)")
-                    try databaseService.storeSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
-                } catch {
-                    throw error
+                // Persistently store the new offer
+                let newOfferForDatabase = DatabaseOffer(
+                    id: newOffer.id.asData().base64EncodedString(),
+                    isCreated: newOffer.isCreated,
+                    isTaken: newOffer.isTaken,
+                    maker: newOffer.maker.addressData.toHexString(),
+                    interfaceId: newOffer.interfaceId.base64EncodedString(),
+                    stablecoin: newOffer.stablecoin.addressData.toHexString(),
+                    amountLowerBound: String(newOffer.amountLowerBound),
+                    amountUpperBound: String(newOffer.amountUpperBound),
+                    securityDepositAmount: String(newOffer.securityDepositAmount),
+                    serviceFeeRate: String(newOffer.serviceFeeRate),
+                    onChainDirection: String(newOffer.onChainDirection),
+                    protocolVersion: String(newOffer.protocolVersion),
+                    chainID: String(newOffer.chainID),
+                    havePublicKey: newOffer.havePublicKey
+                )
+                try databaseService.storeOffer(offer: newOfferForDatabase)
+                if let afterPersistentStorage = afterPersistentStorage {
+                    afterPersistentStorage()
                 }
+                var settlementMethodStrings: [String] = []
+                for settlementMethod in newOffer.onChainSettlementMethods {
+                    settlementMethodStrings.append(settlementMethod.base64EncodedString())
+                }
+                logger.notice("openOffer: persistently storing \(settlementMethodStrings.count) settlement methods for offer \(newOffer.id.uuidString)")
+                try databaseService.storeSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer -> Promise<(Void, Offer)> in
                 // Authorize token transfer to CommutoSwap contract
                 let tokenAmountForOpeningOffer = newOffer.securityDepositAmount + newOffer.serviceFeeAmountUpperBound

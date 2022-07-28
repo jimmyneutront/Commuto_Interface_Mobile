@@ -792,7 +792,7 @@ class OfferServiceTests: XCTestCase {
         )
         _ = offerService.openOffer(offerData: offerData)
         
-        wait(for: [offerTruthSource.offerAddedExpectation], timeout: 20.0)
+        wait(for: [offerTruthSource.offerAddedExpectation], timeout: 30.0)
         
         let offerID = offerTruthSource.offers.keys.first!
         let offerInTruthSource = offerTruthSource.offers[offerID]!
