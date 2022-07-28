@@ -837,10 +837,17 @@ class OfferServiceTests: XCTestCase {
             serviceFeeRate: String(offerInTruthSource.serviceFeeRate),
             onChainDirection: String(BigUInt(1)),
             protocolVersion: String(BigUInt.zero),
-            chainID: String(BigUInt(1)),
+            chainID: String(BigUInt(31337)),
             havePublicKey: true
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
+        
+        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: offerInDatabase.chainID)
+        var expectedSettlementMethodsInDatabase: [String] = []
+        for settlementMethod in offerInTruthSource.onChainSettlementMethods {
+            expectedSettlementMethodsInDatabase.append(settlementMethod.base64EncodedString())
+        }
+        XCTAssertEqual(expectedSettlementMethodsInDatabase, settlementMethodsInDatabase)
         
         let offerStructOnChain = try! blockchainService.getOffer(id: offerInTruthSource.id)!
         XCTAssertTrue(offerStructOnChain.isCreated)

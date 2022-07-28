@@ -188,10 +188,15 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                     if let afterPersistentStorage = afterPersistentStorage {
                         afterPersistentStorage()
                     }
+                    var settlementMethodStrings: [String] = []
+                    for settlementMethod in newOffer.onChainSettlementMethods {
+                        settlementMethodStrings.append(settlementMethod.base64EncodedString())
+                    }
+                    logger.notice("openOffer: persistently storing \(settlementMethodStrings.count) settlement methods for offer \(newOffer.id.uuidString)")
+                    try databaseService.storeSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
                 } catch {
                     throw error
                 }
-                logger.notice("openOffer: adding \(newOffer.id.uuidString) to offerTruthSource")
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer -> Promise<(Void, Offer)> in
                 // Authorize token transfer to CommutoSwap contract
                 let tokenAmountForOpeningOffer = newOffer.securityDepositAmount + newOffer.serviceFeeAmountUpperBound
@@ -212,19 +217,21 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 let newOfferStruct = newOffer.toOfferStruct()
                 // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
                 return blockchainService!.openOffer(offerID: newOffer.id, offerStruct: newOfferStruct).map { ($0, newOffer) }
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { _, newOffer in
+                self.logger.notice("openOffer: opened \(newOffer.id.uuidString)")
+                self.logger.notice("openOffer: adding \(newOffer.id.uuidString) to offerTruthSource")
             }.get(on: DispatchQueue.main) { [self] _, newOffer in
                 guard offerTruthSource != nil else {
                     throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during openOffer call")
                 }
                 offerTruthSource!.offers[newOffer.id] = newOffer
             }.done(on: DispatchQueue.global(qos: .userInitiated)) { _, newOffer in
-                self.logger.notice("openOffer: opened \(newOffer.id.uuidString)")
                 if let afterOpen = afterOpen {
                     afterOpen()
                 }
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-                self.logger.error("offerOpened: encountered error: \(error.localizedDescription)")
+                self.logger.error("openOffer: encountered error: \(error.localizedDescription)")
                 seal.reject(error)
             }
             

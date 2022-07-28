@@ -74,7 +74,7 @@ extension StablecoinInformationRepository {
     )
     
     /**
-     A simple `StablecoinInformationRepository` for testing purposes, which contains `StablecoinInformation` structs for several stablecoin contracts on a hardhat test networks set up by [CommuttoSwapTest.py](https://github.com/jimmyneutront/commuto-protocol/blob/main/tests/CommutoSwapTest.py).
+     A simple `StablecoinInformationRepository` for testing purposes, which contains `StablecoinInformation` structs for several stablecoin contracts on hardhat test networks set up by [CommuttoSwapTest.py](https://github.com/jimmyneutront/commuto-protocol/blob/main/tests/CommutoSwapTest.py).
      */
     static let hardhatStablecoinInfoRepo = StablecoinInformationRepository(
         stablecoinInformation: [

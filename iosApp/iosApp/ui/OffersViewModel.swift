@@ -63,7 +63,7 @@ class OffersViewModel: UIOfferTruthSource {
     var openingOfferError: Error? = nil
     
     /**
-     Sets `openingOfferState`.
+     Sets `openingOfferState` on the main DispatchQueue.
      
      - Parameter state: The new value to which `openingOfferState` will be set.
      */

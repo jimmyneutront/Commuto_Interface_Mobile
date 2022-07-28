@@ -266,7 +266,7 @@ class BlockchainService {
     }
     
     /**
-     A `Promise` wrapper around the ERC20 (https://eips.ethereum.org/EIPS/eip-20) `approve` function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     A `Promise` wrapper around the [ERC20](https://eips.ethereum.org/EIPS/eip-20) `approve` function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
      
      - Parameters:
         - tokenAddress: The contract address of the stablecoin for which a transfer will be approved.

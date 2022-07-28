@@ -24,7 +24,7 @@ import web3swift
  
  - Returns: A `ValidatedNewOfferData` derived from the inputs to this function.
  
- - Throws A `NewOfferDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human readable and can be displayed to the user so that they can correct any problems.
+ - Throws A `NewOfferDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
  */
 func validateNewOfferData(
     chainID: BigUInt,
@@ -80,7 +80,7 @@ func validateNewOfferData(
 }
 
 /**
- Converts a stablecoin amount as a `Decimal` to a base unit amount as a `BigUInt`, according to the decimal value of `stablecoinInformation`. So for example, consider USDC with a decimal value of 6: `Decimal(1)` USDC becomes `BigUInt("1_000_000)` USDC in base units.
+ Converts a stablecoin amount as a `Decimal` to a base unit amount as a `BigUInt`, according to the decimal value of `stablecoinInformation`. So for example, consider USDC with a decimal value of 6: `Decimal(1)` USDC becomes `BigUInt("1_000_000")` USDC in base units.
 
  It would be nice to multiply the amount `Decimal` by ten raised to the power of the stablecoin's decimal value, convert the result to an `Int`, and then convert that Int to a `BigUInt`. However, stablecoin's decimal values can be large, which would result in an overflow error when converting the `Decimal` to an `Int`. The following is an example of what NOT to do:
  

@@ -11,7 +11,7 @@ import Foundation
 import web3swift
 
 /**
- A protocol that a structure or class must adopt in order to act as a single source of truth for open-offer-related data in an application with a graphical user interface..
+ A protocol that a structure or class must adopt in order to act as a single source of truth for open-offer-related data in an application with a graphical user interface.
  */
 protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
     /**
@@ -32,6 +32,16 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
     var openingOfferError: Error? { get set }
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the offer will be created.
+        - stablecoin: The contract address of the stablecoin for which the offer will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which the offer will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer.
+        - maximumAmount: The maximum `Decimal` amount of the new offer.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer.
+        - direction: The direction of the new offer.
+        - settlementMethods: The settlement methods of the new offer.
      */
     func openOffer(
         chainID: BigUInt,
