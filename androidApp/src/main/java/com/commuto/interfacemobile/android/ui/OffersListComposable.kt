@@ -29,7 +29,7 @@ import com.commuto.interfacemobile.android.offer.OfferTruthSource
  */
 @Composable
 fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavController) {
-    val stablecoinInformationRepository = StablecoinInformationRepository.ethereumMainnetStablecoinInfoRepo
+    val stablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
     val offers = remember { offerTruthSource.offers }
     Column {
         Box {

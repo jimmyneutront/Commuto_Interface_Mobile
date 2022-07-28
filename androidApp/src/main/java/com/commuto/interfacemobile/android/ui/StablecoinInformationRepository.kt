@@ -60,6 +60,38 @@ class StablecoinInformationRepository(
                 )
             )
         )
+
+        /**
+         * A simple [StablecoinInformationRepository] for testing purposes, which contains [StablecoinInformation] for
+         * several stablecoin contracts on hardhat test networks set up by
+         * [CommuttoSwapTest.py](https://github.com/jimmyneutront/commuto-protocol/blob/main/tests/CommutoSwapTest.py).
+         */
+        val hardhatStablecoinInfoRepo = StablecoinInformationRepository(
+            mapOf(
+                BigInteger.ONE to mapOf(
+                    "0x663F3ad617193148711d28f5334eE4Ed07016602" to StablecoinInformation(
+                        "DAI",
+                        "Dai",
+                        18,
+                    ),
+                    "0x2E983A1Ba5e8b38AAAeC4B440B9dDcFBf72E15d1" to StablecoinInformation(
+                        "USDC",
+                        "USD Coin",
+                        6,
+                    ),
+                    "0x8438Ad1C834623CfF278AB6829a248E37C2D7E3f" to StablecoinInformation(
+                        "BUSD",
+                        "Binance USD",
+                        18,
+                    ),
+                    "0xBC9129Dc0487fc2E169941C75aABC539f208fb01" to StablecoinInformation(
+                        "USDT",
+                        "USD Tether",
+                        6,
+                    ),
+                )
+            )
+        )
     }
 
 }
