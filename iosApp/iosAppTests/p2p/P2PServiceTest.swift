@@ -85,7 +85,7 @@ class P2PServiceTest: XCTestCase {
         let keyManagerService: KeyManagerService = KeyManagerService(databaseService: databaseService)
         let keyPair = try! keyManagerService.generateKeyPair(storeResult: false)
         var error: Unmanaged<CFError>?
-        let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error)!
+        let pubKeyBytes = try! keyPair.getPublicKey().toPkcs1Bytes()
         
         let offerId = UUID()
         let offerIdBytes = offerId.uuid
@@ -107,7 +107,7 @@ class P2PServiceTest: XCTestCase {
             }
         }
         
-        let expectedPKA = PublicKeyAnnouncement(offerId: offerId, pubKey: try! PublicKey(publicKey: keyPair.publicKey))
+        let expectedPKA = PublicKeyAnnouncement(offerId: offerId, pubKey: try! keyPair.getPublicKey())
         let offerService = TestOfferService(expectedPKA: expectedPKA)
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
         let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: offerService, switrixClient: switrixClient)

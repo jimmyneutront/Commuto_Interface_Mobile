@@ -299,9 +299,7 @@ class CommutoCoreInteraction: XCTestCase {
             
             //TODO: Prepare public key announcement message (this one doesn't work)
             var error: Unmanaged<CFError>?
-            guard let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error) else {
-                throw error!.takeRetainedValue() as Error
-            }
+            let pubKeyBytes = try! keyPair.getPublicKey().toPkcs1Bytes()
             var publicKeyAnnouncementDict: [String: Any] = [
                 "sender": keyPair.interfaceId.base64EncodedString(),
                 "msgType":"pka",
@@ -537,9 +535,7 @@ class CommutoCoreInteraction: XCTestCase {
             //Prepare taker info message
             //TODO: Encrypt encryptedKey and encryptedIV with taker's public key
             var error: Unmanaged<CFError>?
-            guard let pubKeyBytes = SecKeyCopyExternalRepresentation(keyPair.publicKey, &error) else {
-                throw error!.takeRetainedValue() as Error
-            }
+            let pubKeyBytes = try! keyPair.getPublicKey().toPkcs1Bytes()
             let takerInfoMessageKey = try! newSymmetricKey()
             let takerInfoPayloadDict: [String: Any] = [
                 "msgType": "takerInfo",

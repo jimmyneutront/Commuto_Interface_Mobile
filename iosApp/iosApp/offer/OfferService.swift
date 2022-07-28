@@ -60,6 +60,11 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     var blockchainService: BlockchainService? = nil
     
     /**
+     The `P2PService` that this uses for interacting with the peer-to-peer network.
+     */
+    var p2pService: P2PService? = nil
+    
+    /**
      The `DatabaseService` that this uses for persistent storage.
      */
     private let databaseService: DatabaseService
@@ -237,7 +242,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, creates a new `Offer` with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` property accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`. Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, and then checks if the offer has been persistently stored in `databaseService`. If it has been persistently stored and if its `isUserMaker` field is true, then the user of this interface has created this offer, and `OfferService` announces its corresponding public key by getting its key pair from `keyManagerService` and passing the public key of the key pair and the offer ID specified in `event` to `P2PService.announcePublicKey`. If the offer has not been persistently stored or if its `isUserMaker` field is false, then `OfferService` creates a new `Offer` with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` property accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferOpenedEvent` of which `OfferService` is being notified.
      
@@ -258,69 +263,86 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         guard event.chainID == offerStruct.chainID else {
             throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in handleOfferOpenedEvent call. OfferOpenedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID) + ", OfferOpenedEvent.id: " + event.id.uuidString)
         }
-        
-        /*
-         At this point, we should check if we made the offer specified in the event. We do this by checking in databaseService for an offer with the specified ID, and checking if its "isUserMaker" field is true. We do this because the offer will always be in databaseService before openOffer is called for it. If there is no such offer or the isUserMaker field is false, then we execute the rest of the code here, setting isUserMaker to false.
-         
-         However, if the offer is present in databaseService and "isUserMaker" is true, then we build and send the public key announcement and once it is sent we update the status of the offer (both in the database and in offerTruthSource) to indicate that the public key announcement has been sent.
-         */
-        
-        let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
-        logger.notice("handleOfferOpenedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
-        guard let offer = Offer(
-            isCreated: offerStruct.isCreated,
-            isTaken: offerStruct.isTaken,
-            id: event.id,
-            maker: offerStruct.maker,
-            interfaceId: event.interfaceId,
-            stablecoin: offerStruct.stablecoin,
-            amountLowerBound: offerStruct.amountLowerBound,
-            amountUpperBound: offerStruct.amountUpperBound,
-            securityDepositAmount: offerStruct.securityDepositAmount,
-            serviceFeeRate: offerStruct.serviceFeeRate,
-            onChainDirection: offerStruct.direction,
-            onChainSettlementMethods: offerStruct.settlementMethods,
-            protocolVersion: offerStruct.protocolVersion,
-            chainID: offerStruct.chainID,
-            havePublicKey: havePublicKey,
-            isUserMaker: false
-        ) else {
-            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
+        // Check if the offer is already in the database, and if it is, whether the user of this interface is the maker of the offer.
+        let offerInDatabase = try databaseService.getOffer(id: event.id.asData().base64EncodedString())
+        var isUserMaker = false
+        if let offerInDatabase = offerInDatabase {
+            isUserMaker = offerInDatabase.isUserMaker
         }
-        let offerForDatabase = DatabaseOffer(
-            id: offer.id.asData().base64EncodedString(),
-            isCreated: offer.isCreated,
-            isTaken: offer.isTaken,
-            maker: offer.maker.addressData.toHexString(),
-            interfaceId: offer.interfaceId.base64EncodedString(),
-            stablecoin: offer.stablecoin.addressData.toHexString(),
-            amountLowerBound: String(offer.amountLowerBound),
-            amountUpperBound: String(offer.amountUpperBound),
-            securityDepositAmount: String(offer.securityDepositAmount),
-            serviceFeeRate: String(offer.serviceFeeRate),
-            onChainDirection: String(offer.onChainDirection),
-            protocolVersion: String(offer.protocolVersion),
-            chainID: String(offer.chainID),
-            havePublicKey: offer.havePublicKey,
-            isUserMaker: offer.isUserMaker
-        )
-        try databaseService.storeOffer(offer: offerForDatabase)
-        logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
-        var settlementMethodStrings: [String] = []
-        for settlementMethod in offer.onChainSettlementMethods {
-            settlementMethodStrings.append(settlementMethod.base64EncodedString())
+        if isUserMaker {
+            logger.notice("handleOfferOpenedEvent: offer \(event.id.uuidString) made by the user")
+            // The user of this interface is the maker of this offer, so we must announce the public key.
+            guard let keyPair = try keyManagerService.getKeyPair(interfaceId: offerStruct.interfaceId) else {
+                throw OfferServiceError.unexpectedNilError(desc: "handleOfferOpenedEvent: got nil while getting key pair with interface ID \(offerStruct.interfaceId.base64EncodedString()) for offer \(event.id.uuidString), which was made by the user")
+            }
+            guard let p2pService = p2pService else {
+                throw OfferServiceError.unexpectedNilError(desc: "handleOfferOpenedEvent: p2pService was nil during handleOfferOpenedEvent call")
+            }
+            logger.notice("handleOfferOpenedEvent: announcing public key for \(event.id.uuidString)")
+            p2pService.announcePublicKey(offerID: event.id, key: try keyPair.getPublicKey())
+            logger.notice("handleOfferOpenedEvent: announced public key for \(event.id.uuidString)")
+            offerOpenedEventRepository.remove(event)
+            // TODO: Update offer status here
+        } else {
+            logger.notice("handleOfferOpenedEvent: offer \(event.id.uuidString) not made by the user")
+            // The user of this interface is not the maker of this offer, so we treat it as a new offer.
+            let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
+            logger.notice("handleOfferOpenedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
+            guard let offer = Offer(
+                isCreated: offerStruct.isCreated,
+                isTaken: offerStruct.isTaken,
+                id: event.id,
+                maker: offerStruct.maker,
+                interfaceId: event.interfaceId,
+                stablecoin: offerStruct.stablecoin,
+                amountLowerBound: offerStruct.amountLowerBound,
+                amountUpperBound: offerStruct.amountUpperBound,
+                securityDepositAmount: offerStruct.securityDepositAmount,
+                serviceFeeRate: offerStruct.serviceFeeRate,
+                onChainDirection: offerStruct.direction,
+                onChainSettlementMethods: offerStruct.settlementMethods,
+                protocolVersion: offerStruct.protocolVersion,
+                chainID: offerStruct.chainID,
+                havePublicKey: havePublicKey,
+                isUserMaker: false
+            ) else {
+                throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
+            }
+            let offerForDatabase = DatabaseOffer(
+                id: offer.id.asData().base64EncodedString(),
+                isCreated: offer.isCreated,
+                isTaken: offer.isTaken,
+                maker: offer.maker.addressData.toHexString(),
+                interfaceId: offer.interfaceId.base64EncodedString(),
+                stablecoin: offer.stablecoin.addressData.toHexString(),
+                amountLowerBound: String(offer.amountLowerBound),
+                amountUpperBound: String(offer.amountUpperBound),
+                securityDepositAmount: String(offer.securityDepositAmount),
+                serviceFeeRate: String(offer.serviceFeeRate),
+                onChainDirection: String(offer.onChainDirection),
+                protocolVersion: String(offer.protocolVersion),
+                chainID: String(offer.chainID),
+                havePublicKey: offer.havePublicKey,
+                isUserMaker: offer.isUserMaker
+            )
+            try databaseService.storeOffer(offer: offerForDatabase)
+            logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
+            var settlementMethodStrings: [String] = []
+            for settlementMethod in offer.onChainSettlementMethods {
+                settlementMethodStrings.append(settlementMethod.base64EncodedString())
+            }
+            try databaseService.storeSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
+            logger.notice("handleOfferOpenedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
+            offerOpenedEventRepository.remove(event)
+            guard offerTruthSource != nil else {
+                throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
+            }
+            // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
+            DispatchQueue.main.sync {
+                offerTruthSource!.offers[offer.id] = offer
+            }
+            logger.notice("handleOfferOpenedEvent: added offer \(offer.id.uuidString) to offerTruthSource")
         }
-        try databaseService.storeSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
-        logger.notice("handleOfferOpenedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
-        offerOpenedEventRepository.remove(event)
-        guard offerTruthSource != nil else {
-            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
-        }
-        // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
-        DispatchQueue.main.sync {
-            offerTruthSource!.offers[offer.id] = offer
-        }
-        logger.notice("handleOfferOpenedEvent: added offer \(offer.id.uuidString) to offerTruthSource")
     }
     
     #warning("TODO: when we support multiple chains, someone could corrupt the interface's knowledge of settlement methods on Chain A by creating another offer with the same ID on Chain B and then changing the settlement methods of the offer on Chain B. If this interface is listening to both, it will detect the OfferEditedEvent from Chain B and then use the settlement methods from the offer on Chain B to update its local Offer object corresponding to the object from Chain A. We should only update settlement methods if the chainID of the OfferEditedEvent matches that of the already-stored offer")

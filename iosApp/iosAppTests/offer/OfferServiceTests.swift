@@ -141,6 +141,122 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
     
+    func testHandleOfferOpenedEventForUserIsMakerOffer() {
+        
+        let newOfferID = UUID()
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let keyPairForOffer = try! keyManagerService.generateKeyPair(storeResult: true)
+        
+        let interfaceIDString = keyPairForOffer.interfaceId.base64EncodedString()
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_forUserIsMakerOffer_handleOfferOpenedEvent")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened"),
+            URLQueryItem(name: "offerID", value: newOfferID.uuidString),
+            URLQueryItem(name: "interfaceID", value: keyPairForOffer.interfaceId.base64EncodedString())
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let offerService = OfferService<PreviewableOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        offerService.offerTruthSource = PreviewableOfferTruthSource()
+        
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        let p2pErrorHandler = TestP2PErrorHandler()
+        
+        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
+        
+        class TestP2PService: P2PService {
+            let publicKeyAnnouncementExpectation = XCTestExpectation(description: "Fulfilled when announcePublicKey is called")
+            var offerIDForAnnouncement: UUID?
+            var keyForAnnouncement: iosApp.PublicKey?
+            override func announcePublicKey(offerID: UUID, key: iosApp.PublicKey) {
+                offerIDForAnnouncement = offerID
+                keyForAnnouncement = key
+            }
+        }
+        let testP2PService = TestP2PService(errorHandler: p2pErrorHandler, offerService: offerService, switrixClient: switrixClient)
+        offerService.p2pService = testP2PService
+        
+        let offerForDatabase = DatabaseOffer(
+            id: newOfferID.asData().base64EncodedString(),
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: keyPairForOffer.interfaceId.base64EncodedString(),
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound",
+            amountUpperBound: "upper_bound",
+            securityDepositAmount: "security_deposit",
+            serviceFeeRate: "service_fee",
+            onChainDirection: "on_chain_direction",
+            protocolVersion: "protocol_version",
+            chainID: "0",
+            havePublicKey: true,
+            isUserMaker: true
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
+        
+        let offerOpenedEvent = OfferOpenedEvent(
+            id: newOfferID,
+            interfaceID: keyPairForOffer.interfaceId,
+            chainID: BigUInt(31337)
+        )
+        try! offerService.handleOfferOpenedEvent(offerOpenedEvent)
+        
+        XCTAssertFalse(errorHandler.gotError)
+        XCTAssertEqual(testP2PService.offerIDForAnnouncement, newOfferID)
+        XCTAssertEqual(try! testP2PService.keyForAnnouncement!.interfaceId, keyPairForOffer.interfaceId)
+        
+    }
+    
     /**
      Ensures that `OfferService` handles [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) events properly.
      */
@@ -559,7 +675,7 @@ class OfferServiceTests: XCTestCase {
         offerService.offerTruthSource = offerTruthSource
         
         let keyPair = try! keyManagerService.generateKeyPair(storeResult: false)
-        let publicKey = try! PublicKey(publicKey: keyPair.publicKey)
+        let publicKey = try! keyPair.getPublicKey()
         
         let offerID = UUID()
         let offer = Offer(

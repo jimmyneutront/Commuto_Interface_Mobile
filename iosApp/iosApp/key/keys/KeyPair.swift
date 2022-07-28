@@ -20,7 +20,7 @@ import Foundation
 struct KeyPair {
     
     let interfaceId: Data
-    let publicKey: SecKey
+    private let publicKey: SecKey
     let privateKey: SecKey
     
     /**
@@ -93,6 +93,15 @@ struct KeyPair {
         }
         let interfaceIdBytes = Data(bytes: interfaceIdByteArray, count: interfaceIdByteArray.count)
         self.interfaceId = interfaceIdBytes
+    }
+    
+    /**
+     Creates a new `PublicKey` wrapped around this `KeyPair`'s public `SecKey`.
+     
+     - Returns: A new `PublicKey` wrapped around this `KeyPair`'s public `SecKey`.
+     */
+    func getPublicKey() throws -> PublicKey {
+        return try PublicKey(publicKey: self.publicKey)
     }
     
     /**

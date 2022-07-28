@@ -42,6 +42,20 @@ class OfferOpenedEvent: Equatable {
     }
     
     /**
+     Creates a new `OfferOpenedEvent` given an offer ID as a `UUID`, an interface ID as `Data`, and a blockchain ID as a `BigUInt`.
+     
+     - Parameters:
+        - id: The ID of the offer corresponding to this event, as a `UUID`.
+        - interfaceID: The interface ID specified for the offer corresponding to this event, as `Data`.
+        - chainID: The ID of the blockchain on which this event was emitted.
+     */
+    init(id: UUID, interfaceID: Data, chainID: BigUInt) {
+        self.id = id
+        self.interfaceId = interfaceID
+        self.chainID = chainID
+    }
+    
+    /**
     Compares two `OfferOpenedEvent`s for equality. Two `OfferOpenedEvent`s are defined as equal if their `id`, `interfaceId`, and `chainID` properties are equal.
      
      - Parameters:

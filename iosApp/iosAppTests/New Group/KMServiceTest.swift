@@ -29,13 +29,13 @@ class KeyManagerServiceTest: XCTestCase {
         let keyPair = try keyManagerService!.generateKeyPair()
         let retrievedKeyPair = try keyManagerService!.getKeyPair(interfaceId: keyPair.interfaceId)
         XCTAssertEqual(keyPair.interfaceId, retrievedKeyPair!.interfaceId)
-        XCTAssertEqual(keyPair.publicKey, retrievedKeyPair!.publicKey)
+        XCTAssertEqual(try! keyPair.getPublicKey().publicKey, try! retrievedKeyPair!.getPublicKey().publicKey)
         XCTAssertEqual(keyPair.privateKey, retrievedKeyPair!.privateKey)
     }
     
     func testStoreAndGetPublicKey() throws {
         let keyPair = try keyManagerService!.generateKeyPair()
-        let publicKey = try PublicKey(publicKey: keyPair.publicKey)
+        let publicKey = try keyPair.getPublicKey()
         try keyManagerService!.storePublicKey(pubKey: publicKey)
         let retrievedPublicKey = try keyManagerService!.getPublicKey(interfaceId: publicKey.interfaceId)
         XCTAssertEqual(publicKey.interfaceId, retrievedPublicKey?.interfaceId)

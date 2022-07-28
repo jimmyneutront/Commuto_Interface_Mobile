@@ -223,6 +223,11 @@ class P2PService {
     
     }
     
+    func announcePublicKey(offerID: UUID, key: PublicKey) {
+        
+    }
+    
+    #warning("TODO: this should get its own file")
     /**
     Attempts to restore a PublicKeyAnnouncement from a given `String`.
      
