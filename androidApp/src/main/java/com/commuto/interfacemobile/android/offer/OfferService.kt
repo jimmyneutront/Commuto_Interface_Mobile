@@ -190,6 +190,13 @@ class OfferService (
                     havePublicKey = 1L,
                 )
                 databaseService.storeOffer(offerForDatabase)
+                val settlementMethodStrings = newOffer.onChainSettlementMethods.map {
+                    encoder.encodeToString(it)
+                }
+                Log.i(logTag, "openOffer: persistently storing ${settlementMethodStrings.size} settlement " +
+                        "methods for offer ${newOffer.id.toString()}")
+                databaseService.storeSettlementMethods(offerForDatabase.offerId, offerForDatabase.chainID,
+                    settlementMethodStrings)
                 afterPersistentStorage?.invoke()
                 // Authorize token transfer to CommutoSwap contract
                 val tokenAmountForOpeningOffer = newOffer.securityDepositAmount + newOffer.serviceFeeAmountUpperBound
