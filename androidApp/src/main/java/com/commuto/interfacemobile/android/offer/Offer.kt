@@ -2,7 +2,9 @@ package com.commuto.interfacemobile.android.offer
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.commuto.interfacemobile.android.blockchain.structs.OfferStruct
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.math.BigInteger
 import java.util.UUID
@@ -29,18 +31,20 @@ import java.util.UUID
  * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s securityDepositAmount property.
  * @param serviceFeeRate Corresponds to an on-chain
  * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s serviceFeeRate property.
- * @param onChainDirection Corresponds to an on-chain
- * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s direction property.
- * @param onChainSettlementMethods Corresponds to an on-chain
- * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s settlementMethods property.
- * @param protocolVersion Corresponds to an on-chain
- * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s protocolVersion property.
- * @param chainID The ID of the blockchain on which this Offer exists.
- *
  * @property direction The direction of the offer, indicating whether the maker is offering to buy stablecoin or sell
  * stablecoin.
  * @property settlementMethods A [SnapshotStateList] of [SettlementMethod]s derived from parsing
  * [onChainSettlementMethods].
+ * @param protocolVersion Corresponds to an on-chain
+ * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s protocolVersion property.
+ * @param chainID The ID of the blockchain on which this Offer exists.
+ *
+ * @property serviceFeeAmountLowerBound The minimum service fee for the new offer.
+ * @property serviceFeeAmountUpperBound The maximum service fee for the new offer.
+ * @property onChainDirection Corresponds to an on-chain
+ * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s direction property.
+ * @property onChainSettlementMethods Corresponds to an on-chain
+ * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s settlementMethods property.
  * @property havePublicKey Indicates whether this interface has a copy of the public key specified by the [interfaceId]
  * property.
  */
@@ -55,35 +59,111 @@ data class Offer(
     val amountUpperBound: BigInteger,
     val securityDepositAmount: BigInteger,
     val serviceFeeRate: BigInteger,
-    val onChainDirection: BigInteger,
-    var onChainSettlementMethods: List<ByteArray>,
+    val direction: OfferDirection,
+    var settlementMethods: SnapshotStateList<SettlementMethod>,
     val protocolVersion: BigInteger,
     val chainID: BigInteger,
     var havePublicKey: Boolean
 ) {
 
-    val direction: OfferDirection
-    var settlementMethods: SnapshotStateList<SettlementMethod>
-
-    init {
-        when (this.onChainDirection) {
+    constructor(
+        isCreated: Boolean,
+        isTaken: Boolean,
+        id: UUID,
+        maker: String,
+        interfaceId: ByteArray,
+        stablecoin: String,
+        amountLowerBound: BigInteger,
+        amountUpperBound: BigInteger,
+        securityDepositAmount: BigInteger,
+        serviceFeeRate: BigInteger,
+        onChainDirection: BigInteger,
+        onChainSettlementMethods: List<ByteArray>,
+        protocolVersion: BigInteger,
+        chainID: BigInteger,
+        havePublicKey: Boolean
+    ) : this(
+        isCreated = isCreated,
+        isTaken = isTaken,
+        id = id,
+        maker = maker,
+        interfaceId = interfaceId,
+        stablecoin = stablecoin,
+        amountLowerBound = amountLowerBound,
+        amountUpperBound = amountUpperBound,
+        securityDepositAmount = securityDepositAmount,
+        serviceFeeRate = serviceFeeRate,
+        direction =
+        when (onChainDirection) {
             BigInteger.ZERO -> {
-                this.direction = OfferDirection.BUY
+                OfferDirection.BUY
             }
             BigInteger.ONE -> {
-                this.direction = OfferDirection.SELL
+                OfferDirection.SELL
             }
             else -> {
                 throw IllegalStateException("Unexpected onChainDirection encountered while creating Offer")
             }
+        },
+        settlementMethods = kotlin.run {
+            val settlementMethods = mutableStateListOf<SettlementMethod>()
+            onChainSettlementMethods.forEach {
+                try {
+                    settlementMethods.add(Json.decodeFromString(it.decodeToString()))
+                } catch (_: Exception) {
+                }
+            }
+            settlementMethods
+        },
+        protocolVersion = protocolVersion,
+        chainID = chainID,
+        havePublicKey = havePublicKey,
+    )
+
+    val serviceFeeAmountLowerBound: BigInteger = this.serviceFeeRate * (this.amountLowerBound /
+            BigInteger.valueOf(10_000L))
+    val serviceFeeAmountUpperBound: BigInteger = this.serviceFeeRate * (this.amountUpperBound /
+            BigInteger.valueOf(10_000L))
+    val onChainDirection: BigInteger
+    var onChainSettlementMethods: List<ByteArray>
+
+    init {
+        when (this.direction) {
+            OfferDirection.BUY -> {
+                this.onChainDirection = BigInteger.ZERO
+            }
+            OfferDirection.SELL -> {
+                this.onChainDirection = BigInteger.ONE
+            }
         }
-        val settlementMethods = mutableStateListOf<SettlementMethod>()
-        onChainSettlementMethods.forEach {
-            try {
-                settlementMethods.add(Json.decodeFromString(it.decodeToString()))
-            } catch(_: Exception) { }
+        val onChainSettlementMethods = mutableListOf<ByteArray>()
+        settlementMethods.forEach {
+            onChainSettlementMethods.add(Json.encodeToString(it).encodeToByteArray())
         }
-        this.settlementMethods = settlementMethods
+        this.onChainSettlementMethods = onChainSettlementMethods
+    }
+
+    /**
+     * Returns an [OfferStruct] derived from this [Offer].
+     *
+     * @return An [OfferStruct] derived from this [Offer].
+     */
+    fun toOfferStruct(): OfferStruct {
+        return OfferStruct(
+            isCreated = this.isCreated,
+            isTaken = this.isTaken,
+            maker = this.maker,
+            interfaceID = this.interfaceId,
+            stablecoin = this.stablecoin,
+            amountLowerBound = this.amountLowerBound,
+            amountUpperBound = this.amountUpperBound,
+            securityDepositAmount = this.securityDepositAmount,
+            serviceFeeRate = this.serviceFeeRate,
+            direction = this.onChainDirection,
+            settlementMethods = this.onChainSettlementMethods,
+            protocolVersion = this.protocolVersion,
+            chainID = this.chainID
+        )
     }
 
 
@@ -98,7 +178,7 @@ data class Offer(
                 id = UUID.randomUUID(),
                 maker = "0x0000000000000000000000000000000000000000",
                 interfaceId = ByteArray(0),
-                stablecoin = "0x6B175474E89094C44Da98b954EedeAC495271d0F", // DAI on Ethereum Mainnet
+                stablecoin = "0x663F3ad617193148711d28f5334eE4Ed07016602", // DAI on Hardhat
                 amountLowerBound = BigInteger.valueOf(10_000) * BigInteger.TEN.pow(18),
                 amountUpperBound = BigInteger.valueOf(20_000) * BigInteger.TEN.pow(18),
                 securityDepositAmount = BigInteger.valueOf(1_000) * BigInteger.TEN.pow(18),
@@ -115,7 +195,7 @@ data class Offer(
                 ),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                havePublicKey = false
+                false
             ),
             Offer(
                 isCreated = true,
@@ -123,7 +203,7 @@ data class Offer(
                 id = UUID.randomUUID(),
                 maker = "0x0000000000000000000000000000000000000000",
                 interfaceId = ByteArray(0),
-                stablecoin = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum Mainnet
+                stablecoin = "0x2E983A1Ba5e8b38AAAeC4B440B9dDcFBf72E15d1", // USDC on Hardhat
                 amountLowerBound = BigInteger.valueOf(10_000) * BigInteger.TEN.pow(6),
                 amountUpperBound = BigInteger.valueOf(20_000) * BigInteger.TEN.pow(6),
                 securityDepositAmount = BigInteger.valueOf(1_000) * BigInteger.TEN.pow(6),
@@ -140,7 +220,7 @@ data class Offer(
                 ),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                havePublicKey = false
+                false
             ),
             Offer(
                 isCreated = true,
@@ -148,24 +228,16 @@ data class Offer(
                 id = UUID.randomUUID(),
                 maker = "0x0000000000000000000000000000000000000000",
                 interfaceId = ByteArray(0),
-                stablecoin = "0x4Fabb145d64652a948d72533023f6E7A623C7C53", // BUSD on Ethereum Mainnet
+                stablecoin = "0x8438Ad1C834623CfF278AB6829a248E37C2D7E3f", // BUSD on Hardhat
                 amountLowerBound = BigInteger.valueOf(10_000) * BigInteger.TEN.pow(18),
                 amountUpperBound = BigInteger.valueOf(10_000) * BigInteger.TEN.pow(18),
                 securityDepositAmount = BigInteger.valueOf(1_000) * BigInteger.TEN.pow(18),
                 serviceFeeRate = BigInteger.valueOf(1),
                 onChainDirection = BigInteger.ONE,
-                onChainSettlementMethods = listOf(
-                    """
-                    {
-                        "f": "BUSD",
-                        "p": "1.00",
-                        "m": "SANDDOLLAR"
-                    }
-                    """.trimIndent().encodeToByteArray()
-                ),
+                onChainSettlementMethods = listOf("not valid JSON".encodeToByteArray()),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                havePublicKey = false
+                false
             ),
             Offer(
                 isCreated = true,
@@ -185,7 +257,7 @@ data class Offer(
                 onChainSettlementMethods = listOf("not valid JSON".encodeToByteArray()),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                havePublicKey = false
+                false
             ),
         )
     }
