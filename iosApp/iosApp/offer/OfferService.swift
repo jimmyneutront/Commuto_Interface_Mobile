@@ -154,7 +154,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                             settlementMethods: offerData.settlementMethods,
                             protocolVersion: BigUInt.zero,
                             chainID: BigUInt(31337),
-                            havePublicKey: true
+                            havePublicKey: true,
+                            isUserMaker: true
                         )
                         if let afterObjectCreation = afterObjectCreation {
                             afterObjectCreation()
@@ -181,7 +182,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                     onChainDirection: String(newOffer.onChainDirection),
                     protocolVersion: String(newOffer.protocolVersion),
                     chainID: String(newOffer.chainID),
-                    havePublicKey: newOffer.havePublicKey
+                    havePublicKey: newOffer.havePublicKey,
+                    isUserMaker: newOffer.isUserMaker
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
                 if let afterPersistentStorage = afterPersistentStorage {
@@ -256,6 +258,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         guard event.chainID == offerStruct.chainID else {
             throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in handleOfferOpenedEvent call. OfferOpenedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID) + ", OfferOpenedEvent.id: " + event.id.uuidString)
         }
+        
+        /*
+         At this point, we should check if we made the offer specified in the event. We do this by checking in databaseService for an offer with the specified ID, and checking if its "isUserMaker" field is true. We do this because the offer will always be in databaseService before openOffer is called for it. If there is no such offer or the isUserMaker field is false, then we execute the rest of the code here, setting isUserMaker to false.
+         
+         However, if the offer is present in databaseService and "isUserMaker" is true, then we build and send the public key announcement and once it is sent we update the status of the offer (both in the database and in offerTruthSource) to indicate that the public key announcement has been sent.
+         */
+        
         let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
         logger.notice("handleOfferOpenedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
         guard let offer = Offer(
@@ -273,7 +282,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             onChainSettlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion,
             chainID: offerStruct.chainID,
-            havePublicKey: havePublicKey
+            havePublicKey: havePublicKey,
+            isUserMaker: false
         ) else {
             throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
         }
@@ -291,7 +301,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             onChainDirection: String(offer.onChainDirection),
             protocolVersion: String(offer.protocolVersion),
             chainID: String(offer.chainID),
-            havePublicKey: offer.havePublicKey
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker
         )
         try databaseService.storeOffer(offer: offerForDatabase)
         logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
@@ -337,6 +348,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         }
         let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
         logger.notice("handleOfferEditedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
+        #warning("TODO: get offer from database to use actual isUserMaker value here")
         guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
@@ -352,7 +364,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             onChainSettlementMethods: offerStruct.settlementMethods,
             protocolVersion: offerStruct.protocolVersion,
             chainID: offerStruct.chainID,
-            havePublicKey: havePublicKey
+            havePublicKey: havePublicKey,
+            isUserMaker: false
         ) else {
             throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
         }

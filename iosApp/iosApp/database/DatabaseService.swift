@@ -124,6 +124,10 @@ class DatabaseService {
      A database structure  representing an Offer's `havePublicKey` property.
      */
     let havePublicKey = Expression<Bool>("havePublicKey")
+    /**
+     A database structure representing an Offer's `isUserMaker` property.
+     */
+    let isUserMaker = Expression<Bool>("isUserMaker")
     
     /**
      Creates all necessary database tables.
@@ -144,6 +148,7 @@ class DatabaseService {
             t.column(protocolVersion)
             t.column(chainID)
             t.column(havePublicKey)
+            t.column(isUserMaker)
         })
         try connection.run(settlementMethods.create { t in
             t.column(offerId)
@@ -183,7 +188,8 @@ class DatabaseService {
                     onChainDirection <- offer.onChainDirection,
                     protocolVersion <- offer.protocolVersion,
                     chainID <- offer.chainID,
-                    havePublicKey <- offer.havePublicKey
+                    havePublicKey <- offer.havePublicKey,
+                    isUserMaker <- offer.isUserMaker
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
@@ -261,7 +267,8 @@ class DatabaseService {
                 onChainDirection: result[0][onChainDirection],
                 protocolVersion: result[0][protocolVersion],
                 chainID: result[0][chainID],
-                havePublicKey: result[0][havePublicKey]
+                havePublicKey: result[0][havePublicKey],
+                isUserMaker: result[0][isUserMaker]
             )
         } else {
             logger.notice("getOffer: no offer found with B64 ID \(id)")

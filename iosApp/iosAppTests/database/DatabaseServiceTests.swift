@@ -38,7 +38,8 @@ class DatabaseServiceTests: XCTestCase {
             onChainDirection: "direction",
             protocolVersion: "some_version",
             chainID: "a_chain_id",
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )
         try dbService.storeOffer(offer: offerToStore)
         let anotherOfferToStore = DatabaseOffer(
@@ -55,7 +56,8 @@ class DatabaseServiceTests: XCTestCase {
             onChainDirection: "opposite_direction",
             protocolVersion: "some_other_version",
             chainID: "another_chain_id",
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )
         // This should do nothing and not throw
         try dbService.storeOffer(offer: anotherOfferToStore)
@@ -82,7 +84,8 @@ class DatabaseServiceTests: XCTestCase {
             onChainDirection: "direction",
             protocolVersion: "some_version",
             chainID: "a_chain_id",
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )
         try dbService.storeOffer(offer: offerToStore)
         try dbService.updateOfferHavePublicKey(offerID: "a_uuid", _chainID: "a_chain_id", _havePublicKey: true)

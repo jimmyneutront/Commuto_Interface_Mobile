@@ -66,4 +66,8 @@ struct DatabaseOffer: Equatable {
      Corresponds to an Offer's `havePublicKey` property.
      */
     let havePublicKey: Bool
+    /**
+     Corresponds to an Offer's `isUserMaker` property.
+     */
+    let isUserMaker: Bool
 }

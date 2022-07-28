@@ -91,6 +91,10 @@ class Offer: ObservableObject {
      Indicates whether this interface has a copy of the public key specified by the `interfaceId` field
      */
     var havePublicKey: Bool
+    /**
+     Indicates whether the user of this interface is the maker of this offer.
+     */
+    var isUserMaker: Bool
     
     /**
      Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).
@@ -111,6 +115,7 @@ class Offer: ObservableObject {
         - protocolVersion: Corresponds to an `OfferStruct`'s `protocolVersion` property.
         - chainID: Corresponds to an `OfferStruct`'s `chainID` property.
         - havePublicKey: Indicates whether this interface has, in persistent storage, the public key specified by the `interfaceId` parameter.
+        - isUserMaker: Indicates whether the user of this interface is the maker of this offer.
      */
     init?(
         isCreated: Bool,
@@ -127,7 +132,8 @@ class Offer: ObservableObject {
         onChainSettlementMethods: [Data],
         protocolVersion: BigUInt,
         chainID: BigUInt,
-        havePublicKey: Bool
+        havePublicKey: Bool,
+        isUserMaker: Bool
     ) {
         self.isCreated = isCreated
         self.isTaken = isTaken
@@ -156,6 +162,7 @@ class Offer: ObservableObject {
         self.protocolVersion = protocolVersion
         self.chainID = chainID
         self.havePublicKey = havePublicKey
+        self.isUserMaker = isUserMaker
     }
     
     /**
@@ -177,6 +184,7 @@ class Offer: ObservableObject {
         - protocolVersion: Indicates the minimum Commuto Interface version that one must have in order to take this offer.
         - chainID: The ID of the blockchain on which this offer exists.
         - havePublicKey: Indicates whether this interface has, in persistent storage, the public key specified by the `interfaceID` parameter.
+        - isUserMaker: Indicates whether the user of this interface is the maker of this offer.
      */
     init(
         isCreated: Bool,
@@ -193,7 +201,8 @@ class Offer: ObservableObject {
         settlementMethods: [SettlementMethod],
         protocolVersion: BigUInt,
         chainID: BigUInt,
-        havePublicKey: Bool
+        havePublicKey: Bool,
+        isUserMaker: Bool
     ) {
         self.isCreated = isCreated
         self.isTaken = isTaken
@@ -223,6 +232,7 @@ class Offer: ObservableObject {
         self.protocolVersion = protocolVersion
         self.chainID = chainID
         self.havePublicKey = havePublicKey
+        self.isUserMaker = isUserMaker
     }
     
     /**
@@ -290,7 +300,8 @@ extension Offer {
             ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )!,
         sampleOfferIds[1]: Offer(
             isCreated: true,
@@ -315,7 +326,8 @@ extension Offer {
             ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )!,
         sampleOfferIds[2]: Offer(
             isCreated: true,
@@ -340,7 +352,8 @@ extension Offer {
             ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )!,
         sampleOfferIds[3]: Offer(
             isCreated: true,
@@ -357,7 +370,8 @@ extension Offer {
             onChainSettlementMethods: [],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )!,
     ]
 }

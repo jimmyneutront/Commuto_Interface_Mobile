@@ -577,7 +577,8 @@ class OfferServiceTests: XCTestCase {
             onChainSettlementMethods: [],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt.zero,
-            havePublicKey: false
+            havePublicKey: false,
+            isUserMaker: false
         )!
         offerTruthSource.offers[offerID] = offer
         let offerForDatabase = DatabaseOffer(
@@ -594,7 +595,8 @@ class OfferServiceTests: XCTestCase {
             onChainDirection: String(offer.onChainDirection),
             protocolVersion: String(offer.protocolVersion),
             chainID: String(offer.chainID),
-            havePublicKey: offer.havePublicKey
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -838,7 +840,8 @@ class OfferServiceTests: XCTestCase {
             onChainDirection: String(BigUInt(1)),
             protocolVersion: String(BigUInt.zero),
             chainID: String(BigUInt(31337)),
-            havePublicKey: true
+            havePublicKey: true,
+            isUserMaker: true
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
         
