@@ -22,7 +22,7 @@ func createPublicKeyAnnouncement(keyPair: KeyPair, offerId: Data) throws -> Stri
     //Create Base64-encoded string of public key in PKCS#1 bytes
     let pubKeyString = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
     
-    //Create Base-64 encoded string of offer idV
+    //Create Base-64 encoded string of offer id
     let offerIdString = offerId.base64EncodedString()
     
     //Create payload NSDictionary

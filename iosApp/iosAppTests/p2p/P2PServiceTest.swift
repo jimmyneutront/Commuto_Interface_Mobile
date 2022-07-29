@@ -174,4 +174,34 @@ class P2PServiceTest: XCTestCase {
         wait(for: [errorExpectation], timeout: 60.0)
         XCTAssertTrue((try! errorHandler.errorPromise!.wait() as! SwitrixError).errorCode == "M_UNKNOWN_TOKEN")
     }
+    
+    /**
+     Ensure that `P2PService.announcePublicKey` makes Public Key Announcements properly.
+     */
+    func testAnnouncePublicKey() {
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        class TestOfferService : OfferMessageNotifiable {
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
+        }
+        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
+        class TestP2PService: P2PService {
+            var receivedMessage: String?
+            override func sendMessage(_ message: String) {
+                receivedMessage = message
+            }
+        }
+        let p2pService = TestP2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
+        
+        let keyPair = try! KeyPair()
+        let offerID = UUID()
+        
+        try! p2pService.announcePublicKey(offerID: offerID, keyPair: keyPair)
+        
+        let createdPublicKeyAnnouncement = parsePublicKeyAnnouncement(messageString: p2pService.receivedMessage)
+        XCTAssertEqual(keyPair.interfaceId, createdPublicKeyAnnouncement!.publicKey.interfaceId)
+        XCTAssertEqual(offerID, createdPublicKeyAnnouncement!.offerId)
+    }
+    
 }

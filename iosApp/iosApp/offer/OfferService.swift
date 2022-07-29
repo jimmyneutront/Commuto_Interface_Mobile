@@ -289,7 +289,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
              */
             try databaseService.updateOfferState(offerID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: OfferState.awaitingPublicKeyAnnouncement.asString)
             logger.notice("handleOfferOpenedEvent: announcing public key for \(event.id.uuidString)")
-            p2pService.announcePublicKey(offerID: event.id, key: try keyPair.getPublicKey())
+            try p2pService.announcePublicKey(offerID: event.id, keyPair: keyPair)
             logger.notice("handleOfferOpenedEvent: announced public key for \(event.id.uuidString)")
             try databaseService.updateOfferState(offerID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: OfferState.offerOpened.asString)
             guard let offerTruthSource = offerTruthSource else {
@@ -516,7 +516,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      The function called by `P2PService` to notify `OfferService` of a `PublicKeyAnnouncement`.
      
-     Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker, and if the offer has not already passed through the `offerOpened` state, updates its `state` property to `offerOpened`. It updates these properties in persistent storage as well.
+     Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it checks the offer's `havePublicKey` and `state` properties. If `havePublicKey` is true and `state` is at or beyond `offerOpened`, then it returns because this interface already has the public key for this offer. Otherwise, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker, and if the offer has not already passed through the `offerOpened` state, updates its `state` property to `offerOpened`. It updates these properties in persistent storage as well.
      
      - Parameter message: The `PublicKeyAnnouncement` of which `OfferService` is being notified.
      */
@@ -537,6 +537,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             logger.notice("handlePublicKeyAnnouncement: got announcement for offer not in offerTruthSource: \(message.offerId.uuidString)")
             return
         }
+        /*
+         If we already have the public key for an offer and that offer is at or beyond the offerOpened state (such as an offer made by this interface's user), then we do nothing.
+         */
+        guard offer.havePublicKey == false && offer.state.indexNumber < OfferState.offerOpened.indexNumber else {
+            logger.notice("handlePublicKeyAnnouncement: got announcement for offer for which public key was already obtained")
+            return
+        }
         if offer.interfaceId == message.publicKey.interfaceId {
             DispatchQueue.main.sync {
                 let offerInTruthSource = offerTruthSource.offers[message.offerId]
@@ -551,7 +558,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             logger.notice("handlePublicKeyAnnouncement: set havePublicKey true for offer \(message.offerId.uuidString)")
             let offerIDString = message.offerId.asData().base64EncodedString()
             let chainIDString = String(offer.chainID)
-            if offer.state.indexNumber < OfferState.offerOpened.indexNumber {
+            if offer.state.indexNumber <= OfferState.offerOpened.indexNumber {
                 try databaseService.updateOfferState(offerID: offerIDString, _chainID: chainIDString, state: OfferState.offerOpened.asString)
                 logger.notice("handlePublicKeyAnnouncement: persistently set state as offerOpened for offer \(message.offerId.uuidString)")
             }

@@ -200,10 +200,10 @@ class OfferServiceTests: XCTestCase {
         
         class TestP2PService: P2PService {
             var offerIDForAnnouncement: UUID?
-            var keyForAnnouncement: iosApp.PublicKey?
-            override func announcePublicKey(offerID: UUID, key: iosApp.PublicKey) {
+            var keyPairForAnnouncement: KeyPair?
+            override func announcePublicKey(offerID: UUID, keyPair: KeyPair) {
                 offerIDForAnnouncement = offerID
-                keyForAnnouncement = key
+                keyPairForAnnouncement = keyPair
             }
         }
         let testP2PService = TestP2PService(errorHandler: p2pErrorHandler, offerService: offerService, switrixClient: switrixClient)
@@ -254,7 +254,7 @@ class OfferServiceTests: XCTestCase {
         
         XCTAssertFalse(errorHandler.gotError)
         XCTAssertEqual(testP2PService.offerIDForAnnouncement, newOfferID)
-        XCTAssertEqual(testP2PService.keyForAnnouncement!.interfaceId, keyPairForOffer.interfaceId)
+        XCTAssertEqual(testP2PService.keyPairForAnnouncement!.interfaceId, keyPairForOffer.interfaceId)
         let offerInDatabase = try! databaseService.getOffer(id: offerForDatabase.id)
         XCTAssertEqual(offerInDatabase!.state, OfferState.offerOpened.asString)
         
