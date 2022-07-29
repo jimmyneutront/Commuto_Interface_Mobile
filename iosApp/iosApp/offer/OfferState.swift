@@ -28,6 +28,22 @@ enum OfferState {
     case offerOpened
     
     /**
+     Returns an `Int` corresponding to this state's position in a list of possible offer states organized according to the order in which an offer should move through them, with the earliest state at the beginning (corresponding to the integer 0) and the latest state at the end (corresponding to the integer 3).
+     */
+    var indexNumber: Int {
+        switch self {
+        case .opening:
+            return 0
+        case .openOfferTransactionBroadcast:
+            return 1
+        case .awaitingPublicKeyAnnouncement:
+            return 2
+        case .offerOpened:
+            return 3
+        }
+    }
+    
+    /**
      Returns a `String` corresponding to a particular case of `OfferState`.
      */
     var asString: String {
@@ -50,8 +66,10 @@ enum OfferState {
      
      - Returns An `OfferState` corresponding to `string`, or `nil` if no such `OfferState` exists.
      */
-    static func fromString(_ string: String) -> OfferState? {
-        if string == "openOfferTxPublished" {
+    static func fromString(_ string: String?) -> OfferState? {
+        if string == nil {
+            return nil
+        } else if string == "openOfferTxPublished" {
             return .openOfferTransactionBroadcast
         } else if string == "awaitingPKAnnouncement" {
             return .awaitingPublicKeyAnnouncement

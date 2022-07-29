@@ -136,6 +136,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
+        XCTAssertEqual(offerInDatabase!.state, OfferState.awaitingPublicKeyAnnouncement.asString)
         let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
@@ -198,7 +199,6 @@ class OfferServiceTests: XCTestCase {
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
         
         class TestP2PService: P2PService {
-            let publicKeyAnnouncementExpectation = XCTestExpectation(description: "Fulfilled when announcePublicKey is called")
             var offerIDForAnnouncement: UUID?
             var keyForAnnouncement: iosApp.PublicKey?
             override func announcePublicKey(offerID: UUID, key: iosApp.PublicKey) {
@@ -222,10 +222,10 @@ class OfferServiceTests: XCTestCase {
             serviceFeeRate: "service_fee",
             onChainDirection: "on_chain_direction",
             protocolVersion: "protocol_version",
-            chainID: "0",
+            chainID: "31337",
             havePublicKey: true,
             isUserMaker: true,
-            state: "a_state_here"
+            state: OfferState.openOfferTransactionBroadcast.asString
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -254,7 +254,9 @@ class OfferServiceTests: XCTestCase {
         
         XCTAssertFalse(errorHandler.gotError)
         XCTAssertEqual(testP2PService.offerIDForAnnouncement, newOfferID)
-        XCTAssertEqual(try! testP2PService.keyForAnnouncement!.interfaceId, keyPairForOffer.interfaceId)
+        XCTAssertEqual(testP2PService.keyForAnnouncement!.interfaceId, keyPairForOffer.interfaceId)
+        let offerInDatabase = try! databaseService.getOffer(id: offerForDatabase.id)
+        XCTAssertEqual(offerInDatabase!.state, OfferState.offerOpened.asString)
         
     }
     
@@ -643,6 +645,9 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
+        XCTAssertFalse(offerInDatabase!.havePublicKey)
+        XCTAssertFalse(offerInDatabase!.isUserMaker)
+        XCTAssertEqual(offerInDatabase!.state, OfferState.awaitingPublicKeyAnnouncement.asString)
         let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("EUR-SEPA|an edited price here".utf8).base64EncodedString())
@@ -666,6 +671,26 @@ class OfferServiceTests: XCTestCase {
         let databaseService = try! TestDatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        class TestOfferTruthSource: OfferTruthSource {
+            
+            init() {
+                offers = [:]
+            }
+            
+            let offerAddedExpectation = XCTestExpectation(description: "Fulfilled when an offer is added to the offers dictionary")
+            var serviceFeeRate: BigUInt?
+            
+            var offers: [UUID: Offer] {
+                didSet {
+                    // We want to ignore initialization and only fulfill when a new offer is actually added
+                    if offers.keys.count != 0 {
+                        offerAddedExpectation.fulfill()
+                    }
+                }
+            }
+            
+        }
         
         let offerService = OfferService<PreviewableOfferTruthSource>(
             databaseService: databaseService,
@@ -693,7 +718,7 @@ class OfferServiceTests: XCTestCase {
             onChainDirection: BigUInt.zero,
             onChainSettlementMethods: [],
             protocolVersion: BigUInt.zero,
-            chainID: BigUInt.zero,
+            chainID: BigUInt(31337),
             havePublicKey: false,
             isUserMaker: false,
             state: .awaitingPublicKeyAnnouncement
@@ -729,10 +754,11 @@ class OfferServiceTests: XCTestCase {
             try! offerService.handlePublicKeyAnnouncement(publicKeyAnnouncement)
         }
         
-        wait(for: [databaseService.offerHavePublicKeyUpdatedExpectation], timeout: 20)
+        wait(for: [databaseService.offerHavePublicKeyUpdatedExpectation], timeout: 30)
         XCTAssertTrue(offerTruthSource.offers[offerID]!.havePublicKey)
         let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())
         XCTAssertTrue(offerInDatabase!.havePublicKey)
+        XCTAssertEqual(offerInDatabase!.state, "offerOpened")
         let keyInDatabase = try! keyManagerService.getPublicKey(interfaceId: publicKey.interfaceId)
         XCTAssertEqual(keyInDatabase?.publicKey, publicKey.publicKey)
     }
