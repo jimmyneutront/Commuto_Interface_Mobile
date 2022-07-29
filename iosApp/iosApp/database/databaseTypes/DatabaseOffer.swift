@@ -63,11 +63,15 @@ struct DatabaseOffer: Equatable {
      */
     let chainID: String
     /**
-     Corresponds to an Offer's `havePublicKey` property.
+     Corresponds to an `Offer`'s `havePublicKey` property.
      */
     let havePublicKey: Bool
     /**
-     Corresponds to an Offer's `isUserMaker` property.
+     Corresponds to an `Offer`'s `isUserMaker` property.
      */
     let isUserMaker: Bool
+    /**
+     The `state` property of an `Offer` as a `String`.
+     */
+    let state: String
 }

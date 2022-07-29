@@ -2,7 +2,7 @@
 //  CreateOfferView.swift
 //  iosApp
 //
-//  Created by James Telzrow on 7/16/22.
+//  Created by jimmyt on 7/16/22.
 //  Copyright © 2022 orgName. All rights reserved.
 //
 

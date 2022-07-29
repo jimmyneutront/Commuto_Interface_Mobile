@@ -112,7 +112,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
-     On the global `DispatchQueue`, this creates and persistently stores a new key pair, creates a new offer ID and a new `Offer` from the information contained in `offerData`. Then, still on the global `DispatchQueue`, this persistently stores the new `Offer`,  approves token transfer to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, and then calls the CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, passing the new offer ID and `Offer`. Then, on the main `DispatchQueue`, the new `Offer` is added to `offerTruthSource`.
+     On the global `DispatchQueue`, this creates and persistently stores a new key pair, creates a new offer ID and a new `Offer` from the information contained in `offerData`. Then, still on the global `DispatchQueue`, this persistently stores the new `Offer`,  approves token transfer to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, passing the new offer ID and `Offer`, and updates the state of the offer to `openOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Offer` is added to `offerTruthSource`.
      
      - Parameters:
         - offerData: A `ValidatedNewOfferData` containing the data for the new offer to be opened.
@@ -160,7 +160,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                             protocolVersion: BigUInt.zero,
                             chainID: BigUInt(31337),
                             havePublicKey: true,
-                            isUserMaker: true
+                            isUserMaker: true,
+                            state: .opening
                         )
                         if let afterObjectCreation = afterObjectCreation {
                             afterObjectCreation()
@@ -188,7 +189,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                     protocolVersion: String(newOffer.protocolVersion),
                     chainID: String(newOffer.chainID),
                     havePublicKey: newOffer.havePublicKey,
-                    isUserMaker: newOffer.isUserMaker
+                    isUserMaker: newOffer.isUserMaker,
+                    state: newOffer.state.asString
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
                 if let afterPersistentStorage = afterPersistentStorage {
@@ -222,6 +224,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 return blockchainService!.openOffer(offerID: newOffer.id, offerStruct: newOfferStruct).map { ($0, newOffer) }
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { _, newOffer in
                 self.logger.notice("openOffer: opened \(newOffer.id.uuidString)")
+                newOffer.state = .openOfferTransactionBroadcast
+                #warning("TODO: update state of offer in persistent storage")
                 self.logger.notice("openOffer: adding \(newOffer.id.uuidString) to offerTruthSource")
             }.get(on: DispatchQueue.main) { [self] _, newOffer in
                 guard offerTruthSource != nil else {
@@ -288,6 +292,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             // The user of this interface is not the maker of this offer, so we treat it as a new offer.
             let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
             logger.notice("handleOfferOpenedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
+            var offerState: OfferState {
+                if havePublicKey {
+                    return .offerOpened
+                } else {
+                    return .awaitingPublicKeyAnnouncement
+                }
+            }
             guard let offer = Offer(
                 isCreated: offerStruct.isCreated,
                 isTaken: offerStruct.isTaken,
@@ -304,7 +315,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 protocolVersion: offerStruct.protocolVersion,
                 chainID: offerStruct.chainID,
                 havePublicKey: havePublicKey,
-                isUserMaker: false
+                isUserMaker: false,
+                state: offerState
             ) else {
                 throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
             }
@@ -323,7 +335,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 protocolVersion: String(offer.protocolVersion),
                 chainID: String(offer.chainID),
                 havePublicKey: offer.havePublicKey,
-                isUserMaker: offer.isUserMaker
+                isUserMaker: offer.isUserMaker,
+                state: offer.state.asString
             )
             try databaseService.storeOffer(offer: offerForDatabase)
             logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
@@ -370,7 +383,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         }
         let havePublicKey = (try keyManagerService.getPublicKey(interfaceId: offerStruct.interfaceId) != nil)
         logger.notice("handleOfferEditedEvent: havePublicKey for offer \(event.id.uuidString): \(havePublicKey)")
-        #warning("TODO: get offer from database to use actual isUserMaker value here")
+        #warning("TODO: get offer from database to use actual isUserMaker and state value here")
         guard let offer = Offer(
             isCreated: offerStruct.isCreated,
             isTaken: offerStruct.isTaken,
@@ -387,7 +400,8 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             protocolVersion: offerStruct.protocolVersion,
             chainID: offerStruct.chainID,
             havePublicKey: havePublicKey,
-            isUserMaker: false
+            isUserMaker: false,
+            state: .offerOpened
         ) else {
             throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
         }

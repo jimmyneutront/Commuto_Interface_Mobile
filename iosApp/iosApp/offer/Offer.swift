@@ -95,6 +95,10 @@ class Offer: ObservableObject {
      Indicates whether the user of this interface is the maker of this offer.
      */
     var isUserMaker: Bool
+    /**
+     Indicates the current state of this offer, as described in the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     */
+    var state: OfferState
     
     /**
      Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).
@@ -116,6 +120,7 @@ class Offer: ObservableObject {
         - chainID: Corresponds to an `OfferStruct`'s `chainID` property.
         - havePublicKey: Indicates whether this interface has, in persistent storage, the public key specified by the `interfaceId` parameter.
         - isUserMaker: Indicates whether the user of this interface is the maker of this offer.
+        - state: Indicates the current state of this offer.
      */
     init?(
         isCreated: Bool,
@@ -133,7 +138,8 @@ class Offer: ObservableObject {
         protocolVersion: BigUInt,
         chainID: BigUInt,
         havePublicKey: Bool,
-        isUserMaker: Bool
+        isUserMaker: Bool,
+        state: OfferState
     ) {
         self.isCreated = isCreated
         self.isTaken = isTaken
@@ -163,6 +169,7 @@ class Offer: ObservableObject {
         self.chainID = chainID
         self.havePublicKey = havePublicKey
         self.isUserMaker = isUserMaker
+        self.state = state
     }
     
     /**
@@ -185,6 +192,7 @@ class Offer: ObservableObject {
         - chainID: The ID of the blockchain on which this offer exists.
         - havePublicKey: Indicates whether this interface has, in persistent storage, the public key specified by the `interfaceID` parameter.
         - isUserMaker: Indicates whether the user of this interface is the maker of this offer.
+        - state: Indicates the current state of this offer.
      */
     init(
         isCreated: Bool,
@@ -202,7 +210,8 @@ class Offer: ObservableObject {
         protocolVersion: BigUInt,
         chainID: BigUInt,
         havePublicKey: Bool,
-        isUserMaker: Bool
+        isUserMaker: Bool,
+        state: OfferState
     ) {
         self.isCreated = isCreated
         self.isTaken = isTaken
@@ -233,6 +242,7 @@ class Offer: ObservableObject {
         self.chainID = chainID
         self.havePublicKey = havePublicKey
         self.isUserMaker = isUserMaker
+        self.state = state
     }
     
     /**
@@ -301,7 +311,8 @@ extension Offer {
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
-            isUserMaker: false
+            isUserMaker: false,
+            state: .offerOpened
         )!,
         sampleOfferIds[1]: Offer(
             isCreated: true,
@@ -327,7 +338,8 @@ extension Offer {
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
-            isUserMaker: false
+            isUserMaker: false,
+            state: .offerOpened
         )!,
         sampleOfferIds[2]: Offer(
             isCreated: true,
@@ -353,7 +365,8 @@ extension Offer {
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
-            isUserMaker: false
+            isUserMaker: false,
+            state: .offerOpened
         )!,
         sampleOfferIds[3]: Offer(
             isCreated: true,
@@ -371,7 +384,8 @@ extension Offer {
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
-            isUserMaker: false
+            isUserMaker: false,
+            state: .offerOpened
         )!,
     ]
 }

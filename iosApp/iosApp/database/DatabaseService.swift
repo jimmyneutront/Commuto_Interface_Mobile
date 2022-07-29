@@ -121,13 +121,17 @@ class DatabaseService {
      */
     let settlementMethod = Expression<String>("settlementMethod")
     /**
-     A database structure  representing an Offer's `havePublicKey` property.
+     A database structure  representing an `Offer`'s `havePublicKey` property.
      */
     let havePublicKey = Expression<Bool>("havePublicKey")
     /**
-     A database structure representing an Offer's `isUserMaker` property.
+     A database structure representing an `Offer`'s `isUserMaker` property.
      */
     let isUserMaker = Expression<Bool>("isUserMaker")
+    /**
+     A database structure representing an `Offer`'s `state` property.
+     */
+    let offerState = Expression<String>("state")
     
     /**
      Creates all necessary database tables.
@@ -149,6 +153,7 @@ class DatabaseService {
             t.column(chainID)
             t.column(havePublicKey)
             t.column(isUserMaker)
+            t.column(offerState)
         })
         try connection.run(settlementMethods.create { t in
             t.column(offerId)
@@ -189,7 +194,8 @@ class DatabaseService {
                     protocolVersion <- offer.protocolVersion,
                     chainID <- offer.chainID,
                     havePublicKey <- offer.havePublicKey,
-                    isUserMaker <- offer.isUserMaker
+                    isUserMaker <- offer.isUserMaker,
+                    offerState <- offer.state
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
@@ -268,7 +274,8 @@ class DatabaseService {
                 protocolVersion: result[0][protocolVersion],
                 chainID: result[0][chainID],
                 havePublicKey: result[0][havePublicKey],
-                isUserMaker: result[0][isUserMaker]
+                isUserMaker: result[0][isUserMaker],
+                state: result[0][offerState]
             )
         } else {
             logger.notice("getOffer: no offer found with B64 ID \(id)")
