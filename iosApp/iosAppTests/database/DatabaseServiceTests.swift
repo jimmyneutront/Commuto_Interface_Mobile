@@ -96,6 +96,34 @@ class DatabaseServiceTests: XCTestCase {
         XCTAssertTrue(returnedOffer!.havePublicKey)
     }
     
+    /**
+     Ensures that code to update a persistently stored offer's `state` property works properly.
+     */
+    func testUpdateOfferState() throws {
+        let offerToStore = DatabaseOffer(
+            id: "a_uuid",
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: "interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            protocolVersion: "some_version",
+            chainID: "a_chain_id",
+            havePublicKey: false,
+            isUserMaker: false,
+            state: "an_outdated_state_here"
+        )
+        try dbService.storeOffer(offer: offerToStore)
+        try dbService.updateOfferState(offerID: "a_uuid", _chainID: "a_chain_id", state: "a_new_state_here")
+        let returnedOffer = try dbService.getOffer(id: "a_uuid")
+        XCTAssertEqual(returnedOffer!.state, "a_new_state_here")
+    }
+    
     func testStoreAndGetAndDeleteSettlementMethods() throws {
         let offerId = "an_offer_id"
         let chainID = "a_chain_id"

@@ -221,6 +221,21 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseOffer`'s `state` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `state` field.
+     */
+    func updateOfferState(offerID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(offerId == offerID && chainID == _chainID).update(offerState <- state))
+        }
+        logger.notice("updateOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
      Removes every `DatabaseOffer` with an offer ID equal to `offerID` and a chain ID equal to `chainID` from persistent storage.
      
      - Parameters:
