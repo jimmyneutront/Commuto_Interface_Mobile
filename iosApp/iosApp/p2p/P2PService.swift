@@ -223,7 +223,32 @@ class P2PService {
     
     }
     
-    func sendMessage(_ message: String) {}
+    /**
+     Sends the given message `String` in the Commuto Interface Network Test Room.
+     
+     - Parameter message: The `String` to send in the Commuto Interface Network Test Room.
+     */
+    func sendMessage(_ message: String) throws {
+        _ = try Promise<SwitrixSendEventResponse> { seal in
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.logger.notice("sendMessage: sending: \(message)")
+                let eventContent = SwitrixMessageEventContent(body: message)
+                // The Matrix homeserver will fill empty fields as necessary
+                let event = SwitrixClientEvent(content: eventContent, eventId: "", originServerTimestamp: -1, roomId: "", sender: "", type: "m.room.message")
+                self.switrixClient.rooms.sendEvent(roomId: "!WEuJJHaRpDvkbSveLu:matrix.org", event: event) { [self] response in
+                    switch response {
+                    case .success(let sendMessageResponse):
+                        logger.notice("sendMessage: success; ID: \(sendMessageResponse.eventId)")
+                        seal.fulfill(sendMessageResponse)
+                    case .failure(let error):
+                        logger.error("sendMessage: got error: \(error.localizedDescription)")
+                        seal.reject(error)
+                    }
+                }
+            }
+        }.wait()
+        
+    }
     
     /**
      Creates a Public Key Announcement using the given offer ID and key pair and sends it using the `sendMessage` function.
@@ -236,7 +261,7 @@ class P2PService {
         logger.notice("announcePublicKey: creating for offer \(offerID.uuidString) and key pair with interface ID \(keyPair.interfaceId.base64EncodedString())")
         let announcement = try createPublicKeyAnnouncement(offerID: offerID, keyPair: keyPair)
         logger.notice("announcePublicKey: sending announcement for offer \(offerID.uuidString)")
-        sendMessage(announcement)
+        try sendMessage(announcement)
     }
     
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 import Swinject
 import web3swift
+import Switrix
 
 /**
  The entrypoint for the iOS Commuto Interface SwiftUI App.
@@ -40,6 +41,11 @@ struct iOSApp: App {
         }
             .inObjectScope(.container)
         container.resolve(OfferService<OffersViewModel>.self)!.blockchainService = container.resolve(BlockchainService.self)!
+        container.register(P2PService.self) { r in
+            P2PService(errorHandler: ErrorViewModel(), offerService: r.resolve(OfferService<OffersViewModel>.self)!, switrixClient: SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!))
+        }
+            .inObjectScope(.container)
+        container.resolve(OfferService<OffersViewModel>.self)!.p2pService = container.resolve(P2PService.self)!
         container.register(OffersViewModel.self) { r in
             OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel>.self)!)
             
@@ -48,7 +54,7 @@ struct iOSApp: App {
             .initCompleted { r, viewModel in
                 r.resolve(OfferService.self)!.offerTruthSource = viewModel
             }
-        //container.resolve(BlockchainService.self)!.listen()
+        container.resolve(BlockchainService.self)!.listen()
     }
     
 	var body: some Scene {
