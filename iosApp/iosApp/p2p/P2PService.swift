@@ -233,9 +233,7 @@ class P2PService {
             DispatchQueue.global(qos: .userInitiated).async {
                 self.logger.notice("sendMessage: sending: \(message)")
                 let eventContent = SwitrixMessageEventContent(body: message)
-                // The Matrix homeserver will fill empty fields as necessary
-                let event = SwitrixClientEvent(content: eventContent, eventId: "", originServerTimestamp: -1, roomId: "", sender: "", type: "m.room.message")
-                self.switrixClient.rooms.sendEvent(roomId: "!WEuJJHaRpDvkbSveLu:matrix.org", event: event) { [self] response in
+                self.switrixClient.rooms.sendEvent(roomId: "!WEuJJHaRpDvkbSveLu:matrix.org", eventType: "m.room.message", eventContent: eventContent) { [self] response in
                     switch response {
                     case .success(let sendMessageResponse):
                         logger.notice("sendMessage: success; ID: \(sendMessageResponse.eventId)")
