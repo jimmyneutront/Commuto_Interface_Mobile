@@ -108,8 +108,8 @@ class OfferService (
      * process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      *
      * On the IO coroutine dispatcher, this creates and persistently stores a new key pair, creates a new offer ID
-     * [UUID] and a new [Offer] from the information contained in [offerData], persistently stores the new [Offer],
-     * approves token transfer to the
+     * [UUID] and a new [Offer] from the information contained in [offerData], persistently stores the new [Offer] and
+     * its settlement methods, approves token transfer to the
      * [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the
      * CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer)
      * function, passing the new offer ID and [Offer]. Finally, on the Main coroutine dispatcher, the new [Offer] is
@@ -163,7 +163,8 @@ class OfferService (
                     },
                     protocolVersion = BigInteger.ZERO,
                     chainID = BigInteger("31337"),
-                    havePublicKey = true
+                    havePublicKey = true,
+                    isUserMaker = true,
                 )
                 afterObjectCreation?.invoke()
                 Log.i(logTag, "openOffer: persistently storing ${newOffer.id}")
@@ -188,6 +189,7 @@ class OfferService (
                     protocolVersion = newOffer.protocolVersion.toString(),
                     chainID = newOffer.chainID.toString(),
                     havePublicKey = 1L,
+                    isUserMaker = 1L,
                 )
                 databaseService.storeOffer(offerForDatabase)
                 val settlementMethodStrings = newOffer.onChainSettlementMethods.map {
@@ -275,10 +277,12 @@ class OfferService (
             protocolVersion = offerStruct.protocolVersion,
             chainID = offerStruct.chainID,
             havePublicKey = havePublicKey,
+            isUserMaker = false
         )
         val isCreated = if (offerStruct.isCreated) 1L else 0L
         val isTaken = if (offerStruct.isTaken) 1L else 0L
         val havePublicKeyLong = if (offer.havePublicKey) 1L else 0L
+        val isUserMaker = if (offer.isUserMaker) 1L else 0L
         val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
         offerIDByteBuffer.putLong(offer.id.mostSignificantBits)
         offerIDByteBuffer.putLong(offer.id.leastSignificantBits)
@@ -298,6 +302,7 @@ class OfferService (
             protocolVersion = offer.protocolVersion.toString(),
             chainID = offer.chainID.toString(),
             havePublicKey = havePublicKeyLong,
+            isUserMaker = isUserMaker,
         )
         databaseService.storeOffer(offerForDatabase)
         Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")
@@ -363,7 +368,8 @@ class OfferService (
             onChainSettlementMethods = offerStruct.settlementMethods,
             protocolVersion = offerStruct.protocolVersion,
             chainID = offerStruct.chainID,
-            havePublicKey = havePublicKey
+            havePublicKey = havePublicKey,
+            isUserMaker = false,
         )
         val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
         offerIDByteBuffer.putLong(offer.id.mostSignificantBits)

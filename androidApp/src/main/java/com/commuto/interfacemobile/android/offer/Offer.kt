@@ -47,6 +47,7 @@ import java.util.UUID
  * [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s settlementMethods property.
  * @property havePublicKey Indicates whether this interface has a copy of the public key specified by the [interfaceId]
  * property.
+ * @property isUserMaker Indicates whether the user of this interface is the maker of this offer.
  */
 data class Offer(
     val isCreated: Boolean,
@@ -63,7 +64,8 @@ data class Offer(
     var settlementMethods: SnapshotStateList<SettlementMethod>,
     val protocolVersion: BigInteger,
     val chainID: BigInteger,
-    var havePublicKey: Boolean
+    var havePublicKey: Boolean,
+    var isUserMaker: Boolean,
 ) {
 
     constructor(
@@ -81,7 +83,8 @@ data class Offer(
         onChainSettlementMethods: List<ByteArray>,
         protocolVersion: BigInteger,
         chainID: BigInteger,
-        havePublicKey: Boolean
+        havePublicKey: Boolean,
+        isUserMaker: Boolean,
     ) : this(
         isCreated = isCreated,
         isTaken = isTaken,
@@ -118,6 +121,7 @@ data class Offer(
         protocolVersion = protocolVersion,
         chainID = chainID,
         havePublicKey = havePublicKey,
+        isUserMaker = isUserMaker
     )
 
     val serviceFeeAmountLowerBound: BigInteger = this.serviceFeeRate * (this.amountLowerBound /
@@ -195,7 +199,8 @@ data class Offer(
                 ),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                false
+                havePublicKey = false,
+                isUserMaker = false
             ),
             Offer(
                 isCreated = true,
@@ -220,7 +225,8 @@ data class Offer(
                 ),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                false
+                havePublicKey = false,
+                isUserMaker = false
             ),
             Offer(
                 isCreated = true,
@@ -237,7 +243,8 @@ data class Offer(
                 onChainSettlementMethods = listOf("not valid JSON".encodeToByteArray()),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                false
+                havePublicKey = false,
+                isUserMaker = false
             ),
             Offer(
                 isCreated = true,
@@ -257,7 +264,8 @@ data class Offer(
                 onChainSettlementMethods = listOf("not valid JSON".encodeToByteArray()),
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
-                false
+                havePublicKey = false,
+                isUserMaker = false
             ),
         )
     }
