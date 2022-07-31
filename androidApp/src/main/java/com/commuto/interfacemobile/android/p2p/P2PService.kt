@@ -174,77 +174,24 @@ open class P2PService constructor(private val exceptionHandler: P2PExceptionNoti
         }
     }
 
-    open suspend fun announcePublicKey(offerID: UUID, keyPair: KeyPair) {
+    open suspend fun sendMessage(message: String) {}
 
-    }
-
-    // TODO: This should get its own file
     /**
-     * Attempts to restore a [PublicKeyAnnouncement] from a give [String].
+     * Creates a
+     * [Public Key Announcement](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt)
+     * using the given offer ID and key pair and sends it using the [sendMessage] function.
      *
-     * @param messageString An optional [String] from which to try to restore a
-     * [PublicKeyAnnouncement]. If [messageString] is null, [parsePublicKeyAnnouncement] immediately
-     * returns null.
-     *
-     * @return An optional [PublicKeyAnnouncement] that will be null if [messageString] does not
-     * contain a valid public key announcement, and will be non-null if [messageString] does
-     * contain a valid public key announcement.
+     * @param offerID The ID of the offer for which the Public Key Announcement is being made.
+     * @param keyPair The key pair containing the public key to be announced.
      */
-    private fun parsePublicKeyAnnouncement(messageString: String?): PublicKeyAnnouncement? {
-        // Setup decoder
-        val decoder = Base64.getDecoder()
-        // Return null if no message string is given
-        if (messageString == null) {
-            return null
-        }
-        // Restore message object
-        val message = try {
-            Json.decodeFromString<SerializablePublicKeyAnnouncementMessage>(messageString)
-        } catch (e: Exception) {
-            return null
-        }
-        // Ensure that the message is a Public Key announcement message
-        if (message.msgType != "pka") {
-            return null
-        }
-        //Restore payload object
-        val payloadBytes = try {
-            decoder.decode(message.payload)
-        } catch (e: Exception) {
-            return null
-        }
-        val payload = try {
-            val payloadString = payloadBytes.toString(Charset.forName("UTF-8"))
-            Json.decodeFromString<SerializablePublicKeyAnnouncementPayload>(payloadString)
-        } catch (e: Exception) {
-            return null
-        }
-        val messageOfferId = try {
-            val offerIdByteArray = decoder.decode(payload.offerId)
-            val offerIdByteBuffer = ByteBuffer.wrap(offerIdByteArray)
-            val mostSigBits = offerIdByteBuffer.long
-            val leastSigBits = offerIdByteBuffer.long
-            UUID(mostSigBits, leastSigBits)
-        } catch (e: Exception) {
-            return null
-        }
-        //Re-create maker's public key
-        val publicKey = try {
-            PublicKey(decoder.decode(payload.pubKey))
-        } catch (e: Exception) {
-            return null
-        }
-        //Create hash of payload
-        val payloadDataHash = MessageDigest.getInstance("SHA-256").digest(payloadBytes)
-        //Verify signature
-        return try {
-            when (publicKey.verifySignature(payloadDataHash, decoder.decode(message.signature))) {
-                true -> PublicKeyAnnouncement(messageOfferId, publicKey)
-                false -> null
-            }
-        } catch (e: Exception) {
-            null
-        }
+    open suspend fun announcePublicKey(offerID: UUID, keyPair: KeyPair) {
+        val encoder = Base64.getEncoder()
+        Log.i(logTag, "announcePublicKey: creating for offer $offerID and key pair with interface ID " +
+                encoder.encodeToString(keyPair.interfaceId)
+        )
+        val announcement = createPublicKeyAnnouncement(offerID = offerID, keyPair = keyPair)
+        Log.i(logTag, "announcePublicKey: sending announcement for offer $offerID")
+        sendMessage(announcement)
     }
 
 }

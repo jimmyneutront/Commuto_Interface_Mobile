@@ -430,15 +430,19 @@ class OfferService (
         offerEditedEventRepository.append(event)
         val offerStruct = blockchainService.getOffer(event.offerID)
         if (offerStruct == null) {
-            Log.i(logTag, "No on-chain offer was found with ID specified in OfferEditedEvent in " +
-                    "handleOfferEditedEvent call. OfferEditedEvent.id: ${event.offerID}")
+            Log.i(
+                logTag, "No on-chain offer was found with ID specified in OfferEditedEvent in " +
+                        "handleOfferEditedEvent call. OfferEditedEvent.id: ${event.offerID}"
+            )
             return
         }
         Log.i(logTag, "handleOfferEditedEvent: got offer ${event.offerID}")
         if (event.chainID != offerStruct.chainID) {
-            throw IllegalStateException("Chain ID of OfferEditedEvent did not match chain ID of OfferStruct in " +
-                    "handleOfferEditedEvent call. OfferEditedEvent.chainID: ${event.chainID}, " +
-                    "OfferStruct.chainID: ${offerStruct.chainID} OfferEditedEvent.offerID: ${event.offerID}")
+            throw IllegalStateException(
+                "Chain ID of OfferEditedEvent did not match chain ID of OfferStruct in " +
+                        "handleOfferEditedEvent call. OfferEditedEvent.chainID: ${event.chainID}, " +
+                        "OfferStruct.chainID: ${offerStruct.chainID} OfferEditedEvent.offerID: ${event.offerID}"
+            )
         }
         Log.i(logTag, "handleOfferEditedEvent: checking for offer ${event.offerID} in databaseService")
         val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
@@ -450,14 +454,12 @@ class OfferService (
         val havePublicKey = (offerInDatabase?.havePublicKey == 1L)
         // If the user is the offer maker, then the offer would be present in the database
         val isUserMaker = (offerInDatabase?.isUserMaker == 1L)
-        val stateOfOfferInDatabase = OfferState.fromString(string = offerInDatabase?.state)
-        val state: OfferState = if (stateOfOfferInDatabase != null) {
-            stateOfOfferInDatabase
-        } else if (havePublicKey) {
-            OfferState.OFFER_OPENED // This should never be reached for an offer made by the user of this interface
-        } else {
-            OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT
-        }
+        val state: OfferState = OfferState.fromString(string = offerInDatabase?.state)
+            ?: if (havePublicKey) {
+                OfferState.OFFER_OPENED // This should never be reached for an offer made by the user of this interface
+            } else {
+                OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT
+            }
         Log.i(logTag, "handleOfferOpenedEvent: havePublicKey for offer ${event.offerID}: $havePublicKey")
         val offer = Offer(
             isCreated = offerStruct.isCreated,
@@ -483,8 +485,10 @@ class OfferService (
             encoder.encodeToString(it)
         }
         databaseService.storeSettlementMethods(offerIDString, chainIDString, settlementMethodStrings)
-        Log.i(logTag, "handleOfferEditedEvent: persistently stored ${settlementMethodStrings.size} updated " +
-                "settlement methods for offer ${offer.id}")
+        Log.i(
+            logTag, "handleOfferEditedEvent: persistently stored ${settlementMethodStrings.size} updated " +
+                    "settlement methods for offer ${offer.id}"
+        )
         databaseService.updateOfferHavePublicKey(offerIDString, chainIDString, havePublicKey)
         Log.i(logTag, "handleOfferEditedEvent: persistently updated havePublicKey for offer ${offer.id}")
         offerEditedEventRepository.remove(event)
