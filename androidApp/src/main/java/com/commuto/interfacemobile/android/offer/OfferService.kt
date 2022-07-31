@@ -609,6 +609,12 @@ class OfferService (
         } else if (offer.interfaceId.contentEquals(message.publicKey.interfaceId)) {
             withContext(Dispatchers.Main) {
                 offerTruthSource.offers[message.id]?.havePublicKey = true
+                val stateNumberIndex = offerTruthSource.offers[message.id]?.state?.indexNumber
+                if (stateNumberIndex != null) {
+                    if (stateNumberIndex < OfferState.OFFER_OPENED.indexNumber) {
+                        offerTruthSource.offers[message.id]?.state = OfferState.OFFER_OPENED
+                    }
+                }
             }
             Log.i(logTag, "handlePublicKeyAnnouncement: set havePublicKey to true for offer ${offer.id}")
             val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
@@ -617,6 +623,10 @@ class OfferService (
             val offerIDByteArray = offerIDByteBuffer.array()
             val offerIDString = Base64.getEncoder().encodeToString(offerIDByteArray)
             val chainIDString = offer.chainID.toString()
+            if (offer.state.indexNumber <= OfferState.OFFER_OPENED.indexNumber) {
+                Log.i(logTag, "handlePublicKeyAnnouncement: persistently set state as offerOpened for offer " +
+                        "${offer.id}")
+            }
             databaseService.updateOfferHavePublicKey(offerIDString, chainIDString, true)
             Log.i(logTag, "handlePublicKeyAnnouncement: persistently set havePublicKey to true for offer " +
                     "${offer.id}")
