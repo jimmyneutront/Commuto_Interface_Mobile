@@ -33,6 +33,7 @@ class DatabaseServiceTest {
             "a_chain_id",
             0L,
             0L,
+            "a_state_here"
         )
         databaseService.storeOffer(offerToStore)
         val anotherOfferToStore = Offer(
@@ -51,6 +52,7 @@ class DatabaseServiceTest {
             "another_chain_id",
             0L,
             0L,
+            "a_state_here"
         )
         // This should do nothing and not throw
         databaseService.storeOffer(anotherOfferToStore)
@@ -80,6 +82,7 @@ class DatabaseServiceTest {
             "a_chain_id",
             0L,
             0L,
+            "a_state_here"
         )
         databaseService.storeOffer(offerToStore)
         databaseService.updateOfferHavePublicKey("a_uuid", "a_chain_id", true)

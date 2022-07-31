@@ -293,7 +293,8 @@ class OfferServiceTests {
             protocolVersion = "protocol_version",
             chainID = "31337",
             havePublicKey = 1L,
-            isUserMaker = 1L
+            isUserMaker = 1L,
+            "a_state_here"
         )
         databaseService.storeOffer(offerForDatabase)
 
@@ -763,6 +764,7 @@ class OfferServiceTests {
             chainID = BigInteger.ZERO,
             havePublicKey = false,
             isUserMaker = false,
+            state = OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT
         )
         offerTruthSource.offers[offerID] = offer
         val isCreated = if (offer.isCreated) 1L else 0L
@@ -786,6 +788,7 @@ class OfferServiceTests {
             chainID = offer.chainID.toString(),
             havePublicKey = havePublicKey,
             isUserMaker = isUserMaker,
+            state = offer.state.asString,
         )
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
@@ -1049,7 +1052,8 @@ class OfferServiceTests {
                         protocolVersion = addedOffer.protocolVersion.toString(),
                         chainID = addedOffer.chainID.toString(),
                         havePublicKey = 1L,
-                        isUserMaker = 1L
+                        isUserMaker = 1L,
+                        "opening"
                     )
                     assertEquals(expectedOfferInDatabase, offerInDatabase)
 

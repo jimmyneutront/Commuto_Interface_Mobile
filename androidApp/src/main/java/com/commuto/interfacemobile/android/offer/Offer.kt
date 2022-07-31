@@ -48,6 +48,8 @@ import java.util.*
  * @property havePublicKey Indicates whether this interface has a copy of the public key specified by the [interfaceId]
  * property.
  * @property isUserMaker Indicates whether the user of this interface is the maker of this offer.
+ * @property state Indicates the current state of this offer, as described in the
+ * [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
  */
 data class Offer(
     val isCreated: Boolean,
@@ -66,8 +68,10 @@ data class Offer(
     val chainID: BigInteger,
     var havePublicKey: Boolean,
     var isUserMaker: Boolean,
+    var state: OfferState,
 ) {
 
+    // TODO: Resolve issue with settlement method decoding in this constructor
     constructor(
         isCreated: Boolean,
         isTaken: Boolean,
@@ -85,6 +89,7 @@ data class Offer(
         chainID: BigInteger,
         havePublicKey: Boolean,
         isUserMaker: Boolean,
+        state: OfferState,
     ) : this(
         isCreated = isCreated,
         isTaken = isTaken,
@@ -120,7 +125,8 @@ data class Offer(
         protocolVersion = protocolVersion,
         chainID = chainID,
         havePublicKey = havePublicKey,
-        isUserMaker = isUserMaker
+        isUserMaker = isUserMaker,
+        state = state,
     )
 
     val serviceFeeAmountLowerBound: BigInteger = this.serviceFeeRate * (this.amountLowerBound /
@@ -199,7 +205,8 @@ data class Offer(
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
                 havePublicKey = false,
-                isUserMaker = false
+                isUserMaker = false,
+                state = OfferState.OFFER_OPENED
             ),
             Offer(
                 isCreated = true,
@@ -225,7 +232,8 @@ data class Offer(
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
                 havePublicKey = false,
-                isUserMaker = false
+                isUserMaker = false,
+                state = OfferState.OFFER_OPENED
             ),
             Offer(
                 isCreated = true,
@@ -243,7 +251,8 @@ data class Offer(
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
                 havePublicKey = false,
-                isUserMaker = false
+                isUserMaker = false,
+                state = OfferState.OFFER_OPENED
             ),
             Offer(
                 isCreated = true,
@@ -264,7 +273,8 @@ data class Offer(
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
                 havePublicKey = false,
-                isUserMaker = false
+                isUserMaker = false,
+                state = OfferState.OFFER_OPENED
             ),
         )
     }
