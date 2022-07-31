@@ -14,6 +14,11 @@ public class Log {
         return 0;
     }
 
+    public static int w(String tag, String msg) {
+        System.out.println("WARN: " + tag + ": " + msg);
+        return 0;
+    }
+
     public static int w(String tag, String msg, Throwable thr) {
         System.out.println("WARN: " + tag + ": " + msg + ": " + thr.toString());
         return 0;

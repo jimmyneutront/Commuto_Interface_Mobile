@@ -129,8 +129,9 @@ class OfferService (
      * its settlement methods, approves token transfer to the
      * [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the
      * CommutoSwap contract's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer)
-     * function, passing the new offer ID and [Offer]. Finally, on the Main coroutine dispatcher, the new [Offer] is
-     * added to [offerTruthSource].
+     * function, passing the new offer ID and [Offer], and updates the state of the offer to
+     * [OfferState.OPEN_OFFER_TRANSACTION_BROADCAST] Finally, on the Main coroutine dispatcher, the new [Offer] is added
+     * to [offerTruthSource].
      *
      * @param offerData A [ValidatedNewOfferData] containing the data for the new offer to be opened.
      * @param afterObjectCreation A lambda that will be executed after the new key pair, offer ID and [Offer] object are
@@ -233,6 +234,12 @@ class OfferService (
                 Log.i(logTag, "openOffer: opening ${newOffer.id}")
                 blockchainService.openOfferAsync(newOffer.id, newOffer.toOfferStruct()).await()
                 Log.i(logTag, "openOffer: opened ${newOffer.id}")
+                newOffer.state = OfferState.OPEN_OFFER_TRANSACTION_BROADCAST
+                databaseService.updateOfferState(
+                    offerID = offerIDString,
+                    chainID = newOffer.chainID.toString(),
+                    state = newOffer.state.asString,
+                )
                 Log.i(logTag, "openOffer: adding ${newOffer.id} to offerTruthSource")
                 withContext(Dispatchers.Main) {
                     offerTruthSource.addOffer(newOffer)
@@ -252,13 +259,15 @@ class OfferService (
      * calling [BlockchainService.getOffer], verifies that the chain ID of the event and the offer data match, and then
      * checks if the offer has been persistently stored in [databaseService]. If it has been persistently stored and if
      * its [DatabaseOffer.isUserMaker] field is true, then the user of this interface has created the offer, and so
-     * [OfferService] announces its corresponding public key by getting its key pair from [keyManagerService] and
-     * passing the key pair and the offer ID specified in [event] to [P2PService.announcePublicKey] If the offer has not
-     * been persistently stored or if its `isUserMaker` field is false, then [OfferService] creates a new [Offer] and
-     * list of settlement methods with the results, checks if [keyManagerService] has the maker's public key and updates
-     * the [Offer.havePublicKey] property accordingly, persistently stores the new offer and its settlement methods,
-     * removes [event] from [offerOpenedEventRepository], and then adds the new [Offer] to [offerTruthSource] on the
-     * main coroutine dispatcher.
+     * [OfferService] updates the offer's state to [OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT], announces the
+     * corresponding public key by getting its key pair from [keyManagerService] and passing the key pair and the offer
+     * ID specified in [event] to [P2PService.announcePublicKey], and updates the offer state to
+     * [OfferState.OFFER_OPENED]. If the offer has not been persistently stored or if its [Offer.isUserMaker] field is
+     * false, then [OfferService] creates a new [Offer] and list of settlement methods with the results, checks if
+     * [keyManagerService] has the maker's public key and updates the [Offer.havePublicKey] and [Offer.state] properties
+     * accordingly, persistently stores the new offer and its settlement methods, removes [event] from
+     * [offerOpenedEventRepository], and then adds the new [Offer] to [offerTruthSource] on the main coroutine
+     * dispatcher.
      *
      * @param event The [OfferOpenedEvent] of which [OfferService] is being notified.
      *
@@ -303,12 +312,36 @@ class OfferService (
                 ?: throw IllegalStateException("handleOfferOpenedEvent: got null while getting key pair with interface " +
                         "ID ${encoder.encodeToString(offerStruct.interfaceID)} for offer ${event.offerID}, which was " +
                         "made by the user")
-            // TODO: Update offer state to awaitingPublicKeyAnnouncement in persistent storage
+            /*
+            We do update the state of the persistently stored offer here but not the state of the corresponding Offer in
+            offerTruthSource, since the offer should only remain in the awaitingPublicKeyAnnouncement state for a few
+            moments.
+             */
+            databaseService.updateOfferState(
+                offerID = offerIDString,
+                chainID = event.chainID.toString(),
+                state = OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT.asString
+            )
             Log.i(logTag, "handleOfferOpenedEvent: announcing public key for ${event.offerID}")
             p2pService.announcePublicKey(offerID = event.offerID, keyPair = keyPair)
             Log.i(logTag, "handleOfferOpenedEvent: announced public key for ${event.offerID}")
-            // TODO: Update offer state to offerOpened
-            // TODO: Update state of offer in offerTruthSource
+            databaseService.updateOfferState(
+                offerID = offerIDString,
+                chainID = event.chainID.toString(),
+                state = OfferState.OFFER_OPENED.asString,
+            )
+            val offerInTruthSource = withContext(Dispatchers.Main) {
+                offerTruthSource.offers[event.offerID]
+            }
+            if (offerInTruthSource != null) {
+                withContext(Dispatchers.Main) {
+                    offerInTruthSource.state = OfferState.OFFER_OPENED
+                }
+            } else {
+                Log.w(logTag, "handleOfferOpenedEvent: offer ${event.offerID} (made by interface user) not " +
+                        "found in offerTruthSource during handleOfferOpenedEvent call")
+            }
+            offerOpenedEventRepository.remove(event)
         } else {
             val havePublicKey = (keyManagerService.getPublicKey(offerStruct.interfaceID) != null)
             Log.i(logTag, "handleOfferOpenedEvent: havePublicKey for offer ${event.offerID}: $havePublicKey")
@@ -356,6 +389,7 @@ class OfferService (
                 chainID = offer.chainID.toString(),
                 havePublicKey = havePublicKeyLong,
                 isUserMaker = isUserMakerLong,
+                state = offer.state.asString,
             )
             databaseService.storeOffer(offerForDatabase)
             Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")
@@ -375,13 +409,14 @@ class OfferService (
     }
 
     /**
-     * The method called by [BlockchainService] to notify [OfferService] of a [OfferEditedEvent]. Once notified,
-     * [OfferService] saves [event] in [offerEditedEventRepository], gets updated on-chain offer data by calling
-     * [blockchainService]'s [BlockchainService.getOffer] method, verifies that the chain ID of the event and the offer
-     * data match, creates an updated [Offer] and with the results, checks if [keyManagerService] has the maker's public
-     * key and updates the [Offer.havePublicKey] property accordingly, updates the settlement methods of the
-     * corresponding persistently stored offer, removes [event] from [offerEditedEventRepository], and then adds the
-     * updated [Offer] to [offerTruthSource] on the main coroutine dispatcher.
+     * The method called by [BlockchainService] to notify [OfferService] of a [OfferEditedEvent].
+     *
+     * Once notified, [OfferService] saves [event] in [offerEditedEventRepository], gets updated on-chain offer data by
+     * calling [BlockchainService.getOffer], verifies that the chain ID of the event and the offer data match, attempts
+     * to get the offer corresponding to the ID specified in [event] from persistent storage, creates an updated [Offer]
+     * with the results of both calls, updates the settlement methods of the corresponding persistently stored offer,
+     * removes [event] from [offerEditedEventRepository], and then adds the updated [Offer] to [offerTruthSource] on the
+     * main coroutine dispatcher.
      *
      * @param event The [OfferEditedEvent] of which [OfferService] is being notified.
      *
@@ -405,7 +440,24 @@ class OfferService (
                     "handleOfferEditedEvent call. OfferEditedEvent.chainID: ${event.chainID}, " +
                     "OfferStruct.chainID: ${offerStruct.chainID} OfferEditedEvent.offerID: ${event.offerID}")
         }
-        val havePublicKey = (keyManagerService.getPublicKey(offerStruct.interfaceID) != null)
+        Log.i(logTag, "handleOfferEditedEvent: checking for offer ${event.offerID} in databaseService")
+        val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
+        offerIDByteBuffer.putLong(event.offerID.mostSignificantBits)
+        offerIDByteBuffer.putLong(event.offerID.leastSignificantBits)
+        val offerIDByteArray = offerIDByteBuffer.array()
+        val offerIDString = encoder.encodeToString(offerIDByteArray)
+        val offerInDatabase = databaseService.getOffer(id = offerIDString)
+        val havePublicKey = (offerInDatabase?.havePublicKey == 1L)
+        // If the user is the offer maker, then the offer would be present in the database
+        val isUserMaker = (offerInDatabase?.isUserMaker == 1L)
+        val stateOfOfferInDatabase = OfferState.fromString(string = offerInDatabase?.state)
+        val state: OfferState = if (stateOfOfferInDatabase != null) {
+            stateOfOfferInDatabase
+        } else if (havePublicKey) {
+            OfferState.OFFER_OPENED // This should never be reached for an offer made by the user of this interface
+        } else {
+            OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT
+        }
         Log.i(logTag, "handleOfferOpenedEvent: havePublicKey for offer ${event.offerID}: $havePublicKey")
         val offer = Offer(
             isCreated = offerStruct.isCreated,
@@ -423,21 +475,17 @@ class OfferService (
             protocolVersion = offerStruct.protocolVersion,
             chainID = offerStruct.chainID,
             havePublicKey = havePublicKey,
-            isUserMaker = false,
+            isUserMaker = isUserMaker,
+            state = state,
         )
-        val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
-        offerIDByteBuffer.putLong(offer.id.mostSignificantBits)
-        offerIDByteBuffer.putLong(offer.id.leastSignificantBits)
-        val offerIDByteArray = offerIDByteBuffer.array()
-        val offerIdString = encoder.encodeToString(offerIDByteArray)
         val chainIDString = offer.chainID.toString()
         val settlementMethodStrings = offer.onChainSettlementMethods.map {
             encoder.encodeToString(it)
         }
-        databaseService.storeSettlementMethods(offerIdString, chainIDString, settlementMethodStrings)
+        databaseService.storeSettlementMethods(offerIDString, chainIDString, settlementMethodStrings)
         Log.i(logTag, "handleOfferEditedEvent: persistently stored ${settlementMethodStrings.size} updated " +
                 "settlement methods for offer ${offer.id}")
-        databaseService.updateOfferHavePublicKey(offerIdString, chainIDString, havePublicKey)
+        databaseService.updateOfferHavePublicKey(offerIDString, chainIDString, havePublicKey)
         Log.i(logTag, "handleOfferEditedEvent: persistently updated havePublicKey for offer ${offer.id}")
         offerEditedEventRepository.remove(event)
         withContext(Dispatchers.Main) {
@@ -448,7 +496,9 @@ class OfferService (
     }
 
     /**
-     * The method called by [BlockchainService] to notify [OfferService] of an [OfferCanceledEvent]. Once notified,
+     * The method called by [BlockchainService] to notify [OfferService] of an [OfferCanceledEvent].
+     *
+     * Once notified,
      * [OfferService] saves [event] in [offerCanceledEventRepository], removes the corresponding [Offer] and its
      * settlement methods from persistent storage, removes [event] from [offerCanceledEventRepository], and then checks
      * that the chain ID of the event matches the chain ID of the [Offer] mapped to the offer ID specified in [event] in
@@ -516,11 +566,19 @@ class OfferService (
 
     /**
      * The method called by [com.commuto.interfacemobile.android.p2p.P2PService] to notify [OfferService] of a
-     * [PublicKeyAnnouncement]. Once notified, [OfferService] checks that the public key in [message] is not already
-     * saved in persistent storage via [keyManagerService], and does so if it is not. Then this checks
-     * [offerTruthSource] for an offer with the ID specified in [message] and an interface ID equal to that of the
-     * public key in [message]. If it finds such an offer, it updates the offer's [Offer.havePublicKey] property to
-     * true, to indicate that we have the public key necessary to take the offer and communicate with its maker.
+     * [PublicKeyAnnouncement].
+     *
+     * Once notified, [OfferService] checks that the public key in [message] is not already saved in persistent storage
+     * via [keyManagerService], and does so if it is not. Then this checks [offerTruthSource] for an offer with the ID
+     * specified in [message] and an interface ID equal to that of the public key in [message]. If it finds such an
+     * offer, it checks the offer's [Offer.havePublicKey] and [Offer.state] properties. If [Offer.havePublicKey] is true
+     * or [Offer.state] is at or beyond [OfferState.OFFER_OPENED], then it returns because this interface already has
+     * the public key for this offer. Otherwise, it updates the offer's [Offer.havePublicKey] property to
+     * true, to indicate that we have the public key necessary to take the offer and communicate with its maker, and if
+     * the offer has not already passed through the [OfferState.OFFER_OPENED] state, updates its [Offer.state] property
+     * to [OfferState.OFFER_OPENED]. It updates these properties in persistent storage as well.
+     *
+     * @param message The [PublicKeyAnnouncement] of which [OfferService] is being notified.
      */
     override suspend fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {
         Log.i(logTag, "handlePublicKeyAnnouncement: handling announcement for offer ${message.id}")
@@ -540,8 +598,15 @@ class OfferService (
             Log.i(logTag, "handlePublicKeyAnnouncement: got announcement for offer not in offerTruthSource: " +
                     "${message.id}")
             return
-        }
-        if (offer.interfaceId.contentEquals(message.publicKey.interfaceId)) {
+        } else if (offer.havePublicKey || offer.state.indexNumber >= OfferState.OFFER_OPENED.indexNumber) {
+            /*
+            If we already have the public key for an offer and/or that offer is at or beyond the offerOpened state (such
+            as an offer made by this interface's user), then we do nothing.
+             */
+            Log.i(logTag, "handlePublicKeyAnnouncement: got announcement for offer for which public key was " +
+                    "already obtained: ${offer.id}")
+            return
+        } else if (offer.interfaceId.contentEquals(message.publicKey.interfaceId)) {
             withContext(Dispatchers.Main) {
                 offerTruthSource.offers[message.id]?.havePublicKey = true
             }
