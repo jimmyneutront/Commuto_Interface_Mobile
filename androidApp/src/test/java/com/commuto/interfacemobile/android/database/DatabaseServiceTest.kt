@@ -90,6 +90,35 @@ class DatabaseServiceTest {
         assertEquals(returnedOffer!!.havePublicKey, 1L)
     }
 
+    /**
+     * Ensures that code to update a persistently stored [Offer.state] property works properly.
+     */
+    @Test
+    fun testUpdateOfferState() = runBlocking {
+        val offerToStore = Offer(
+            "a_uuid",
+            1L,
+            0L,
+            "maker_address",
+            "interface_id",
+            "stablecoin_address",
+            "lower_bound_amount",
+            "upper_bound_amount",
+            "security_deposit_amount",
+            "service_fee_rate",
+            "direction",
+            "some_version",
+            "a_chain_id",
+            0L,
+            0L,
+            "a_state_here"
+        )
+        databaseService.storeOffer(offerToStore)
+        databaseService.updateOfferState("a_uuid", "a_chain_id", "a_new_state_here")
+        val returnedOffer = databaseService.getOffer("a_uuid")
+        assertEquals(returnedOffer!!.state, "a_new_state_here")
+    }
+
     @Test
     fun testStoreAndGetAndDeleteSettlementMethods() = runBlocking {
         val offerId = "an_offer_id"
