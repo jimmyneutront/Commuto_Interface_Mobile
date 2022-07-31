@@ -1,7 +1,6 @@
 package com.commuto.interfacemobile.android.p2p
 
 import com.commuto.interfacemobile.android.key.keys.KeyPair
-import com.commuto.interfacemobile.android.key.keys.PublicKey
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.p2p.serializable.messages.SerializablePublicKeyAnnouncementMessage
 import com.commuto.interfacemobile.android.p2p.serializable.payloads.SerializablePublicKeyAnnouncementPayload
@@ -86,7 +85,7 @@ class P2PServiceTest {
             }
         }
 
-        val expectedPKA = PublicKeyAnnouncement(offerId, PublicKey(keyPair.keyPair.public))
+        val expectedPKA = PublicKeyAnnouncement(offerId, keyPair.getPublicKey())
         val offerService = TestOfferService(expectedPKA)
         val p2pService = P2PService(TestP2PExceptionHandler(), offerService, mxClient)
         p2pService.listen()
@@ -114,7 +113,7 @@ class P2PServiceTest {
                 eventContent = RoomMessageEventContent
                     .TextMessageEventContent(publicKeyAnnouncementString)
             ).getOrThrow()
-            withTimeout(30_000) {
+            withTimeout(60_000) {
                 offerService.publicKeyAnnouncementChannel.receive()
             }
         }

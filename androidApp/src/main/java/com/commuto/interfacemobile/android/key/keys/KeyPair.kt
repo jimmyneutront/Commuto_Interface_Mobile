@@ -10,7 +10,7 @@ import org.bouncycastle.asn1.pkcs.RSAPrivateKey
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.*
-import java.security.PublicKey
+import java.security.PublicKey as JavaSecPublicKey
 import java.security.KeyPair as JavaSecKeyPair
 import java.security.spec.MGF1ParameterSpec
 import java.security.spec.RSAPrivateCrtKeySpec
@@ -58,7 +58,7 @@ class KeyPair {
             DERNull.INSTANCE
         )
         val pubKeyX509Bytes = SubjectPublicKeyInfo(algorithmIdentifier, publicKeyBytes).encoded
-        val publicKey: PublicKey = KeyFactory.getInstance("RSA")
+        val publicKey: JavaSecPublicKey = KeyFactory.getInstance("RSA")
             .generatePublic(X509EncodedKeySpec(pubKeyX509Bytes))
 
         //Restore private key
@@ -92,9 +92,17 @@ class KeyPair {
             .digest(pubKeyToPkcs1Bytes())
     }
 
-    //TODO: make these private but make public getters
     val interfaceId: ByteArray
     val keyPair: JavaSecKeyPair
+
+    /**
+     * Creates a new [PublicKey] wrapped around this [KeyPair]'s public key.
+     *
+     * @return A new [PublicKey] wrapped around this [KeyPair]'s public key.
+     */
+    fun getPublicKey(): PublicKey {
+        return PublicKey(keyPair.public)
+    }
 
     /**
      * Signs a [ByteArray] using this [KeyPair]'s private key.
@@ -172,8 +180,7 @@ class KeyPair {
         val pubKeyX509Bytes = this.keyPair.public.encoded
         val sPubKeyInfo: SubjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pubKeyX509Bytes)
         val pubKeyPrimitive: ASN1Primitive = sPubKeyInfo.parsePublicKey()
-        val pubKeyPkcs1Bytes: ByteArray = pubKeyPrimitive.encoded
-        return pubKeyPkcs1Bytes
+        return pubKeyPrimitive.encoded // Public key PKCS#1 bytes
     }
 
     /**
@@ -186,7 +193,6 @@ class KeyPair {
         val privKeyInfo = PrivateKeyInfo.getInstance(this.keyPair.private.encoded)
         val privKeyAsn1Encodable: ASN1Encodable = privKeyInfo.parsePrivateKey()
         val privKeyAsn1Primitive: ASN1Primitive = privKeyAsn1Encodable.toASN1Primitive()
-        val privKeyPkcs1Bytes: ByteArray = privKeyAsn1Primitive.getEncoded()
-        return privKeyPkcs1Bytes
+        return privKeyAsn1Primitive.encoded // Private key PKCS#1 bytes
     }
 }

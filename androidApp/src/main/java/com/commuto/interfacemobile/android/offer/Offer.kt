@@ -7,7 +7,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.math.BigInteger
-import java.util.UUID
+import java.util.*
 
 /**
  * Represents an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
@@ -108,15 +108,14 @@ data class Offer(
                 throw IllegalStateException("Unexpected onChainDirection encountered while creating Offer")
             }
         },
-        settlementMethods = kotlin.run {
-            val settlementMethods = mutableStateListOf<SettlementMethod>()
+        settlementMethods = mutableStateListOf<SettlementMethod>().apply {
             onChainSettlementMethods.forEach {
                 try {
-                    settlementMethods.add(Json.decodeFromString(it.decodeToString()))
-                } catch (_: Exception) {
+                    this.add(Json.decodeFromString(it.decodeToString()))
+                } catch (e: Exception) {
+                    print(e)
                 }
             }
-            settlementMethods
         },
         protocolVersion = protocolVersion,
         chainID = chainID,

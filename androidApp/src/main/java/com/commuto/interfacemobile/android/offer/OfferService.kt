@@ -10,6 +10,7 @@ import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.offer.validation.ValidatedNewOfferData
 import com.commuto.interfacemobile.android.p2p.OfferMessageNotifiable
+import com.commuto.interfacemobile.android.p2p.P2PService
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.ui.OffersViewModel
 import kotlinx.coroutines.Deferred
@@ -42,6 +43,8 @@ import javax.inject.Singleton
  * @property serviceFeeRateChangedEventRepository A repository containing [ServiceFeeRateChangedEvent]s
  * @property offerTruthSource The [OfferTruthSource] in which this is responsible for maintaining an accurate list of
  * all open offers. If this is not yet initialized, event handling methods will throw the corresponding error.
+ * @property blockchainService The [BlockchainService] that this uses to interact with the blockchain.
+ * @property p2pService The [P2PService] that this uses for interacting with the peer-to-peer network.
  */
 @Singleton
 class OfferService (
@@ -68,6 +71,8 @@ class OfferService (
 
     private lateinit var blockchainService: BlockchainService
 
+    private lateinit var p2pService: P2PService
+
     private val logTag = "OfferService"
 
     /**
@@ -85,13 +90,25 @@ class OfferService (
     /**
      * Used to set the [blockchainService] property. This can only be called once.
      *
-     * @param newBlockchainService The new value of the [blockchainService]
+     * @param newBlockchainService The new value of the [blockchainService] property, which cannot be null.
      */
     fun setBlockchainService(newBlockchainService: BlockchainService) {
         check(!::blockchainService.isInitialized) {
             "blockchainService is already initialized"
         }
         blockchainService = newBlockchainService
+    }
+
+    /**
+     * Used to set the [p2pService] property. This can only be called once.
+     *
+     * @param newP2PService The new value of the [p2pService] property, which cannot be null.
+     */
+    fun setP2PService(newP2PService: P2PService) {
+        check(!::p2pService.isInitialized) {
+            "p2pService is already initialized"
+        }
+        p2pService = newP2PService
     }
 
     /**
@@ -196,7 +213,7 @@ class OfferService (
                     encoder.encodeToString(it)
                 }
                 Log.i(logTag, "openOffer: persistently storing ${settlementMethodStrings.size} settlement " +
-                        "methods for offer ${newOffer.id.toString()}")
+                        "methods for offer ${newOffer.id}")
                 databaseService.storeSettlementMethods(offerForDatabase.offerId, offerForDatabase.chainID,
                     settlementMethodStrings)
                 afterPersistentStorage?.invoke()
@@ -226,13 +243,19 @@ class OfferService (
     }
 
     /**
-     * The method called by [BlockchainService] to notify [OfferService] of an [OfferOpenedEvent]. Once notified,
-     * [OfferService] saves [event] in offerOpenedEventRepository], gets all on-chain offer data by calling
-     * [blockchainService]'s [BlockchainService.getOffer] method, verifies that the chain ID of the event and the offer
-     * data match, creates a new [Offer] and list of settlement methods with the results, checks if [keyManagerService]
-     * has the maker's public key and updates the [Offer.havePublicKey] property accordingly, persistently stores the
-     * new offer and its settlement methods, removes [event] from [offerOpenedEventRepository], and then adds the new
-     * [Offer] to [offerTruthSource] on the main coroutine dispatcher.
+     * The method called by [BlockchainService] to notify [OfferService] of an [OfferOpenedEvent].
+     *
+     * Once notified, [OfferService] saves [event] in offerOpenedEventRepository], gets all on-chain offer data by
+     * calling [BlockchainService.getOffer], verifies that the chain ID of the event and the offer data match, and then
+     * checks if the offer has been persistently stored in [databaseService]. If it has been persistently stored and if
+     * its [DatabaseOffer.isUserMaker] field is true, then the user of this interface has created the offer, and so
+     * [OfferService] announces its corresponding public key by getting its key pair from [keyManagerService] and
+     * passing the key pair and the offer ID specified in [event] to [P2PService.announcePublicKey] If the offer has not
+     * been persistently stored or if its `isUserMaker` field is false, then [OfferService] creates a new [Offer] and
+     * list of settlement methods with the results, checks if [keyManagerService] has the maker's public key and updates
+     * the [Offer.havePublicKey] property accordingly, persistently stores the new offer and its settlement methods,
+     * removes [event] from [offerOpenedEventRepository], and then adds the new [Offer] to [offerTruthSource] on the
+     * main coroutine dispatcher.
      *
      * @param event The [OfferOpenedEvent] of which [OfferService] is being notified.
      *
@@ -259,65 +282,87 @@ class OfferService (
                     "handleOfferOpenedEvent call. OfferOpenedEvent.chainID: ${event.chainID}, " +
                     "OfferStruct.chainID: ${offerStruct.chainID}, OfferOpenedEvent.offerID: ${event.offerID}")
         }
-        val havePublicKey = (keyManagerService.getPublicKey(offerStruct.interfaceID) != null)
-        Log.i(logTag, "handleOfferOpenedEvent: havePublicKey for offer ${event.offerID}: $havePublicKey")
-        val offer = Offer(
-            isCreated = offerStruct.isCreated,
-            isTaken = offerStruct.isTaken,
-            id = event.offerID,
-            maker = offerStruct.maker,
-            interfaceId = offerStruct.interfaceID,
-            stablecoin = offerStruct.stablecoin,
-            amountLowerBound = offerStruct.amountLowerBound,
-            amountUpperBound = offerStruct.amountUpperBound,
-            securityDepositAmount = offerStruct.securityDepositAmount,
-            serviceFeeRate = offerStruct.serviceFeeRate,
-            onChainDirection = offerStruct.direction,
-            onChainSettlementMethods = offerStruct.settlementMethods,
-            protocolVersion = offerStruct.protocolVersion,
-            chainID = offerStruct.chainID,
-            havePublicKey = havePublicKey,
-            isUserMaker = false
-        )
-        val isCreated = if (offerStruct.isCreated) 1L else 0L
-        val isTaken = if (offerStruct.isTaken) 1L else 0L
-        val havePublicKeyLong = if (offer.havePublicKey) 1L else 0L
-        val isUserMaker = if (offer.isUserMaker) 1L else 0L
         val offerIDByteBuffer = ByteBuffer.wrap(ByteArray(16))
-        offerIDByteBuffer.putLong(offer.id.mostSignificantBits)
-        offerIDByteBuffer.putLong(offer.id.leastSignificantBits)
+        offerIDByteBuffer.putLong(event.offerID.mostSignificantBits)
+        offerIDByteBuffer.putLong(event.offerID.leastSignificantBits)
         val offerIDByteArray = offerIDByteBuffer.array()
-        val offerForDatabase = DatabaseOffer(
-            isCreated = isCreated,
-            isTaken = isTaken,
-            offerId = encoder.encodeToString(offerIDByteArray),
-            maker = offer.maker,
-            interfaceId = encoder.encodeToString(offer.interfaceId),
-            stablecoin = offer.stablecoin,
-            amountLowerBound = offer.amountLowerBound.toString(),
-            amountUpperBound = offer.amountUpperBound.toString(),
-            securityDepositAmount = offer.securityDepositAmount.toString(),
-            serviceFeeRate = offer.serviceFeeRate.toString(),
-            onChainDirection = offer.onChainDirection.toString(),
-            protocolVersion = offer.protocolVersion.toString(),
-            chainID = offer.chainID.toString(),
-            havePublicKey = havePublicKeyLong,
-            isUserMaker = isUserMaker,
-        )
-        databaseService.storeOffer(offerForDatabase)
-        Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")
-        val settlementMethodStrings = offer.onChainSettlementMethods.map {
-            encoder.encodeToString(it)
+        val offerIDString = encoder.encodeToString(offerIDByteArray)
+        val offerInDatabase = databaseService.getOffer(offerIDString)
+        /*
+        If offerInDatabase is null or isUserMaker is false (0L), this will be false. It will be true if and only if
+        offerInDatabase is not null and isUserMaker is true (1L)
+         */
+        val isUserMaker = offerInDatabase?.isUserMaker == 1L
+        if (isUserMaker) {
+            Log.i(logTag, "handleOfferOpenedEvent: offer ${event.offerID} made by the user")
+            // The user of this interface is the maker of this offer, so we must announce the public key.
+            val keyPair = keyManagerService.getKeyPair(offerStruct.interfaceID)
+                ?: throw IllegalStateException("handleOfferOpenedEvent: got null while getting key pair with interface " +
+                        "ID ${encoder.encodeToString(offerStruct.interfaceID)} for offer ${event.offerID}, which was " +
+                        "made by the user")
+            // TODO: Update offer state to awaitingPublicKeyAnnouncement in persistent storage
+            Log.i(logTag, "handleOfferOpenedEvent: announcing public key for ${event.offerID}")
+            p2pService.announcePublicKey(offerID = event.offerID, keyPair = keyPair)
+            Log.i(logTag, "handleOfferOpenedEvent: announced public key for ${event.offerID}")
+            // TODO: Update offer state to offerOpened
+            // TODO: Update state of offer in offerTruthSource
+        } else {
+            val havePublicKey = (keyManagerService.getPublicKey(offerStruct.interfaceID) != null)
+            Log.i(logTag, "handleOfferOpenedEvent: havePublicKey for offer ${event.offerID}: $havePublicKey")
+            val offer = Offer(
+                isCreated = offerStruct.isCreated,
+                isTaken = offerStruct.isTaken,
+                id = event.offerID,
+                maker = offerStruct.maker,
+                interfaceId = offerStruct.interfaceID,
+                stablecoin = offerStruct.stablecoin,
+                amountLowerBound = offerStruct.amountLowerBound,
+                amountUpperBound = offerStruct.amountUpperBound,
+                securityDepositAmount = offerStruct.securityDepositAmount,
+                serviceFeeRate = offerStruct.serviceFeeRate,
+                onChainDirection = offerStruct.direction,
+                onChainSettlementMethods = offerStruct.settlementMethods,
+                protocolVersion = offerStruct.protocolVersion,
+                chainID = offerStruct.chainID,
+                havePublicKey = havePublicKey,
+                isUserMaker = isUserMaker
+            )
+            val isCreated = if (offerStruct.isCreated) 1L else 0L
+            val isTaken = if (offerStruct.isTaken) 1L else 0L
+            val havePublicKeyLong = if (offer.havePublicKey) 1L else 0L
+            val isUserMakerLong = if (offer.isUserMaker) 1L else 0L
+            val offerForDatabase = DatabaseOffer(
+                isCreated = isCreated,
+                isTaken = isTaken,
+                offerId = encoder.encodeToString(offerIDByteArray),
+                maker = offer.maker,
+                interfaceId = encoder.encodeToString(offer.interfaceId),
+                stablecoin = offer.stablecoin,
+                amountLowerBound = offer.amountLowerBound.toString(),
+                amountUpperBound = offer.amountUpperBound.toString(),
+                securityDepositAmount = offer.securityDepositAmount.toString(),
+                serviceFeeRate = offer.serviceFeeRate.toString(),
+                onChainDirection = offer.onChainDirection.toString(),
+                protocolVersion = offer.protocolVersion.toString(),
+                chainID = offer.chainID.toString(),
+                havePublicKey = havePublicKeyLong,
+                isUserMaker = isUserMakerLong,
+            )
+            databaseService.storeOffer(offerForDatabase)
+            Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")
+            val settlementMethodStrings = offer.onChainSettlementMethods.map {
+                encoder.encodeToString(it)
+            }
+            databaseService.storeSettlementMethods(offerForDatabase.offerId, offerForDatabase.chainID,
+                settlementMethodStrings)
+            Log.i(logTag, "handleOfferOpenedEvent: persistently stored ${settlementMethodStrings.size} settlement " +
+                    "methods for offer ${offer.id}")
+            offerOpenedEventRepository.remove(event)
+            withContext(Dispatchers.Main) {
+                offerTruthSource.addOffer(offer)
+            }
+            Log.i(logTag, "handleOfferOpenedEvent: added offer ${offer.id} to offerTruthSource")
         }
-        databaseService.storeSettlementMethods(offerForDatabase.offerId, offerForDatabase.chainID,
-            settlementMethodStrings)
-        Log.i(logTag, "handleOfferOpenedEvent: persistently stored ${settlementMethodStrings.size} settlement " +
-                "methods for offer ${offer.id}")
-        offerOpenedEventRepository.remove(event)
-        withContext(Dispatchers.Main) {
-            offerTruthSource.addOffer(offer)
-        }
-        Log.i(logTag, "handleOfferOpenedEvent: added offer ${offer.id} to offerTruthSource")
     }
 
     /**

@@ -1,7 +1,9 @@
 package com.commuto.interfacemobile.android.p2p
 
 import android.util.Log
+import com.commuto.interfacemobile.android.key.keys.KeyPair
 import com.commuto.interfacemobile.android.key.keys.PublicKey
+import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.p2p.serializable.messages.SerializablePublicKeyAnnouncementMessage
 import com.commuto.interfacemobile.android.p2p.serializable.payloads.SerializablePublicKeyAnnouncementPayload
@@ -49,9 +51,13 @@ import javax.inject.Singleton
  * loop.
  */
 @Singleton
-class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiable,
+open class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiable,
                              private val offerService: OfferMessageNotifiable,
                              private val mxClient: MatrixClientServerApiClient) {
+
+    init {
+        (offerService as? OfferService)?.setP2PService(this)
+    }
 
     private val logTag = "P2PService"
 
@@ -168,6 +174,11 @@ class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiabl
         }
     }
 
+    open suspend fun announcePublicKey(offerID: UUID, keyPair: KeyPair) {
+
+    }
+
+    // TODO: This should get its own file
     /**
      * Attempts to restore a [PublicKeyAnnouncement] from a give [String].
      *
@@ -235,4 +246,5 @@ class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiabl
             null
         }
     }
+
 }
