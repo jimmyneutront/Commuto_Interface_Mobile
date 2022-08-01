@@ -19,6 +19,7 @@ class AndroidDatabaseDriverFactory @Inject constructor(@ApplicationContext val c
      * @return A new [AndroidSqliteDriver].
      */
     override fun createDriver(): SqlDriver {
-        return AndroidSqliteDriver(CommutoInterfaceDB.Schema, context, "test.db")
+        // Name database to create an actual database file
+        return AndroidSqliteDriver(CommutoInterfaceDB.Schema, context, null)
     }
 }

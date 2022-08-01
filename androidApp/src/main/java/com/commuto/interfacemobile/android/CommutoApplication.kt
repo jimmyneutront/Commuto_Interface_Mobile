@@ -3,6 +3,7 @@ package com.commuto.interfacemobile.android
 import android.app.Application
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
 import com.commuto.interfacemobile.android.database.DatabaseService
+import com.commuto.interfacemobile.android.p2p.P2PService
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -18,6 +19,8 @@ class CommutoApplication: Application() {
     lateinit var blockchainService: BlockchainService
     @Inject
     lateinit var databaseService: DatabaseService
+    @Inject
+    lateinit var p2pService: P2PService
 
     override fun onCreate() {
         super.onCreate()
@@ -25,5 +28,7 @@ class CommutoApplication: Application() {
         databaseService.createTables()
         // Start listening to the blockchain
         blockchainService.listen()
+        // Start listening to the peer-to-peer network
+        p2pService.listen()
     }
 }
