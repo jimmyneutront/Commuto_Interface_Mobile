@@ -1,18 +1,16 @@
+// Suppress warning in initializer
+@file:Suppress("LeakingThis")
+
 package com.commuto.interfacemobile.android.p2p
 
 import android.util.Log
 import com.commuto.interfacemobile.android.key.keys.KeyPair
-import com.commuto.interfacemobile.android.key.keys.PublicKey
 import com.commuto.interfacemobile.android.offer.OfferService
-import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
-import com.commuto.interfacemobile.android.p2p.serializable.messages.SerializablePublicKeyAnnouncementMessage
-import com.commuto.interfacemobile.android.p2p.serializable.payloads.SerializablePublicKeyAnnouncementPayload
+import io.ktor.http.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import net.folivo.trixnity.clientserverapi.client.MatrixClientServerApiClient
 import net.folivo.trixnity.clientserverapi.model.rooms.GetEvents
 import net.folivo.trixnity.core.ErrorResponse
@@ -21,10 +19,8 @@ import net.folivo.trixnity.core.model.RoomId
 import net.folivo.trixnity.core.model.events.Event
 import net.folivo.trixnity.core.model.events.m.room.RoomMessageEventContent
 import java.net.ConnectException
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
-import java.security.MessageDigest
 import java.util.*
+import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
@@ -54,6 +50,18 @@ import javax.inject.Singleton
 open class P2PService constructor(private val exceptionHandler: P2PExceptionNotifiable,
                              private val offerService: OfferMessageNotifiable,
                              private val mxClient: MatrixClientServerApiClient) {
+
+    @Inject
+    constructor(
+        exceptionHandler: P2PExceptionNotifiable,
+        offerService: OfferMessageNotifiable
+    ): this(
+        exceptionHandler = exceptionHandler,
+        offerService = offerService,
+        mxClient = MatrixClientServerApiClient(
+            baseUrl = Url("https://matrix.org"),
+        ).apply { accessToken.value = "syt_amltbXl0_TlbyjkdfhjbCVJNjOtOt_0GeYu6" }
+    )
 
     init {
         (offerService as? OfferService)?.setP2PService(this)
@@ -174,7 +182,22 @@ open class P2PService constructor(private val exceptionHandler: P2PExceptionNoti
         }
     }
 
-    open suspend fun sendMessage(message: String) {}
+    /**
+     * Sends the given message [String] in the Commuto Interface Network Test Room.
+     *
+     * @param message The [String] to send in the Commuto Interface Network Test Room.
+     */
+    open suspend fun sendMessage(message: String) {
+        Log.i(logTag, "sendMessage: sending $message")
+        val result = mxClient.rooms.sendMessageEvent(
+            roomId = RoomId("!WEuJJHaRpDvkbSveLu:matrix.org"),
+            eventContent = RoomMessageEventContent.TextMessageEventContent(message),
+        ).getOrElse {
+            Log.e(logTag, "sendMessage: got exception", it)
+            throw it
+        }
+        Log.i(logTag, "sendMessage: success; ID: $result")
+    }
 
     /**
      * Creates a
