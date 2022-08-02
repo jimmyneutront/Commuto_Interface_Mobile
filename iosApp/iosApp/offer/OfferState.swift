@@ -19,7 +19,7 @@ enum OfferState {
      */
     case openOfferTransactionBroadcast
     /**
-     Indicates that the [OfferOpened event](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) for the corresponding offer has been detected, so the public key should now be announced.
+     Indicates that the [OfferOpened event](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) for the corresponding offer has been detected, so, if the offer's maker is the user of the interface, the public key should now be announced; otherwise this means that we are waiting for the maker to announce their public key.
      */
     case awaitingPublicKeyAnnouncement
     /**
@@ -69,6 +69,8 @@ enum OfferState {
     static func fromString(_ string: String?) -> OfferState? {
         if string == nil {
             return nil
+        } else if string == "opening" {
+            return .opening
         } else if string == "openOfferTxPublished" {
             return .openOfferTransactionBroadcast
         } else if string == "awaitingPKAnnouncement" {
