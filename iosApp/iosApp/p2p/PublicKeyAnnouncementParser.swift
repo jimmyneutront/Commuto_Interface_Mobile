@@ -12,7 +12,7 @@ import Foundation
 /**
 Attempts to restore a PublicKeyAnnouncement from a given `String`.
  
- - Parameter messageString: A `String?` from which to try to restore a `PublicKeyAnnouncement`. If `messageString` is nil, `parsePublicKeyAnnouncement(...)` immediately returns nil.
+ - Parameter messageString: A `String?` from which to try to restore a `PublicKeyAnnouncement`.
  
  - Returns: A `PublicKeyAnnouncement?` that will be `nil` if `messageString` does not contain a valid public key announcement, and will be non-`nil` if `messageString` does contain a valid public key announcement.
  */
@@ -20,7 +20,7 @@ func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement
     guard messageString != nil else {
         return nil
     }
-    //Restore message NSDictionary
+    // Restore message NSDictionary
     guard let messageData = messageString!.data(using: String.Encoding.utf8) else {
         return nil
     }
@@ -28,7 +28,7 @@ func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement
         return nil
     }
     
-    //Ensure that the message is a Public Key Announcement message
+    // Ensure that the message is a Public Key Announcement message
     guard let messageType = message["msgType"] as? String else {
         return nil
     }
@@ -36,12 +36,12 @@ func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement
         return nil
     }
     
-    //Ensure that the sender is the maker
+    // Get the interface ID of the sender
     guard let senderInterfaceIdString = message["sender"] as? String, let senderInterfaceId = Data(base64Encoded: senderInterfaceIdString) else {
         return nil
     }
     
-    //Restore payload NSDictionary
+    // Restore payload NSDictionary
     guard let payloadString = message["payload"] as? String, let payloadData = Data(base64Encoded: payloadString) else {
         return nil
     }
@@ -49,12 +49,12 @@ func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement
         return nil
     }
     
-    //Ensure that the offer id in the PKA matches the offer in question
+    // Get the offer ID in the announcement
     guard let messageOfferIdString = payload["offerId"] as? String, let messageOfferIdData = Data(base64Encoded: messageOfferIdString), let messageOfferId = UUID.from(data: messageOfferIdData) else {
         return nil
     }
     
-    //Re-create maker's public key
+    // Re-create maker's public key
     guard let pubKeyString = payload["pubKey"] as? String, let pubKeyBytes = Data(base64Encoded: pubKeyString) else {
         return nil
     }
@@ -62,12 +62,12 @@ func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement
         return nil
     }
     
-    //Check that interface id of maker's key matches value in "sender" field of message
+    // Check that interface id of maker's key matches value in "sender" field of message
     guard senderInterfaceId == publicKey.interfaceId else {
         return nil
     }
     
-    //Create hash of payload
+    // Create hash of payload
     let payloadDataDigest = SHA256.hash(data: payloadData)
     var payloadDataHashByteArray = [UInt8]()
     for byte: UInt8 in payloadDataDigest.makeIterator() {
@@ -75,7 +75,7 @@ func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement
     }
     let payloadDataHash = Data(bytes: payloadDataHashByteArray, count: payloadDataHashByteArray.count)
     
-    //Verify signature
+    // Verify signature
     guard let signatureString = message["signature"] as? String, let signature = Data(base64Encoded: signatureString) else {
         return nil
     }

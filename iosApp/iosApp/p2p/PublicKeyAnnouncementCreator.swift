@@ -13,10 +13,10 @@ import Foundation
  Creates a Public Key Announcement for the given public key and offer ID according to the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
  
  - Parameters:
-    - offerID: The ID of the offer for which this `PublicKey` is being announced.
+    - offerID: The ID of the offer for which the `PublicKey` is being announced.
     - keyPair: The `KeyPair` containing the `PublicKey` to be announced.
  
- - Returns: A JSON `String` that is the Public Key Announcement
+ - Returns: A JSON `String` that is the Public Key Announcement.
  */
 func createPublicKeyAnnouncement(offerID: UUID, keyPair: KeyPair) throws -> String {
     // Create Base64-encoded string of public key in PKCS#1 bytes

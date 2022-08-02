@@ -18,7 +18,7 @@ import XCTest
  */
 class OfferServiceTests: XCTestCase {
     /**
-     Ensures that `OfferService` handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events properly.
+     Ensures that `OfferService` handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events properly for offers NOT made by the interface user.
      */
     func testHandleOfferOpenedEvent() {
         
@@ -142,6 +142,9 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
     
+    /**
+     Ensures that `OfferService` handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events properly for offers made by the interface user.
+     */
     func testHandleOfferOpenedEventForUserIsMakerOffer() {
         
         let newOfferID = UUID()
@@ -163,7 +166,7 @@ class OfferServiceTests: XCTestCase {
         testingServerUrlComponents.queryItems = [
             URLQueryItem(name: "events", value: "offer-opened"),
             URLQueryItem(name: "offerID", value: newOfferID.uuidString),
-            URLQueryItem(name: "interfaceID", value: keyPairForOffer.interfaceId.base64EncodedString())
+            URLQueryItem(name: "interfaceID", value: interfaceIDString)
         ]
         var request = URLRequest(url: testingServerUrlComponents.url!)
         request.httpMethod = "GET"
@@ -188,8 +191,39 @@ class OfferServiceTests: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        let offerService = OfferService<PreviewableOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
-        offerService.offerTruthSource = PreviewableOfferTruthSource()
+        class TestOfferTruthSource: OfferTruthSource {
+            
+            init() {
+                offers = [:]
+            }
+            var serviceFeeRate: BigUInt?
+            
+            var offers: [UUID: Offer]
+            
+        }
+        let offerTruthSource = TestOfferTruthSource()
+        
+        class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent> {
+            
+            let eventRemovedExpectation = XCTestExpectation(description: "Fulfilled when remove is called")
+            
+            override func append(_ element: OfferOpenedEvent) {                super.append(element)
+            }
+            
+            override func remove(_ elementToRemove: OfferOpenedEvent) {
+                eventRemovedExpectation.fulfill()
+                super.remove(elementToRemove)
+            }
+            
+        }
+        let offerOpenedEventRepository = TestBlockchainEventRepository()
+        
+        let offerService = OfferService<TestOfferTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            offerOpenedEventRepository: offerOpenedEventRepository
+        )
+        offerService.offerTruthSource = offerTruthSource
         
         class TestP2PErrorHandler : P2PErrorNotifiable {
             func handleP2PError(_ error: Error) {}
@@ -209,22 +243,42 @@ class OfferServiceTests: XCTestCase {
         let testP2PService = TestP2PService(errorHandler: p2pErrorHandler, offerService: offerService, switrixClient: switrixClient)
         offerService.p2pService = testP2PService
         
-        let offerForDatabase = DatabaseOffer(
-            id: newOfferID.asData().base64EncodedString(),
+        let offer = Offer(
             isCreated: true,
             isTaken: false,
-            maker: "maker_address",
-            interfaceId: keyPairForOffer.interfaceId.base64EncodedString(),
-            stablecoin: "stablecoin_address",
-            amountLowerBound: "lower_bound",
-            amountUpperBound: "upper_bound",
-            securityDepositAmount: "security_deposit",
-            serviceFeeRate: "service_fee",
-            onChainDirection: "on_chain_direction",
-            protocolVersion: "protocol_version",
-            chainID: "31337",
+            id: newOfferID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            direction: .buy,
+            settlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt("31337"),
             havePublicKey: true,
             isUserMaker: true,
+            state: .openOfferTransactionBroadcast
+        )
+        offerTruthSource.offers[newOfferID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: newOfferID.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.address,
+            interfaceId: keyPairForOffer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.address,
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: offer.direction.string,
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
             state: OfferState.openOfferTransactionBroadcast.asString
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
@@ -244,17 +298,13 @@ class OfferServiceTests: XCTestCase {
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         offerService.blockchainService = blockchainService
+        blockchainService.listen()
         
-        let offerOpenedEvent = OfferOpenedEvent(
-            id: newOfferID,
-            interfaceID: keyPairForOffer.interfaceId,
-            chainID: BigUInt(31337)
-        )
-        try! offerService.handleOfferOpenedEvent(offerOpenedEvent)
-        
+        wait(for: [offerOpenedEventRepository.eventRemovedExpectation], timeout: 60.0)
         XCTAssertFalse(errorHandler.gotError)
         XCTAssertEqual(testP2PService.offerIDForAnnouncement, newOfferID)
         XCTAssertEqual(testP2PService.keyPairForAnnouncement!.interfaceId, keyPairForOffer.interfaceId)
+        XCTAssertEqual(OfferState.offerOpened, offerTruthSource.offers[newOfferID]!.state)
         let offerInDatabase = try! databaseService.getOffer(id: offerForDatabase.id)
         XCTAssertEqual(offerInDatabase!.state, OfferState.offerOpened.asString)
         
@@ -672,26 +722,6 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        class TestOfferTruthSource: OfferTruthSource {
-            
-            init() {
-                offers = [:]
-            }
-            
-            let offerAddedExpectation = XCTestExpectation(description: "Fulfilled when an offer is added to the offers dictionary")
-            var serviceFeeRate: BigUInt?
-            
-            var offers: [UUID: Offer] {
-                didSet {
-                    // We want to ignore initialization and only fulfill when a new offer is actually added
-                    if offers.keys.count != 0 {
-                        offerAddedExpectation.fulfill()
-                    }
-                }
-            }
-            
-        }
-        
         let offerService = OfferService<PreviewableOfferTruthSource>(
             databaseService: databaseService,
             keyManagerService: keyManagerService
@@ -987,7 +1017,7 @@ class OfferServiceTests: XCTestCase {
             chainID: String(BigUInt(31337)),
             havePublicKey: true,
             isUserMaker: true,
-            state: "opening"
+            state: "openOfferTxPublished"
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
         

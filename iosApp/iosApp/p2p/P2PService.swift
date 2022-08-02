@@ -230,10 +230,10 @@ class P2PService {
      */
     func sendMessage(_ message: String) throws {
         _ = try Promise<SwitrixSendEventResponse> { seal in
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.logger.notice("sendMessage: sending: \(message)")
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("sendMessage: sending: \(message)")
                 let eventContent = SwitrixMessageEventContent(body: message)
-                self.switrixClient.rooms.sendEvent(roomId: "!WEuJJHaRpDvkbSveLu:matrix.org", eventType: "m.room.message", eventContent: eventContent) { [self] response in
+                switrixClient.rooms.sendEvent(roomId: "!WEuJJHaRpDvkbSveLu:matrix.org", eventType: "m.room.message", eventContent: eventContent) { [self] response in
                     switch response {
                     case .success(let sendMessageResponse):
                         logger.notice("sendMessage: success; ID: \(sendMessageResponse.eventId)")
@@ -249,7 +249,7 @@ class P2PService {
     }
     
     /**
-     Creates a Public Key Announcement using the given offer ID and key pair and sends it using the `sendMessage` function.
+     Creates a [Public Key Announcement](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) using the given offer ID and key pair and sends it using the `sendMessage` function.
      
      - Parameters:
         - offerID: The ID of the offer for which the Public Key Announcement is being made.

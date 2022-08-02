@@ -55,7 +55,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     var offerTruthSource: _OfferTruthSource? = nil
     
     /**
-     The `BlockchainService` that this uses for interacting with the blockchain.
+     The `BlockchainService` that this uses to interact with the blockchain.
      */
     var blockchainService: BlockchainService? = nil
     
@@ -248,7 +248,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`.
      
-     Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, and then checks if the offer has been persistently stored in `databaseService`. If it has been persistently stored and if its `isUserMaker` field is true, then the user of this interface has created this offer, and so `OfferService`updates the offer's status to `awaitingPublicKeyAnnouncement`, announces its corresponding public key by getting its key pair from `keyManagerService` and passing the public key of the key pair and the offer ID specified in `event` to `P2PService.announcePublicKey`, and then updates the offer state to `offerOpened`. If the offer has not been persistently stored or if its `isUserMaker` field is false, then `OfferService` creates a new `Offer` with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` property accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, and then checks if the offer has been persistently stored in `databaseService`. If it has been persistently stored and if its `isUserMaker` field is true, then the user of this interface has created this offer, and so `OfferService`updates the offer's state to `awaitingPublicKeyAnnouncement`, announces its corresponding public key by getting its key pair from `keyManagerService` and passing the key pair and the offer ID specified in `event` to `P2PService.announcePublicKey`, and then updates the offer state to `offerOpened`. If the offer has not been persistently stored or if its `isUserMaker` field is false, then `OfferService` creates a new `Offer` and list of settlement methods with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` and `state` properties accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferOpenedEvent` of which `OfferService` is being notified.
      
@@ -295,13 +295,14 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             guard let offerTruthSource = offerTruthSource else {
                 throw OfferServiceError.unexpectedNilError(desc: "handleOfferOpenedEvent: offerTruthSource was nil during handleOfferOpenedEvent call")
             }
-            guard let offerInTruthSource = offerTruthSource.offers[event.id] else {
+            guard offerTruthSource.offers[event.id] != nil else {
                 logger.warning("handleOfferOpenedEvent: offer \(event.id.uuidString) (made by interface user) not found in offerTruthSource during handleOfferOpenedEvent call")
                 offerOpenedEventRepository.remove(event)
                 return
             }
-            DispatchQueue.main.async {
-                offerInTruthSource.state = .offerOpened
+            DispatchQueue.main.sync {
+                offerTruthSource.offers[event.id]?.state = .offerOpened
+                print(offerTruthSource.offers[event.id])
             }
             offerOpenedEventRepository.remove(event)
         } else {
@@ -410,7 +411,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             if let state = stateOfOfferInDatabase {
                 return state
             } else if havePublicKey {
-                return .offerOpened
+                return .offerOpened // This should never be reached for an offer made by the user of this interface
             } else {
                 return .awaitingPublicKeyAnnouncement
             }
@@ -516,7 +517,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      The function called by `P2PService` to notify `OfferService` of a `PublicKeyAnnouncement`.
      
-     Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it checks the offer's `havePublicKey` and `state` properties. If `havePublicKey` is true and `state` is at or beyond `offerOpened`, then it returns because this interface already has the public key for this offer. Otherwise, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker, and if the offer has not already passed through the `offerOpened` state, updates its `state` property to `offerOpened`. It updates these properties in persistent storage as well.
+     Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it checks the offer's `havePublicKey` and `state` properties. If `havePublicKey` is true or `state` is at or beyond `offerOpened`, then it returns because this interface already has the public key for this offer. Otherwise, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker, and if the offer has not already passed through the `offerOpened` state, updates its `state` property to `offerOpened`. It updates these properties in persistent storage as well.
      
      - Parameter message: The `PublicKeyAnnouncement` of which `OfferService` is being notified.
      */
@@ -538,10 +539,10 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
             return
         }
         /*
-         If we already have the public key for an offer and that offer is at or beyond the offerOpened state (such as an offer made by this interface's user), then we do nothing.
+         If we already have the public key for an offer and/or that offer is at or beyond the offerOpened state (such as an offer made by this interface's user), then we do nothing.
          */
         guard offer.havePublicKey == false && offer.state.indexNumber < OfferState.offerOpened.indexNumber else {
-            logger.notice("handlePublicKeyAnnouncement: got announcement for offer for which public key was already obtained")
+            logger.notice("handlePublicKeyAnnouncement: got announcement for offer for which public key was already obtained: \(message.offerId.uuidString)")
             return
         }
         if offer.interfaceId == message.publicKey.interfaceId {
