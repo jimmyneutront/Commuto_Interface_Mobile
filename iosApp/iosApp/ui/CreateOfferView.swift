@@ -513,12 +513,12 @@ struct SettlementMethodCard: View {
                     SettlementMethodPriceField(value: $priceValue, formatter: createPriceFormatter())
                         .onChange(of: priceValue) { newPriceValue in
                             priceValueAsDecimal = NSNumber(floatLiteral: newPriceValue).decimalValue
-                            // If this settlement is selected, we update its price value in the selected settlement methods list.
+                            settlementMethod.price = String(describing: priceValue)
+                            // If this settlement method is selected, we update its price value in the selected settlement methods list.
                             if let index = selectedSettlementMethods.firstIndex(where: {
                                 selectedSettlementMethod in
                                     settlementMethod.id == selectedSettlementMethod.id
                             }) {
-                                settlementMethod.price = String(describing: priceValue)
                                 selectedSettlementMethods[index] = settlementMethod
                             }
                             

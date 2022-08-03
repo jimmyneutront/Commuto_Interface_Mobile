@@ -54,7 +54,7 @@ struct iOSApp: App {
             .initCompleted { r, viewModel in
                 r.resolve(OfferService.self)!.offerTruthSource = viewModel
             }
-        container.resolve(BlockchainService.self)!.listen()
+        //container.resolve(BlockchainService.self)!.listen()
     }
     
 	var body: some Scene {
