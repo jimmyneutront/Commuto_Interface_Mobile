@@ -52,6 +52,41 @@ class NewOfferDataValidatorTests: XCTestCase {
     }
     
     /**
+     Ensures that `validateNewOfferData` validates offer data properly when the service fee rate is zero.
+     */
+    func testValidateNewOfferDataZeroServiceFee() throws {
+        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method")
+        let validatedData = try! validateNewOfferData(
+            chainID: BigUInt.zero,
+            stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!,
+            stablecoinInformation: StablecoinInformation(currencyCode: "DAI", name: "Dai", decimal: 18),
+            minimumAmount: NSNumber(floatLiteral: 100.0).decimalValue,
+            maximumAmount: NSNumber(floatLiteral: 200.0).decimalValue,
+            securityDepositAmount: NSNumber(floatLiteral: 20.0).decimalValue,
+            serviceFeeRate: BigUInt.zero,
+            direction: .buy,
+            settlementMethods: [
+                settlementMethod
+            ]
+        )
+        let expectedValidatedData = ValidatedNewOfferData(
+            stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!,
+            stablecoinInformation: StablecoinInformation(currencyCode: "DAI", name: "Dai", decimal: 18),
+            minimumAmount: BigUInt("100000000000000000000"),
+            maximumAmount: BigUInt("200000000000000000000"),
+            securityDepositAmount: BigUInt("20000000000000000000"),
+            serviceFeeRate: BigUInt.zero,
+            serviceFeeAmountLowerBound: BigUInt.zero,
+            serviceFeeAmountUpperBound: BigUInt.zero,
+            direction: .buy,
+            settlementMethods: [
+                settlementMethod
+            ]
+        )
+        XCTAssertEqual(validatedData, expectedValidatedData)
+    }
+    
+    /**
      Ensures that `stablecoinAmountToBaseUnits` converts amounts properly.
      */
     func testStablecoinAmountToBaseUnits() throws {

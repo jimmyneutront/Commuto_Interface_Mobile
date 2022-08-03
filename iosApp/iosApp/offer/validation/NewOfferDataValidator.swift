@@ -53,7 +53,7 @@ func validateNewOfferData(
         throw NewOfferDataValidationError(desc: "The security deposit amount must be at least 10% of the maximum amount.")
     }
     let serviceFeeAmountLowerBound = serviceFeeRate * (minimumAmountBaseUnits / BigUInt(10_000))
-    guard serviceFeeAmountLowerBound > BigUInt.zero else {
+    guard serviceFeeAmountLowerBound > BigUInt.zero || serviceFeeRate == BigUInt.zero else {
         throw NewOfferDataValidationError(desc: "The minimum service fee amount must be greater than zero.")
     }
     let serviceFeeRateUpperBound = serviceFeeRate * (maximumAmountBaseUnits / BigUInt(10_000))
