@@ -215,6 +215,18 @@ struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource 
                         }
                     }
                 }
+                if let serviceFeeRate = offerTruthSource.serviceFeeRate {
+                    ServiceFeeAmountView(
+                        stablecoinInformation: stablecoins.getStablecoinInformation(
+                            chainID: chainID,
+                            contractAddress: selectedStablecoin ?? EthereumAddress("0x0000000000000000000000000000000000000000")!
+                        ),
+                        minimumAmount: NSNumber(floatLiteral: Double(minimumAmount)).decimalValue,
+                        maximumAmount: NSNumber(floatLiteral: Double(maximumAmount)).decimalValue,
+                        serviceFeeRate: serviceFeeRate
+                    )
+                    .padding(.bottom, 10.0)
+                }
                 HStack {
                     Text("Settlement Methods:")
                         .font(.title2)
