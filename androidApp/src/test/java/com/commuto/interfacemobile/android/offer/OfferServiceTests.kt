@@ -180,18 +180,11 @@ class OfferServiceTests {
                 assertEquals(offerInDatabase.onChainDirection, "1")
                 assertEquals(offerInDatabase.protocolVersion, "1")
                 assertEquals(offerInDatabase.state, OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT.asString)
-                /*
-                TODO: Fix issue with decoding on-chain settlement methods in Offer constructor and re-activate these
-                 tests
-                 */
-                /*
                 val settlementMethodsInDatabase = databaseService.getSettlementMethods(encoder
                     .encodeToString(expectedOfferIdByteArray), offerInDatabase.chainID)
                 assertEquals(settlementMethodsInDatabase!!.size, 1)
-                assertEquals(settlementMethodsInDatabase[0], encoder.encodeToString(("{\"f\":\"USD\", \"p\":" +
-                        "\"SWIFT\", \"m\":\"1.00\"}").encodeToByteArray()))
-
-                 */
+                assertEquals(settlementMethodsInDatabase[0], encoder.encodeToString(("{\"f\":\"USD\",\"p\":" +
+                        "\"SWIFT\",\"m\":\"1.00\"}").encodeToByteArray()))
             }
         }
     }
@@ -756,14 +749,11 @@ class OfferServiceTests {
                 assertEquals(offerInDatabase.havePublicKey, 0L)
                 assertEquals(offerInDatabase.isUserMaker, 0L)
                 assertEquals(offerInDatabase.state, OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT.asString)
-                // TODO: Re-enable this when settlement method parsing issue in secondary constructor is fixed
-                /*
                 val settlementMethodsInDatabase = databaseService.getSettlementMethods(encoder
                     .encodeToString(expectedOfferIdByteArray), offerInDatabase.chainID)
                 assertEquals(settlementMethodsInDatabase!!.size, 1)
-                assertEquals(settlementMethodsInDatabase[0], encoder.encodeToString("EUR-SEPA|an edited price here"
-                    .encodeToByteArray()))
-                 */
+                assertEquals(settlementMethodsInDatabase[0], encoder.encodeToString(("{\"f\":\"EUR\",\"p\":\"SEPA\"," +
+                        "\"m\":\"0.98\"}").encodeToByteArray()))
             }
         }
     }
@@ -803,7 +793,7 @@ class OfferServiceTests {
         offerIDByteBuffer.putLong(offerID.mostSignificantBits)
         offerIDByteBuffer.putLong(offerID.leastSignificantBits)
         val offerIDByteArray = offerIDByteBuffer.array()
-        val offer = Offer(
+        val offer = Offer.fromOnChainData(
             isCreated = true,
             isTaken = false,
             id = offerID,

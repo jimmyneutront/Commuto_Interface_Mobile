@@ -350,7 +350,7 @@ class OfferService (
             } else {
                 OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT
             }
-            val offer = Offer(
+            val offer = Offer.fromOnChainData(
                 isCreated = offerStruct.isCreated,
                 isTaken = offerStruct.isTaken,
                 id = event.offerID,
@@ -398,8 +398,8 @@ class OfferService (
             }
             databaseService.storeSettlementMethods(offerForDatabase.offerId, offerForDatabase.chainID,
                 settlementMethodStrings)
-            Log.i(logTag, "handleOfferOpenedEvent: persistently stored ${settlementMethodStrings.size} settlement " +
-                    "methods for offer ${offer.id}")
+            Log.i(logTag, "handleOfferOpenedEvent: persistently stored ${settlementMethodStrings.size} " +
+                    "settlement methods for offer ${offer.id}")
             offerOpenedEventRepository.remove(event)
             withContext(Dispatchers.Main) {
                 offerTruthSource.addOffer(offer)
@@ -461,7 +461,7 @@ class OfferService (
                 OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT
             }
         Log.i(logTag, "handleOfferOpenedEvent: havePublicKey for offer ${event.offerID}: $havePublicKey")
-        val offer = Offer(
+        val offer = Offer.fromOnChainData(
             isCreated = offerStruct.isCreated,
             isTaken = offerStruct.isTaken,
             id = event.offerID,
@@ -478,7 +478,7 @@ class OfferService (
             chainID = offerStruct.chainID,
             havePublicKey = havePublicKey,
             isUserMaker = isUserMaker,
-            state = state,
+            state = state
         )
         val chainIDString = offer.chainID.toString()
         val settlementMethodStrings = offer.onChainSettlementMethods.map {
