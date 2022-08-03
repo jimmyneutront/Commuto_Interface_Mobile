@@ -525,7 +525,18 @@ struct SettlementMethodCard: View {
                         }
                 }
             }
-           Spacer()
+            Spacer()
+            Toggle("Use Settlement Method", isOn: $isSelected)
+                .labelsHidden()
+                .onChange(of: isSelected) { newIsSelectedValue in
+                    if (!newIsSelectedValue) {
+                        selectedSettlementMethods.removeAll { settlementMethodToCheck in
+                            return settlementMethodToCheck.method == settlementMethod.method && settlementMethodToCheck.currency == settlementMethod.currency
+                        }
+                    } else {
+                        selectedSettlementMethods.append(settlementMethod)
+                    }
+                }
         }
         .padding(15)
         .overlay(
@@ -533,18 +544,6 @@ struct SettlementMethodCard: View {
                 .stroke(color, lineWidth: 1)
         )
         .accentColor(.primary)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if (isSelected) {
-                selectedSettlementMethods.removeAll { settlementMethodToCheck in
-                    return settlementMethodToCheck.method == settlementMethod.method && settlementMethodToCheck.currency == settlementMethod.currency
-                }
-                isSelected = false
-            } else {
-                selectedSettlementMethods.append(settlementMethod)
-                isSelected = true
-            }
-        }
     }
     
     /**
