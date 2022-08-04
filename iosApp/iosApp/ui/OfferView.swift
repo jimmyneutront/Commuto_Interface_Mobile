@@ -95,6 +95,11 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         }
                     )
                     .accentColor(Color.primary)
+                    ServiceFeeAmountView(
+                        stablecoinInformation: stablecoinInformation,
+                        minimumString: String(offer.serviceFeeRate * offer.amountLowerBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000))),
+                        maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
+                    )
                     DisclosureGroup(
                         isExpanded: $isAdvancedDetailsDescriptionExpanded,
                         content: {

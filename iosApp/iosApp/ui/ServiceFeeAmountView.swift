@@ -54,6 +54,20 @@ struct ServiceFeeAmountView: View {
         
     }
     
+    /**
+     Creates a `ServiceFeeAmountView` for an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     - Parameters:
+        - stablecoinInformation: The `StablecoinInformation` of the offer for which this `View` is being displayed, or `nil` if this information is not available.
+        - minimumString: The `String` value to be displayed as the minimum amount.
+        - maximumString: The `String` value to be displayed  as the maximum amount.
+     */
+    init(stablecoinInformation: StablecoinInformation?, minimumString: String, maximumString: String) {
+        self.stablecoinInformation = stablecoinInformation
+        self.minimumString = minimumString
+        self.maximumString = maximumString
+    }
+    
     var body: some View {
         let currencyCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
         HStack {
