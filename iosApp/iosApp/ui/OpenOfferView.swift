@@ -1,5 +1,5 @@
 //
-//  CreateOfferView.swift
+//  OpenOfferView.swift
 //  iosApp
 //
 //  Created by jimmyt on 7/16/22.
@@ -11,9 +11,9 @@ import BigInt
 import web3swift
 
 /**
- The screen for creating a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+ The screen for opening a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
+struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     init(offerTruthSource: TruthSource) {
         self.offerTruthSource = offerTruthSource
@@ -28,7 +28,7 @@ struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource 
     @ObservedObject var offerTruthSource: TruthSource
     
     /**
-     The ID of the blockchain on which the new offer will be created.
+     The ID of the blockchain on which the new offer will be opened.
      */
     private var chainID = BigUInt(31337)
     
@@ -257,7 +257,7 @@ struct CreateOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource 
                 if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
                     Button(
                         action: {
-                            // Don't let the user create a new offer if one is currently being created, or if the user has just created one
+                            // Don't let the user open a new offer if one is currently being opened, or if the user has just opened one
                             if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
                                 offerTruthSource.openOffer(
                                     chainID: chainID,
@@ -428,7 +428,7 @@ struct StablecoinAmountField: View {
 }
 
 /**
- Displays a vertical list of settlement method cards one for each settlement method that the offer has created. These cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being created.
+ Displays a vertical list of settlement method cards one for each settlement method that the offer has opened. These cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being opened.
  */
 struct SettlementMethodSelector: View {
     
@@ -616,12 +616,12 @@ struct SettlementMethodPriceField: View {
 }
 
 /**
- Displays a preview of `CreateOfferView`
+ Displays a preview of `OpenOfferView`
  */
-struct CreateOfferView_Previews: PreviewProvider {
+struct OpenOfferView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            CreateOfferView<PreviewableOfferTruthSource>(
+            OpenOfferView<PreviewableOfferTruthSource>(
                 offerTruthSource: PreviewableOfferTruthSource()
             )
         }
