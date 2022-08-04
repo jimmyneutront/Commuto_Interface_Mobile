@@ -122,6 +122,12 @@ fun OfferComposable(
                         )
                     }
                 )
+                ServiceFeeAmountComposable(
+                    stablecoinInformation = stablecoinInformation,
+                    minimumAmount = offer.amountLowerBound,
+                    maximumAmount = offer.amountUpperBound,
+                    serviceFeeRate = offer.serviceFeeRate
+                )
                 DisclosureComposable(
                     header = {
                         Text(
