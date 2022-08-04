@@ -52,13 +52,18 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     var openingOfferError: Error?
     
     /**
-     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
     func createOffer(chainID: BigUInt, stablecoin: EthereumAddress?, stablecoinInformation: StablecoinInformation?, minimumAmount: Decimal, maximumAmount: Decimal, securityDepositAmount: Decimal, direction: OfferDirection, settlementMethods: [SettlementMethod]) {}
     
     /**
-     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
     func openOffer(chainID: BigUInt, stablecoin: EthereumAddress?, stablecoinInformation: StablecoinInformation?, minimumAmount: Decimal, maximumAmount: Decimal, securityDepositAmount: Decimal, direction: OfferDirection, settlementMethods: [SettlementMethod]) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func cancelOffer(_ offer: Offer) {}
     
 }

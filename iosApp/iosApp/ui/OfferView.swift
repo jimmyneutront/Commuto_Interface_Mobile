@@ -123,6 +123,25 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         }
                     )
                     .accentColor(Color.primary)
+                    if (offer.isUserMaker) {
+                        Button (
+                            action: {
+                                offerTruthSource.cancelOffer(offer)
+                            },
+                            label: {
+                                Text("Cancel Offer")
+                                    .font(.largeTitle)
+                                    .bold()
+                                    .padding(10)
+                                    .frame(maxWidth: .infinity)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.red, lineWidth: 3)
+                                    )
+                            }
+                        )
+                        .accentColor(Color.red)
+                    }
                 }
                 .offset(x: 0.0, y: -10.0)
                 .padding()

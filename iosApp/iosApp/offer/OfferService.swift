@@ -246,6 +246,30 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     }
     
     /**
+     Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     On the global `DispatchQueue`, this calls `blockchainService.cancelOffer`, passing `offerID`.
+     
+     - Parameter offerID: The ID of the Offer to be canceled.
+     
+     - Returns: An empty promise that will be fulfilled when the Offer is canceled.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func cancelOffer(offerID: UUID) -> Promise<Void> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("cancelOffer: canceling \(offerID.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    seal.reject(OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during cancelOffer call"))
+                    return
+                }
+                blockchainService.cancelOffer(offerID: offerID).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`.
      
      Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, and then checks if the offer has been persistently stored in `databaseService`. If it has been persistently stored and if its `isUserMaker` field is true, then the user of this interface has created this offer, and so `OfferService`updates the offer's state to `awaitingPublicKeyAnnouncement`, announces its corresponding public key by getting its key pair from `keyManagerService` and passing the key pair and the offer ID specified in `event` to `P2PService.announcePublicKey`, and then updates the offer state to `offerOpened`. If the offer has not been persistently stored or if its `isUserMaker` field is false, then `OfferService` creates a new `Offer` and list of settlement methods with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` and `state` properties accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.

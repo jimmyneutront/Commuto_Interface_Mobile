@@ -53,4 +53,15 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
         direction: OfferDirection,
         settlementMethods: [SettlementMethod]
     )
+    
+    /**
+     Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     This passes the offer ID to `offerService.cancelOffer`.
+     
+     - Parameter offer: The `Offer` to be canceled.
+     */
+    func cancelOffer(
+        _ offer: Offer
+    )
 }

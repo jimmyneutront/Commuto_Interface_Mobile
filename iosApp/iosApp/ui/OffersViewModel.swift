@@ -163,4 +163,24 @@ class OffersViewModel: UIOfferTruthSource {
         }
     }
     
+    /**
+     Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     This passes the offer ID to `offerService.cancelOffer`.
+     
+     - Parameter offer: The `Offer` to be canceled.
+     */
+    func cancelOffer(_ offer: Offer) {
+        Promise<Void> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("cancelOffer: canceling offer \(offer.id.uuidString)")
+                offerService.cancelOffer(offerID: offer.id).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+            self.logger.notice("cancelOffer: successfully canceled offer \(offer.id.uuidString)")
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+            self.logger.error("cancelOffer: got error during cancelOffer call")
+        }
+    }
+    
 }

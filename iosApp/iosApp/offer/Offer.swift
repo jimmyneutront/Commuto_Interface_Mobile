@@ -311,7 +311,7 @@ extension Offer {
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
-            isUserMaker: false,
+            isUserMaker: true,
             state: .offerOpened
         )!,
         sampleOfferIds[1]: Offer(
@@ -338,7 +338,7 @@ extension Offer {
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
-            isUserMaker: false,
+            isUserMaker: true,
             state: .offerOpened
         )!,
         sampleOfferIds[2]: Offer(
