@@ -53,6 +53,7 @@
 		6D91C988275432E300D85654 /* PublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C987275432E300D85654 /* PublicKey.swift */; };
 		6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9291C9284BA082002B9E43 /* P2PService.swift */; };
 		6D9291CD284BC690002B9E43 /* P2PServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9291CC284BC690002B9E43 /* P2PServiceTest.swift */; };
+		6D948424289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */; };
 		6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */; };
 		6D9A7282286FD63100458353 /* OfferEditedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9A7281286FD63100458353 /* OfferEditedEvent.swift */; };
 		6D9ABCBD2736399F0034AE01 /* KeyManagerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9ABCBC2736399F0034AE01 /* KeyManagerService.swift */; };
@@ -135,6 +136,7 @@
 		6D91C987275432E300D85654 /* PublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKey.swift; sourceTree = "<group>"; };
 		6D9291C9284BA082002B9E43 /* P2PService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PService.swift; sourceTree = "<group>"; };
 		6D9291CC284BC690002B9E43 /* P2PServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PServiceTest.swift; sourceTree = "<group>"; };
+		6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLite.swiftExtensions.swift; sourceTree = "<group>"; };
 		6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTakenEvent.swift; sourceTree = "<group>"; };
 		6D9A7281286FD63100458353 /* OfferEditedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferEditedEvent.swift; sourceTree = "<group>"; };
 		6D9ABCBC2736399F0034AE01 /* KeyManagerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyManagerService.swift; sourceTree = "<group>"; };
@@ -340,6 +342,14 @@
 			path = p2p;
 			sourceTree = "<group>";
 		};
+		6D948420289BF6BF00E2AEC8 /* extension */ = {
+			isa = PBXGroup;
+			children = (
+				6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */,
+			);
+			path = extension;
+			sourceTree = "<group>";
+		};
 		6D9ABCBB273639750034AE01 /* key */ = {
 			isa = PBXGroup;
 			children = (
@@ -441,6 +451,7 @@
 		7555FF7D242A565900829871 /* iosApp */ = {
 			isa = PBXGroup;
 			children = (
+				6D948420289BF6BF00E2AEC8 /* extension */,
 				6D9291C8284B9FB9002B9E43 /* p2p */,
 				6DE6938A284A68C100086719 /* blockchain */,
 				6D6CE883284479310009B815 /* ui */,
@@ -726,6 +737,7 @@
 				6D91C9862754329B00D85654 /* KeyPair.swift in Sources */,
 				6DA6C0502847148100F5C1C5 /* OffersViewModel.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				6D948424289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift in Sources */,
 				6D79D918287B7C4F00CB544A /* StablecoinInformationRepository.swift in Sources */,
 				6D70A5CA28665E50003FEDF3 /* OfferTruthSource.swift in Sources */,
 				6DDFAFA5284AAC52004BC95F /* OfferOpenedEvent.swift in Sources */,
