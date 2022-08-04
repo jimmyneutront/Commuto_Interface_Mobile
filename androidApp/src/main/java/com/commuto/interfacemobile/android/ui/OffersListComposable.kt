@@ -45,7 +45,7 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
                 )
                 Button(
                     onClick = {
-                        navController.navigate("CreateOfferComposable")
+                        navController.navigate("OpenOfferComposable")
                     },
                     content = {
                         Text(
