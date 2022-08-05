@@ -248,23 +248,51 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     On the global `DispatchQueue`, this calls `blockchainService.cancelOffer`, passing `offerID`.
+     On the global `DispatchQueue`, this persistently updates the state of the offer to `OfferState.canceling`, and then does the same to  the `Offer` on the main `DispatchQueue`. Then, back on the global `DispatchQueue`, this cancels the offer on chain by calling the CommutoSwap contract's [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, passing the offer ID, and then persistently updates the state of the offer to `OfferState.cancelOfferTransactionBroadcast`.  Finally, on the main `DispatchQueue`, this sets the state of the `Offer` to `OfferState.cancelOfferTransactionBroadcast`.
      
-     - Parameter offerID: The ID of the Offer to be canceled.
+     - Parameters:
+        - offerID: The ID of the `Offer` to be canceled.
+        - chainID: The ID of the blockchain on which the `Offer` exists.
      
      - Returns: An empty promise that will be fulfilled when the Offer is canceled.
      
      - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
-    func cancelOffer(offerID: UUID) -> Promise<Void> {
+    func cancelOffer(offerID: UUID, chainID: BigUInt) -> Promise<Void> {
         return Promise { seal in
-            DispatchQueue.global(qos: .userInitiated).async { [self] in
-                logger.notice("cancelOffer: canceling \(offerID.uuidString)")
-                guard let blockchainService = blockchainService else {
-                    seal.reject(OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during cancelOffer call"))
-                    return
+            Promise<Void> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("cancelOffer: canceling \(offerID.uuidString)")
+                    do {
+                        logger.notice("cancelOffer: persistently updating offer \(offerID.uuidString) state to canceling")
+                        try databaseService.updateOfferState(offerID: offerID.asData().base64EncodedString(), _chainID: String(chainID), state: OfferState.canceling.asString)
+                        logger.notice("cancelOffer: updating offer \(offerID.uuidString) state to canceling")
+                        seal.fulfill(())
+                    } catch {
+                        seal.reject(error)
+                    }
                 }
-                blockchainService.cancelOffer(offerID: offerID).pipe(to: seal.resolve)
+            }.get(on: DispatchQueue.main) { _ in
+                self.offerTruthSource?.offers[offerID]?.state = .canceling
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ -> Promise<Void> in
+                logger.notice("cancelOffer: canceling offer \(offerID.uuidString) on chain")
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during cancelOffer call")
+                }
+                return blockchainService.cancelOffer(offerID: offerID)
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("cancelOffer: persistently updating offer \(offerID.uuidString) state to cancelOfferTxBroadcast")
+                do {
+                    try databaseService.updateOfferState(offerID: offerID.asData().base64EncodedString(), _chainID: String(chainID), state: OfferState.cancelOfferTransactionBroadcast.asString)
+                    logger.notice("cancelOffer: updating offer \(offerID.uuidString) state to cancelOfferTxBroadcast")
+                }
+            }.get(on: DispatchQueue.main) { _ in
+                self.offerTruthSource?.offers[offerID]?.state = .cancelOfferTransactionBroadcast
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) {
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("cancelOffer: encountered error while canceling \(offerID.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
             }
         }
     }

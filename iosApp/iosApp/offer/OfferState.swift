@@ -7,7 +7,7 @@
 //
 
 /**
- Describes the state of an `Offer` according to the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt). The order in which the cases of this `enum` are defined is the order in which an offer should move through the states that they represent.
+ Describes the state of an `Offer` according to the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt). The order in which the non-cancellation-related cases of this `enum` are defined is the order in which an offer should move through the states that they represent. The order in which the cancellation-related cases are defined is the order in which an offer being canceled should move through the states that they represent.
  */
 enum OfferState {
     /**
@@ -28,7 +28,21 @@ enum OfferState {
     case offerOpened
     
     /**
-     Returns an `Int` corresponding to this state's position in a list of possible offer states organized according to the order in which an offer should move through them, with the earliest state at the beginning (corresponding to the integer 0) and the latest state at the end (corresponding to the integer 3).
+     Indicates that the corresponding offer will be canceled, but [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) has not yet been called for it.
+     */
+    case canceling
+    /**
+     Indicates that the transaction to cancel the corresponding offer has been broadcast.
+     */
+    case cancelOfferTransactionBroadcast
+    /**
+     Indicates that the corresponding offer has been canceled on chain.
+     */
+    case canceled
+    
+    
+    /**
+     Returns an `Int` corresponding to this state's position in a list of possible offer states organized according to the order in which an offer should move through them, with the earliest state at the beginning (corresponding to the integer 0), the latest state at the end (corresponding to the integer 3), and cancellation-related states corresponding to -1.
      */
     var indexNumber: Int {
         switch self {
@@ -40,6 +54,12 @@ enum OfferState {
             return 2
         case .offerOpened:
             return 3
+        case .canceling:
+            return -1
+        case .cancelOfferTransactionBroadcast:
+            return -1
+        case .canceled:
+            return -1
         }
     }
     
@@ -56,6 +76,12 @@ enum OfferState {
             return "awaitingPKAnnouncement"
         case .offerOpened:
             return "offerOpened"
+        case .canceling:
+            return "canceling"
+        case .cancelOfferTransactionBroadcast:
+            return "cancelOfferTxBroadcast"
+        case .canceled:
+            return "canceled"
         }
     }
     
@@ -77,6 +103,12 @@ enum OfferState {
             return .awaitingPublicKeyAnnouncement
         } else if string == "offerOpened" {
             return .offerOpened
+        } else if string == "canceling" {
+            return .canceling
+        } else if string == "cancelOfferTxBroadcast" {
+            return .cancelOfferTransactionBroadcast
+        } else if string == "canceled" {
+            return .canceled
         } else {
             return nil
         }

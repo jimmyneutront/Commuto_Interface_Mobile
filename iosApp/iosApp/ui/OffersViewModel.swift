@@ -174,7 +174,7 @@ class OffersViewModel: UIOfferTruthSource {
         Promise<Void> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("cancelOffer: canceling offer \(offer.id.uuidString)")
-                offerService.cancelOffer(offerID: offer.id).pipe(to: seal.resolve)
+                offerService.cancelOffer(offerID: offer.id, chainID: offer.chainID).pipe(to: seal.resolve)
             }
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
             self.logger.notice("cancelOffer: successfully canceled offer \(offer.id.uuidString)")
