@@ -99,6 +99,14 @@ class Offer: ObservableObject {
      Indicates the current state of this offer, as described in the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      */
     var state: OfferState
+    /**
+     If this offer was made by the user of the interface, this indicates whether the offer is being canceled, and if so, what part of the offer cancellation process it is in. If this offer was not made by the user of this interface, this property is not used.
+     */
+    @Published var cancelingOfferState = CancelingOfferState.none
+    /**
+     (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occured during the offer cancellation process, or `nil` if no such error has occured.
+     */
+    var cancelingOfferError: Error? = nil
     
     /**
      Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).

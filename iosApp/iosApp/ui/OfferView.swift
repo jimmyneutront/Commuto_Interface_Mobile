@@ -124,23 +124,57 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     )
                     .accentColor(Color.primary)
                     if (offer.isUserMaker) {
-                        Button (
-                            action: {
-                                offerTruthSource.cancelOffer(offer)
-                            },
-                            label: {
-                                Text("Cancel Offer")
-                                    .font(.largeTitle)
-                                    .bold()
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.red, lineWidth: 3)
-                                    )
+                        if offer.cancelingOfferState == .error {
+                            HStack {
+                                Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occured")
+                                    .foregroundColor(Color.red)
+                                Spacer()
                             }
-                        )
-                        .accentColor(Color.red)
+                        }
+                        if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
+                            Button (
+                                action: {
+                                    // Don't let the user try to cancel the offer if it is already being canceled
+                                    if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
+                                        offerTruthSource.cancelOffer(offer)
+                                    }
+                                },
+                                label: {
+                                    Text("Cancel Offer")
+                                        .font(.largeTitle)
+                                        .bold()
+                                        .padding(10)
+                                        .frame(maxWidth: .infinity)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(Color.red, lineWidth: 3)
+                                        )
+                                }
+                            )
+                            .accentColor(Color.red)
+                        } else if offer.cancelingOfferState == .canceling {
+                            Text("Canceling Offer")
+                                .foregroundColor(.red)
+                                .font(.largeTitle)
+                                .bold()
+                                .padding(10)
+                                .frame(maxWidth: .infinity)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.gray, lineWidth: 3)
+                                )
+                        } else {
+                            Text("Offer Canceled")
+                                .foregroundColor(.red)
+                                .font(.largeTitle)
+                                .bold()
+                                .padding(10)
+                                .frame(maxWidth: .infinity)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.gray, lineWidth: 3)
+                                )
+                        }
                     }
                 }
                 .offset(x: 0.0, y: -10.0)

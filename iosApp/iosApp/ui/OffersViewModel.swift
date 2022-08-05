@@ -63,13 +63,26 @@ class OffersViewModel: UIOfferTruthSource {
     var openingOfferError: Error? = nil
     
     /**
-     Sets `openingOfferState` on the main DispatchQueue.
+     Sets `openingOfferState` on the main `DispatchQueue`.
      
      - Parameter state: The new value to which `openingOfferState` will be set.
      */
     func setOpeningOfferState(state: OpeningOfferState) {
         DispatchQueue.main.async {
             self.openingOfferState = state
+        }
+    }
+    
+    /**
+     Sets the `cancelingOfferState` property of the `Offer` in `offers` with the specified `offerID` on the main `DispatchQueue`.
+     
+     - Parameters:
+        - offerID: The ID of the `Offer` of which to set the `cancelingOfferState`.
+        - state: The value to which the `Offer`'s `cancellingOfferState` will be set.
+     */
+    func setCancelingOfferState(offerID: UUID, state: CancelingOfferState) {
+        DispatchQueue.main.async {
+            self.offers[offerID]?.cancelingOfferState = state
         }
     }
     
@@ -171,15 +184,20 @@ class OffersViewModel: UIOfferTruthSource {
      - Parameter offer: The `Offer` to be canceled.
      */
     func cancelOffer(_ offer: Offer) {
+        setCancelingOfferState(offerID: offer.id, state: .canceling)
+        offer.cancelingOfferError = nil
         Promise<Void> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("cancelOffer: canceling offer \(offer.id.uuidString)")
                 offerService.cancelOffer(offerID: offer.id, chainID: offer.chainID).pipe(to: seal.resolve)
             }
-        }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
-            self.logger.notice("cancelOffer: successfully canceled offer \(offer.id.uuidString)")
-        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-            self.logger.error("cancelOffer: got error during cancelOffer call")
+        }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+            logger.notice("cancelOffer: successfully canceled offer \(offer.id.uuidString)")
+            setCancelingOfferState(offerID: offer.id, state: .completed)
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+            logger.error("cancelOffer: got error during cancelOffer call")
+            offer.cancelingOfferError = error
+            setCancelingOfferState(offerID: offer.id, state: .error)
         }
     }
     
