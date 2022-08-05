@@ -1046,4 +1046,132 @@ class OfferServiceTests: XCTestCase {
         
     }
     
+    /**
+     Ensures that `OfferService.cancelOffer` functions properly.
+     */
+    func testCancelOffer() {
+        
+        let offerID = UUID()
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_cancelOffer")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened"),
+            URLQueryItem(name: "offerID", value: offerID.uuidString)
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        
+        class TestOfferTruthSource: OfferTruthSource {
+            var serviceFeeRate: BigUInt? = BigUInt(1)
+            var offers: [UUID : Offer] = [:]
+        }
+        
+        let offerTruthSource = TestOfferTruthSource()
+        offerService.offerTruthSource = offerTruthSource
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
+        
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: offerID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt(10000),
+            amountUpperBound: BigUInt(10000),
+            securityDepositAmount: BigUInt(1000),
+            serviceFeeRate: BigUInt(100),
+            direction: .buy,
+            settlementMethods: [],
+            protocolVersion: BigUInt(1),
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: true,
+            state: .offerOpened
+        )
+        offerTruthSource.offers[offerID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let cancellationExpectation = XCTestExpectation(description: "Fulfilled when offerService.cancelOffer returns")
+        
+        offerService.cancelOffer(offerID: offerID, chainID: BigUInt(31337)).done {
+            cancellationExpectation.fulfill()
+        }.cauterize()
+        
+        wait(for: [cancellationExpectation], timeout: 30.0)
+        
+        XCTAssertEqual(offerTruthSource.offers[offerID]?.state, .cancelOfferTransactionBroadcast)
+        
+        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())!
+        XCTAssertEqual(offerInDatabase.state, "cancelOfferTxBroadcast")
+        
+        let offerStruct = try! blockchainService.getOffer(id: offerID)
+        XCTAssertNil(offerStruct)
+        
+    }
+    
 }
