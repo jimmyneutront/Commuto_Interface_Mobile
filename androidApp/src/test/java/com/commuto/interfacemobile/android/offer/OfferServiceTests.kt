@@ -480,6 +480,8 @@ class OfferServiceTests {
             }
         }
 
+        val openedOffer = offerTruthSource.offers[expectedOfferId]
+
         runBlocking {
             testingServerClient.get(testingServiceUrl) {
                 url {
@@ -495,6 +497,7 @@ class OfferServiceTests {
                 offerTruthSource.offersChannel.receive()
                 assertFalse(exceptionHandler.gotError)
                 assert(offerTruthSource.offers.isEmpty())
+                assertEquals(OfferState.CANCELED, openedOffer!!.state)
                 assertEquals(offerCanceledEventRepository.appendedEvent!!.offerID, expectedOfferId)
                 assertEquals(offerCanceledEventRepository.removedEvent!!.offerID, expectedOfferId)
                 val offerInDatabase = databaseService.getOffer(encoder.encodeToString(expectedOfferIdByteArray))
