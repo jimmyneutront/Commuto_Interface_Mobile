@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.ui
 
 import androidx.compose.runtime.MutableState
+import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
 import com.commuto.interfacemobile.android.offer.SettlementMethod
@@ -48,5 +49,15 @@ interface UIOfferTruthSource: OfferTruthSource {
         securityDepositAmount: BigDecimal,
         direction: OfferDirection?,
         settlementMethods: List<SettlementMethod>
+    )
+
+    /**
+     * Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the
+     * user of this interface.
+     *
+     * @param offer The [Offer] to be canceled.
+     */
+    fun cancelOffer(
+        offer: Offer
     )
 }

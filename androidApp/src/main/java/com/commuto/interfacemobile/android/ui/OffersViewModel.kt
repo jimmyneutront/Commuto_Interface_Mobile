@@ -172,4 +172,24 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
         }
     }
 
+    /**
+     * Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the
+     * user of this interface.
+     *
+     * @param offer The [Offer] to be canceled.
+     */
+    override fun cancelOffer(offer: Offer) {
+        viewModelScope.launch {
+            Log.i(logTag, "cancelOffer: canceling offer ${offer.id}")
+            try {
+                offerService.cancelOffer(
+                    offerID = offer.id
+                )
+                Log.i(logTag, "cancelOffer: successfully canceled offer ${offer.id}")
+            } catch (exception: Exception) {
+                Log.i(logTag, "cancelOffer: got exception during cancelOffer call", exception)
+            }
+        }
+    }
+
 }

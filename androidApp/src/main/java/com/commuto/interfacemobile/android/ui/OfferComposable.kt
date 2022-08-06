@@ -1,11 +1,14 @@
 package com.commuto.interfacemobile.android.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -14,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.*
@@ -149,6 +153,28 @@ fun OfferComposable(
                         }
                     }
                 )
+                if (offer.isUserMaker) {
+                    Button(
+                        onClick = {
+                            offerTruthSource.cancelOffer(offer)
+                        },
+                        content = {
+                            Text(
+                                text = "Cancel Offer",
+                                style = MaterialTheme.typography.h4,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                        },
+                        border = BorderStroke(3.dp, Color.Red),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor =  Color.Transparent,
+                            contentColor = Color.Red,
+                        ),
+                        elevation = null,
+                        modifier = Modifier.width(400.dp)
+                    )
+                }
             }
         }
     }

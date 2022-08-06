@@ -207,7 +207,7 @@ data class Offer(
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
                 havePublicKey = false,
-                isUserMaker = false,
+                isUserMaker = true,
                 state = OfferState.OFFER_OPENED
             ),
             fromOnChainData(
@@ -234,7 +234,7 @@ data class Offer(
                 protocolVersion = BigInteger.ZERO,
                 chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
                 havePublicKey = false,
-                isUserMaker = false,
+                isUserMaker = true,
                 state = OfferState.OFFER_OPENED
             ),
             fromOnChainData(
