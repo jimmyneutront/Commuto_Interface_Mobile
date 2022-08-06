@@ -952,7 +952,8 @@ class OfferServiceTests {
     }
 
     /**
-     * Ensures that [OfferService.openOffer] functions properly.
+     * Ensures that [OfferService.openOffer], [BlockchainService.approveTokenTransferAsync] and
+     * [BlockchainService.openOfferAsync] function properly.
      */
     @Test
     fun testOpenOffer() {
@@ -1140,7 +1141,7 @@ class OfferServiceTests {
     }
 
     /**
-     * Ensures that [OfferService.cancelOffer] functions properly.
+     * Ensures that [OfferService.cancelOffer] and [BlockchainService.cancelOfferAsync] function properly.
      */
     @Test
     fun testCancelOffer() {

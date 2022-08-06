@@ -6,6 +6,7 @@ import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFac
 import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
+import com.commuto.interfacemobile.android.offer.OfferServiceTests
 import com.commuto.interfacemobile.android.ui.OffersViewModel
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -115,6 +116,18 @@ class BlockchainServiceTest {
             assertEquals(blockchainService.getServiceFeeRateAsync().await(), BigInteger.valueOf(100L))
         }
     }
+
+    /**
+     * [BlockchainService.approveTokenTransferAsync] is  tested by [OfferServiceTests.testOpenOffer].
+     */
+
+    /**
+     * [BlockchainService.openOfferAsync] is tested by [OfferServiceTests.testOpenOffer].
+     */
+
+    /**
+     * [BlockchainService.cancelOfferAsync] is tested by [OfferServiceTests.testCancelOffer].
+     */
 
     /**
      * Tests [BlockchainService] by ensuring it detects and handles
