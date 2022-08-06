@@ -129,11 +129,11 @@ class BlockchainServiceTest: XCTestCase {
      */
     
     /**
-     `BlockchainService.openOffer` is tested by `OfferServiceTests.testOpenOffer`
+     `BlockchainService.openOffer` is tested by `OfferServiceTests.testOpenOffer`.
      */
     
     /**
-     `BlockchainService.cancelOffer` is tested by `OfferServiceTests.testCancelOffer`
+     `BlockchainService.cancelOffer` is tested by `OfferServiceTests.testCancelOffer`.
      */
     
     /**

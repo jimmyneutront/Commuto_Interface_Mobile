@@ -124,6 +124,18 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     )
                     .accentColor(Color.primary)
                     if (offer.isUserMaker) {
+                        NavigationLink(destination: EditOfferView(stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin")) {
+                            Text("Edit Offer")
+                                .font(.largeTitle)
+                                .bold()
+                                .padding(10)
+                                .frame(maxWidth: .infinity)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.primary, lineWidth: 3)
+                                )
+                        }
+                        .accentColor(Color.primary)
                         if offer.cancelingOfferState == .error {
                             HStack {
                                 Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occurred")
