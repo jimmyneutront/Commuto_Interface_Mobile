@@ -882,7 +882,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService.openOffer` functions properly.
+     Ensures that `OfferService.openOffer`,`BlockchainService.approveTokenTransfer` and `BlockchainService.openOffer`function properly.
      */
     func testOpenOffer() {
         
@@ -1049,7 +1049,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService.cancelOffer` functions properly.
+     Ensures that `OfferService.cancelOffer` and `BlockchainService.cancelOffer` function properly.
      */
     func testCancelOffer() {
         
