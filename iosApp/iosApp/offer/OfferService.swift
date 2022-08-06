@@ -248,7 +248,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     On the global `DispatchQueue`, this persistently updates the state of the offer to `OfferState.canceling`, and then does the same to  the `Offer` on the main `DispatchQueue`. Then, back on the global `DispatchQueue`, this cancels the offer on chain by calling the CommutoSwap contract's [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, passing the offer ID, and then persistently updates the state of the offer to `OfferState.cancelOfferTransactionBroadcast`.  Finally, on the main `DispatchQueue`, this sets the state of the `Offer` to `OfferState.cancelOfferTransactionBroadcast`.
+     On the global `DispatchQueue`, this persistently updates the state of the offer to `OfferState.canceling`, and then does the same to  the corresponding `Offer` in `offerTruthSource` on the main `DispatchQueue`. Then, back on the global `DispatchQueue`, this cancels the offer on chain by calling the CommutoSwap contract's [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, passing the offer ID, and then persistently updates the state of the offer to `OfferState.cancelOfferTransactionBroadcast`.  Finally, on the main `DispatchQueue`, this sets the state of the `Offer` in `offerTruthSource` to `OfferState.cancelOfferTransactionBroadcast`.
      
      - Parameters:
         - offerID: The ID of the `Offer` to be canceled.
@@ -526,13 +526,14 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
         logger.notice("handleOfferCanceledEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
         offerCanceledEventRepository.remove(event)
-        guard offerTruthSource != nil else {
+        guard var offerTruthSource = offerTruthSource else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call")
         }
         // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
         DispatchQueue.main.sync {
-            if offerTruthSource!.offers[event.id]?.chainID == event.chainID {
-                offerTruthSource!.offers.removeValue(forKey: event.id)
+            if offerTruthSource.offers[event.id]?.chainID == event.chainID {
+                offerTruthSource.offers[event.id]?.state = .canceled
+                offerTruthSource.offers.removeValue(forKey: event.id)
             }
         }
         logger.notice("handleOfferCanceledEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
@@ -554,13 +555,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
         logger.notice("handleOfferTakenEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
         offerTakenEventRepository.remove(event)
-        guard offerTruthSource != nil else {
+        guard var offerTruthSource = offerTruthSource else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferTakenEvent call")
         }
         // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
         DispatchQueue.main.sync {
-            if offerTruthSource!.offers[event.id]?.chainID == event.chainID {
-                offerTruthSource!.offers.removeValue(forKey: event.id)
+            if offerTruthSource.offers[event.id]?.chainID == event.chainID {
+                offerTruthSource.offers.removeValue(forKey: event.id)
             }
         }
         logger.notice("handleOfferTakenEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")

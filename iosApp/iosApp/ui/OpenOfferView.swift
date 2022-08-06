@@ -249,7 +249,7 @@ struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                 }
                 if (offerTruthSource.openingOfferState == .error) {
                     HStack {
-                        Text(offerTruthSource.openingOfferError?.localizedDescription ?? "An unknown error occured")
+                        Text(offerTruthSource.openingOfferError?.localizedDescription ?? "An unknown error occurred")
                             .foregroundColor(Color.red)
                         Spacer()
                     }

@@ -67,7 +67,7 @@ class OffersViewModel: UIOfferTruthSource {
      
      - Parameter state: The new value to which `openingOfferState` will be set.
      */
-    func setOpeningOfferState(state: OpeningOfferState) {
+    private func setOpeningOfferState(state: OpeningOfferState) {
         DispatchQueue.main.async {
             self.openingOfferState = state
         }
@@ -78,9 +78,9 @@ class OffersViewModel: UIOfferTruthSource {
      
      - Parameters:
         - offerID: The ID of the `Offer` of which to set the `cancelingOfferState`.
-        - state: The value to which the `Offer`'s `cancellingOfferState` will be set.
+        - state: The value to which the `Offer`'s `cancelingOfferState` will be set.
      */
-    func setCancelingOfferState(offerID: UUID, state: CancelingOfferState) {
+    private func setCancelingOfferState(offerID: UUID, state: CancelingOfferState) {
         DispatchQueue.main.async {
             self.offers[offerID]?.cancelingOfferState = state
         }

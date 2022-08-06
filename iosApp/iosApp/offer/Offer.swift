@@ -104,7 +104,7 @@ class Offer: ObservableObject {
      */
     @Published var cancelingOfferState = CancelingOfferState.none
     /**
-     (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occured during the offer cancellation process, or `nil` if no such error has occured.
+     (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occurred during the offer cancellation process, or `nil` if no such error has occurred.
      */
     var cancelingOfferError: Error? = nil
     

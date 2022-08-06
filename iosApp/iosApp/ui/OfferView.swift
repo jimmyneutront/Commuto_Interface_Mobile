@@ -126,7 +126,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     if (offer.isUserMaker) {
                         if offer.cancelingOfferState == .error {
                             HStack {
-                                Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occured")
+                                Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occurred")
                                     .foregroundColor(Color.red)
                                 Spacer()
                             }
@@ -134,7 +134,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
                             Button (
                                 action: {
-                                    // Don't let the user try to cancel the offer if it is already being canceled
+                                    // Don't let the user try to cancel the offer if it is already canceled or being canceled
                                     if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
                                         offerTruthSource.cancelOffer(offer)
                                     }

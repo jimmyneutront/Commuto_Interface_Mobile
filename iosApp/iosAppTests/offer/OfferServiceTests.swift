@@ -421,6 +421,7 @@ class OfferServiceTests: XCTestCase {
         blockchainService.listen()
         
         wait(for: [offerTruthSource.offerAddedExpectation], timeout: 60.0)
+        let openedOffer = offerTruthSource.offers[expectedOfferID]
         
         let cancelOfferResponseExpectation = XCTestExpectation(description: "Fulfilled when testing server responds to request for offer cancellation")
         testingServerUrlComponents.queryItems = [
@@ -450,6 +451,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 0)
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID] == nil)
+        XCTAssertEqual(openedOffer?.state, .canceled)
         XCTAssertEqual(offerCanceledEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerCanceledEventRepository.removedEvent!.id, expectedOfferID)
         let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
