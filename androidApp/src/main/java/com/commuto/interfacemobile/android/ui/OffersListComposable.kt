@@ -49,7 +49,7 @@ fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavC
                     },
                     content = {
                         Text(
-                            text = "Create",
+                            text = "Open",
                             fontWeight = FontWeight.Bold,
                         )
                     },

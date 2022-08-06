@@ -85,9 +85,22 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
      *
      * @param state The new value to which [openingOfferState]'s value will be set.
      */
-    suspend fun setOpeningOfferState(state: OpeningOfferState) {
+    private suspend fun setOpeningOfferState(state: OpeningOfferState) {
         withContext(Dispatchers.Main) {
             openingOfferState.value = state
+        }
+    }
+
+    /**
+     * Sets the [Offer.cancelingOfferState] value of the [Offer] in [offers] with the specified [offerID] on the main
+     * coroutine dispatcher.
+     *
+     * @param offerID The ID of the [Offer] of which to set the [Offer.cancelingOfferState].
+     * @param state The value to which the [Offer]'s [Offer.cancelingOfferState] will be set.
+     */
+    private suspend fun setCancelingOfferState(offerID: UUID, state: CancelingOfferState) {
+        withContext(Dispatchers.Main) {
+            offers[offerID]?.cancelingOfferState?.value = state
         }
     }
 
@@ -180,6 +193,10 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
      */
     override fun cancelOffer(offer: Offer) {
         viewModelScope.launch {
+            setCancelingOfferState(
+                offerID = offer.id,
+                state = CancelingOfferState.CANCELING
+            )
             Log.i(logTag, "cancelOffer: canceling offer ${offer.id}")
             try {
                 offerService.cancelOffer(
@@ -187,8 +204,17 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
                     chainID = offer.chainID
                 )
                 Log.i(logTag, "cancelOffer: successfully canceled offer ${offer.id}")
+                setCancelingOfferState(
+                    offerID = offer.id,
+                    state = CancelingOfferState.COMPLETED
+                )
             } catch (exception: Exception) {
                 Log.i(logTag, "cancelOffer: got exception during cancelOffer call", exception)
+                offer.cancelingOfferException = exception
+                setCancelingOfferState(
+                    offerID = offer.id,
+                    state = CancelingOfferState.EXCEPTION
+                )
             }
         }
     }

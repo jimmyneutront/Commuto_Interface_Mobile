@@ -277,7 +277,7 @@ fun OpenOfferComposable(
         }
         if (offerTruthSource.openingOfferState.value == OpeningOfferState.EXCEPTION) {
             Text(
-                text = offerTruthSource.openingOfferException?.message ?: "An unknown exception occured",
+                text = offerTruthSource.openingOfferException?.message ?: "An unknown exception occurred",
                 style =  MaterialTheme.typography.h6,
                 color = Color.Red
             )
@@ -436,7 +436,7 @@ fun StablecoinAmountComposable(
 }
 
 /**
- * Displays a vertical list of settlement method cards, one for each settlement method that the offer has opened. These
+ * Displays a vertical list of settlement method cards, one for each settlement method that the user has created. These
  * cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being
  * opened.
  *
@@ -513,7 +513,7 @@ fun SettlementMethodCardComposable(
                 },
                 content = {
                     Text(
-                        text = buildCreateOfferPriceDescription(settlementMethod, stablecoinCurrencyCode)
+                        text = buildOpenOfferPriceDescription(settlementMethod, stablecoinCurrencyCode)
                     )
                 },
                 contentPadding = PaddingValues(vertical = 0.dp, horizontal = 0.dp),
@@ -574,7 +574,7 @@ fun SettlementMethodCardComposable(
  * @param settlementMethod The [SettlementMethod] for which this price description is being built.
  * @param stablecoinCurrencyCode The currency code of the stablecoin that the user has selected.
  */
-fun buildCreateOfferPriceDescription(
+fun buildOpenOfferPriceDescription(
     settlementMethod: SettlementMethod,
     stablecoinCurrencyCode: String,
 ): String {
