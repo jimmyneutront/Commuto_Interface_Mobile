@@ -216,7 +216,7 @@ data class Offer(
                     """.trimIndent().encodeToByteArray()
                 ),
                 protocolVersion = BigInteger.ZERO,
-                chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
+                chainID = BigInteger.valueOf(31337L), // Hardhat blockchain ID
                 havePublicKey = false,
                 isUserMaker = true,
                 state = OfferState.OFFER_OPENED
@@ -243,7 +243,7 @@ data class Offer(
                     """.trimIndent().encodeToByteArray()
                 ),
                 protocolVersion = BigInteger.ZERO,
-                chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
+                chainID = BigInteger.valueOf(31337L), // Hardhat blockchain ID
                 havePublicKey = false,
                 isUserMaker = true,
                 state = OfferState.OFFER_OPENED
@@ -262,7 +262,7 @@ data class Offer(
                 onChainDirection = BigInteger.ONE,
                 onChainSettlementMethods = listOf("not valid JSON".encodeToByteArray()),
                 protocolVersion = BigInteger.ZERO,
-                chainID = BigInteger.ONE, // Ethereum Mainnet blockchain ID
+                chainID = BigInteger.valueOf(31337L), // Hardhat blockchain ID
                 havePublicKey = false,
                 isUserMaker = false,
                 state = OfferState.OFFER_OPENED

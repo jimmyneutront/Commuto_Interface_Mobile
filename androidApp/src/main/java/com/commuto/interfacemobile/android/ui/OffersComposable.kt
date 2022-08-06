@@ -30,7 +30,7 @@ fun OffersComposable(offerTruthSource: UIOfferTruthSource) {
         ) {
             OpenOfferComposable(
                 offerTruthSource = offerTruthSource,
-                chainID = BigInteger.ONE
+                chainID = BigInteger.valueOf(31337L)
             )
         }
         composable(
