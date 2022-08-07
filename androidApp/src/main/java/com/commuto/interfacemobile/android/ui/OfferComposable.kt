@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.offer.*
 import java.math.BigInteger
 import java.util.*
@@ -31,13 +33,15 @@ import java.util.*
  * @param stablecoinInfoRepo The [StablecoinInformationRepository] that this [Composable] uses to get stablecoin name
  * and currency code information. Defaults to [StablecoinInformationRepository.hardhatStablecoinInfoRepo] if no
  * other value is passed.
+ * @param navController The [NavController] that controls navigation between offer-related [Composable]s.
  */
 @Composable
 fun OfferComposable(
     offerTruthSource: UIOfferTruthSource,
     id: UUID?,
     stablecoinInfoRepo: StablecoinInformationRepository =
-        StablecoinInformationRepository.hardhatStablecoinInfoRepo
+        StablecoinInformationRepository.hardhatStablecoinInfoRepo,
+    navController: NavController
 ) {
 
     /**
@@ -154,6 +158,31 @@ fun OfferComposable(
                     }
                 )
                 if (offer.isUserMaker) {
+                    Button(
+                        onClick = {
+                            navController.navigate("EditOfferComposable/${stablecoinInformation?.currencyCode 
+                                ?: "Unknown Stablecoin"}"
+                            )
+                        },
+                        content = {
+                            Text(
+                                text = "Edit Offer",
+                                style = MaterialTheme.typography.h4,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                        },
+                        border = BorderStroke(3.dp, Color.Black),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor =  Color.Transparent,
+                            contentColor = Color.Black,
+                        ),
+                        elevation = null,
+                        modifier = Modifier.width(400.dp),
+                    )
+                    Spacer(
+                        modifier = Modifier.height(9.dp)
+                    )
                     if (offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
                         Text(
                             text = offer.cancelingOfferException?.message ?: "An unknown exception occurred",
@@ -375,7 +404,7 @@ fun buildPriceDescription(settlementMethod: SettlementMethod, stablecoin: String
 )
 @Composable
 fun PreviewOfferComposableWithDaiOffer() {
-    OfferComposable(PreviewableOfferTruthSource(), Offer.sampleOffers[0].id)
+    OfferComposable(PreviewableOfferTruthSource(), Offer.sampleOffers[0].id, navController = rememberNavController())
 }
 
 /**
@@ -386,7 +415,7 @@ fun PreviewOfferComposableWithDaiOffer() {
 )
 @Composable
 fun PreviewOfferComposableWithUnknownStablecoinOffer() {
-    OfferComposable(PreviewableOfferTruthSource(), Offer.sampleOffers[3].id)
+    OfferComposable(PreviewableOfferTruthSource(), Offer.sampleOffers[3].id, navController = rememberNavController())
 }
 
 /**
@@ -397,7 +426,7 @@ fun PreviewOfferComposableWithUnknownStablecoinOffer() {
 )
 @Composable
 fun PreviewOfferComposableWithRandomUUID() {
-    OfferComposable(PreviewableOfferTruthSource(), UUID.randomUUID())
+    OfferComposable(PreviewableOfferTruthSource(), UUID.randomUUID(), navController = rememberNavController())
 }
 
 /**
@@ -410,5 +439,5 @@ fun PreviewOfferComposableWithRandomUUID() {
 )
 @Composable
 fun PreviewOfferComposableWithNull() {
-    OfferComposable(PreviewableOfferTruthSource(),null)
+    OfferComposable(PreviewableOfferTruthSource(),null, navController = rememberNavController())
 }
