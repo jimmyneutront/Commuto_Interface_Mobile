@@ -21,11 +21,11 @@ func validateEditedSettlementMethods(
     _ settlementMethods: [SettlementMethod]
 ) throws -> [SettlementMethod] {
     guard !settlementMethods.isEmpty else {
-        throw EditedSettlementMethodValidationError(desc: "You must specify at leat one settlement method")
+        throw EditedSettlementMethodValidationError(desc: "You must specify at leat one settlement method.")
     }
     try settlementMethods.forEach { settlementMethod in
         guard settlementMethod.price != "" else {
-            throw EditedSettlementMethodValidationError(desc: "You must specify a price for each settlement method")
+            throw EditedSettlementMethodValidationError(desc: "You must specify a price for each selected settlement method.")
         }
     }
     return settlementMethods

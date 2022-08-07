@@ -40,6 +40,17 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
     @ObservedObject var offerTruthSource: TruthSource
     
+    /**
+     The string that will be displayed in the label of the button that edits the offer.
+     */
+    var editOfferButtonLabel: String {
+        if offer.editingOfferState != .editing {
+            return "Edit Offer"
+        } else {
+            return "Editing Offer"
+        }
+    }
+    
     var body: some View {
         let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
         ScrollView(.vertical, showsIndicators: false) {
@@ -124,6 +135,13 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     )
                     .accentColor(Color.primary)
                     if (offer.isUserMaker) {
+                        if offer.editingOfferError != nil {
+                            HStack {
+                                Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
+                                    .foregroundColor(Color.red)
+                                Spacer()
+                            }
+                        }
                         NavigationLink(destination:
                                         EditOfferView(
                                             offer: offer,
@@ -131,7 +149,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                                             stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
                                         )
                         ) {
-                            Text("Edit Offer")
+                            Text(editOfferButtonLabel)
                                 .font(.largeTitle)
                                 .bold()
                                 .padding(10)

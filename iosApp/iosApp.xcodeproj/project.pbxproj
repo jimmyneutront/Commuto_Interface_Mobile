@@ -24,6 +24,7 @@
 		6D18F1B7289ECF26002B667C /* SettlementMethodSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1B6289ECF25002B667C /* SettlementMethodSelector.swift */; };
 		6D18F1BC289EECD8002B667C /* EditedSettlementMethodValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BB289EECD8002B667C /* EditedSettlementMethodValidator.swift */; };
 		6D18F1BE289EEDF1002B667C /* EditedSettlementMethodValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BD289EEDF1002B667C /* EditedSettlementMethodValidationError.swift */; };
+		6D18F1C0289F7890002B667C /* EditingOfferState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BF289F7890002B667C /* EditingOfferState.swift */; };
 		6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1914DA278B6DC6004A4329 /* MatrixTests.swift */; };
 		6D21A3BA2871CC0C00B017BC /* ErrorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D21A3B92871CC0C00B017BC /* ErrorViewModel.swift */; };
 		6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */; };
@@ -111,6 +112,7 @@
 		6D18F1B6289ECF25002B667C /* SettlementMethodSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethodSelector.swift; sourceTree = "<group>"; };
 		6D18F1BB289EECD8002B667C /* EditedSettlementMethodValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditedSettlementMethodValidator.swift; sourceTree = "<group>"; };
 		6D18F1BD289EEDF1002B667C /* EditedSettlementMethodValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditedSettlementMethodValidationError.swift; sourceTree = "<group>"; };
+		6D18F1BF289F7890002B667C /* EditingOfferState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingOfferState.swift; sourceTree = "<group>"; };
 		6D1914DA278B6DC6004A4329 /* MatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixTests.swift; sourceTree = "<group>"; };
 		6D21A3B92871CC0C00B017BC /* ErrorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorViewModel.swift; sourceTree = "<group>"; };
 		6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPlatCryptoCompatibility.swift; sourceTree = "<group>"; };
@@ -279,6 +281,7 @@
 				6D6F190C287E02DC00B9BCA1 /* SettlementMethod.swift */,
 				6D7CC6A728934BF200917505 /* OfferState.swift */,
 				6D774231289CCCEA0068C862 /* CancelingOfferState.swift */,
+				6D18F1BF289F7890002B667C /* EditingOfferState.swift */,
 			);
 			path = offer;
 			sourceTree = "<group>";
@@ -764,6 +767,7 @@
 				6D6CE885284479490009B815 /* OfferCardView.swift in Sources */,
 				6D91C9812753FA2900D85654 /* DatabasePublicKey.swift in Sources */,
 				6D6F190D287E02DC00B9BCA1 /* SettlementMethod.swift in Sources */,
+				6D18F1C0289F7890002B667C /* EditingOfferState.swift in Sources */,
 				6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */,
 				6D096CE92872121700A36764 /* OfferView.swift in Sources */,
 				6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */,

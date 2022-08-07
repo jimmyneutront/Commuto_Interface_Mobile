@@ -62,7 +62,7 @@ func validateNewOfferData(
     }
     try settlementMethods.forEach { settlementMethod in
         guard settlementMethod.price != "" else {
-            throw NewOfferDataValidationError(desc: "You must specify a price for each settlement method.")
+            throw NewOfferDataValidationError(desc: "You must specify a price for each selected settlement method.")
         }
     }
     return ValidatedNewOfferData(

@@ -111,6 +111,14 @@ class Offer: ObservableObject {
     (This property is used only if the maker of this offer is the user of this interface.) The new `SettlementMethods` with which the user wants to replace the offer's current settlement methods by editing the offer. If the user  is not currently editing this offer, (or if the user is not the maker of this offer) this array should be empty.
      */
     @Published var selectedSettlementMethods: [SettlementMethod] = []
+    /**
+     If this offer was made by the user of the interface, this indicates whether the offer is being edited, and if so, what part of the offer editing process it is in. If this offer was not made by the user of this interface, this property is not used.
+     */
+    @Published var editingOfferState = EditingOfferState.none
+    /**
+     (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occurred during the offer editing process, or `nil` if no such error has occurred.
+     */
+    var editingOfferError: Error? = nil
     
     /**
      Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).
