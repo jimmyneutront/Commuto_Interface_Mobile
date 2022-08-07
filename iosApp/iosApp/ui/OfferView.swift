@@ -124,7 +124,13 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     )
                     .accentColor(Color.primary)
                     if (offer.isUserMaker) {
-                        NavigationLink(destination: EditOfferView(stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin")) {
+                        NavigationLink(destination:
+                                        EditOfferView(
+                                            offer: offer,
+                                            offerTruthSource: offerTruthSource,
+                                            stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+                                        )
+                        ) {
                             Text("Edit Offer")
                                 .font(.largeTitle)
                                 .bold()

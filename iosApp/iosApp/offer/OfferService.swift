@@ -254,7 +254,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         - offerID: The ID of the `Offer` to be canceled.
         - chainID: The ID of the blockchain on which the `Offer` exists.
      
-     - Returns: An empty promise that will be fulfilled when the Offer is canceled.
+     - Returns: An empty `Promise` that will be fulfilled when the Offer is canceled.
      
      - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
@@ -292,6 +292,72 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("cancelOffer: encountered error while canceling \(offerID.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     On the global `DispatchQueue`, this serializes the new settlement methods and calls the CommutoSwap contract's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, passing the offer ID and new serialized settlement methods.
+     
+     - Parameters:
+        - offerID: The ID of the offer to edit.
+        - newSettlementMethods: The new settlement methods with which the offer will be edited.
+     
+     - Returns: An empty `Promise` that will be fulfilled when the Offer is edited.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func editOffer(offerID: UUID, newSettlementMethods: [SettlementMethod]) -> Promise<Void> {
+        return Promise { seal in
+            Promise<Array<Data>> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("editOffer: editing \(offerID.uuidString)")
+                    do {
+                        logger.notice("cancelOffer: serializing settlement methods for \(offerID.uuidString)")
+                        let onChainSettlementMethods = try newSettlementMethods.compactMap { settlementMethod in
+                            return try JSONEncoder().encode(settlementMethod)
+                        }
+                        seal.fulfill(onChainSettlementMethods)
+                    } catch {
+                        self.logger.error("cancelOffer: encountered error serializing settlement methods for \(offerID.uuidString): \(error.localizedDescription)")
+                        seal.reject(error)
+                    }
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] onChainSettlementMethods -> Promise<Void> in
+                logger.notice("editOffer: editing \(offerID.uuidString) on chain")
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during editOffer call")
+                }
+                /*
+                 Since editOffer only uses the settlement methods of the passed Offer struct, we put meaningless values in all other properties of the passed struct.
+                 */
+                let offerStruct = OfferStruct(
+                    isCreated: false,
+                    isTaken: false,
+                    maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+                    interfaceId: Data(),
+                    stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+                    amountLowerBound: BigUInt.zero,
+                    amountUpperBound: BigUInt.zero,
+                    securityDepositAmount: BigUInt.zero,
+                    serviceFeeRate: BigUInt.zero,
+                    direction: BigUInt.zero,
+                    settlementMethods: onChainSettlementMethods,
+                    protocolVersion: BigUInt.zero,
+                    chainID: BigUInt.zero
+                )
+                return blockchainService.editOffer(
+                    offerID: offerID,
+                    offerStruct: offerStruct
+                )
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                self.logger.notice("editOffer: successfully edited \(offerID.uuidString)")
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("editOffer: encountered error while canceling \(offerID.uuidString): \(error.localizedDescription)")
                 seal.reject(error)
             }
         }

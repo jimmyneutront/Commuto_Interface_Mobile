@@ -66,4 +66,9 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
      */
     func cancelOffer(_ offer: Offer) {}
     
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod]) {}
+    
 }

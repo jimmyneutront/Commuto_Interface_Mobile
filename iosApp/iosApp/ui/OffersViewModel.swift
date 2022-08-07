@@ -195,9 +195,45 @@ class OffersViewModel: UIOfferTruthSource {
             logger.notice("cancelOffer: successfully canceled offer \(offer.id.uuidString)")
             setCancelingOfferState(offerID: offer.id, state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
-            logger.error("cancelOffer: got error during cancelOffer call")
+            logger.error("cancelOffer: got error during cancelOffer call. Error: \(error.localizedDescription)")
             offer.cancelingOfferError = error
             setCancelingOfferState(offerID: offer.id, state: .error)
+        }
+    }
+    
+    /**
+     Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     This validates `newSettlementMethods`, passes the offer ID and validated settlement methods to `offerService.editOffer`, and then clears `offer.selectedSettlementMethods`
+     
+     - Parameters:
+        - offer: The `Offer` to be edited.
+        - newSettlementMethods: An `Array` of `SettlementMethod`s with which the `Offer` will be edited.
+     */
+    func editOffer(
+        offer: Offer,
+        newSettlementMethods: [SettlementMethod]
+    ) {
+        Promise<Array<SettlementMethod>> { seal in
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.logger.notice("editOffer: validating edited settlement methods for \(offer.id.uuidString)")
+                do {
+                    let validatedSettlementMethods = try validateEditedSettlementMethods(newSettlementMethods)
+                    seal.fulfill(validatedSettlementMethods)
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] validatedSettlementMethods -> Promise<Void> in
+            logger.notice("editOffer: editing offer \(offer.id.uuidString) with validated settlement methods")
+            return offerService.editOffer(offerID: offer.id, newSettlementMethods: newSettlementMethods)
+        }.done(on: DispatchQueue.main) { _ in
+            self.logger.notice("editOffer: successfully edited offer \(offer.id.uuidString)")
+            offer.settlementMethods = newSettlementMethods
+            // We have successfully edited the offer, so we empty the selected settlement method list.
+            offer.selectedSettlementMethods = []
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+            self.logger.error("editOffer: got error during editOffer call. Error: \(error.localizedDescription)")
         }
     }
     

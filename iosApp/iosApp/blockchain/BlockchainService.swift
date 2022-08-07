@@ -339,7 +339,7 @@ class BlockchainService {
     }
     
     /**
-     A promise wrapper around CommutoSwap's [cancelOffer]() function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     A `Promise` wrapper around CommutoSwap's [cancelOffer]() function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
      
      - Parameters:
         - offerID: The ID of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be canceled.
@@ -357,6 +357,40 @@ class BlockchainService {
                 transactionOptions: .defaultOptions
             ) else {
                 seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Found nil while creating cancelOffer write transaction"))
+                return
+            }
+            #warning("TODO: this is temporary, will be improved when WalletService is implemented")
+            writeTransaction.transactionOptions.from = ethKeyStore.addresses!.first!
+            writeTransaction.transactionOptions.gasLimit = .manual(BigUInt(30000000))
+            writeTransaction.transactionOptions.gasPrice = .manual(BigUInt(30000000))
+            writeTransaction.sendPromise(password: ethPassword).done { TransactionSendingResult in
+                seal.fulfill_()
+            }.catch { error in
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     A `Promise` wrapper around CommutoSwap's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     
+     - Parameters:
+        - offerID: The ID of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be edited.
+        - offerStruct: The `OfferStruct` to be passed to [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer).
+     
+     - Returns: An empty `Promise` that will be fulfilled when the offer is opened.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if `nil` is returned during write transaction creation.
+     */
+    func editOffer(offerID: UUID, offerStruct: OfferStruct) -> Promise<Void> {
+        return Promise { seal in
+            let method = "editOffer"
+            guard let writeTransaction = commutoSwap.write(
+                method,
+                parameters: [offerID.asData(), offerStruct.toOfferDataArray()] as [AnyObject],
+                transactionOptions: .defaultOptions
+            ) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Found nil while creating editOffer write transaction"))
                 return
             }
             #warning("TODO: this is temporary, will be improved when WalletService is implemented")

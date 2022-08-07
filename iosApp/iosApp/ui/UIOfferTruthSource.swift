@@ -57,11 +57,22 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     This passes the offer ID to `offerService.cancelOffer`.
-     
      - Parameter offer: The `Offer` to be canceled.
      */
     func cancelOffer(
         _ offer: Offer
     )
+    
+    /**
+     Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     - Parameters:
+        - offer: The `Offer` to be canceled.
+        - newSettlementMethods: The new `Array` of settlement methods that the maker has selected, indicating that they are willing to use them to send/receive fiat currency for this offer.
+     */
+    func editOffer(
+        offer: Offer,
+        newSettlementMethods: [SettlementMethod]
+    )
+    
 }

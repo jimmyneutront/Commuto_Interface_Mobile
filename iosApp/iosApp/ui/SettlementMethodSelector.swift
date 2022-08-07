@@ -127,7 +127,12 @@ struct SettlementMethodCard: View {
                             return settlementMethodToCheck.method == settlementMethod.method && settlementMethodToCheck.currency == settlementMethod.currency
                         }
                     } else {
-                        selectedSettlementMethods.append(settlementMethod)
+                        if selectedSettlementMethods.firstIndex(where: { selectedSettlementMethod in
+                            settlementMethod.id == selectedSettlementMethod.id
+                        }) == nil {
+                            // We should only add the settlement method that this card represents if it is not currently in selectedSettlementMethods
+                            selectedSettlementMethods.append(settlementMethod)
+                        }
                     }
                 }
         }
@@ -137,6 +142,19 @@ struct SettlementMethodCard: View {
                 .stroke(color, lineWidth: 1)
         )
         .accentColor(.primary)
+        .onAppear {
+            // If the settlement method that this card represents is already in selectedSettlementMethods, then isSelected should be true
+            if let index = selectedSettlementMethods.firstIndex(where: { selectedSettlementMethod in
+                settlementMethod.id == selectedSettlementMethod.id
+            }) {
+                isSelected = true
+                // If settlementMethod already has a price, we attempt to restore it
+                if let priceValueFromString = Double(selectedSettlementMethods[index].price) {
+                    priceValue = priceValueFromString
+                    settlementMethod.price = selectedSettlementMethods[index].price
+                }
+            }
+        }
     }
     
     /**

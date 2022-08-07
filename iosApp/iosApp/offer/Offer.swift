@@ -107,6 +107,10 @@ class Offer: ObservableObject {
      (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occurred during the offer cancellation process, or `nil` if no such error has occurred.
      */
     var cancelingOfferError: Error? = nil
+    /**
+    (This property is used only if the maker of this offer is the user of this interface.) The new `SettlementMethods` with which the user wants to replace the offer's current settlement methods by editing the offer. If the user  is not currently editing this offer, (or if the user is not the maker of this offer) this array should be empty.
+     */
+    @Published var selectedSettlementMethods: [SettlementMethod] = []
     
     /**
      Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).

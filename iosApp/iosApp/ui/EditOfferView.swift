@@ -12,10 +12,12 @@ import web3swift
 /**
  Allows the user to edit one of their [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)s.
  */
-struct EditOfferView: View {
+struct EditOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
-    init(stablecoinCurrencyCode: String) {
+    init(offer: Offer, offerTruthSource: TruthSource, stablecoinCurrencyCode: String) {
         self.stablecoinCurrencyCode = stablecoinCurrencyCode
+        self.offer = offer
+        self.offerTruthSource = offerTruthSource
     }
     
     /**
@@ -29,9 +31,12 @@ struct EditOfferView: View {
     private var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethodsEmptyPrices
     
     /**
-     The `SettlementMethod`s that the user has selected.
+     The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) for which this view allows editing.
      */
-    @State private var selectedSettlementMethods: [SettlementMethod] = []
+    @ObservedObject var offer: Offer
+    
+    /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
+    @ObservedObject var offerTruthSource: TruthSource
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -44,11 +49,14 @@ struct EditOfferView: View {
                 SettlementMethodSelector(
                     settlementMethods: settlementMethods,
                     stablecoinCurrencyCode: stablecoinCurrencyCode,
-                    selectedSettlementMethods: $selectedSettlementMethods
+                    selectedSettlementMethods: $offer.selectedSettlementMethods
                 )
                 Button(
                     action: {
-                        
+                        offerTruthSource.editOffer(
+                            offer: offer,
+                            newSettlementMethods: offer.selectedSettlementMethods
+                        )
                     },
                     label: {
                         Text("Edit Offer")
@@ -75,6 +83,10 @@ struct EditOfferView: View {
  */
 struct EditOfferView_Previews: PreviewProvider {
     static var previews: some View {
-        EditOfferView(stablecoinCurrencyCode: "STBL")
+        EditOfferView(
+            offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
+            offerTruthSource: PreviewableOfferTruthSource(),
+            stablecoinCurrencyCode: "STBL"
+        )
     }
 }
