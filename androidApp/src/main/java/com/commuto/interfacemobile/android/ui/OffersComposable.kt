@@ -42,14 +42,21 @@ fun OffersComposable(offerTruthSource: UIOfferTruthSource) {
             OfferComposable(offerTruthSource, id, navController = navController)
         }
         composable(
-            "EditOfferComposable/{stablecoinCurrencyCode}",
+            "EditOfferComposable/{id}/{stablecoinCurrencyCode}",
             arguments = listOf(
+                navArgument("id") { type = NavType.StringType },
                 navArgument("stablecoinCurrencyCode") { type = NavType.StringType },
             )
         ) { backStackEntry ->
+            val id = try { UUID.fromString(backStackEntry.arguments?.getString("id")) }
+            catch (e: Throwable) { null }
             val stablecoinCurrencyCode = backStackEntry.arguments?.getString("stablecoinCurrencyCode")
                 ?: "Unknown Stablecoin"
-            EditOfferComposable(stablecoinCurrencyCode = stablecoinCurrencyCode)
+            EditOfferComposable(
+                offer = offerTruthSource.offers[id],
+                offerTruthSource = offerTruthSource,
+                stablecoinCurrencyCode = stablecoinCurrencyCode
+            )
         }
     }
 }

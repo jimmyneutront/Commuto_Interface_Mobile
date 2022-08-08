@@ -160,8 +160,8 @@ fun OfferComposable(
                 if (offer.isUserMaker) {
                     Button(
                         onClick = {
-                            navController.navigate("EditOfferComposable/${stablecoinInformation?.currencyCode 
-                                ?: "Unknown Stablecoin"}"
+                            navController.navigate("EditOfferComposable/$id/${stablecoinInformation
+                                ?.currencyCode ?: "Unknown Stablecoin"}"
                             )
                         },
                         content = {

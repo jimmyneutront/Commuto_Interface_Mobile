@@ -1,15 +1,12 @@
 package com.commuto.interfacemobile.android.ui
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,8 +89,14 @@ fun OpenOfferComposable(
 
     /**
      * The list of [SettlementMethod]s from which the user can choose.
+     *
+     * We want a copy of the list of sample settlement methods, we don't want to actually change any of them at all.
      */
-    val settlementMethods = remember { SettlementMethod.sampleSettlementMethodsEmptyPrices }
+    val settlementMethods = remember {
+        SettlementMethod.sampleSettlementMethodsEmptyPrices.map {
+            it.copy()
+        }
+    }
 
     /**
      * The [SettlementMethod]s that the user has selected.
