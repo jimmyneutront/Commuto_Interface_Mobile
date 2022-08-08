@@ -9,14 +9,17 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.commuto.interfacemobile.android.offer.EditingOfferState
 import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.SettlementMethod
 
@@ -54,6 +57,18 @@ fun EditOfferComposable(
             )
         }
     } else {
+        DisposableEffect(LocalLifecycleOwner.current) {
+            onDispose {
+                // Clear the "Offer Edited" message once the user leaves EditOfferView
+                if (offer.editingOfferState.value == EditingOfferState.COMPLETED) {
+                    offer.editingOfferState.value = EditingOfferState.NONE
+                }
+            }
+        }
+        val editOfferButtonLabel = if (offer.editingOfferState.value != EditingOfferState.EDITING) "Edit Offer" else
+            "Editing Offer"
+        val editOfferButtonOutlineColor = if (offer.editingOfferState.value != EditingOfferState.EDITING) Color.Black
+            else Color.Gray
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
@@ -73,22 +88,37 @@ fun EditOfferComposable(
                 stablecoinCurrencyCode = stablecoinCurrencyCode,
                 selectedSettlementMethods = offer.selectedSettlementMethods
             )
+            if (offer.editingOfferException != null) {
+                Text(
+                    text = offer.editingOfferException?.message ?: "An unknown exception occurred",
+                    style =  MaterialTheme.typography.h6,
+                    color = Color.Red
+                )
+            } else if (offer.editingOfferState.value == EditingOfferState.COMPLETED) {
+                Text(
+                    text = "Offer Edited.",
+                    style =  MaterialTheme.typography.h6,
+                )
+            }
             Button(
                 onClick = {
-                    offerTruthSource.editOffer(
-                        offer = offer,
-                        newSettlementMethods = offer.selectedSettlementMethods
-                    )
+                    // Don't let the user try to edit the offer if it is currently being edited
+                    if (offer.editingOfferState.value != EditingOfferState.EDITING) {
+                        offerTruthSource.editOffer(
+                            offer = offer,
+                            newSettlementMethods = offer.selectedSettlementMethods
+                        )
+                    }
                 },
                 content = {
                     Text(
-                        text = "Edit Offer",
+                        text = editOfferButtonLabel,
                         style = MaterialTheme.typography.h4,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                 },
-                border = BorderStroke(3.dp, Color.Black),
+                border = BorderStroke(3.dp, editOfferButtonOutlineColor),
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor =  Color.Transparent,
                     contentColor = Color.Black,
