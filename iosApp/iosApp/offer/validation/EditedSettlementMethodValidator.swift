@@ -13,9 +13,11 @@
     - the user has selected at least one settlement method
     - the user has specified a price for each selected settlement method
  
+ - Parameter settlementMethods: The `Array` of `SettlementMethod`s to be validated.
+ 
  - Returns: An `Array` of validated `SettlementMethod`s
  
- - Throws A `EditedSettlementMethodValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
+ - Throws An `EditedSettlementMethodValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
  */
 func validateEditedSettlementMethods(
     _ settlementMethods: [SettlementMethod]

@@ -76,7 +76,7 @@ class Offer: ObservableObject {
     let onChainSettlementMethods: [Data]
     #warning("TODO: every time this is changed, settlementMethods should be re-deserialized from the new values")
     /**
-     An `Array` of `SettlementMethods` derived from parsing `onChainSettlementMethods`.
+     An `Array` of `SettlementMethod`s derived from parsing `onChainSettlementMethods`.
      */
     @Published var settlementMethods: [SettlementMethod]
     /**
@@ -108,7 +108,7 @@ class Offer: ObservableObject {
      */
     var cancelingOfferError: Error? = nil
     /**
-    (This property is used only if the maker of this offer is the user of this interface.) The new `SettlementMethods` with which the user wants to replace the offer's current settlement methods by editing the offer. If the user  is not currently editing this offer, (or if the user is not the maker of this offer) this array should be empty.
+    (This property is used only if the maker of this offer is the user of this interface.) The new `SettlementMethod`s with which the user wants to replace the offer's current settlement methods by editing the offer. If the user is not currently editing this offer, (or if the user is not the maker of this offer) this array should be empty.
      */
     @Published var selectedSettlementMethods: [SettlementMethod] = []
     /**

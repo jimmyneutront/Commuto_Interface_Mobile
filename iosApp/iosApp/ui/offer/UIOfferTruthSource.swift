@@ -67,7 +67,7 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
      Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
      - Parameters:
-        - offer: The `Offer` to be canceled.
+        - offer: The `Offer` to be edited.
         - newSettlementMethods: The new `Array` of settlement methods that the maker has selected, indicating that they are willing to use them to send/receive fiat currency for this offer.
      */
     func editOffer(

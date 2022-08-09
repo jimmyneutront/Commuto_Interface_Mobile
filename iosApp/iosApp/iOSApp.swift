@@ -57,9 +57,52 @@ struct iOSApp: App {
         //container.resolve(BlockchainService.self)!.listen()
     }
     
+    /**
+     Indicates the tab that should be displayed.
+     */
+    @State var currentTab: CurrentTab = .offers
+    
 	var body: some Scene {
 		WindowGroup {
-            OffersView(offerTruthSource: container.resolve(OffersViewModel.self)!)
+            VStack(spacing: 0) {
+                switch currentTab {
+                case .offers:
+                    OffersView(offerTruthSource: container.resolve(OffersViewModel.self)!)
+                case .swaps:
+                    SwapsView()
+                        .frame(maxHeight: .infinity)
+                }
+                Divider()
+                HStack {
+                    TabButton(label: "Offers", tab: .offers)
+                    TabButton(label: "Swaps", tab: .swaps)
+                }
+                .padding([.top, .bottom], 15)
+            }
         }
 	}
+    
+    /**
+     Returns a button that lies at the bottom of the screen capable of setting the current tab.
+     
+     - Parameters:
+        - label: The `String` that will be displayed as this button's label.
+        - tab: The value to which this button will set `currentTab` when pressed.
+     */
+    @ViewBuilder
+    func TabButton(label: String, tab: CurrentTab) -> some View {
+        Button(
+            action: {
+                currentTab = tab
+            },
+            label: {
+                Text(label)
+                    .frame(width: 60, height: 22)
+                    .frame(maxWidth: .infinity)
+                    .font(.title3)
+                    .foregroundColor(.primary)
+            }
+        )
+    }
+    
 }

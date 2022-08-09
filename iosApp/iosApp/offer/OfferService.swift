@@ -300,7 +300,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     On the global `DispatchQueue`, this serializes the new settlement methods and calls the CommutoSwap contract's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, passing the offer ID and new serialized settlement methods.
+     On the global `DispatchQueue`, this serializes the new settlement methods and calls the CommutoSwap contract's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, passing the offer ID and an `OfferStruct` containing the new serialized settlement methods.
      
      - Parameters:
         - offerID: The ID of the offer to edit.
@@ -316,13 +316,13 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("editOffer: editing \(offerID.uuidString)")
                     do {
-                        logger.notice("cancelOffer: serializing settlement methods for \(offerID.uuidString)")
+                        logger.notice("editOffer: serializing settlement methods for \(offerID.uuidString)")
                         let onChainSettlementMethods = try newSettlementMethods.compactMap { settlementMethod in
                             return try JSONEncoder().encode(settlementMethod)
                         }
                         seal.fulfill(onChainSettlementMethods)
                     } catch {
-                        self.logger.error("cancelOffer: encountered error serializing settlement methods for \(offerID.uuidString): \(error.localizedDescription)")
+                        self.logger.error("editOffer: encountered error serializing settlement methods for \(offerID.uuidString): \(error.localizedDescription)")
                         seal.reject(error)
                     }
                 }
