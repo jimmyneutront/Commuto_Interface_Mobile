@@ -87,6 +87,30 @@ struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
      */
     @State private var selectedSettlementMethods: [SettlementMethod] = []
     
+    /**
+     The string that will be displayed in the label of the button that opens the offer.
+     */
+    var openOfferButtonLabel: String {
+        if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
+            return "Open Offer"
+        } else if offerTruthSource.openingOfferState == .completed {
+            return "Offer Opened"
+        } else {
+            return "Opening Offer"
+        }
+    }
+    
+    /**
+     The color of the outline around the button that opens the offer.
+     */
+    var openOfferButtonOutlineColor: Color {
+        if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
+            return Color.primary
+        } else {
+            return Color.gray
+        }
+    }
+    
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             let currencyCode = stablecoins.getStablecoinInformation(
@@ -254,59 +278,34 @@ struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         Spacer()
                     }
                 }
-                if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
-                    Button(
-                        action: {
-                            // Don't let the user open a new offer if one is currently being opened, or if the user has just opened one
-                            if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
-                                offerTruthSource.openOffer(
-                                    chainID: chainID,
-                                    stablecoin: selectedStablecoin,
-                                    stablecoinInformation: stablecoins.getStablecoinInformation(chainID: chainID, contractAddress: selectedStablecoin),
-                                    minimumAmount: Decimal(minimumAmount),
-                                    maximumAmount: Decimal(maximumAmount),
-                                    securityDepositAmount: Decimal(securityDepositAmount),
-                                    direction: selectedDirection,
-                                    settlementMethods: selectedSettlementMethods
-                                )
-                            }
-                        },
-                        label: {
-                            Text("Open Offer")
-                                .font(.largeTitle)
-                                .bold()
-                                .padding(10)
-                                .frame(maxWidth: .infinity)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.primary, lineWidth: 3)
-                                )
+                Button(
+                    action: {
+                        // Don't let the user open a new offer if one is currently being opened, or if the user has just opened one
+                        if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
+                            offerTruthSource.openOffer(
+                                chainID: chainID,
+                                stablecoin: selectedStablecoin,
+                                stablecoinInformation: stablecoins.getStablecoinInformation(chainID: chainID, contractAddress: selectedStablecoin),
+                                minimumAmount: Decimal(minimumAmount),
+                                maximumAmount: Decimal(maximumAmount),
+                                securityDepositAmount: Decimal(securityDepositAmount),
+                                direction: selectedDirection,
+                                settlementMethods: selectedSettlementMethods
+                            )
                         }
-                    )
-                    .accentColor(Color.primary)
-                    .padding([.top], 10)
-                } else if offerTruthSource.openingOfferState == .completed {
-                    Text("Offer Opened")
-                        .font(.largeTitle)
-                        .bold()
-                        .padding(10)
-                        .frame(maxWidth: .infinity)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray, lineWidth: 1)
-                        )
-                } else {
-                    Text("Opening Offer")
-                        .font(.largeTitle)
-                        .bold()
-                        .padding(10)
-                        .frame(maxWidth: .infinity)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray, lineWidth: 1)
-                        )
-                }
-                
+                    },
+                    label: {
+                        Text(openOfferButtonLabel)
+                            .font(.largeTitle)
+                            .bold()
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(openOfferButtonOutlineColor, lineWidth: 3)
+                            )
+                    }
+                )
             }
             .padding([.leading, .trailing, .bottom])
         }

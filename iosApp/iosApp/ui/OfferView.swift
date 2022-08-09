@@ -41,6 +41,30 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     @ObservedObject var offerTruthSource: TruthSource
     
     /**
+     The string that will be displayed in the label of the button that cancels the offer.
+     */
+    var cancelingOfferButtonLabel: String {
+        if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
+            return "Cancel Offer"
+        } else if offer.cancelingOfferState == .canceling {
+            return "Canceling Offer"
+        } else {
+            return "Offer Canceled"
+        }
+    }
+    
+    /**
+     The color of the outline around the button that cancels the offer.
+     */
+    var cancelingOfferButtonOutlineColor: Color {
+        if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
+            return Color.red
+        } else {
+            return Color.gray
+        }
+    }
+    
+    /**
      The string that will be displayed in the label of the button that edits the offer.
      */
     var editOfferButtonLabel: String {
@@ -167,50 +191,25 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                                 Spacer()
                             }
                         }
-                        if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
-                            Button (
-                                action: {
-                                    // Don't let the user try to cancel the offer if it is already canceled or being canceled
-                                    if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
-                                        offerTruthSource.cancelOffer(offer)
-                                    }
-                                },
-                                label: {
-                                    Text("Cancel Offer")
-                                        .font(.largeTitle)
-                                        .bold()
-                                        .padding(10)
-                                        .frame(maxWidth: .infinity)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.red, lineWidth: 3)
-                                        )
+                        Button (
+                            action: {
+                                // Don't let the user try to cancel the offer if it is already canceled or being canceled
+                                if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
+                                    offerTruthSource.cancelOffer(offer)
                                 }
-                            )
-                            .accentColor(Color.red)
-                        } else if offer.cancelingOfferState == .canceling {
-                            Text("Canceling Offer")
-                                .foregroundColor(.red)
-                                .font(.largeTitle)
-                                .bold()
-                                .padding(10)
-                                .frame(maxWidth: .infinity)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.gray, lineWidth: 3)
-                                )
-                        } else {
-                            Text("Offer Canceled")
-                                .foregroundColor(.red)
-                                .font(.largeTitle)
-                                .bold()
-                                .padding(10)
-                                .frame(maxWidth: .infinity)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.gray, lineWidth: 3)
-                                )
-                        }
+                            },
+                            label: {
+                                Text(cancelingOfferButtonLabel)
+                                    .font(.largeTitle)
+                                    .bold()
+                                    .padding(10)
+                                    .frame(maxWidth: .infinity)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(cancelingOfferButtonOutlineColor, lineWidth: 3)
+                                    )
+                            }
+                        )
                     }
                 }
                 .offset(x: 0.0, y: -10.0)
