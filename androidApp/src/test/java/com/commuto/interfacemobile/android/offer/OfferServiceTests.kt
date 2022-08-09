@@ -16,7 +16,7 @@ import com.commuto.interfacemobile.android.offer.validation.validateNewOfferData
 import com.commuto.interfacemobile.android.p2p.P2PExceptionNotifiable
 import com.commuto.interfacemobile.android.p2p.P2PService
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
-import com.commuto.interfacemobile.android.ui.PreviewableOfferTruthSource
+import com.commuto.interfacemobile.android.ui.offer.PreviewableOfferTruthSource
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import io.ktor.client.*
 import io.ktor.client.call.*

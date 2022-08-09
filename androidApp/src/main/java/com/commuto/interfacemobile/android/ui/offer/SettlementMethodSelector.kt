@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -202,7 +202,7 @@ fun SettlementMethodCardComposable(
 }
 
 /**
- * Builds a human readable string describing the price specified for a settlement method, such as "Price: 0.94 EUR/DAI"
+ * Builds a human-readable string describing the price specified for a settlement method, such as "Price: 0.94 EUR/DAI"
  * or "Price: 1.00 USD/USDC", or "Price: Tap to specify" if no price has been specified.
  *
  * @param settlementMethod The [SettlementMethod] for which this price description is being built.

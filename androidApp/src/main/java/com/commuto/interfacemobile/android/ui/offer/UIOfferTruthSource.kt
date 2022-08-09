@@ -1,10 +1,11 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.runtime.MutableState
 import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
 import com.commuto.interfacemobile.android.offer.SettlementMethod
+import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import java.math.BigDecimal
 import java.math.BigInteger
 

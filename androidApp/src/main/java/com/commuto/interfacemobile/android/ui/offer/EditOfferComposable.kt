@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*

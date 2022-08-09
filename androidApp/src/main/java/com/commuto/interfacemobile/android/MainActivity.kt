@@ -3,8 +3,18 @@ package com.commuto.interfacemobile.android
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import com.commuto.interfacemobile.android.ui.OffersComposable
-import com.commuto.interfacemobile.android.ui.OffersViewModel
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.Divider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.commuto.interfacemobile.android.ui.CurrentTab
+import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
+import com.commuto.interfacemobile.android.ui.TabButton
+import com.commuto.interfacemobile.android.ui.offer.OffersComposable
+import com.commuto.interfacemobile.android.ui.swap.SwapsComposable
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -23,7 +33,45 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            OffersComposable(offersViewModel)
+            val currentTab = remember { mutableStateOf(CurrentTab.OFFERS) }
+            Column(
+                verticalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                Box {
+                    when (currentTab.value) {
+                        CurrentTab.OFFERS -> {
+                            OffersComposable(
+                                offerTruthSource = offersViewModel,
+                            )
+                        }
+                        CurrentTab.SWAPS -> {
+                            SwapsComposable()
+                        }
+                    }
+                }
+                Column {
+                    Divider(
+                        thickness = 1.dp
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        TabButton(
+                            label = "Offers",
+                            onClick = { currentTab.value = CurrentTab.OFFERS }
+                        )
+                        TabButton(
+                            label = "Swaps",
+                            onClick = { currentTab.value = CurrentTab.SWAPS }
+                        )
+                    }
+                }
+            }
         }
     }
 }

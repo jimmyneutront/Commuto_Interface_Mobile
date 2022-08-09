@@ -1,7 +1,11 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,11 +21,18 @@ import java.util.*
  * offer-related data.
  */
 @Composable
-fun OffersComposable(offerTruthSource: UIOfferTruthSource) {
+fun OffersComposable(
+    offerTruthSource: UIOfferTruthSource,
+) {
 
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "OffersListComposable") {
+    // This should take up the entire heighth of the screen minus 50 dp, to display the bottom navigation bar.
+    NavHost(
+        navController = navController,
+        startDestination = "OffersListComposable",
+        modifier = Modifier.height((LocalConfiguration.current.screenHeightDp - 50).dp)
+    ) {
         composable("OffersListComposable") {
             OffersListComposable(offerTruthSource, navController)
         }
@@ -67,5 +78,7 @@ fun OffersComposable(offerTruthSource: UIOfferTruthSource) {
 @Preview
 @Composable
 fun PreviewOffersComposable() {
-    OffersComposable(PreviewableOfferTruthSource())
+    OffersComposable(
+        PreviewableOfferTruthSource()
+    )
 }

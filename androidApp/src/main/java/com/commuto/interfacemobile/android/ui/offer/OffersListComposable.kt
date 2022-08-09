@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -17,6 +17,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.R
 import com.commuto.interfacemobile.android.offer.OfferTruthSource
+import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 
 /**
  * Displays a [OffersNoneFoundComposable] if there are no open offers in [offerTruthSource], or, if there

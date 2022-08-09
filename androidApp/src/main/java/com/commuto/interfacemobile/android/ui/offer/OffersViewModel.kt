@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import android.util.Log
 import androidx.compose.runtime.MutableState
@@ -11,6 +11,7 @@ import com.commuto.interfacemobile.android.offer.*
 import com.commuto.interfacemobile.android.offer.validation.NewOfferDataValidationException
 import com.commuto.interfacemobile.android.offer.validation.validateEditedSettlementMethods
 import com.commuto.interfacemobile.android.offer.validation.validateNewOfferData
+import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

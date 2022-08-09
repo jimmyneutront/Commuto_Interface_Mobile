@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -17,6 +17,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.SettlementMethod
+import com.commuto.interfacemobile.android.ui.DisclosureComposable
+import com.commuto.interfacemobile.android.ui.StablecoinInformation
+import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import java.lang.NumberFormatException
 import java.math.BigDecimal
 import java.math.BigInteger

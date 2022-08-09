@@ -1,10 +1,11 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import java.math.BigDecimal
 import java.math.BigInteger
 

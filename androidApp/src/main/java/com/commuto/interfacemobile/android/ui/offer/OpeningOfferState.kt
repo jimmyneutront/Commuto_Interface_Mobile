@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 /**
  * Indicates whether we are currently opening a new offer. If we are, then this indicates the part of the

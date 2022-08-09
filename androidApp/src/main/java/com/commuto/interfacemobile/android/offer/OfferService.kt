@@ -13,7 +13,7 @@ import com.commuto.interfacemobile.android.offer.validation.ValidatedNewOfferDat
 import com.commuto.interfacemobile.android.p2p.OfferMessageNotifiable
 import com.commuto.interfacemobile.android.p2p.P2PService
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
-import com.commuto.interfacemobile.android.ui.OffersViewModel
+import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

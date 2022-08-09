@@ -7,7 +7,7 @@ import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.offer.OfferServiceTests
-import com.commuto.interfacemobile.android.ui.OffersViewModel
+import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*

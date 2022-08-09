@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.ui
+package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.offer.*
+import com.commuto.interfacemobile.android.ui.DisclosureComposable
+import com.commuto.interfacemobile.android.ui.StablecoinInformation
+import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import java.math.BigInteger
 import java.util.*
 
