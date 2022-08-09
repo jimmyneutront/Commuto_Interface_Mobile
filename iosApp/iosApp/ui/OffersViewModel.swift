@@ -227,11 +227,12 @@ class OffersViewModel: UIOfferTruthSource {
         offer: Offer,
         newSettlementMethods: [SettlementMethod]
     ) {
-        setEditingOfferState(offerID: offer.id, state: .editing)
-        offer.editingOfferError = nil
         Promise<Array<SettlementMethod>> { seal in
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.logger.notice("editOffer: validating edited settlement methods for \(offer.id.uuidString)")
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("editOffer: editing \(offer.id.uuidString)")
+                setEditingOfferState(offerID: offer.id, state: .editing)
+                offer.editingOfferError = nil
+                logger.notice("editOffer: validating edited settlement methods for \(offer.id.uuidString)")
                 do {
                     let validatedSettlementMethods = try validateEditedSettlementMethods(newSettlementMethods)
                     seal.fulfill(validatedSettlementMethods)
@@ -244,10 +245,10 @@ class OffersViewModel: UIOfferTruthSource {
             return offerService.editOffer(offerID: offer.id, newSettlementMethods: newSettlementMethods)
         }.done(on: DispatchQueue.main) { [self] _ in
             logger.notice("editOffer: successfully edited offer \(offer.id.uuidString)")
-            setEditingOfferState(offerID: offer.id, state: .completed)
             offer.settlementMethods = newSettlementMethods
             // We have successfully edited the offer, so we empty the selected settlement method list.
             offer.selectedSettlementMethods = []
+            setEditingOfferState(offerID: offer.id, state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
             logger.error("editOffer: got error during editOffer call. Error: \(error.localizedDescription)")
             offer.editingOfferError = error
