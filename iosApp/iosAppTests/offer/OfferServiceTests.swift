@@ -1246,46 +1246,6 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.blockchainService = blockchainService
         
-        let offer = Offer(
-            isCreated: true,
-            isTaken: false,
-            id: offerID,
-            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
-            interfaceID: Data(),
-            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
-            amountLowerBound: BigUInt(10000),
-            amountUpperBound: BigUInt(10000),
-            securityDepositAmount: BigUInt(1000),
-            serviceFeeRate: BigUInt(100),
-            direction: .buy,
-            settlementMethods: [],
-            protocolVersion: BigUInt(1),
-            chainID: BigUInt(31337),
-            havePublicKey: true,
-            isUserMaker: true,
-            state: .offerOpened
-        )
-        offerTruthSource.offers[offerID] = offer
-        let offerForDatabase = DatabaseOffer(
-            id: offer.id.asData().base64EncodedString(),
-            isCreated: offer.isCreated,
-            isTaken: offer.isTaken,
-            maker: offer.maker.addressData.toHexString(),
-            interfaceId: offer.interfaceId.base64EncodedString(),
-            stablecoin: offer.stablecoin.addressData.toHexString(),
-            amountLowerBound: String(offer.amountLowerBound),
-            amountUpperBound: String(offer.amountUpperBound),
-            securityDepositAmount: String(offer.securityDepositAmount),
-            serviceFeeRate: String(offer.serviceFeeRate),
-            onChainDirection: String(offer.onChainDirection),
-            protocolVersion: String(offer.protocolVersion),
-            chainID: String(offer.chainID),
-            havePublicKey: offer.havePublicKey,
-            isUserMaker: offer.isUserMaker,
-            state: offer.state.asString
-        )
-        try! databaseService.storeOffer(offer: offerForDatabase)
-        
         let editingExpectation = XCTestExpectation(description: "Fulfilled when offerService.editOffer returns")
         
         offerService.editOffer(offerID: offerID, newSettlementMethods: [

@@ -73,7 +73,7 @@ struct EditOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     stablecoinCurrencyCode: stablecoinCurrencyCode,
                     selectedSettlementMethods: $offer.selectedSettlementMethods
                 )
-                if offer.editingOfferError != nil {
+                if offer.editingOfferState == .error {
                     HStack {
                         Text(offer.editingOfferError?.localizedDescription ?? "An unknown error occured")
                             .foregroundColor(Color.red)
@@ -112,7 +112,7 @@ struct EditOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
             .padding([.leading, .trailing])
         }
         .onDisappear {
-            // Clear the "Offer Editied" message once the user leaves EditOfferView
+            // Clear the "Offer Edited" message once the user leaves EditOfferView
             if offer.editingOfferState == .completed {
                 offer.editingOfferState = .none
             }
