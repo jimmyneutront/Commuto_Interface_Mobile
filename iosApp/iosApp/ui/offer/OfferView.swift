@@ -75,6 +75,8 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
         }
     }
     
+    @State private var isShowingTakeOfferSheet = false
+    
     var body: some View {
         let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
         ScrollView(.vertical, showsIndicators: false) {
@@ -191,7 +193,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                                 Spacer()
                             }
                         }
-                        Button (
+                        Button(
                             action: {
                                 // Don't let the user try to cancel the offer if it is already canceled or being canceled
                                 if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
@@ -211,6 +213,28 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                             }
                         )
                         .accentColor(Color.red)
+                    } else if (offer.state == .offerOpened) {
+                        // We should only display the "Take Offer" button if the user is NOT the maker and if the offer is in the offerOpened state
+                        Button(
+                            action: {
+                                isShowingTakeOfferSheet = true
+                            },
+                            label: {
+                                Text("Take Offer")
+                                    .font(.largeTitle)
+                                    .bold()
+                                    .padding(10)
+                                    .frame(maxWidth: .infinity)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.primary, lineWidth: 3)
+                                    )
+                            }
+                        )
+                        .accentColor(Color.primary)
+                        .sheet(isPresented: $isShowingTakeOfferSheet) {
+                            TakeOfferView()
+                        }
                     }
                 }
                 .offset(x: 0.0, y: -10.0)
@@ -402,7 +426,7 @@ struct OfferView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             OfferView(
-                offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
+                offer: Offer.sampleOffers[Offer.sampleOfferIds[2]]!,
                 offerTruthSource: PreviewableOfferTruthSource()
             )
             OfferView(
