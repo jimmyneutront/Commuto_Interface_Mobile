@@ -20,7 +20,7 @@ import java.util.*
  * [service fee rate](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt) as a
  * percentage times 100, or `null` if the current service fee rate is not known.
  * @property isGettingServiceFeeRate Indicates whether this is currently getting the current service fee rate. This will
- * always be false, this this class is used only for previewing user interfaces.
+ * always be false, this class is used only for previewing user interfaces.
  */
 class PreviewableOfferTruthSource: UIOfferTruthSource {
     override var offers = SnapshotStateMap<UUID, Offer>().also { map ->

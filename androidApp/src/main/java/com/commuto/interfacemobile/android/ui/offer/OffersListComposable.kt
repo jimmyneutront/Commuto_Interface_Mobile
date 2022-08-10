@@ -29,7 +29,10 @@ import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
  * @param navController The [NavController] that controls navigation between offer-related [Composable]s.
  */
 @Composable
-fun OffersListComposable(offerTruthSource: OfferTruthSource, navController: NavController) {
+fun OffersListComposable(
+    offerTruthSource: OfferTruthSource,
+    navController: NavController
+) {
     val stablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
     val offers = remember { offerTruthSource.offers }
     Column {
