@@ -210,6 +210,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                                     )
                             }
                         )
+                        .accentColor(Color.red)
                     }
                 }
                 .offset(x: 0.0, y: -10.0)

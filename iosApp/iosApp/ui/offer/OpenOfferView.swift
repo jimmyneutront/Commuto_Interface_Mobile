@@ -306,6 +306,7 @@ struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                             )
                     }
                 )
+                .accentColor(Color.primary)
             }
             .padding([.leading, .trailing, .bottom])
         }
