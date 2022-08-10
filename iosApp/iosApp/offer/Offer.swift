@@ -410,6 +410,7 @@ extension Offer {
     ]
 }
 
+#warning("TODO: move this to extension group")
 /**
  Allows the creation of a `UUID` from raw bytes as `Data`. Used to create offer IDs as `UUID`s from the raw bytes retrieved from [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) calls.
  */
