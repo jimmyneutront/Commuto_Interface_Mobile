@@ -1,12 +1,9 @@
 package com.commuto.interfacemobile.android.ui.offer
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
@@ -24,6 +21,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.offer.*
 import com.commuto.interfacemobile.android.ui.DisclosureComposable
+import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import java.math.BigInteger
@@ -36,6 +34,7 @@ import java.util.*
  * @param stablecoinInfoRepo The [StablecoinInformationRepository] that this [Composable] uses to get stablecoin name
  * and currency code information. Defaults to [StablecoinInformationRepository.hardhatStablecoinInfoRepo] if no
  * other value is passed.
+ *
  * @param navController The [NavController] that controls navigation between offer-related [Composable]s.
  */
 @Composable
@@ -51,6 +50,8 @@ fun OfferComposable(
      * The offer about which this [Composable] displays information.
      */
     val offer = offerTruthSource.offers[id]
+
+    val isShowingTakeOfferSheet = remember { mutableStateOf(false) }
 
     if (id == null) {
         Row(
@@ -183,7 +184,7 @@ fun OfferComposable(
                             contentColor = Color.Black,
                         ),
                         elevation = null,
-                        modifier = Modifier.width(400.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(
                         modifier = Modifier.height(9.dp)
@@ -228,11 +229,93 @@ fun OfferComposable(
                             contentColor = Color.Red,
                         ),
                         elevation = null,
-                        modifier = Modifier.width(400.dp)
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else if (offer.state == OfferState.OFFER_OPENED) {
+                    /*
+                    We should only display the "Take Offer" button if the user is NOT the maker and if the offer is in
+                    the offerOpened state
+                     */
+                    Button(
+                        onClick = {
+                            isShowingTakeOfferSheet.value = !isShowingTakeOfferSheet.value
+                        },
+                        content = {
+                            Text(
+                                text = "Take offer",
+                                style = MaterialTheme.typography.h4,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                        },
+                        border = BorderStroke(3.dp, Color.Black),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor =  Color.Transparent,
+                            contentColor = Color.Black,
+                        ),
+                        elevation = null,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         }
+        SheetComposable(
+            isPresented = isShowingTakeOfferSheet,
+            content = { closeSheet ->
+                Column(
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxHeight(),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Take Offer",
+                            style = MaterialTheme.typography.h4,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Button(
+                            onClick = {
+                                closeSheet()
+                            },
+                            content = {
+                                Text(
+                                    text = "Cancel",
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor =  Color.Transparent,
+                                contentColor = Color.Black,
+                            ),
+                            elevation = null,
+                        )
+                    }
+                    Button(
+                        onClick = {},
+                        content = {
+                            Text(
+                                text = "Take offer",
+                                style = MaterialTheme.typography.h4,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                        },
+                        border = BorderStroke(3.dp, Color.Black),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor =  Color.Transparent,
+                            contentColor = Color.Black,
+                        ),
+                        elevation = null,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        )
     }
 }
 

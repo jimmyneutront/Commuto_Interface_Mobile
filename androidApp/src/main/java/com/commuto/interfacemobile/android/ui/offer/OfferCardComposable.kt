@@ -39,7 +39,7 @@ fun OfferCardComposable(offerDirection: String, stablecoinCode: String) {
 }
 
 /**
- * Displays a preview of [OfferCardComposable] with a sample [Offer].
+ * Displays a preview of [OfferCardComposable].
  */
 @Preview(
     showBackground = true,

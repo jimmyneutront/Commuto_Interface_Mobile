@@ -20,10 +20,9 @@ import com.commuto.interfacemobile.android.offer.OfferTruthSource
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 
 /**
- * Displays a [OffersNoneFoundComposable] if there are no open offers in [offerTruthSource], or, if there
- * are open offers in [offerTruthSource], displays a list containing an [OfferCardComposable]-labeled
- * [Button] for each open offer in [offerTruthSource] that navigates to "OfferDetailComposable/ + offer id
- * as a [String]" when pressed.
+ * Displays a [OffersNoneFoundComposable] if there are no open offers in [offerTruthSource], or, if there are open
+ * offers in [offerTruthSource], displays a list containing an [OfferCardComposable]-labeled [Button] for each open
+ * offer in [offerTruthSource] that navigates to "OfferComposable/ + offer id as a [String]" when pressed.
  *
  * @param offerTruthSource The OffersViewModel that acts as a single source of truth for all offer-related data.
  * @param navController The [NavController] that controls navigation between offer-related [Composable]s.
