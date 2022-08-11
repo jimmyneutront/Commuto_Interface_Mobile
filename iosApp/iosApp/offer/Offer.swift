@@ -369,8 +369,8 @@ extension Offer {
             interfaceId: Data(),
             stablecoin: EthereumAddress("0x8438Ad1C834623CfF278AB6829a248E37C2D7E3f")!, // BUSD on Hardhat
             amountLowerBound: 10_000 * BigUInt(10).power(18),
-            amountUpperBound: 10_000 * BigUInt(10).power(18),
-            securityDepositAmount: 1_000 * BigUInt(10).power(18),
+            amountUpperBound: 20_000 * BigUInt(10).power(18),
+            securityDepositAmount: 2_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(1),
             onChainDirection: BigUInt.init(UInt64(1)),
             onChainSettlementMethods: [

@@ -55,6 +55,23 @@ struct ServiceFeeAmountView: View {
     }
     
     /**
+     Creates a `ServiceFeeAmountView` to use when taking an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer). When taking an offer, the user must specify the amount of stablecoin to be swapped (or, if the minimum swap amount equals the maximum swap amount, there is only one possible swap amount), and thus we only want to display a single service fee to the user.
+     
+     - Parameters:
+        - stablecoinInformation: The `StablecoinInformation` of the offer for which this `View` is being displayed, or `nil` if this information is not available.
+        - amount: The amount from which the service fee will be calculated, as a `Decimal` in token units.
+        - serviceFeeRate: The service fee rate for the offer, as a `BigUInt`.
+     */
+    init(stablecoinInformation: StablecoinInformation?, amount: Decimal, serviceFeeRate: BigUInt) {
+        self.init(
+            stablecoinInformation: stablecoinInformation,
+            minimumAmount: amount,
+            maximumAmount: amount,
+            serviceFeeRate: serviceFeeRate
+        )
+    }
+    
+    /**
      Creates a `ServiceFeeAmountView` for an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      
      - Parameters:

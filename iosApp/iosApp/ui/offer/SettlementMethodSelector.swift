@@ -9,7 +9,7 @@
 import SwiftUI
 
 /**
- Displays a vertical list of settlement method cards one for each settlement method that the offer has opened. These cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being opened.
+ Displays a vertical list of settlement method cards, one for each of the offers settlement methods. These cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being opened.
  */
 struct SettlementMethodSelector: View {
     
@@ -41,7 +41,7 @@ struct SettlementMethodSelector: View {
 }
 
 /**
- Displays a card containing settlement method information. The "Price" button on the card can be tapped to specify the price of the
+ Displays a card containing settlement method information. The "Price" button on the card can be tapped to specify the price of the `SettlementMethod`.
  */
 struct SettlementMethodCard: View {
     

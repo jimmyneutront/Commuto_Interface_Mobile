@@ -233,7 +233,10 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         )
                         .accentColor(Color.primary)
                         .sheet(isPresented: $isShowingTakeOfferSheet) {
-                            TakeOfferView()
+                            TakeOfferView(
+                                offerID: offer.id,
+                                offerTruthSource: offerTruthSource
+                            )
                         }
                     }
                 }
@@ -273,72 +276,6 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
         let stablecoinName = stablecoinInformation?.name ?? "Unknown Stablecoin"
         // We should never get the empty string here because no offer information will be displayed if offer is nil
         return "This is a " + offer.direction.string + " offer: The maker of this offer wants to " + offer.direction.string.lowercased() + " " + stablecoinName + " in exchange for fiat."
-    }
-}
-
-/**
- A view that displays the minimum and maximum amount stablecoin that the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)  is willing to exchange.
- */
-struct OfferAmountView: View {
-    /**
-     The `StablecoinInformation` struct for the offer's stablecoin, or `nil` if such a struct cannot be resolved from the offer's chain ID and stablecoin address.
-     */
-    let stablecoinInformation: StablecoinInformation?
-    
-    /**
-     The offer's `amountLowerBound` divided by ten raised to the power of the stablecoin's decimal count, as a string.
-     */
-    let minimumString: String
-    /**
-     The offer's `amountUpperBound` divided by ten raised to the power of the stablecoin's decimal count, as a string.
-     */
-    let maximumString: String
-    /**
-     The offer's `securityDepositAmount` divided by ten raised to the  power of the stablecoin's decimal count, as a string.
-     */
-    let securityDepositString: String
-    
-    init(stablecoinInformation: StablecoinInformation?, minimum: BigUInt, maximum: BigUInt, securityDeposit: BigUInt) {
-        self.stablecoinInformation = stablecoinInformation
-        let stablecoinDecimal = stablecoinInformation?.decimal ?? 1
-        minimumString = String(minimum / BigUInt(10).power(stablecoinDecimal))
-        maximumString = String(maximum / BigUInt(10).power(stablecoinDecimal))
-        securityDepositString = String(securityDeposit / BigUInt(10).power(stablecoinDecimal))
-    }
-    
-    var body: some View {
-        let currencyCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
-        HStack {
-            let headerString = (stablecoinInformation != nil) ? "Amount: " : "Amount (in token base units):"
-            Text(headerString)
-                .font(.title2)
-            Spacer()
-        }
-        .padding(.bottom, 2)
-        if minimumString == maximumString {
-            HStack {
-                Text(minimumString + " " + currencyCode)
-                    .font(.title2).bold()
-                Spacer()
-            }
-        } else {
-            HStack {
-                Text("Minimum: " + minimumString + " " + currencyCode)
-                    .font(.title2).bold()
-                Spacer()
-                
-            }
-            HStack {
-                Text("Maximum: " + maximumString + " " + currencyCode)
-                    .font(.title2).bold()
-                Spacer()
-            }
-        }
-        HStack {
-            Text("Security Deposit: " + securityDepositString + " " + currencyCode)
-                .font(.title3)
-            Spacer()
-        }
     }
 }
 
