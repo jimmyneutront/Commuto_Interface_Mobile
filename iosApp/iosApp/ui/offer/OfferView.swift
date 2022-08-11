@@ -306,7 +306,7 @@ struct SettlementMethodListView: View {
             }
         } else {
             HStack {
-                Text("No settlement methods found")
+                Text("No Settlement Methods Found")
                 Spacer()
             }
         }

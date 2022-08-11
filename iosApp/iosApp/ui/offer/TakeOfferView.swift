@@ -39,6 +39,9 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
      */
     @State var specifiedStablecoinAmount = 0
     
+    /**
+     The settlement method by which the user has chosen to send/receive traditional currency payment, or `nil` if the user has not made such a selection.
+     */
     @State var selectedSettlementMethod: SettlementMethod? = nil
     
     var body: some View {
@@ -73,15 +76,10 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                             maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
                         )
                     }
-                    if(offer.settlementMethods.count == 1) {
-                        Text("Settlement Method")
-                            .font(.title2)
-                    } else {
-                        Text("Settlement Methods")
-                            .font(.title2)
-                    }
+                    Text(createSettlementMethodHeader(numberOfSettlementMethods: offer.settlementMethods.count))
+                        .font(.title2)
                     ImmutableSettlementMethodSelector(
-                        settlementmethods: offer.settlementMethods,
+                        settlementMethods: offer.settlementMethods,
                         selectedSettlementMethod: $selectedSettlementMethod,
                         stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
                     )
@@ -105,11 +103,20 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                 .padding()
             }
             .onAppear {
+                // Set up the stablecoin NumberFormatter when this view appears
                 stablecoinFormatter.numberStyle = .currency
                 stablecoinFormatter.maximumFractionDigits = 3
             }
         } else {
             Text("This Offer is not available.")
+        }
+    }
+    
+    func createSettlementMethodHeader(numberOfSettlementMethods: Int) -> String {
+        if numberOfSettlementMethods == 1 {
+            return "Settlement Method:"
+        } else {
+            return "Settlement Methods:"
         }
     }
     
@@ -123,37 +130,42 @@ struct ImmutableSettlementMethodSelector: View {
     /**
      The `Offer`'s `SettlementMethod`s.
      */
-    let settlementmethods: [SettlementMethod]
+    let settlementMethods: [SettlementMethod]
     
     /**
-     The currently `SettlementMethod` method, or `nil` of no `SettlementMethod` is currently selected.
+     The currently selected `SettlementMethod`, or `nil` if no `SettlementMethod` is currently selected.
      */
     @Binding var selectedSettlementMethod: SettlementMethod?
     
     /**
-     The currency code of the offer's stablecoin.
+     The currency code of the Offer's stablecoin.
      */
     let stablecoinCurrencyCode: String
     
     var body: some View {
-        ForEach(settlementmethods) { settlementMethod in
-            
-            let color: Color = {
-                if selectedSettlementMethod?.currency == settlementMethod.currency && selectedSettlementMethod?.price == settlementMethod.price && selectedSettlementMethod?.method == settlementMethod.method {
-                    return Color.green
-                } else {
-                    return Color.primary
+        if settlementMethods.count > 0 {
+            ForEach(settlementMethods) { settlementMethod in
+                
+                // If the settlement method that this card represents is the selected settlement method, this card should be colored green.
+                let color: Color = {
+                    if selectedSettlementMethod?.currency == settlementMethod.currency && selectedSettlementMethod?.price == settlementMethod.price && selectedSettlementMethod?.method == settlementMethod.method {
+                        return Color.green
+                    } else {
+                        return Color.primary
+                    }
+                }()
+                
+                Button(action: { selectedSettlementMethod = settlementMethod }) {
+                    ImmutableSettlementMethodCard(
+                        settlementMethod: settlementMethod,
+                        color: color,
+                        stablecoinCurrencyCode: stablecoinCurrencyCode
+                    )
                 }
-            }()
-            
-            Button(action: { selectedSettlementMethod = settlementMethod }) {
-                ImmutableSettlementMethodCard(
-                    settlementMethod: settlementMethod,
-                    strokeColor: color,
-                    stablecoinCurrencyCode: stablecoinCurrencyCode
-                )
+                .accentColor(color)
             }
-            .accentColor(color)
+        } else {
+            Text("No Settlement Methods Found")
         }
     }
 }
@@ -164,14 +176,14 @@ struct ImmutableSettlementMethodSelector: View {
 struct ImmutableSettlementMethodCard: View {
     
     /**
-     The `SettlementMethod`  that this card represents.
+     The `SettlementMethod` that this card represents.
      */
-    @State var settlementMethod: SettlementMethod
+    var settlementMethod: SettlementMethod
     
     /**
-     The color of the stroke surrounding this card.
+     The color of the stroke surrounding this card and the text within it.
      */
-    var strokeColor: Color
+    var color: Color
     
     /**
      The currency code of the currently selected stablecoin.
@@ -182,9 +194,11 @@ struct ImmutableSettlementMethodCard: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(buildCurrencyDescription())
+                    .foregroundColor(color)
                     .bold()
                     .padding(1)
                 Text(buildPriceDescription())
+                    .foregroundColor(color)
                     .bold()
                     .padding(1)
             }
@@ -193,7 +207,7 @@ struct ImmutableSettlementMethodCard: View {
         .padding(15)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(strokeColor, lineWidth: 1)
+                .stroke(color, lineWidth: 1)
         )
     }
     
