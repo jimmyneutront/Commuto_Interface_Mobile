@@ -71,4 +71,9 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
      */
     func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod]) {}
     
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func takeOffer(offer: Offer, takenSwapAmount: Decimal, settlementMethod: SettlementMethod?) {}
+    
 }

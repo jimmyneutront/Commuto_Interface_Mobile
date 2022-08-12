@@ -44,6 +44,30 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
      */
     @State var selectedSettlementMethod: SettlementMethod? = nil
     
+    /**
+     Creates the string that will be displayed in the label  of the button that edits the offer.
+     */
+    func createTakeOfferButtonLabel(offer: Offer) -> String {
+        if offer.takingOfferState == .none || offer.takingOfferState == .error {
+            return "Take Offer"
+        } else if offer.takingOfferState == .completed {
+            return "Offer Taken"
+        } else {
+            return "Taking Offer"
+        }
+    }
+    
+    /**
+     Gets the color of the outline around the button that cancels the offer.
+     */
+    func getTakeOfferButtonOutlineColor(offer: Offer) -> Color {
+        if offer.takingOfferState == .none || offer.takingOfferState == .error {
+            return Color.primary
+        } else {
+            return Color.gray
+        }
+    }
+    
     var body: some View {
         if let offer = offerTruthSource.offers[offerID] {
             let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(
@@ -83,18 +107,33 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         selectedSettlementMethod: $selectedSettlementMethod,
                         stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
                     )
-                    Spacer()
+                    if (offer.takingOfferState != .none && offer.takingOfferState != .error) {
+                        Text(offer.takingOfferState.description)
+                            .font(.title2)
+                    }
+                    if offer.takingOfferState == .error {
+                        Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
+                            .foregroundColor(Color.red)
+                    }
                     Button(
-                        action: {},
+                        action: {
+                            if offer.takingOfferState == .none || offer.takingOfferState == .error {
+                                offerTruthSource.takeOffer(
+                                    offer: offer,
+                                    takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                    settlementMethod: selectedSettlementMethod
+                                )
+                            }
+                        },
                         label: {
-                            Text("Take Offer")
+                            Text(createTakeOfferButtonLabel(offer: offer))
                                 .font(.largeTitle)
                                 .bold()
                                 .padding(10)
                                 .frame(maxWidth: .infinity)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.primary, lineWidth: 3)
+                                        .stroke(getTakeOfferButtonOutlineColor(offer: offer), lineWidth: 3)
                                 )
                         }
                     )

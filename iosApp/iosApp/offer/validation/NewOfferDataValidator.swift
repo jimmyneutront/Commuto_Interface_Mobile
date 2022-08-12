@@ -24,7 +24,7 @@ import web3swift
  
  - Returns: A `ValidatedNewOfferData` derived from the inputs to this function.
  
- - Throws A `NewOfferDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
+ - Throws: A `NewOfferDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
  */
 func validateNewOfferData(
     chainID: BigUInt,

@@ -77,6 +77,19 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     @State private var isShowingTakeOfferSheet = false
     
+    /**
+     The string that  will be displayed in the label  of the button that edits the offer.
+     */
+    var takeOfferButtonLabel: String {
+        if offer.takingOfferState == .none || offer.takingOfferState == .error {
+            return "Take Offer"
+        } else if offer.takingOfferState == .completed {
+            return "Offer Taken"
+        } else {
+            return "Taking Offer"
+        }
+    }
+    
     var body: some View {
         let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
         ScrollView(.vertical, showsIndicators: false) {
@@ -116,7 +129,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                 .padding([.leading, .trailing, .top])
                 SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: offer.settlementMethods)
                     .padding(.leading)
-                VStack {
+                VStack(alignment: .leading) {
                     DisclosureGroup(
                         isExpanded: $isServiceFeeRateDescriptionExpanded,
                         content: {
@@ -214,13 +227,17 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         )
                         .accentColor(Color.red)
                     } else if (offer.state == .offerOpened) {
+                        if offer.takingOfferState == .error {
+                            Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
+                                .foregroundColor(Color.red)
+                        }
                         // We should only display the "Take Offer" button if the user is NOT the maker and if the offer is in the offerOpened state
                         Button(
                             action: {
                                 isShowingTakeOfferSheet = true
                             },
                             label: {
-                                Text("Take Offer")
+                                Text(takeOfferButtonLabel)
                                     .font(.largeTitle)
                                     .bold()
                                     .padding(10)

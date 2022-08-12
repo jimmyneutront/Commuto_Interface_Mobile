@@ -63,7 +63,7 @@ enum OpeningOfferState {
         case .completed:
             return "Offer successfully opened"
         case .error:
-            return "An error occured."
+            return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed.
         }
     }
     

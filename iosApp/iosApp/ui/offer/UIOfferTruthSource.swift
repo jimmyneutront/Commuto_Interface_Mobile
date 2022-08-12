@@ -75,4 +75,18 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
         newSettlementMethods: [SettlementMethod]
     )
     
+    /**
+     Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - settlementMethod: The `SettlementMethod` that the user has selected to send/receive traditional currency payment.
+     */
+    func takeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        settlementMethod: SettlementMethod?
+    )
+    
 }

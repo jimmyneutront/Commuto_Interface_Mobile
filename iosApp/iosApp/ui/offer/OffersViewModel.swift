@@ -90,12 +90,25 @@ class OffersViewModel: UIOfferTruthSource {
      Sets the `editingOfferState` property of the `Offer` in `offers` with the specified `offerID` on the main `DispatchQueue`.
      
      - Parameters:
-        - offerID: THe ID of the `Offer` of which to set the `editingOfferState`.
+        - offerID: The ID of the `Offer` of which to set the `editingOfferState`.
         - state: The value to which the `Offer`'s `editingOfferState` will be set.
      */
     private func setEditingOfferState(offerID: UUID, state: EditingOfferState) {
         DispatchQueue.main.async {
             self.offers[offerID]?.editingOfferState = state
+        }
+    }
+    
+    /**
+     Sets the `takingOfferState` property of the `Offer` in `offers` with the specified `offerID` on the main `DispatchQueue`.
+     
+     - Parameters:
+        - offerID: The ID of the `Offer` of which to set the `takingOfferState`.
+        - state: The value to which the `Offer`'s `takingOfferState` will be set.
+     */
+    private func setTakingOfferState(offerID: UUID, state: TakingOfferState) {
+        DispatchQueue.main.async {
+            self.offers[offerID]?.takingOfferState = state
         }
     }
     
@@ -253,6 +266,45 @@ class OffersViewModel: UIOfferTruthSource {
             logger.error("editOffer: got error during editOffer call. Error: \(error.localizedDescription)")
             offer.editingOfferError = error
             setEditingOfferState(offerID: offer.id, state: .error)
+        }
+    }
+    
+    /**
+     Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell.
+        - settlementMethod: The `SettlementMethod` that the user has selected to send/receive traditional currency payment.
+     */
+    func takeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        settlementMethod: SettlementMethod?
+    ) {
+        Promise<ValidatedNewSwapData> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("takeOffer: validating new swap data for \(offer.id.uuidString)")
+                setTakingOfferState(offerID: offer.id, state: .validating)
+                do {
+                    #warning("TODO: get the proper stablecoin info repo here")
+                    let validatedSwapData = try validateNewSwapData(
+                        offer: offer,
+                        takenSwapAmount: takenSwapAmount,
+                        selectedSettlementMethod: settlementMethod,
+                        stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo)
+                    seal.fulfill(validatedSwapData)
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+            logger.notice("takeOffer: successfully took offer \(offer.id.uuidString)")
+            setTakingOfferState(offerID: offer.id, state: .completed)
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+            logger.error("takeOffer: got error during takeOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+            offer.takingOfferError = error
+            setTakingOfferState(offerID: offer.id, state: .error)
         }
     }
     

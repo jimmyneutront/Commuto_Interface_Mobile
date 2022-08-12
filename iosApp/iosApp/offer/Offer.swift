@@ -119,6 +119,14 @@ class Offer: ObservableObject {
      (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occurred during the offer editing process, or `nil` if no such error has occurred.
      */
     var editingOfferError: Error? = nil
+    /**
+     (This property is used only if the maker of this offer is NOT the user of this interface.) This indicates whether we are currently taking this offer, and if so, what part of the offer taking process we are in.
+     */
+    @Published var takingOfferState = TakingOfferState.none
+    /**
+     (This property is used only if the maker of this offer is NOT the user of this interface.)  The `Error` that we encountered during the offer editing process, or `nil` of no such error has occured.
+     */
+    var takingOfferError: Error? = nil
     
     /**
      Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).
@@ -384,7 +392,7 @@ extension Offer {
             ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
-            havePublicKey: false,
+            havePublicKey: true,
             isUserMaker: false,
             state: .offerOpened
         )!,
