@@ -231,6 +231,13 @@ fun OfferComposable(
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else if (offer.state == OfferState.OFFER_OPENED) {
+                    if (offer.takingOfferState.value == TakingOfferState.EXCEPTION) {
+                        Text(
+                            text = offer.takingOfferException?.message ?: "An unknown exception occurred",
+                            style =  MaterialTheme.typography.h6,
+                            color = Color.Red
+                        )
+                    }
                     /*
                     We should only display the "Take Offer" button if the user is NOT the maker and if the offer is in
                     the offerOpened state
@@ -240,8 +247,13 @@ fun OfferComposable(
                             isShowingTakeOfferSheet.value = !isShowingTakeOfferSheet.value
                         },
                         content = {
+                            val takeOfferButtonLabel = when (offer.takingOfferState.value) {
+                                TakingOfferState.NONE, TakingOfferState.EXCEPTION -> "Take Offer"
+                                TakingOfferState.COMPLETED -> "Offer Taken"
+                                else -> "Taking Offer"
+                            }
                             Text(
-                                text = "Take offer",
+                                text = takeOfferButtonLabel,
                                 style = MaterialTheme.typography.h4,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center

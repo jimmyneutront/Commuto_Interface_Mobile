@@ -11,7 +11,9 @@ import com.commuto.interfacemobile.android.offer.*
 import com.commuto.interfacemobile.android.offer.validation.NewOfferDataValidationException
 import com.commuto.interfacemobile.android.offer.validation.validateEditedSettlementMethods
 import com.commuto.interfacemobile.android.offer.validation.validateNewOfferData
+import com.commuto.interfacemobile.android.offer.validation.validateNewSwapData
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
+import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -121,6 +123,19 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
     }
 
     /**
+     * Sets the [Offer.takingOfferState] value of the [Offer] in [offers] ith the specified [offerID] on the main
+     * coroutine dispatcher.
+     *
+     * @param offerID The ID of the [Offer] of which to set the [Offer.takingOfferState].
+     * @param state The value to which the [Offer]'s [Offer.takingOfferState] will be set.
+     */
+    private suspend fun setTakingOfferState(offerID: UUID, state: TakingOfferState) {
+        withContext(Dispatchers.Main) {
+            offers[offerID]?.takingOfferState?.value = state
+        }
+    }
+
+    /**
      * Gets the current service fee rate via [offerService] in this view model's coroutine scope and sets
      * [serviceFeeRate] equal to the result in the main coroutine dispatcher..
      */
@@ -170,7 +185,6 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
         viewModelScope.launch {
             Log.i(logTag, "openOffer: validating new offer data")
             setOpeningOfferState(OpeningOfferState.VALIDATING)
-            openingOfferState
             try {
                 val serviceFeeRateForOffer = serviceFeeRate.value ?: throw NewOfferDataValidationException("Unable " +
                         "to determine service fee rate")
@@ -280,6 +294,40 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
                     offerID = offer.id,
                     state = EditingOfferState.EXCEPTION
                 )
+            }
+        }
+    }
+
+    /**
+     * Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     *
+     * @param offer The [Offer] to be taken.
+     * @param takenSwapAmount The [BigDecimal] amount of stablecoin that the user wants to buy/sell.
+     * @param settlementMethod The [SettlementMethod] that the user has selected to send/receive traditional currency
+     * payment.
+     */
+    override fun takeOffer(
+        offer: Offer,
+        takenSwapAmount: BigDecimal,
+        settlementMethod: SettlementMethod?
+    ) {
+        viewModelScope.launch {
+            Log.i(logTag, "takeOffer: validating new swap data for ${offer.id}")
+            setTakingOfferState(offerID = offer.id, state = TakingOfferState.VALIDATING)
+            try {
+                // TODO: get the proper stablecoin info repo here
+                /*val validatedSwapData =*/ validateNewSwapData(
+                    offer = offer,
+                    takenSwapAmount = takenSwapAmount,
+                    selectedSettlementMethod = settlementMethod,
+                    stablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
+                )
+                Log.i(logTag, "takeOffer: successfully took offer ${offer.id}")
+                setTakingOfferState(offerID = offer.id, state = TakingOfferState.COMPLETED)
+            } catch (exception: Exception) {
+                Log.e(logTag, "takeOffer: got error during takeOffer call for ${offer.id}", exception)
+                offer.takingOfferException = exception
+                setTakingOfferState(offerID = offer.id, state = TakingOfferState.EXCEPTION)
             }
         }
     }

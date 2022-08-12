@@ -1,10 +1,7 @@
 package com.commuto.interfacemobile.android.ui.offer
 
 import androidx.compose.runtime.MutableState
-import com.commuto.interfacemobile.android.offer.Offer
-import com.commuto.interfacemobile.android.offer.OfferDirection
-import com.commuto.interfacemobile.android.offer.OfferTruthSource
-import com.commuto.interfacemobile.android.offer.SettlementMethod
+import com.commuto.interfacemobile.android.offer.*
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -73,5 +70,19 @@ interface UIOfferTruthSource: OfferTruthSource {
     fun editOffer(
         offer: Offer,
         newSettlementMethods: List<SettlementMethod>
+    )
+
+    /**
+     * Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     *
+     * @param offer The [Offer] to be taken.
+     * @param takenSwapAmount The [BigDecimal] amount of stablecoin that the user wants to buy/sell.
+     * @param settlementMethod The [SettlementMethod] that the user has selected to send/receive traditional currency
+     * payment.
+     */
+    fun takeOffer(
+        offer: Offer,
+        takenSwapAmount: BigDecimal,
+        settlementMethod: SettlementMethod?
     )
 }

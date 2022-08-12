@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.OfferDirection
+import com.commuto.interfacemobile.android.offer.OpeningOfferState
 import com.commuto.interfacemobile.android.offer.SettlementMethod
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import java.math.BigDecimal
@@ -76,5 +77,15 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     override fun editOffer(
         offer: Offer,
         newSettlementMethods: List<SettlementMethod>
+    ) {}
+
+    /**
+     * Does nothing since this class is only used for previewing user interfaces, but is required for implementing
+     * [UIOfferTruthSource]
+     */
+    override fun takeOffer(
+        offer: Offer,
+        takenSwapAmount: BigDecimal,
+        settlementMethod: SettlementMethod?
     ) {}
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.SettlementMethod
+import com.commuto.interfacemobile.android.offer.TakingOfferState
 import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import java.math.BigDecimal
@@ -67,10 +68,36 @@ fun TakeOfferComposable(
     val selectedSettlementMethod = remember { mutableStateOf<SettlementMethod?>(null) }
 
     if (offer == null) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly
+        Column(
+            modifier = Modifier
+                .padding(10.dp)
         ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Text(
+                    text = "Take Offer",
+                    style = MaterialTheme.typography.h4,
+                    fontWeight = FontWeight.Bold,
+                )
+                Button(
+                    onClick = {
+                        closeSheet()
+                    },
+                    content = {
+                        Text(
+                            text = "Cancel",
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor =  Color.Transparent,
+                        contentColor = Color.Black,
+                    ),
+                    elevation = null,
+                )
+            }
             Text(
                 text = "This Offer is not available.",
             )
@@ -79,6 +106,7 @@ fun TakeOfferComposable(
         val stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(
             chainID = offer.chainID, contractAddress = offer.stablecoin
         )
+        val closeSheetButtonLabel = if (offer.takingOfferState.value == TakingOfferState.COMPLETED) "Done" else "Cancel"
         Column(
             modifier = Modifier
                 .padding(10.dp)
@@ -100,7 +128,7 @@ fun TakeOfferComposable(
                     },
                     content = {
                         Text(
-                            text = "Cancel",
+                            text = closeSheetButtonLabel,
                             fontWeight = FontWeight.Bold,
                         )
                     },
@@ -161,17 +189,49 @@ fun TakeOfferComposable(
                 selectedSettlementMethod = selectedSettlementMethod,
                 stablecoinCurrencyCode = stablecoinInformation?.currencyCode ?: "Unknown Stablecoin"
             )
+            if (offer.takingOfferState.value != TakingOfferState.NONE &&
+                offer.takingOfferState.value != TakingOfferState.EXCEPTION) {
+                Text(
+                    text = offer.takingOfferState.value.description,
+                    style =  MaterialTheme.typography.h6,
+                )
+            }
+            if (offer.takingOfferState.value == TakingOfferState.EXCEPTION) {
+                Text(
+                    text = offer.takingOfferException?.message ?: "An unknown exception occurred",
+                    style =  MaterialTheme.typography.h6,
+                    color = Color.Red
+                )
+            }
+            val takeOfferButtonOutlineColor = when (offer.takingOfferState.value) {
+                TakingOfferState.NONE, TakingOfferState.EXCEPTION -> Color.Black
+                else -> Color.Gray
+            }
             Button(
-                onClick = {},
+                onClick = {
+                    if (offer.takingOfferState.value == TakingOfferState.NONE ||
+                        offer.takingOfferState.value == TakingOfferState.EXCEPTION) {
+                        offerTruthSource.takeOffer(
+                            offer = offer,
+                            takenSwapAmount = specifiedStablecoinAmount.value,
+                            settlementMethod = selectedSettlementMethod.value
+                        )
+                    }
+                },
                 content = {
+                    val takeOfferButtonLabel = when (offer.takingOfferState.value) {
+                        TakingOfferState.NONE, TakingOfferState.EXCEPTION -> "Take Offer"
+                        TakingOfferState.COMPLETED -> "Offer Taken"
+                        else -> "Taking Offer"
+                    }
                     Text(
-                        text = "Take offer",
+                        text = takeOfferButtonLabel,
                         style = MaterialTheme.typography.h4,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                 },
-                border = BorderStroke(3.dp, Color.Black),
+                border = BorderStroke(3.dp, takeOfferButtonOutlineColor),
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor =  Color.Transparent,
                     contentColor = Color.Black,
