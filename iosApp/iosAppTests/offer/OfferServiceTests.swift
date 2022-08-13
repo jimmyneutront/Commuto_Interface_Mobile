@@ -621,6 +621,8 @@ class OfferServiceTests: XCTestCase {
             var appendedEvent: OfferEditedEvent? = nil
             var removedEvent: OfferEditedEvent? = nil
             
+            let eventRemovedExpectation = XCTestExpectation(description: "Fulfilled when eventRemovedExpectation is called")
+            
             override func append(_ element: OfferEditedEvent) {
                 appendedEvent = element
                 super.append(element)
@@ -628,6 +630,7 @@ class OfferServiceTests: XCTestCase {
             
             override func remove(_ elementToRemove: OfferEditedEvent) {
                 removedEvent = elementToRemove
+                eventRemovedExpectation.fulfill()
                 super.remove(elementToRemove)
             }
             
@@ -643,22 +646,9 @@ class OfferServiceTests: XCTestCase {
                 offers = [:]
             }
             
-            let editedOfferAddedExpectation = XCTestExpectation(description: "Fulfilled when the edited offer is added to the offers dictionary")
             var serviceFeeRate: BigUInt?
             
-            var offersAddedCounter = 0
-            
-            var offers: [UUID: Offer] {
-                didSet {
-                    // We want to ignore initialization and only fulfill when two `Offer`s have been added.
-                    if offers.keys.count != 0 {
-                        offersAddedCounter += 1
-                        if offersAddedCounter == 2 {
-                            editedOfferAddedExpectation.fulfill()
-                        }
-                    }
-                }
-            }
+            var offers: [UUID: Offer]
             
         }
         
@@ -681,7 +671,7 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.blockchainService = blockchainService
         blockchainService.listen()
-        wait(for: [offerTruthSource.editedOfferAddedExpectation], timeout: 60.0)
+        wait(for: [offerEditedEventRepository.eventRemovedExpectation], timeout: 60.0)
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 1)
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID]!.id == expectedOfferID)
@@ -702,7 +692,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.state, OfferState.awaitingPublicKeyAnnouncement.asString)
         let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
-        XCTAssertEqual(settlementMethodsInDatabase![0], Data("EUR-SEPA|an edited price here".utf8).base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase![0], Data("{\"f\":\"EUR\",\"p\":\"SEPA\",\"m\":\"0.98\"}".utf8).base64EncodedString())
     }
     
     /**

@@ -498,7 +498,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`.
      
-     Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, verifies that the chain ID of the event and the offer data match, attempts to get the offer corresponding to the ID specified in `event` from persistent storage, creates an updated `Offer` with the results of both calls, updates the settlement methods of the corresponding persistently stored offer, removes `event` from `offerEditedEventsRepository`, and then synchronously maps the offer's ID to the updated `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, verifies that the chain ID of the event and the offer data match, checks for the existence of an offer corresponding to the ID specified in `event` in persistent storage, updates the settlement methods of the corresponding persistently stored offer, removes `event` from `offerEditedEventsRepository`, and then synchronously updates the settlement methods of the offer with the ID specified in `event` (if present) in `offerTruthSource`'s `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferEditedEvent` of which `OfferService` is being notified.
      
@@ -521,59 +521,25 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         }
         logger.notice("handleOfferEditedEvent: checking for offer \(event.id.uuidString) in databaseService")
         let offerInDatabase = try databaseService.getOffer(id: event.id.asData().base64EncodedString())
-        let havePublicKey = offerInDatabase?.havePublicKey ?? false
-        // If the user is the offer maker, then the offer would be present in the database
-        let isUserMaker = offerInDatabase?.isUserMaker ?? false
-        let stateOfOfferInDatabase = OfferState.fromString(offerInDatabase?.state)
-        var state: OfferState {
-            if let state = stateOfOfferInDatabase {
-                return state
-            } else if havePublicKey {
-                return .offerOpened // This should never be reached for an offer made by the user of this interface
-            } else {
-                return .awaitingPublicKeyAnnouncement
-            }
-        }
         if offerInDatabase == nil {
             logger.warning("handleOfferEditedEvent: could not find persistently stored offer \(event.id.uuidString) during handleOfferEditedEvent call")
         }
-        guard let offer = Offer(
-            isCreated: offerStruct.isCreated,
-            isTaken: offerStruct.isTaken,
-            id: event.id,
-            maker: offerStruct.maker,
-            interfaceId: offerStruct.interfaceId,
-            stablecoin: offerStruct.stablecoin,
-            amountLowerBound: offerStruct.amountLowerBound,
-            amountUpperBound: offerStruct.amountUpperBound,
-            securityDepositAmount: offerStruct.securityDepositAmount,
-            serviceFeeRate: offerStruct.serviceFeeRate,
-            onChainDirection: offerStruct.direction,
-            onChainSettlementMethods: offerStruct.settlementMethods,
-            protocolVersion: offerStruct.protocolVersion,
-            chainID: offerStruct.chainID,
-            havePublicKey: havePublicKey,
-            isUserMaker: isUserMaker,
-            state: state
-        ) else {
-            throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferEditedEvent call. OfferEditedEvent.id: " + event.id.uuidString)
-        }
-        let offerIdString = offer.id.asData().base64EncodedString()
-        let chainIDString = String(offer.chainID)
+        let offerIdString = event.id.asData().base64EncodedString()
+        let chainIDString = String(event.chainID)
         var settlementMethodStrings: [String] = []
         for settlementMethod in offerStruct.settlementMethods {
             settlementMethodStrings.append(settlementMethod.base64EncodedString())
         }
         try databaseService.storeSettlementMethods(offerID: offerIdString, _chainID: chainIDString, settlementMethods: settlementMethodStrings)
-        logger.notice("handleOfferEditedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
-        offerEditedEventRepository.remove(event)
-        guard var offerTruthSource = offerTruthSource else {
+        logger.notice("handleOfferEditedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(event.id.uuidString)")
+        guard let offerTruthSource = offerTruthSource else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferEditedEvent call")
         }
         DispatchQueue.main.sync {
-            offerTruthSource.offers[offer.id] = offer
+            offerTruthSource.offers[event.id]?.updateSettlementMethodsFromChain(onChainSettlementMethods: offerStruct.settlementMethods)
         }
-        logger.notice("handleOfferEditedEvent: added updated offer \(offer.id.uuidString) to offerTruthSource")
+        logger.notice("handleOfferEditedEvent: updated offer \(event.id.uuidString) in offerTruthSource")
+        offerEditedEventRepository.remove(event)
     }
     
     /**
