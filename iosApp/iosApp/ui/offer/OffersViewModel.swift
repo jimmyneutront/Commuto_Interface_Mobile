@@ -158,10 +158,10 @@ class OffersViewModel: UIOfferTruthSource {
         direction: OfferDirection,
         settlementMethods: [SettlementMethod]
     ) {
+        setOpeningOfferState(state: .validating)
         Promise<ValidatedNewOfferData> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("openOffer: validating new offer data")
-                setOpeningOfferState(state: .validating)
                 guard let serviceFeeRateForOffer = serviceFeeRate else {
                     seal.reject(NewOfferDataValidationError(desc: "Unable to determine service fee rate"))
                     return
@@ -240,10 +240,10 @@ class OffersViewModel: UIOfferTruthSource {
         offer: Offer,
         newSettlementMethods: [SettlementMethod]
     ) {
+        setEditingOfferState(offerID: offer.id, state: .editing)
         Promise<Array<SettlementMethod>> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("editOffer: editing \(offer.id.uuidString)")
-                setEditingOfferState(offerID: offer.id, state: .editing)
                 offer.editingOfferError = nil
                 logger.notice("editOffer: validating edited settlement methods for \(offer.id.uuidString)")
                 do {
@@ -282,10 +282,10 @@ class OffersViewModel: UIOfferTruthSource {
         takenSwapAmount: Decimal,
         settlementMethod: SettlementMethod?
     ) {
+        setTakingOfferState(offerID: offer.id, state: .validating)
         Promise<ValidatedNewSwapData> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("takeOffer: validating new swap data for \(offer.id.uuidString)")
-                setTakingOfferState(offerID: offer.id, state: .validating)
                 do {
                     #warning("TODO: get the proper stablecoin info repo here")
                     let validatedSwapData = try validateNewSwapData(
