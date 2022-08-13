@@ -18,6 +18,12 @@ import BigInt
     - the user has selected a settlement method
     - the settlement method selected by the user is accepted by the offer maker
  
+ - Parameters:
+    - offer: The `Offer` that is being taken.
+    - takenSwapAmount: (If the lower and upper bound amounts of `offer` are equal, this will not be used.) The stablecoin amount that the user wants to buy/sell as a `Decimal`
+    - selectedSettlementMethod: The settlement method by which the user wants to send/receive payment to/from the maker.
+    - stablecoinInformationRepository: The `StablecoinInformationRepository` that this will use to convert `takenSwapAmount` to ERC20 base units.
+ 
  - Returns: A `ValidatedNewSwapData` derived from the inputs to this function.
  
  - Throws: A `NewSwapDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
@@ -51,7 +57,7 @@ func validateNewSwapData(
         throw NewSwapDataValidationError(desc: "You must specify a stablecoin amount that is not greater than the maximum amount.")
     }
     guard let selectedSettlementMethod = selectedSettlementMethod else {
-        throw NewSwapDataValidationError(desc: "You must select a settlement method.")
+        throw NewSwapDataValidationError(desc: ".")
     }
     guard let selectedSettlementMethodInArray = offer.settlementMethods.first(where: { settlementMethod in
         settlementMethod.currency == selectedSettlementMethod.currency && settlementMethod.price == selectedSettlementMethod.price && settlementMethod.method == selectedSettlementMethod.method

@@ -174,12 +174,9 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     )
                     .accentColor(Color.primary)
                     if (offer.isUserMaker) {
-                        if offer.editingOfferError != nil {
-                            HStack {
-                                Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
-                                    .foregroundColor(Color.red)
-                                Spacer()
-                            }
+                        if offer.editingOfferState == .error {
+                            Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
+                                .foregroundColor(Color.red)
                         }
                         NavigationLink(destination:
                                         EditOfferView(

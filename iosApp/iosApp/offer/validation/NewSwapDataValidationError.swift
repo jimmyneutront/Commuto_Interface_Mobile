@@ -8,6 +8,9 @@
 
 import Foundation
 
+/**
+ A `LocalizedError` thrown if a problem is encountered while validating data to take an offer.
+ */
 struct NewSwapDataValidationError: LocalizedError {
     
     /**
