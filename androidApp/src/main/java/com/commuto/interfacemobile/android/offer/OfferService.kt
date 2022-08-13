@@ -532,16 +532,15 @@ class OfferService (
      * The method called by [BlockchainService] to notify [OfferService] of a [OfferEditedEvent].
      *
      * Once notified, [OfferService] saves [event] in [offerEditedEventRepository], gets updated on-chain offer data by
-     * calling [BlockchainService.getOffer], verifies that the chain ID of the event and the offer data match, attempts
-     * to get the offer corresponding to the ID specified in [event] from persistent storage, creates an updated [Offer]
-     * with the results of both calls, updates the settlement methods of the corresponding persistently stored offer,
-     * removes [event] from [offerEditedEventRepository], and then adds the updated [Offer] to [offerTruthSource] on the
-     * main coroutine dispatcher.
+     * calling [BlockchainService.getOffer], verifies that the chain ID of the event and the offer data match, checks
+     * for the existence of an offer corresponding to the ID specified in [event] in persistent storage, updates the
+     * settlement methods of the corresponding persistently stored offer, updates the settlement methods of the [Offer]
+     * with the ID specified in [event] (if present) in [OfferTruthSource.offers] on the main coroutine dispatcher.
      *
      * @param event The [OfferEditedEvent] of which [OfferService] is being notified.
      *
-     * @throws [IllegalStateException] if no offer is found with the ID specified in [event], or if the chain ID of [event]
-     * doesn't match the chain ID of the offer obtained from [BlockchainService.getOffer] when called with
+     * @throws [IllegalStateException] if no offer is found with the ID specified in [event], or if the chain ID of
+     * [event] doesn't match the chain ID of the offer obtained from [BlockchainService.getOffer] when called with
      * [OfferEditedEvent.offerID].
      */
     override suspend fun handleOfferEditedEvent(event: OfferEditedEvent) {
@@ -571,52 +570,26 @@ class OfferService (
         val offerIDByteArray = offerIDByteBuffer.array()
         val offerIDString = encoder.encodeToString(offerIDByteArray)
         val offerInDatabase = databaseService.getOffer(id = offerIDString)
-        val havePublicKey = (offerInDatabase?.havePublicKey == 1L)
-        // If the user is the offer maker, then the offer would be present in the database
-        val isUserMaker = (offerInDatabase?.isUserMaker == 1L)
-        val state: OfferState = OfferState.fromString(string = offerInDatabase?.state)
-            ?: if (havePublicKey) {
-                OfferState.OFFER_OPENED // This should never be reached for an offer made by the user of this interface
-            } else {
-                OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT
-            }
-        Log.i(logTag, "handleOfferOpenedEvent: havePublicKey for offer ${event.offerID}: $havePublicKey")
-        val offer = Offer.fromOnChainData(
-            isCreated = offerStruct.isCreated,
-            isTaken = offerStruct.isTaken,
-            id = event.offerID,
-            maker = offerStruct.maker,
-            interfaceId = offerStruct.interfaceID,
-            stablecoin = offerStruct.stablecoin,
-            amountLowerBound = offerStruct.amountLowerBound,
-            amountUpperBound = offerStruct.amountUpperBound,
-            securityDepositAmount = offerStruct.securityDepositAmount,
-            serviceFeeRate = offerStruct.serviceFeeRate,
-            onChainDirection = offerStruct.direction,
-            onChainSettlementMethods = offerStruct.settlementMethods,
-            protocolVersion = offerStruct.protocolVersion,
-            chainID = offerStruct.chainID,
-            havePublicKey = havePublicKey,
-            isUserMaker = isUserMaker,
-            state = state
-        )
-        val chainIDString = offer.chainID.toString()
-        val settlementMethodStrings = offer.onChainSettlementMethods.map {
+        if (offerInDatabase == null) {
+            Log.w(logTag, "handleOfferEditedEvent: could not find persistently stored offer ${event.offerID} " +
+                    "during handleOfferEditedEvent call")
+        }
+        val chainIDString = event.chainID.toString()
+        val settlementMethodStrings = offerStruct.settlementMethods.map {
             encoder.encodeToString(it)
         }
         databaseService.storeSettlementMethods(offerIDString, chainIDString, settlementMethodStrings)
         Log.i(
             logTag, "handleOfferEditedEvent: persistently stored ${settlementMethodStrings.size} updated " +
-                    "settlement methods for offer ${offer.id}"
+                    "settlement methods for offer ${event.offerID}"
         )
-        databaseService.updateOfferHavePublicKey(offerIDString, chainIDString, havePublicKey)
-        Log.i(logTag, "handleOfferEditedEvent: persistently updated havePublicKey for offer ${offer.id}")
-        offerEditedEventRepository.remove(event)
         withContext(Dispatchers.Main) {
-            offerTruthSource.removeOffer(offer.id)
-            offerTruthSource.addOffer(offer)
+            offerTruthSource.offers[event.offerID]?.updateSettlementMethodsFromChain(
+                onChainSettlementMethods = offerStruct.settlementMethods
+            )
         }
-        Log.i(logTag, "handleOfferEditedEvent: added updated offer ${offer.id} to offerTruthSource")
+        offerEditedEventRepository.remove(event)
+        Log.i(logTag, "handleOfferEditedEvent: updated offer ${event.offerID} in offerTruthSource")
     }
 
     /**

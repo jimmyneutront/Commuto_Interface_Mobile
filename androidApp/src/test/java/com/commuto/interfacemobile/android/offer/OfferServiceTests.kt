@@ -664,6 +664,8 @@ class OfferServiceTests {
             var appendedEvent: OfferEditedEvent? = null
             var removedEvent: OfferEditedEvent? = null
 
+            val removedEventChannel = Channel<OfferEditedEvent>()
+
             override fun append(element: OfferEditedEvent) {
                 appendedEvent = element
                 super.append(element)
@@ -671,6 +673,9 @@ class OfferServiceTests {
 
             override fun remove(elementToRemove: OfferEditedEvent) {
                 removedEvent = elementToRemove
+                runBlocking {
+                    removedEventChannel.send(elementToRemove)
+                }
                 super.remove(elementToRemove)
             }
 
@@ -691,19 +696,10 @@ class OfferServiceTests {
             init {
                 offerService.setOfferTruthSource(this)
             }
-            val offersChannel = Channel<Offer>()
-            var offersAddedCounter = 0
             override var offers = mutableStateMapOf<UUID, Offer>()
             override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
             override fun addOffer(offer: Offer) {
-                offersAddedCounter++
                 offers[offer.id] = offer
-                if (offersAddedCounter == 2) {
-                    // We only want to send the offer with the updated price, not the first one.
-                    runBlocking {
-                        offersChannel.send(offer)
-                    }
-                }
             }
 
             override fun removeOffer(id: UUID) {
@@ -730,7 +726,7 @@ class OfferServiceTests {
         val encoder = Base64.getEncoder()
         runBlocking {
             withTimeout(60_000) {
-                offerTruthSource.offersChannel.receive()
+                offerEditedEventRepository.removedEventChannel.receive()
                 assertFalse(exceptionHandler.gotError)
                 assert(offerTruthSource.offers.size == 1)
                 assertEquals(offerTruthSource.offers[expectedOfferId]!!.id, expectedOfferId)
