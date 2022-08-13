@@ -221,7 +221,7 @@ class OffersViewModel: UIOfferTruthSource {
             logger.notice("cancelOffer: successfully canceled offer \(offer.id.uuidString)")
             setCancelingOfferState(offerID: offer.id, state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
-            logger.error("cancelOffer: got error during cancelOffer call. Error: \(error.localizedDescription)")
+            logger.error("cancelOffer: got error during cancelOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
             offer.cancelingOfferError = error
             setCancelingOfferState(offerID: offer.id, state: .error)
         }
@@ -263,7 +263,7 @@ class OffersViewModel: UIOfferTruthSource {
             offer.selectedSettlementMethods = []
             setEditingOfferState(offerID: offer.id, state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
-            logger.error("editOffer: got error during editOffer call. Error: \(error.localizedDescription)")
+            logger.error("editOffer: got error during editOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
             offer.editingOfferError = error
             setEditingOfferState(offerID: offer.id, state: .error)
         }
