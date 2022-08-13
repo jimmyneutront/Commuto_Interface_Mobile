@@ -73,12 +73,11 @@ class Offer: ObservableObject {
     /**
      Corresponds to an on-chain Offer's `settlementMethods` property.
      */
-    let onChainSettlementMethods: [Data]
-    #warning("TODO: every time this is changed, settlementMethods should be re-deserialized from the new values")
+    private(set) var onChainSettlementMethods: [Data]
     /**
      An `Array` of `SettlementMethod`s derived from parsing `onChainSettlementMethods`.
      */
-    @Published var settlementMethods: [SettlementMethod]
+    @Published private(set) var settlementMethods: [SettlementMethod]
     /**
      Corresponds to an on-chain Offer's `protocolVersion` property.
      */
@@ -271,6 +270,34 @@ class Offer: ObservableObject {
         self.havePublicKey = havePublicKey
         self.isUserMaker = isUserMaker
         self.state = state
+    }
+    
+    /**
+     Updates this `Offer`'s settlement methods given an `Array` of `SettlementMethod`s.
+     
+     When called, it serializes the contents of `settlementMethods` and sets `onChainSettlementMethods` equal to a list of the results. Then it sets `Offer.settlementMethods` equal to `settlementMethods`.
+     
+     - Parameter settlementMethods: An updated `Array` of `SettlementMethod`s.
+     */
+    func updateSettlementMethods(settlementMethods: [SettlementMethod]) throws {
+        self.onChainSettlementMethods = try settlementMethods.map { settlementMethod in
+            return try JSONEncoder().encode(settlementMethod)
+        }
+        self.settlementMethods = settlementMethods
+    }
+    
+    /**
+     Updates this `Offer`'s settlement methods given an `Array` of serialized settlement methods as `Data`.
+     
+     When called, it deserializes the contents of `onChainSettlementMethods` and sets `settlementMethods` equal to an `Array` of the results. Then it sets `Offer.onChainSettlementMethods` equal to `onChainSettlementMethods`.
+     
+     - Parameter onChainSettlementMethods: An updated `Array` of serialized settlement methods as `Data`.
+     */
+    func updateSettlementMethodsFromChain(onChainSettlementMethods: [Data]) {
+        self.settlementMethods = onChainSettlementMethods.compactMap { onChainSettlementMethod in
+            return try? JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+        }
+        self.onChainSettlementMethods = onChainSettlementMethods
     }
     
     /**

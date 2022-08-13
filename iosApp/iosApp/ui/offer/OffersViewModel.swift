@@ -258,7 +258,7 @@ class OffersViewModel: UIOfferTruthSource {
             return offerService.editOffer(offerID: offer.id, newSettlementMethods: newSettlementMethods)
         }.done(on: DispatchQueue.main) { [self] _ in
             logger.notice("editOffer: successfully edited offer \(offer.id.uuidString)")
-            offer.settlementMethods = newSettlementMethods
+            try offer.updateSettlementMethods(settlementMethods: newSettlementMethods)
             // We have successfully edited the offer, so we empty the selected settlement method list.
             offer.selectedSettlementMethods = []
             setEditingOfferState(offerID: offer.id, state: .completed)
