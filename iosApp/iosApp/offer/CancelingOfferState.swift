@@ -11,19 +11,19 @@
  */
 enum CancelingOfferState {
     /**
-     Indicates that the corresponding offer is open and not currently being canceled.
+     Indicates that we are NOT currently canceling the corresponding offer.
      */
     case none
     /**
-     Indicates that the corresponding offer is currently being canceled.
+     Indicates that we are currently canceling the corresponding offer.
      */
     case canceling
     /**
-     Indicates that the corresponding offer has been canceled.
+     Indicates that we have canceled the corresponding offer.
      */
     case completed
     /**
-     Indicates that an error was encountered during offer cancellation.
+     Indicates that we encountered an error while canceling the corresponding offer.
      */
     case error
 }

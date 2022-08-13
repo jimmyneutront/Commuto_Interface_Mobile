@@ -11,19 +11,19 @@
  */
 enum EditingOfferState {
     /**
-     Indicates that the corresponding offer is not currently being edited.
+     Indicates that we are NOT currently editing the corresponding offer.
      */
     case none
     /**
-     Indicates that the corresponding offer is currently being edited.
+     Indicates that we are currently editing the corresponding offer.
      */
     case editing
     /**
-     Indicates that the corresponding offer has been edited.
+     Indicates that we have edited the corresponding offer.
      */
     case completed
     /**
-     Indicates that an error was encountered during offer editing.
+     Indicates that we encountered an exception while editing the corresponding offer.
      */
     case error
 }

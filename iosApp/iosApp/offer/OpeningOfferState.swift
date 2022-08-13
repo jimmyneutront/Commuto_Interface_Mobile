@@ -11,7 +11,7 @@
  */
 enum OpeningOfferState {
     /**
-     Indicates that we are not currently creating a new offer.
+     Indicates that we are not currently opening a new offer.
      */
     case none
     /**
@@ -39,16 +39,16 @@ enum OpeningOfferState {
      */
     case completed
     /**
-     Indicates that an error was encountered during offer creation.
+     Indicates that we encountered an exception during offer creation.
      */
     case error
     
     /**
-     A human readable string describing the current state.
+     A human-readable string describing the current state.
      */
     var description: String {
         switch self {
-        case .none: // Note: This should not be used.
+        case .none: // Note: This should not be used
             return "Press Open Offer to open the offer"
         case .validating:
             return "Validating offer data..."
@@ -63,7 +63,7 @@ enum OpeningOfferState {
         case .completed:
             return "Offer successfully opened"
         case .error:
-            return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed.
+            return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed
         }
     }
     
