@@ -535,10 +535,14 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         guard let offerTruthSource = offerTruthSource else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferEditedEvent call")
         }
-        DispatchQueue.main.sync {
-            offerTruthSource.offers[event.id]?.updateSettlementMethodsFromChain(onChainSettlementMethods: offerStruct.settlementMethods)
+        if let offer = offerTruthSource.offers[event.id] {
+            DispatchQueue.main.async {
+                offer.updateSettlementMethodsFromChain(onChainSettlementMethods: offerStruct.settlementMethods)
+            }
+            logger.notice("handleOfferEditedEvent: updated offer \(event.id.uuidString) in offerTruthSource")
+        } else {
+            logger.warning("handleOfferEditedEvent: could not find offer \(event.id.uuidString) in offerTruthSource")
         }
-        logger.notice("handleOfferEditedEvent: updated offer \(event.id.uuidString) in offerTruthSource")
         offerEditedEventRepository.remove(event)
     }
     
