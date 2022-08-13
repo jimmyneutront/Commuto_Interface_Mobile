@@ -10,7 +10,7 @@ package com.commuto.interfacemobile.android.offer
  * offer.
  * @property COMPLETED Indicates that we have taken the corresponding offer.
  * @property EXCEPTION Indicates that we encountered an exception while taking the corresponding offer.
- * @property description A human readable string describing the current state.
+ * @property description A human-readable string describing the current state.
  */
 enum class TakingOfferState {
     NONE,
