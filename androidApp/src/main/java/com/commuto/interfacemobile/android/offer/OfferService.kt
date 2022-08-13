@@ -583,13 +583,18 @@ class OfferService (
             logTag, "handleOfferEditedEvent: persistently stored ${settlementMethodStrings.size} updated " +
                     "settlement methods for offer ${event.offerID}"
         )
-        withContext(Dispatchers.Main) {
-            offerTruthSource.offers[event.offerID]?.updateSettlementMethodsFromChain(
-                onChainSettlementMethods = offerStruct.settlementMethods
-            )
+        val offer = offerTruthSource.offers[event.offerID]
+        if (offer != null) {
+            withContext(Dispatchers.Main) {
+                offer.updateSettlementMethodsFromChain(
+                    onChainSettlementMethods = offerStruct.settlementMethods
+                )
+            }
+            Log.i(logTag, "handleOfferEditedEvent: updated offer ${event.offerID} in offerTruthSource")
+        } else {
+            Log.w(logTag, "handleOfferEditedEvent: could not find offer ${event.offerID} in offerTruthSource")
         }
         offerEditedEventRepository.remove(event)
-        Log.i(logTag, "handleOfferEditedEvent: updated offer ${event.offerID} in offerTruthSource")
     }
 
     /**
