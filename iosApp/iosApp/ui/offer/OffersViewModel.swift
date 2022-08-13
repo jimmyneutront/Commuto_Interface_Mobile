@@ -192,7 +192,7 @@ class OffersViewModel: UIOfferTruthSource {
                 afterPersistentStorage: { self.setOpeningOfferState(state: .approving) },
                 afterTransferApproval: { self.setOpeningOfferState(state: .opening) }
             )
-        }.done { [self] _ in
+        }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
             logger.notice("openOffer: successfully opened offer")
             setOpeningOfferState(state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
