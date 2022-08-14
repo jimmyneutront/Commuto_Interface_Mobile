@@ -8,6 +8,7 @@
 
 import BigInt
 import Foundation
+import os
 import web3swift
 
 /**
@@ -148,6 +149,7 @@ class Offer: ObservableObject {
         - havePublicKey: Indicates whether this interface has, in persistent storage, the public key specified by the `interfaceId` parameter.
         - isUserMaker: Indicates whether the user of this interface is the maker of this offer.
         - state: Indicates the current state of this offer.
+        - logger: An optional `Logger` to log warnings when this is unable to deserialize `Data` in `onChainSettlementMethods`
      */
     init?(
         isCreated: Bool,
@@ -166,7 +168,8 @@ class Offer: ObservableObject {
         chainID: BigUInt,
         havePublicKey: Bool,
         isUserMaker: Bool,
-        state: OfferState
+        state: OfferState,
+        logger: Logger? = nil
     ) {
         self.isCreated = isCreated
         self.isTaken = isTaken
@@ -190,7 +193,14 @@ class Offer: ObservableObject {
         }
         self.onChainSettlementMethods = onChainSettlementMethods
         self.settlementMethods = onChainSettlementMethods.compactMap { onChainSettlementMethod in
-            return try? JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+            do {
+                return try JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+            } catch {
+                if let logger = logger {
+                    logger.warning("Offer: got exception while deserializing \(onChainSettlementMethod.base64EncodedString()) : \(error.localizedDescription)")
+                }
+                return nil
+            }
         }
         self.protocolVersion = protocolVersion
         self.chainID = chainID
@@ -291,11 +301,20 @@ class Offer: ObservableObject {
      
      When called, it deserializes the contents of `onChainSettlementMethods` and sets `settlementMethods` equal to an `Array` of the results. Then it sets `Offer.onChainSettlementMethods` equal to `onChainSettlementMethods`.
      
-     - Parameter onChainSettlementMethods: An updated `Array` of serialized settlement methods as `Data`.
+     - Parameters:
+        - onChainSettlementMethods: An updated `Array` of serialized settlement methods as `Data`.
+        - logger: An optional `Logger` to log warnings when this is unable to deserialize `Data` in `onChainSettlementMethods`
      */
-    func updateSettlementMethodsFromChain(onChainSettlementMethods: [Data]) {
+    func updateSettlementMethodsFromChain(onChainSettlementMethods: [Data], logger: Logger?) {
         self.settlementMethods = onChainSettlementMethods.compactMap { onChainSettlementMethod in
-            return try? JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+            do {
+                return try JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+            } catch {
+                if let logger = logger {
+                    logger.warning("updateSettlementMethodsFromChain: got exception while deserializing \(onChainSettlementMethod.base64EncodedString()) : \(error.localizedDescription)")
+                }
+                return nil
+            }
         }
         self.onChainSettlementMethods = onChainSettlementMethods
     }
