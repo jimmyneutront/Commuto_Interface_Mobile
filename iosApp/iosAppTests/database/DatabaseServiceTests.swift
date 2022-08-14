@@ -180,5 +180,67 @@ class DatabaseServiceTests: XCTestCase {
         let publicKey = try dbService.getPublicKey(interfaceId: "interf_id")
         XCTAssertEqual(expectedPublicKey, publicKey)
     }
+    
+    func testStoreAndGetAndDeleteSwap() throws {
+        let swapToStore = DatabaseSwap(
+            id: "a_uuid",
+            isCreated: true,
+            requiresFill: false,
+            maker: "maker_address",
+            makerInterfaceID: "maker_interface_id",
+            taker: "taker_address",
+            takerInterfaceID: "taker_interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            takenSwapAmount: "taken_swap_amount",
+            serviceFeeAmount: "service_fee_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            onChainSettlementMethod: "settlement_method",
+            protocolVersion: "some_version",
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "dispute_raiser",
+            chainID: "chain_id"
+        )
+        try dbService.storeSwap(swap: swapToStore)
+        let anotherSwapToStore = DatabaseSwap(
+            id: "a_uuid",
+            isCreated: true,
+            requiresFill: false,
+            maker: "another_maker_address",
+            makerInterfaceID: "another_maker_interface_id",
+            taker: "another_taker_address",
+            takerInterfaceID: "another_taker_interface_id",
+            stablecoin: "another_stablecoin_address",
+            amountLowerBound: "another_lower_bound_amount",
+            amountUpperBound: "another_upper_bound_amount",
+            securityDepositAmount: "another_security_deposit_amount",
+            takenSwapAmount: "another_taken_swap_amount",
+            serviceFeeAmount: "another_service_fee_amount",
+            serviceFeeRate: "another_service_fee_rate",
+            onChainDirection: "another_direction",
+            onChainSettlementMethod: "another_settlement_method",
+            protocolVersion: "another_version",
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "another_dispute_raiser",
+            chainID: "another_chain_id"
+        )
+        // This should do nothing and not throw
+        try dbService.storeSwap(swap: anotherSwapToStore)
+        // This should not throw since only one such Swap should exist in the database
+        let returnedSwap = try dbService.getSwap(id: "a_uuid")
+        XCTAssertEqual(swapToStore, returnedSwap)
+        try dbService.deleteSwaps(swapID: "a_uuid", chainID: "chain_id")
+        let returnedSwapAfterDeletion = try dbService.getSwap(id: "a_uuid")
+        XCTAssertEqual(returnedSwapAfterDeletion, nil)
+    }
 
 }

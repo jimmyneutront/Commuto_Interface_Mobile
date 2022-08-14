@@ -55,11 +55,19 @@ class DatabaseService {
      A database table of `PublicKey`s.
      */
     let publicKeys = Table("PublicKey")
+    /**
+     A database table of `Swap`s.
+     */
+    let swaps = Table("Swap")
     
     /**
      A database structure representing an offer ID.
      */
     let offerId = Expression<String>("offerId")
+    /**
+     A database structure representing a swap ID.
+     */
+    let swapID = Expression<String>("swapID")
     /**
      A database structure representing an interface ID.
      */
@@ -73,7 +81,7 @@ class DatabaseService {
      */
     let privateKey = Expression<String>("privateKey")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `isCreated` property.
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `isCreated` property.
      */
     let isCreated = Expression<Bool>("isCreated")
     /**
@@ -81,45 +89,89 @@ class DatabaseService {
      */
     let isTaken = Expression<Bool>("isTaken")
     /**
-     A database structure representing the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `requiresFill` property.
+     */
+    let requiresFill = Expression<Bool>("requiresFill")
+    /**
+     A database structure representing the maker of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
      */
     let maker = Expression<String>("maker")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `makerInterfaceID` property,
+     */
+    let makerInterfaceID = Expression<String>("makerInterfaceID")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `taker` property.
+     */
+    let taker = Expression<String>("taker")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `takerInterfaceID` property.
+     */
+    let takerInterfaceID = Expression<String>("takerInterfaceID")
     /**
      A database structure representing a stablecoin smart contract address.
      */
     let stablecoin = Expression<String>("stablecoin")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `amountLowerBound` property.
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `amountLowerBound` property.
      */
     let amountLowerBound = Expression<String>("amountLowerBound")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `amountUpperBound` property.
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `amountUpperBound` property.
      */
     let amountUpperBound = Expression<String>("amountUpperBound")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `securityDepositAmount` property.
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `securityDepositAmount` property.
      */
     let securityDepositAmount = Expression<String>("securityDepositAmount")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `serviceFeeRate` property.
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `takenSwapAmount` property.
+     */
+    let takenSwapAmount = Expression<String>("takenSwapAmount")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `serviceFeeAmount` property.
+     */
+    let serviceFeeAmount = Expression<String>("serviceFeeAmount")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `serviceFeeRate` property.
      */
     let serviceFeeRate = Expression<String>("serviceFeeRate")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `direction` property.
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `direction` property.
      */
     let onChainDirection = Expression<String>("onChainDirection")
     /**
-     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)'s `protocolVersion` property.
+     A database structure representing a particular settlement method of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+     */
+    let settlementMethod = Expression<String>("settlementMethod")
+    /**
+     A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)  or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `protocolVersion` property.
      */
     let protocolVersion = Expression<String>("protocolVersion")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `isPaymentSent` property.
+     */
+    let isPaymentSent = Expression<Bool>("isPaymentSent")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `isPaymentReceived` property.
+     */
+    let isPaymentReceived = Expression<Bool>("isPaymentReceived")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `hasBuyerClosed` property.
+     */
+    let hasBuyerClosed = Expression<Bool>("hasBuyerClosed")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `hasSellerClosed` property.
+     */
+    let hasSellerClosed = Expression<Bool>("hasSellerClosed")
+    /**
+     A database structure representing a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `disputeRaiser` property.
+     */
+    let disputeRaiser = Expression<String>("disputeRaiser")
     /**
      A database structure representing a blockchain ID.
      */
     let chainID = Expression<String>("chainID")
-    /**
-     A database structure representing a particular settlement method of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
-     */
-    let settlementMethod = Expression<String>("settlementMethod")
     /**
      A database structure  representing an `Offer`'s `havePublicKey` property.
      */
@@ -169,6 +221,31 @@ class DatabaseService {
             t.column(interfaceId, unique: true)
             t.column(publicKey)
         })
+        try connection.run(swaps.create { t in
+            t.column(swapID, unique: true)
+            t.column(isCreated)
+            t.column(requiresFill)
+            t.column(maker)
+            t.column(makerInterfaceID)
+            t.column(taker)
+            t.column(takerInterfaceID)
+            t.column(stablecoin)
+            t.column(amountLowerBound)
+            t.column(amountUpperBound)
+            t.column(securityDepositAmount)
+            t.column(takenSwapAmount)
+            t.column(serviceFeeAmount)
+            t.column(serviceFeeRate)
+            t.column(onChainDirection)
+            t.column(settlementMethod)
+            t.column(protocolVersion)
+            t.column(isPaymentSent)
+            t.column(isPaymentReceived)
+            t.column(hasBuyerClosed)
+            t.column(hasSellerClosed)
+            t.column(disputeRaiser)
+            t.column(chainID)
+        })
     }
     
     /**
@@ -199,7 +276,7 @@ class DatabaseService {
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
-                // An Offer with the specified id already exists in the database, so we do nothing
+                // An Offer with the specified ID already exists in the database, so we do nothing
                 logger.notice("storeOffer: offer with B64 ID \(offer.id) already exists in database")
             }
         }
@@ -254,9 +331,9 @@ class DatabaseService {
      
      - Parameter id: The offer ID of the `DatabaseOffer` to return, as a Base64-`String` of bytes.
      
-     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`, and a `DatabaseServiceError.unexpectedQueryResult` if `DatabaseOffer`s are found with the same offer ID or if the offer ID of the `DatabaseOffer` returned from the database does not match `id`.
+     - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`, and a `DatabaseServiceError.unexpectedQueryResult` if multiple `DatabaseOffer`s are found with the same offer ID or if the offer ID of the `DatabaseOffer` returned from the database does not match `id`.
      
-     - Returns: A `DatabaseOffer` corresponding to `id`, or `nil` if no such event is found.
+     - Returns: A `DatabaseOffer` corresponding to `id`, or `nil` if no such `DatabaseOffer` is found.
      */
     func getOffer(id: String) throws -> DatabaseOffer? {
         var rowIterator: RowIterator? = nil
@@ -268,7 +345,7 @@ class DatabaseService {
         }
         let result = try Array(rowIterator!)
         if result.count > 1 {
-            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Offers found with given offer id" + id)
+            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Offers found with given offer id \(id)")
         } else if result.count == 1 {
             guard result[0][offerId] == id else {
                 throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned Offer did not match specified offer ID " + id)
@@ -343,7 +420,7 @@ class DatabaseService {
      
      - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`.
      
-     - Returns: An `Array` of `Strings` which are settlement methods associated with `id`, or `nil` if no such settlement  methods are found.
+     - Returns: An `Array` of `Strings` which are settlement methods associated with `id`, or `nil` if no such settlement methods are found.
      */
     func getSettlementMethods(offerID: String, _chainID: String) throws -> [String]? {
         var rowIterator: RowIterator? = nil
@@ -467,6 +544,112 @@ class DatabaseService {
             return DatabasePublicKey(interfaceId: result[0][interfaceId], publicKey: result[0][publicKey])
         } else {
             logger.notice("getPublicKey: no public key found with interface ID \(interfId)")
+            return nil
+        }
+    }
+    
+    /**
+     Persistently stores a `DatabaseSwap`. If a `DatabaseSwap` with an offer ID equal to that of `swap` already exists in the database, this does nothing.
+    
+     - Parameter swap: The `swap` to be persistently stored.
+     */
+    func storeSwap(swap: DatabaseSwap) throws {
+        try databaseQueue.sync {
+            do {
+                try connection.run(swaps.insert(
+                    swapID <- swap.id,
+                    isCreated <- swap.isCreated,
+                    requiresFill <- swap.requiresFill,
+                    maker <- swap.maker,
+                    makerInterfaceID <- swap.makerInterfaceID,
+                    taker <- swap.taker,
+                    takerInterfaceID <- swap.takerInterfaceID,
+                    stablecoin <- swap.stablecoin,
+                    amountLowerBound <- swap.amountLowerBound,
+                    amountUpperBound <- swap.amountUpperBound,
+                    securityDepositAmount <- swap.securityDepositAmount,
+                    takenSwapAmount <- swap.takenSwapAmount,
+                    serviceFeeAmount <- swap.serviceFeeAmount,
+                    serviceFeeRate <- swap.serviceFeeRate,
+                    onChainDirection <- swap.onChainDirection,
+                    settlementMethod <- swap.onChainSettlementMethod,
+                    protocolVersion <- swap.protocolVersion,
+                    isPaymentSent <- swap.isPaymentSent,
+                    isPaymentReceived <- swap.isPaymentReceived,
+                    hasBuyerClosed <- swap.hasBuyerClosed,
+                    hasSellerClosed <- swap.hasSellerClosed,
+                    disputeRaiser <- swap.onChainDisputeRaiser,
+                    chainID <- swap.chainID
+                ))
+            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Swap.swapID" {
+                // A swap with the specified ID already exists in the database, so we do nothing
+                logger.notice("storeSwap: swap with B64 ID \(swap.id) already exists in database")
+            }
+        }
+    }
+    
+    /**
+     Removes every `DatabaseSwap` with a swapID equal to `swapID` and a chain ID equal to `chainID` from persistent storage.
+     
+     - Parameters:
+        - swapID: The ID of the swaps to be removed, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swaps to be removed as a `String`.
+     */
+    func deleteSwaps(swapID _swapID: String, chainID _chainID: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(swapID == _swapID && chainID == _chainID).delete())
+        }
+        logger.notice("deleteSwaps: deleted swaps with B64 ID \(_swapID) and chain ID \(_chainID), if present")
+    }
+    
+    /**
+     Retrieves the persistently stored `DatabaseSwap` with the specified offer ID, or returns `nil` if no such event is present.
+     
+     - Parameter id: The swap ID of the `DatabaseSwap` to return, as a Base64-`String` of bytes.
+     
+     - Throws: A `DatabaseServiceError.unexpectedQueryResult` if multiple `DatabaseSwap`s are found with the same swap ID or if the swap ID of the `DatabaseSwap` returned from the database does not match `id`.
+     
+     - Returns: A `DatabaseSwap` corresponding to `id`, or `nil` if no such `DatabaseSwap` is found.
+     */
+    func getSwap(id: String) throws -> DatabaseSwap? {
+        let rowIterator = try databaseQueue.sync {
+            try connection.prepareRowIterator(swaps.filter(swapID == id))
+        }
+        let result = try Array(rowIterator)
+        if result.count > 1 {
+            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Swaps found with given swap id \(id)")
+        } else if result.count == 1 {
+            guard result[0][swapID] == id else {
+                throw DatabaseServiceError.unexpectedQueryResult(message: "Swap ID of returned ")
+            }
+            logger.notice("getSwap: returning swap with B64 ID \(id)")
+            return DatabaseSwap(
+                id: result[0][swapID],
+                isCreated: result[0][isCreated],
+                requiresFill: result[0][requiresFill],
+                maker: result[0][maker],
+                makerInterfaceID: result[0][makerInterfaceID],
+                taker: result[0][taker],
+                takerInterfaceID: result[0][takerInterfaceID],
+                stablecoin: result[0][stablecoin],
+                amountLowerBound: result[0][amountLowerBound],
+                amountUpperBound: result[0][amountUpperBound],
+                securityDepositAmount: result[0][securityDepositAmount],
+                takenSwapAmount: result[0][takenSwapAmount],
+                serviceFeeAmount: result[0][serviceFeeAmount],
+                serviceFeeRate: result[0][serviceFeeRate],
+                onChainDirection: result[0][onChainDirection],
+                onChainSettlementMethod: result[0][settlementMethod],
+                protocolVersion: result[0][protocolVersion],
+                isPaymentSent: result[0][isPaymentSent],
+                isPaymentReceived: result[0][isPaymentReceived],
+                hasBuyerClosed: result[0][hasBuyerClosed],
+                hasSellerClosed: result[0][hasSellerClosed],
+                onChainDisputeRaiser: result[0][disputeRaiser],
+                chainID: result[0][chainID]
+            )
+        } else {
+            logger.notice("getSwap: no swap found with B64 ID \(id)")
             return nil
         }
     }

@@ -55,6 +55,7 @@
 		6D7CC6A828934BF200917505 /* OfferState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7CC6A728934BF200917505 /* OfferState.swift */; };
 		6D7D3CDF288390D20004F7F2 /* OpenOfferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7D3CDE288390D20004F7F2 /* OpenOfferView.swift */; };
 		6D7D3CE128847D9A0004F7F2 /* EthereumAddressExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7D3CE028847D9A0004F7F2 /* EthereumAddressExtensions.swift */; };
+		6D80072228A9276900510D01 /* DatabaseSwap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D80072128A9276900510D01 /* DatabaseSwap.swift */; };
 		6D84F83A28A830CC008A7554 /* OfferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D84F83928A830CC008A7554 /* OfferTests.swift */; };
 		6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */; };
 		6D91C97B27533EBB00D85654 /* DatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C97A27533EBB00D85654 /* DatabaseService.swift */; };
@@ -158,6 +159,7 @@
 		6D7CC6A728934BF200917505 /* OfferState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferState.swift; sourceTree = "<group>"; };
 		6D7D3CDE288390D20004F7F2 /* OpenOfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenOfferView.swift; sourceTree = "<group>"; };
 		6D7D3CE028847D9A0004F7F2 /* EthereumAddressExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EthereumAddressExtensions.swift; sourceTree = "<group>"; };
+		6D80072128A9276900510D01 /* DatabaseSwap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseSwap.swift; sourceTree = "<group>"; };
 		6D84F83928A830CC008A7554 /* OfferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTests.swift; sourceTree = "<group>"; };
 		6D8AF7A92759BAEF007BD4E3 /* SymmetricKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymmetricKey.swift; sourceTree = "<group>"; };
 		6D91C97A27533EBB00D85654 /* DatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseService.swift; sourceTree = "<group>"; };
@@ -354,6 +356,7 @@
 				6D91C97D2753F9B100D85654 /* DatabaseKeyPair.swift */,
 				6D91C9802753FA2900D85654 /* DatabasePublicKey.swift */,
 				6D37F9CB28694ED300BA4EE2 /* DatabaseOffer.swift */,
+				6D80072128A9276900510D01 /* DatabaseSwap.swift */,
 			);
 			path = databaseTypes;
 			sourceTree = "<group>";
@@ -854,6 +857,7 @@
 				6D18F1BE289EEDF1002B667C /* EditedSettlementMethodValidationError.swift in Sources */,
 				6D18F1B5289ECCFB002B667C /* EditOfferView.swift in Sources */,
 				6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */,
+				6D80072228A9276900510D01 /* DatabaseSwap.swift in Sources */,
 				6D70A5CE2866A64E003FEDF3 /* DatabaseServiceError.swift in Sources */,
 				6D51876A28A48C1E0061315A /* StablecoinAmountField.swift in Sources */,
 				6DE0896D284FD49300948166 /* OfferNotifiable.swift in Sources */,

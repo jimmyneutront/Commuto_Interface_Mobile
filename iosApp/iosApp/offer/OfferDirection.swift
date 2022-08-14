@@ -6,6 +6,8 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import BigInt
+
 /**
  Describes the direction of an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), which specifies whether the maker wants to buy or sell stablecoin.
  */
@@ -24,10 +26,22 @@ enum OfferDirection: CaseIterable, Identifiable {
      */
     var string: String {
         switch self {
-        case.buy:
+        case .buy:
             return "Buy"
         case .sell:
             return "Sell"
+        }
+    }
+    
+    /**
+     The direction in the form stored on chain, as a `BigUInt` literal.
+     */
+    var onChainValue: BigUInt {
+        switch self {
+        case .buy:
+            return BigUInt(0)
+        case .sell:
+            return BigUInt(1)
         }
     }
     
