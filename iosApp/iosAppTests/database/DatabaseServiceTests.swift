@@ -205,7 +205,8 @@ class DatabaseServiceTests: XCTestCase {
             hasBuyerClosed: false,
             hasSellerClosed: false,
             onChainDisputeRaiser: "dispute_raiser",
-            chainID: "chain_id"
+            chainID: "chain_id",
+            state: "a_state_here"
         )
         try dbService.storeSwap(swap: swapToStore)
         let anotherSwapToStore = DatabaseSwap(
@@ -231,7 +232,8 @@ class DatabaseServiceTests: XCTestCase {
             hasBuyerClosed: false,
             hasSellerClosed: false,
             onChainDisputeRaiser: "another_dispute_raiser",
-            chainID: "another_chain_id"
+            chainID: "another_chain_id",
+            state: "another_state_here"
         )
         // This should do nothing and not throw
         try dbService.storeSwap(swap: anotherSwapToStore)
@@ -241,6 +243,42 @@ class DatabaseServiceTests: XCTestCase {
         try dbService.deleteSwaps(swapID: "a_uuid", chainID: "chain_id")
         let returnedSwapAfterDeletion = try dbService.getSwap(id: "a_uuid")
         XCTAssertEqual(returnedSwapAfterDeletion, nil)
+    }
+    
+    /**
+     Ensures that code to update a persistently stored swap's `state` property works properly.
+     */
+    func testUpdateSwapState() throws {
+        let swapToStore = DatabaseSwap(
+            id: "a_uuid",
+            isCreated: true,
+            requiresFill: false,
+            maker: "maker_address",
+            makerInterfaceID: "maker_interface_id",
+            taker: "taker_address",
+            takerInterfaceID: "taker_interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            takenSwapAmount: "taken_swap_amount",
+            serviceFeeAmount: "service_fee_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            onChainSettlementMethod: "settlement_method",
+            protocolVersion: "some_version",
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "dispute_raiser",
+            chainID: "chain_id",
+            state: "a_state_here"
+        )
+        try dbService.storeSwap(swap: swapToStore)
+        try dbService.updateSwapState(swapID: "a_uuid", chainID: "chain_id", state: "a_new_state_here")
+        let returnedSwap = try dbService.getSwap(id: "a_uuid")
+        XCTAssertEqual("a_new_state_here", returnedSwap!.state)
     }
 
 }

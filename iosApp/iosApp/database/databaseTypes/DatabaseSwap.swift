@@ -99,4 +99,8 @@ struct DatabaseSwap: Equatable {
      The `chainID` property of a `Swap` as a `String`
      */
     let chainID: String
+    /**
+     The `state` property of a `State` as a `String`.
+     */
+    let state: String
 }

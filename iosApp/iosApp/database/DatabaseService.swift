@@ -184,6 +184,10 @@ class DatabaseService {
      A database structure representing an `Offer`'s `state` property.
      */
     let offerState = Expression<String>("state")
+    /**
+     A database structure representing an `Swaps`'s `state` property.
+     */
+    let swapState = Expression<String>("state")
     
     /**
      Creates all necessary database tables.
@@ -245,6 +249,7 @@ class DatabaseService {
             t.column(hasSellerClosed)
             t.column(disputeRaiser)
             t.column(chainID)
+            t.column(swapState)
         })
     }
     
@@ -579,13 +584,29 @@ class DatabaseService {
                     hasBuyerClosed <- swap.hasBuyerClosed,
                     hasSellerClosed <- swap.hasSellerClosed,
                     disputeRaiser <- swap.onChainDisputeRaiser,
-                    chainID <- swap.chainID
+                    chainID <- swap.chainID,
+                    swapState <- swap.state
                 ))
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Swap.swapID" {
                 // A swap with the specified ID already exists in the database, so we do nothing
                 logger.notice("storeSwap: swap with B64 ID \(swap.id) already exists in database")
             }
         }
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseSwap`'s `state` field.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `state` field.
+     */
+    func updateSwapState(swapID _swapID: String, chainID _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(swapID == _swapID && chainID == _chainID).update(swapState <- state))
+        }
+        logger.notice("updateSwapState: set value to \(state) for swap with B64 ID \(_swapID), if present")
     }
     
     /**
@@ -646,7 +667,8 @@ class DatabaseService {
                 hasBuyerClosed: result[0][hasBuyerClosed],
                 hasSellerClosed: result[0][hasSellerClosed],
                 onChainDisputeRaiser: result[0][disputeRaiser],
-                chainID: result[0][chainID]
+                chainID: result[0][chainID],
+                state: result[0][swapState]
             )
         } else {
             logger.notice("getSwap: no swap found with B64 ID \(id)")
