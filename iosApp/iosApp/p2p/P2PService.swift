@@ -122,18 +122,20 @@ class P2PService {
             if (!isDoingListening) {
                 logger.notice("Beginning iteration of listen loop")
                 isDoingListening = true
-                firstly {
-                    self.syncPromise()
-                }.then { [self] response -> Promise<(SwitrixGetEventsResponse, String)> in
+                Promise<SwitrixSyncResponse> { seal in
+                    DispatchQueue.global(qos: .utility).async {
+                        self.syncPromise().pipe(to: seal.resolve(_:))
+                    }
+                }.then(on: DispatchQueue.global(qos: .utility)) { [self] response -> Promise<(SwitrixGetEventsResponse, String)> in
                     self.logger.notice("Synced with Matrix homeserver, got nextBatchToken: \(response.nextBatchToken)")
                     return getMessagesPromise(from: self.lastNonEmptyBatchToken, limit: 1_000_000_000_000).map { ($0, response.nextBatchToken)  }
-                }.done { [self] response, newToken in
+                }.done(on: DispatchQueue.global(qos: .utility)) { [self] response, newToken in
                     self.logger.notice("Got new messages from Matrix homeserver from lastNonEmptyBatchToken: \(self.lastNonEmptyBatchToken)")
                     try parseEvents(response.chunk)
                     self.logger.notice("Finished parsing new events from chunk of size \(response.chunk.count)")
                     updateLastNonEmptyBatchToken(newToken)
                     self.logger.notice("Updated lastNonEmptyBatchToken with new token: \(newToken)")
-                }.catch { [self] error in
+                }.catch(on: DispatchQueue.global(qos: .utility)) { [self] error in
                     self.logger.error("Got an error during listen loop, calling error handler. Error: \(error.localizedDescription)")
                     errorHandler.handleP2PError(error)
                     if (error as NSError).domain == "NSURLErrorDomain" {
@@ -152,7 +154,7 @@ class P2PService {
                             break
                         }
                     }
-                }.finally {
+                }.finally(on: DispatchQueue.global(qos: .utility)) {
                     self.isDoingListening = false
                     self.logger.info("Completed iteration of listen loop.")
                 }
