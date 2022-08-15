@@ -379,7 +379,6 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         - afterObjectCreation: A closure that will be executed after the new key pair and `Swap` objects are created.
         - afterPersistentStorage: A closure that will be executed after the `Swap` is persistently stored.
         - afterTransferApproval: A closure that will be executed after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
-        - afterTaken: A closure that will be run after the offer is taken via a call to [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer).
      
      - Returns: An empty promise that will be fulfilled when the Offer is taken.
      
@@ -390,8 +389,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         swapData: ValidatedNewSwapData,
         afterObjectCreation: (() -> Void)? = nil,
         afterPersistentStorage: (() -> Void)? = nil,
-        afterTransferApproval: (() -> Void)? = nil,
-        afterTaken: (() -> Void)? = nil
+        afterTransferApproval: (() -> Void)? = nil
     ) -> Promise<Void> {
         return Promise { seal in
             Promise<Swap> { seal in
@@ -520,9 +518,6 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 }
                 offerTruthSource.offers.removeValue(forKey: offerToTake.id)
             }.done(on: DispatchQueue.global(qos: .userInitiated)) { _, newSwap in
-                if let afterTaken = afterTaken {
-                    afterTaken()
-                }
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("takeOffer: encountered error during call for \(offerToTake.id.uuidString): \(error.localizedDescription)")

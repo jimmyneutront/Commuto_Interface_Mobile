@@ -298,8 +298,18 @@ class OffersViewModel: UIOfferTruthSource {
                     seal.reject(error)
                 }
             }
+        }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] validatedNewSwapData -> Promise<Void> in
+            logger.notice("takeOffer: taking \(offer.id.uuidString) with validated data")
+            setTakingOfferState(offerID: offer.id, state: .creating)
+            return offerService.takeOffer(
+                offerToTake: offer,
+                swapData: validatedNewSwapData,
+                afterObjectCreation: { self.setTakingOfferState(offerID: offer.id, state: .storing) },
+                afterPersistentStorage: { self.setTakingOfferState(offerID: offer.id, state: .approving) },
+                afterTransferApproval: { self.setTakingOfferState(offerID: offer.id, state: .taking) }
+            )
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
-            logger.notice("takeOffer: successfully took offer \(offer.id.uuidString)")
+            self.logger.notice("takeOffer: successfully took offer \(offer.id.uuidString)")
             setTakingOfferState(offerID: offer.id, state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
             logger.error("takeOffer: got error during takeOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")

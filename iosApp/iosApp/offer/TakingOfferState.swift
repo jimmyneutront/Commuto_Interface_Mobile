@@ -19,6 +19,22 @@ enum TakingOfferState {
      */
     case validating
     /**
+     Indicates that we are currently creating a new key pair and `Swap` object for the new swap.
+     */
+    case creating
+    /**
+     Indicates that we are currently saving the new swap in persistent storage.
+     */
+    case storing
+    /**
+     Indicates that we are currently approving the token transfer to take the corresponding offer.
+     */
+    case approving
+    /**
+     Indicates that we are currently calling CommutoSwap's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function for the new offer.
+     */
+    case taking
+    /**
      Indicates that we have taken the corresponding offer.
      */
     case completed
@@ -36,6 +52,14 @@ enum TakingOfferState {
             return "Press Take Offer to take the offer"
         case .validating:
             return "Validating swap data..."
+        case .creating:
+            return "Creating a new key pair and swap object..."
+        case .storing:
+            return "Saving the new swap..."
+        case .approving:
+            return "Approving token transfer..."
+        case .taking:
+            return "Taking the offer..."
         case .completed:
             return "Offer successfully taken"
         case .error:
