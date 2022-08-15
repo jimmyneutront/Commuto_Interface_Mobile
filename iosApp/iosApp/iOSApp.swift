@@ -54,7 +54,8 @@ struct iOSApp: App {
             .initCompleted { r, viewModel in
                 r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = viewModel
             }
-        //container.resolve(BlockchainService.self)!.listen()
+        container.resolve(BlockchainService.self)!.listen()
+        container.resolve(P2PService.self)!.listen()
     }
     
     /**

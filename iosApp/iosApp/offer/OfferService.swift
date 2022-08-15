@@ -409,6 +409,24 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         }
                         let serviceFeeAmount = (swapData.takenSwapAmount * offerToTake.serviceFeeRate) / BigUInt(10_000)
                         #warning("TODO: get proper taker address here")
+                        /*
+                         We can't simply use the SettlementMethod object in the swapData, because CommutoSwap doesn't allow us to take the offer unless the serialized settlement method data that we use in the takeOffer call exactly matches the serialized settlement method data supplied by the offer maker, and SettlementMethod objects aren't serialized the same way on every platform. Therefore we must find and use the serialized settlement method data supplied by the offer maker in offerToTake.
+                         */
+                        guard let selectedOnChainSettlementMethod = (offerToTake.onChainSettlementMethods.first { onChainSettlementMethod in
+                            do {
+                                let settlementMethod = try JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+                                if settlementMethod.currency == swapData.settlementMethod.currency && settlementMethod.price == swapData.settlementMethod.price && settlementMethod.method == swapData.settlementMethod.method {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            } catch {
+                                logger.warning("takeOffer: got exception while deserializing settlement method \(onChainSettlementMethod.base64EncodedString()) for \(offerToTake.id.uuidString): \(error.localizedDescription)")
+                                return false
+                            }
+                        }) else {
+                            throw OfferServiceError.unexpectedNilError(desc: "Unable to find specified settlement method in list of settlement methods accepted by offer maker")
+                        }
                         let newSwap = try Swap(
                             isCreated: true,
                             requiresFill: requiresFill,
@@ -425,7 +443,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                             serviceFeeAmount: serviceFeeAmount,
                             serviceFeeRate: offerToTake.serviceFeeRate,
                             direction: offerToTake.direction,
-                            settlementMethod: swapData.settlementMethod,
+                            onChainSettlementMethod: selectedOnChainSettlementMethod,
                             protocolVersion: offerToTake.protocolVersion,
                             isPaymentSent: false,
                             isPaymentReceived: false,

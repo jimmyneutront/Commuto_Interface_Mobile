@@ -84,7 +84,7 @@ class Swap: ObservableObject {
      */
     let onChainSettlementMethod: Data
     /**
-     A `SettlementMethod` derived by deserializing `onChainSettlementMethod`.
+     A `SettlementMethod` derived by deserializing `onChainSettlementMethod`, selected by the taker from the list of settlement method specified by the maker, by which the maker and taker will send/receive traditional currency payment.
      */
     let settlementMethod: SettlementMethod
     /**
@@ -138,7 +138,7 @@ class Swap: ObservableObject {
         - securityDepositAmount: The amount of stablecoin that the maker and taker must lock up in escrow during this swap.
         - serviceFeeRate: The percentage times 100 of `takenSwapAmount` that the swap maker and taker must pay as a service fee.
         - direction: The direction of the swap, either `buy` or `sell`.
-        - settlementMethod: The settlement method, selected by the taker from the list of settlement method specified by the maker, by which the maker and taker will send/receive traditional currency payment.
+        - onChainSettlementMethod: The settlement method selected by the taker, as serialized by the maker of the corresponding offer.
         - protocolVersion: Indicates the minimum Commuto Interface version that one must have in order to take this offer.
         - isPaymentSent: Indicates whether the buyer has sent traditional currency payment for this Swap.
         - isPaymentReceived: Indicates whether the seller has received traditional currency payment for this Swap.
@@ -164,7 +164,7 @@ class Swap: ObservableObject {
         serviceFeeAmount: BigUInt,
         serviceFeeRate: BigUInt,
         direction: OfferDirection,
-        settlementMethod: SettlementMethod,
+        onChainSettlementMethod: Data,
         protocolVersion: BigUInt,
         isPaymentSent: Bool,
         isPaymentReceived: Bool,
@@ -190,8 +190,8 @@ class Swap: ObservableObject {
         self.serviceFeeRate = serviceFeeRate
         self.onChainDirection = direction.onChainValue
         self.direction = direction
-        self.onChainSettlementMethod = try JSONEncoder().encode(settlementMethod)
-        self.settlementMethod = settlementMethod
+        self.onChainSettlementMethod = onChainSettlementMethod
+        self.settlementMethod = try JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
         self.protocolVersion = protocolVersion
         self.isPaymentSent = isPaymentSent
         self.isPaymentReceived = isPaymentReceived
@@ -266,7 +266,14 @@ extension Swap {
             serviceFeeAmount: BigUInt(150),
             serviceFeeRate: BigUInt(100),
             direction: .buy,
-            settlementMethod: SettlementMethod(currency: "EUR", price: "0.94", method: "SEPA"),
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "EUR",
+                    "p": "0.94",
+                    "m": "SEPA"
+                }
+                """.data(using: .utf8)!,
             protocolVersion: BigUInt.zero,
             isPaymentSent: false,
             isPaymentReceived: false,
@@ -292,7 +299,14 @@ extension Swap {
             serviceFeeAmount: BigUInt(150),
             serviceFeeRate: BigUInt(100),
             direction: .buy,
-            settlementMethod: SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT"),
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
             protocolVersion: BigUInt.zero,
             isPaymentSent: false,
             isPaymentReceived: false,
