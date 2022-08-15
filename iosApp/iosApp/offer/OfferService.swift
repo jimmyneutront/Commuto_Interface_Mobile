@@ -371,22 +371,24 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
-     On the global `DispatchQueue`, this creates and persistently stores a new key pair and a new `Swap` with the information contained in `offerToTake` and `swapData`. Then, still on the global `DispatchQueue`, this approves token transfer for the proper amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [takeOffer] function (via `BlockchainService`), passing the offer ID and new `Swap`, and then updates the state of `offerToTake` to `taken` and the state of the swap to `takeOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Swap` is added to `swapTruthSource` and `offerToTake` is removed from `offerTruthSource`.
+     On the global `DispatchQueue`, this ensures that an offer with an ID equal to that of `offerToTake` exists on chain, creates and persistently stores a new key pair and a new `Swap` with the information contained in `offerToTake` and `swapData`. Then, still on the global `DispatchQueue`, this approves token transfer for the proper amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [takeOffer] function (via `BlockchainService`), passing the offer ID and new `Swap`, and then updates the state of `offerToTake` to `taken` and the state of the swap to `takeOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Swap` is added to `swapTruthSource` and `offerToTake` is removed from `offerTruthSource`.
      
      - Parameters:
         - offerToTake: The `Offer` that this function will take.
         - swapData: A `ValidatedNewSwapData` containing data necessary for taking `offerToTake`.
+        - afterAvailabilityCheck: A closure that will be executed after this has ensured that the offer exists and is not taken.
         - afterObjectCreation: A closure that will be executed after the new key pair and `Swap` objects are created.
         - afterPersistentStorage: A closure that will be executed after the `Swap` is persistently stored.
         - afterTransferApproval: A closure that will be executed after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
      
      - Returns: An empty promise that will be fulfilled when the Offer is taken.
      
-     - Throws: An `OfferService.unexpectedNilError` if `blockchainService`, `swapTruthSource`, or `offerTruthSource` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: An `OfferService.unexpectedNilError` if `blockchainService`, `swapTruthSource`, or `offerTruthSource` is `nil`, or if an offer with an ID equal to that of `offerToTake` does not exist on-chain. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func takeOffer(
         offerToTake: Offer,
         swapData: ValidatedNewSwapData,
+        afterAvailabilityCheck: (() -> Void)? = nil,
         afterObjectCreation: (() -> Void)? = nil,
         afterPersistentStorage: (() -> Void)? = nil,
         afterTransferApproval: (() -> Void)? = nil
@@ -394,9 +396,19 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         return Promise { seal in
             Promise<Swap> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
-                    #warning("TODO: set offer state to taking")
-                    logger.notice("takeOffer: creating Swap object and creating and persistently storing new key pair to take offer \(offerToTake.id.uuidString)")
                     do {
+                        guard let blockchainService = blockchainService else {
+                            throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during takeOffer call for \(offerToTake.id.uuidString)")
+                        }
+                        let offerOnChain = try blockchainService.getOffer(id: offerToTake.id)
+                        // If offerOnChain is nil, then we say isCreated is false
+                        if !(offerOnChain?.isCreated ?? false) {
+                            throw OfferServiceError.unexpectedNilError(desc: "unable to find on-chain offer with id \(offerToTake.id.uuidString)")
+                        }
+                        if let afterAvailabilityCheck = afterAvailabilityCheck {
+                            afterAvailabilityCheck()
+                        }
+                        logger.notice("takeOffer: creating Swap object and creating and persistently storing new key pair to take offer \(offerToTake.id.uuidString)")
                         // Generate a new 2056 bit RSA key pair to take the swap
                         let newKeyPairForSwap = try keyManagerService.generateKeyPair(storeResult: true)
                         var requiresFill: Bool {

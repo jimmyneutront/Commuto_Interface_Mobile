@@ -19,6 +19,10 @@ enum TakingOfferState {
      */
     case validating
     /**
+     Indicates that we are currently checking if the offer is open and not taken.
+     */
+    case checking
+    /**
      Indicates that we are currently creating a new key pair and `Swap` object for the new swap.
      */
     case creating
@@ -52,6 +56,8 @@ enum TakingOfferState {
             return "Press Take Offer to take the offer"
         case .validating:
             return "Validating swap data..."
+        case .checking:
+            return "Checking offer availability..."
         case .creating:
             return "Creating a new key pair and swap object..."
         case .storing:

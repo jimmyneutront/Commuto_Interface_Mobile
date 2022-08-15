@@ -300,10 +300,11 @@ class OffersViewModel: UIOfferTruthSource {
             }
         }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] validatedNewSwapData -> Promise<Void> in
             logger.notice("takeOffer: taking \(offer.id.uuidString) with validated data")
-            setTakingOfferState(offerID: offer.id, state: .creating)
+            setTakingOfferState(offerID: offer.id, state: .checking)
             return offerService.takeOffer(
                 offerToTake: offer,
                 swapData: validatedNewSwapData,
+                afterAvailabilityCheck: { self.setTakingOfferState(offerID: offer.id, state: .creating) },
                 afterObjectCreation: { self.setTakingOfferState(offerID: offer.id, state: .storing) },
                 afterPersistentStorage: { self.setTakingOfferState(offerID: offer.id, state: .approving) },
                 afterTransferApproval: { self.setTakingOfferState(offerID: offer.id, state: .taking) }
