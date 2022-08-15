@@ -15,7 +15,7 @@ import web3swift
 /**
  The main Offer Service. It is responsible for processing and organizing offer-related data that it receives from `BlockchainService` and `P2PService` in order to maintain an accurate list of all open offers in `OffersViewModel`.
  */
-class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable where _OfferTruthSource: OfferTruthSource {
+class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferMessageNotifiable where _OfferTruthSource: OfferTruthSource, _SwapTruthSource: SwapTruthSource {
     
     /**
      Initializes a new OfferService object.
@@ -53,6 +53,11 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
      An object adopting `OfferTruthSource` in which this is responsible for maintaining an accurate list of all open offers.
      */
     var offerTruthSource: _OfferTruthSource? = nil
+    
+    /**
+     An object adopting `SwapTruthSource` in which this creates new `Swap`s as necessary.
+     */
+    var swapTruthSource: _SwapTruthSource? = nil
     
     /**
      The `BlockchainService` that this uses to interact with the blockchain.
@@ -118,7 +123,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
         - offerData: A `ValidatedNewOfferData` containing the data for the new offer to be opened.
         - afterObjectCreation: A closure that will be executed after the new key pair, offer ID and `Offer` object are created.
         - afterPersistentStorage: A closure that will be executed after the `Offer` is persistently stored.
-        - afterTransferApproval: A closure that will be run after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
+        - afterTransferApproval: A closure that will be executed after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
         - afterOpen: A closure that will be run after the offer is opened, via a call to [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
      
      - Returns: An empty promise that will be fulfilled when the new Offer is opened.
@@ -143,7 +148,7 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                         let newOfferID = UUID()
                         logger.notice("openOffer: created ID \(newOfferID.uuidString) for new offer")
                         // Create a new Offer
-                        #warning("TODO: get proper chain ID here")
+                        #warning("TODO: get proper chain ID here and maker address")
                         let newOffer = Offer(
                             isCreated: true,
                             isTaken: false,
@@ -358,6 +363,169 @@ class OfferService<_OfferTruthSource>: OfferNotifiable, OfferMessageNotifiable w
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("editOffer: encountered error while canceling \(offerID.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     
+     On the global `DispatchQueue`, this creates and persistently stores a new key pair and a new `Swap` with the information contained in `offerToTake` and `swapData`. Then, still on the global `DispatchQueue`, this approves token transfer for the proper amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [takeOffer] function (via `BlockchainService`), passing the offer ID and new `Swap`, and then updates the state of `offerToTake` to `taken` and the state of the swap to `takeOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Swap` is added to `swapTruthSource` and `offerToTake` is removed from `offerTruthSource`.
+     
+     - Parameters:
+        - offerToTake: The `Offer` that this function will take.
+        - swapData: A `ValidatedNewSwapData` containing data necessary for taking `offerToTake`.
+        - afterObjectCreation: A closure that will be executed after the new key pair and `Swap` objects are created.
+        - afterPersistentStorage: A closure that will be executed after the `Swap` is persistently stored.
+        - afterTransferApproval: A closure that will be executed after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
+        - afterTaken: A closure that will be run after the offer is taken via a call to [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer).
+     
+     - Returns: An empty promise that will be fulfilled when the Offer is taken.
+     
+     - Throws: An `OfferService.unexpectedNilError` if `blockchainService`, `swapTruthSource`, or `offerTruthSource` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func takeOffer(
+        offerToTake: Offer,
+        swapData: ValidatedNewSwapData,
+        afterObjectCreation: (() -> Void)? = nil,
+        afterPersistentStorage: (() -> Void)? = nil,
+        afterTransferApproval: (() -> Void)? = nil,
+        afterTaken: (() -> Void)? = nil
+    ) -> Promise<Void> {
+        return Promise { seal in
+            Promise<Swap> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    #warning("TODO: set offer state to taking")
+                    logger.notice("takeOffer: creating Swap object and creating and persistently storing new key pair to take offer \(offerToTake.id.uuidString)")
+                    do {
+                        // Generate a new 2056 bit RSA key pair to take the swap
+                        let newKeyPairForSwap = try keyManagerService.generateKeyPair(storeResult: true)
+                        var requiresFill: Bool {
+                            switch(offerToTake.direction) {
+                            case .buy:
+                                return false
+                            case .sell:
+                                return true
+                            }
+                        }
+                        let serviceFeeAmount = (swapData.takenSwapAmount * offerToTake.serviceFeeRate) / BigUInt(10_000)
+                        #warning("TODO: get proper taker address here")
+                        let newSwap = try Swap(
+                            isCreated: true,
+                            requiresFill: requiresFill,
+                            id: offerToTake.id,
+                            maker: offerToTake.maker,
+                            makerInterfaceID: offerToTake.interfaceId,
+                            taker: EthereumAddress("0x0000000000000000000000000000000000000000")!, // It is safe to use the zero address here, because the maker address will be automatically set to that of the function caller by CommutoSwap,
+                            takerInterfaceID: newKeyPairForSwap.interfaceId,
+                            stablecoin: offerToTake.stablecoin,
+                            amountLowerBound: offerToTake.amountLowerBound,
+                            amountUpperBound: offerToTake.amountUpperBound,
+                            securityDepositAmount: offerToTake.securityDepositAmount,
+                            takenSwapAmount: swapData.takenSwapAmount,
+                            serviceFeeAmount: serviceFeeAmount,
+                            serviceFeeRate: offerToTake.serviceFeeRate,
+                            direction: offerToTake.direction,
+                            settlementMethod: swapData.settlementMethod,
+                            protocolVersion: offerToTake.protocolVersion,
+                            isPaymentSent: false,
+                            isPaymentReceived: false,
+                            hasBuyerClosed: false,
+                            hasSellerClosed: false,
+                            onChainDisputeRaiser: BigUInt.zero,
+                            chainID: offerToTake.chainID,
+                            state: .taking
+                        )
+                        if let afterObjectCreation = afterObjectCreation {
+                            afterObjectCreation()
+                        }
+                        seal.fulfill(newSwap)
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] newSwap in
+                logger.notice("takeOffer: persistently storing \(newSwap.id.uuidString)")
+                // Persistently store the new swap
+                let newSwapForDatabase = DatabaseSwap(
+                    id: newSwap.id.asData().base64EncodedString(),
+                    isCreated: newSwap.isCreated,
+                    requiresFill: newSwap.requiresFill,
+                    maker: newSwap.maker.addressData.toHexString(),
+                    makerInterfaceID: newSwap.makerInterfaceID.base64EncodedString(),
+                    taker: newSwap.taker.addressData.toHexString(),
+                    takerInterfaceID: newSwap.takerInterfaceID.base64EncodedString(),
+                    stablecoin: newSwap.stablecoin.addressData.toHexString(),
+                    amountLowerBound: String(newSwap.amountLowerBound),
+                    amountUpperBound: String(newSwap.amountUpperBound),
+                    securityDepositAmount: String(newSwap.securityDepositAmount),
+                    takenSwapAmount: String(newSwap.takenSwapAmount),
+                    serviceFeeAmount: String(newSwap.serviceFeeAmount),
+                    serviceFeeRate: String(newSwap.serviceFeeRate),
+                    onChainDirection: String(newSwap.onChainDirection),
+                    onChainSettlementMethod: newSwap.onChainSettlementMethod.base64EncodedString(),
+                    protocolVersion: String(newSwap.protocolVersion),
+                    isPaymentSent: newSwap.isPaymentSent,
+                    isPaymentReceived: newSwap.isPaymentReceived,
+                    hasBuyerClosed: newSwap.hasBuyerClosed,
+                    hasSellerClosed: newSwap.hasSellerClosed,
+                    onChainDisputeRaiser: String(newSwap.onChainDisputeRaiser),
+                    chainID: String(newSwap.chainID),
+                    state: newSwap.state.asString
+                )
+                try databaseService.storeSwap(swap: newSwapForDatabase)
+                if let afterPersistentStorage = afterPersistentStorage {
+                    afterPersistentStorage()
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] newSwap -> Promise<(Void, Swap)> in
+                var tokenAmountForTakingOffer: BigUInt {
+                    switch (newSwap.direction) {
+                    case .buy:
+                        // We are taking a BUY offer, so we are SELLING stablecoin. Therefore we must authorize a transfer equal to the taken swap amount, the security deposit amount, and the service fee amount to the CommutoSwap contract.
+                        return newSwap.takenSwapAmount + newSwap.securityDepositAmount + newSwap.serviceFeeAmount
+                    case .sell:
+                        // We are taking a SELL offer, so we are BUYING stablecoin. Therefore we must authorize a transfer equal to the security deposit amount and the service fee amount to the CommutoSwap contract.
+                        return newSwap.securityDepositAmount + newSwap.serviceFeeAmount
+                    }
+                }
+                logger.notice("takeOffer: authorizing transfer for \(newSwap.id.uuidString). Amount: \(String(tokenAmountForTakingOffer))")
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during takeOffer call for \(newSwap.id.uuidString)")
+                }
+                return blockchainService.approveTokenTransfer(tokenAddress: newSwap.stablecoin, destinationAddress: blockchainService.commutoSwapAddress, amount: tokenAmountForTakingOffer).map { ($0, newSwap) }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newSwap -> Promise<(Void, Swap)> in
+                if let afterTransferApproval = afterTransferApproval {
+                    afterTransferApproval()
+                }
+                logger.notice("takeOffer: taking \(newSwap.id.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during takeOffer call for \(newSwap.id.uuidString)")
+                }
+                return blockchainService.takeOffer(offerID: newSwap.id, swapStruct: newSwap.toSwapStruct()).map { ($0, newSwap) }
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newSwap in
+                logger.notice("takeOffer: took \(newSwap.id.uuidString)")
+                offerToTake.state = .taken
+                try databaseService.updateOfferState(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID), state: offerToTake.state.asString)
+                newSwap.state = .takeOfferTransactionBroadcast
+                try databaseService.updateSwapState(swapID: newSwap.id.asData().base64EncodedString(), chainID: String(newSwap.chainID), state: newSwap.state.asString)
+                logger.notice("takeOffer: adding \(newSwap.id.uuidString) to swapTruthSource and removing \(offerToTake.id.uuidString) from offerTruthSource")
+            }.get(on: DispatchQueue.main) { [self] _, newSwap in
+                guard var swapTruthSource = swapTruthSource else {
+                    throw OfferServiceError.unexpectedNilError(desc: "swapTruthSource was nil during takeOffer call for \(newSwap.id.uuidString)")
+                }
+                swapTruthSource.swaps[newSwap.id] = newSwap
+                guard var offerTruthSource = offerTruthSource else {
+                    throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during takeOffer call for \(offerToTake.id.uuidString)")
+                }
+                offerTruthSource.offers.removeValue(forKey: offerToTake.id)
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _, newSwap in
+                if let afterTaken = afterTaken {
+                    afterTaken()
+                }
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("takeOffer: encountered error during call for \(offerToTake.id.uuidString): \(error.localizedDescription)")
                 seal.reject(error)
             }
         }

@@ -128,6 +128,9 @@ struct OfferStruct {
         return "Got nil while getting " + valueName + " value from getOffer response"
     }
     
+    /**
+     Returns an `Array` containing the properties of this struct, which can be passed to a web3swift write transaction call.
+     */
     func toOfferDataArray() -> [AnyObject] {
         return [
             isCreated,

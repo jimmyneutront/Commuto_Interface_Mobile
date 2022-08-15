@@ -79,7 +79,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerOpenedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerOpenedEventRepository: offerOpenedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerOpenedEventRepository: offerOpenedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -218,7 +218,7 @@ class OfferServiceTests: XCTestCase {
         }
         let offerOpenedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
             databaseService: databaseService,
             keyManagerService: keyManagerService,
             offerOpenedEventRepository: offerOpenedEventRepository
@@ -371,7 +371,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerCanceledEventRepository = TestBlockchainEventRepository<OfferCanceledEvent>()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerCanceledEventRepository: offerCanceledEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerCanceledEventRepository: offerCanceledEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -519,7 +519,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerTakenEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerTakenEventRepository: offerTakenEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerTakenEventRepository: offerTakenEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -638,7 +638,7 @@ class OfferServiceTests: XCTestCase {
         
         let offerEditedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerEditedEventRepository: offerEditedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerEditedEventRepository: offerEditedEventRepository)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -714,7 +714,7 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<PreviewableOfferTruthSource>(
+        let offerService = OfferService<PreviewableOfferTruthSource, TestSwapTruthSource>(
             databaseService: databaseService,
             keyManagerService: keyManagerService
         )
@@ -826,7 +826,7 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -910,7 +910,7 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
         
         class TestOfferTruthSource: OfferTruthSource {
             init() {
@@ -1082,7 +1082,7 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
         
         class TestOfferTruthSource: OfferTruthSource {
             var serviceFeeRate: BigUInt? = BigUInt(1)
@@ -1148,6 +1148,9 @@ class OfferServiceTests: XCTestCase {
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
+        let offerInDatabaseBeforeCancellation = try! databaseService.getOffer(id: offer.id.asData().base64EncodedString())
+        XCTAssertEqual(offerForDatabase, offerInDatabaseBeforeCancellation)
+        
         let cancellationExpectation = XCTestExpectation(description: "Fulfilled when offerService.cancelOffer returns")
         
         offerService.cancelOffer(offerID: offerID, chainID: BigUInt(31337)).done {
@@ -1210,7 +1213,7 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
         
         class TestOfferTruthSource: OfferTruthSource {
             var serviceFeeRate: BigUInt? = BigUInt(1)
@@ -1253,6 +1256,207 @@ class OfferServiceTests: XCTestCase {
         let offerStruct = try! blockchainService.getOffer(id: offerID)
         XCTAssertEqual(expectedSettlementMethods, offerStruct?.settlementMethods)
         
+    }
+    
+    /**
+     Ensures that `OfferService.takeOffer`, `BlockchainService.approveTokenTransfer` and `BlockchainService.takeOffer` function properly.
+     */
+    func testTakeOffer() {
+        
+        let offerID = UUID()
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let stablecoinAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_takeOffer")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened"),
+            URLQueryItem(name: "offerID", value: offerID.uuidString)
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        
+        class TestOfferTruthSource: OfferTruthSource {
+            var serviceFeeRate: BigUInt? = BigUInt(1)
+            var offers: [UUID : Offer] = [:]
+        }
+        
+        let offerTruthSource = TestOfferTruthSource()
+        offerService.offerTruthSource = offerTruthSource
+        
+        let swapTruthSource = TestSwapTruthSource()
+        offerService.swapTruthSource = swapTruthSource
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
+        
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: offerID,
+            maker: EthereumAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")!,
+            interfaceID: Data(),
+            stablecoin: EthereumAddress(testingServerResponse!.stablecoinAddress)!,
+            amountLowerBound: 10_000 * BigUInt(10).power(18),
+            amountUpperBound: 20_000 * BigUInt(10).power(18),
+            securityDepositAmount: 2_000 * BigUInt(10).power(18),
+            serviceFeeRate: BigUInt(100),
+            direction: .buy,
+            settlementMethods: [SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA")],
+            protocolVersion: BigUInt(1),
+            chainID: BigUInt(31337), // Hardhat blockchain ID,
+            havePublicKey: true,
+            isUserMaker: false,
+            state: .offerOpened
+        )
+        offerTruthSource.offers[offerID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let offerInDatabaseBeforeCancellation = try! databaseService.getOffer(id: offer.id.asData().base64EncodedString())
+        XCTAssertEqual(offerForDatabase, offerInDatabaseBeforeCancellation)
+        
+        let takingExpectation = XCTestExpectation(description: "Fulfilled when offerService.takeOffer returns")
+        
+        let swapData = ValidatedNewSwapData(takenSwapAmount: 15_000 * BigUInt(10).power(18), settlementMethod: SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA"))
+        
+        offerService.takeOffer(offerToTake: offer, swapData: swapData).done {
+            takingExpectation.fulfill()
+        }.cauterize()
+        
+        wait(for: [takingExpectation], timeout: 30.0)
+        
+        #warning("TODO: check for swap on chain")
+        
+        #warning("TODO: check for key pair in KeyManagerService")
+        
+        // Test the Swap in swapTruthSource
+        let swapInTruthSource = swapTruthSource.swaps[offerID]!
+        XCTAssertTrue(swapInTruthSource.isCreated)
+        XCTAssertFalse(swapInTruthSource.requiresFill)
+        XCTAssertEqual(offerID, swapInTruthSource.id)
+        XCTAssertEqual(EthereumAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")!, swapInTruthSource.maker)
+        XCTAssertEqual(Data(), swapInTruthSource.makerInterfaceID)
+        #warning("TODO: check taker address once walletService is implemented")
+        #warning("TODO: check taker interface ID once we have swap from chain")
+        XCTAssertEqual(EthereumAddress(testingServerResponse!.stablecoinAddress)!, swapInTruthSource.stablecoin)
+        XCTAssertEqual(10_000 * BigUInt(10).power(18), swapInTruthSource.amountLowerBound)
+        XCTAssertEqual(20_000 * BigUInt(10).power(18), swapInTruthSource.amountUpperBound)
+        XCTAssertEqual(2_000 * BigUInt(10).power(18), swapInTruthSource.securityDepositAmount)
+        XCTAssertEqual(15_000 * BigUInt(10).power(18), swapInTruthSource.takenSwapAmount)
+        XCTAssertEqual(150 * BigUInt(10).power(18), swapInTruthSource.serviceFeeAmount)
+        XCTAssertEqual(BigUInt(100), swapInTruthSource.serviceFeeRate)
+        XCTAssertEqual(BigUInt(0), swapInTruthSource.onChainDirection)
+        XCTAssertEqual(.buy, swapInTruthSource.direction)
+        XCTAssertEqual(try! JSONEncoder().encode(SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA")), swapInTruthSource.onChainSettlementMethod)
+        XCTAssertEqual("EUR", swapInTruthSource.settlementMethod.currency)
+        XCTAssertEqual("0.98", swapInTruthSource.settlementMethod.price)
+        XCTAssertEqual("SEPA", swapInTruthSource.settlementMethod.method)
+        XCTAssertEqual(BigUInt(1), swapInTruthSource.protocolVersion)
+        XCTAssertFalse(swapInTruthSource.isPaymentSent)
+        XCTAssertFalse(swapInTruthSource.isPaymentReceived)
+        XCTAssertFalse(swapInTruthSource.hasBuyerClosed)
+        XCTAssertFalse(swapInTruthSource.hasSellerClosed)
+        XCTAssertEqual(BigUInt(0), swapInTruthSource.onChainDisputeRaiser)
+        XCTAssertEqual(BigUInt(31337), swapInTruthSource.chainID)
+        XCTAssertEqual(.takeOfferTransactionBroadcast, swapInTruthSource.state)
+        
+        // Test the persistently stored swap
+        let swapInDatabase = try! databaseService.getSwap(id: offerID.asData().base64EncodedString())!
+        #warning("TODO: check proper taker address once WalletService is implemented")
+        let expectedSwapInDatabase = DatabaseSwap(
+            id: swapInTruthSource.id.asData().base64EncodedString(),
+            isCreated: swapInTruthSource.isCreated,
+            requiresFill: swapInTruthSource.requiresFill,
+            maker: swapInTruthSource.maker.addressData.toHexString(),
+            makerInterfaceID: swapInTruthSource.makerInterfaceID.base64EncodedString(),
+            taker: swapInTruthSource.taker.addressData.toHexString(),
+            takerInterfaceID: swapInTruthSource.takerInterfaceID.base64EncodedString(),
+            stablecoin: swapInTruthSource.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(swapInTruthSource.amountLowerBound),
+            amountUpperBound: String(swapInTruthSource.amountUpperBound),
+            securityDepositAmount: String(swapInTruthSource.securityDepositAmount),
+            takenSwapAmount: String(swapInTruthSource.takenSwapAmount),
+            serviceFeeAmount: String(swapInTruthSource.serviceFeeAmount),
+            serviceFeeRate: String(swapInTruthSource.serviceFeeRate),
+            onChainDirection: String(swapInTruthSource.onChainDirection),
+            onChainSettlementMethod: swapInTruthSource.onChainSettlementMethod.base64EncodedString(),
+            protocolVersion: String(swapInTruthSource.protocolVersion),
+            isPaymentSent: swapInTruthSource.isPaymentSent,
+            isPaymentReceived: swapInTruthSource.isPaymentReceived,
+            hasBuyerClosed: swapInTruthSource.hasBuyerClosed,
+            hasSellerClosed: swapInTruthSource.hasSellerClosed,
+            onChainDisputeRaiser: String(swapInTruthSource.onChainDisputeRaiser),
+            chainID: String(swapInTruthSource.chainID),
+            state: swapInTruthSource.state.asString
+        )
+        XCTAssertEqual(expectedSwapInDatabase, swapInDatabase)
+        
+        // Ensure the Offer is in the "taken" state
+        XCTAssertEqual(.taken, offer.state)
+        
+        // Check that the state of the offer has been persistently updated
+        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())!
+        XCTAssertEqual(OfferState.taken.asString, offerInDatabase.state)
     }
     
 }

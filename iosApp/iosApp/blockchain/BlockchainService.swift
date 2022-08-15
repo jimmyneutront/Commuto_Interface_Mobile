@@ -372,6 +372,40 @@ class BlockchainService {
     }
     
     /**
+     A `Promise` wrapper around CommutoSwap's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     
+     - Parameters:
+        - offerID: The ID of the [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) to be taken.
+        - swapStruct: The SwapStruct containing the data of the new [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) to be opened.
+     
+     - Returns: An empty `Promise` that will be fulfilled when the swap is taken.
+     
+     - Throws `BlockchainServiceError.unexpectedNilError` if `nil` is returned during write transaction creation.
+     */
+    func takeOffer(offerID: UUID, swapStruct: SwapStruct) -> Promise<Void> {
+        return Promise { seal in
+            let method = "takeOffer"
+            guard let writeTransaction = commutoSwap.write(
+                method,
+                parameters: [offerID.asData(), swapStruct.toSwapDataArray()] as [AnyObject],
+                transactionOptions: .defaultOptions
+            ) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Found nil while creating takeOffer write transaction"))
+                return
+            }
+            #warning("TODO: this is temporary, will be improved when WalletService is implemented")
+            writeTransaction.transactionOptions.from = ethKeyStore.addresses!.first!
+            writeTransaction.transactionOptions.gasLimit = .manual(BigUInt(30000000))
+            writeTransaction.transactionOptions.gasPrice = .manual(BigUInt(30000000))
+            writeTransaction.sendPromise(password: ethPassword).done { TransactionSendingResult in
+                seal.fulfill_()
+            }.catch { error in
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
      A `Promise` wrapper around CommutoSwap's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
      
      - Parameters:

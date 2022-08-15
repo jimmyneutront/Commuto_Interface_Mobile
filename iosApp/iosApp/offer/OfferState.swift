@@ -26,6 +26,11 @@ enum OfferState {
      Indicates that the corresponding offer has been opened on chain and the maker's public key has been announced.
      */
     case offerOpened
+    /**
+     Indicates that the corresponding offer has been taken.
+     */
+    case taken
+    
     
     /**
      Indicates that the corresponding offer will be canceled, but [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) has not yet been called for it.
@@ -54,6 +59,8 @@ enum OfferState {
             return 2
         case .offerOpened:
             return 3
+        case .taken:
+            return 4
         case .canceling:
             return -1
         case .cancelOfferTransactionBroadcast:
@@ -76,6 +83,8 @@ enum OfferState {
             return "awaitingPKAnnouncement"
         case .offerOpened:
             return "offerOpened"
+        case .taken:
+            return "taken"
         case .canceling:
             return "canceling"
         case .cancelOfferTransactionBroadcast:
@@ -90,7 +99,7 @@ enum OfferState {
      
      - Parameter string: The `String` from which this attempts to create a corresponding `OfferState`.
      
-     - Returns An `OfferState` corresponding to `string`, or `nil` if no such `OfferState` exists.
+     - Returns: An `OfferState` corresponding to `string`, or `nil` if no such `OfferState` exists.
      */
     static func fromString(_ string: String?) -> OfferState? {
         if string == nil {
@@ -103,6 +112,8 @@ enum OfferState {
             return .awaitingPublicKeyAnnouncement
         } else if string == "offerOpened" {
             return .offerOpened
+        } else if string == "taken" {
+            return .taken
         } else if string == "canceling" {
             return .canceling
         } else if string == "cancelOfferTxBroadcast" {

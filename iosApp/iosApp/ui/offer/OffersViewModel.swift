@@ -22,7 +22,7 @@ class OffersViewModel: UIOfferTruthSource {
      
      - Parameter offerService: An `OfferService` that adds and removes `Offer`s from this class's `offers` dictionary as offers are created, canceled and taken.
      */
-    init(offerService: OfferService<OffersViewModel>) {
+    init(offerService: OfferService<OffersViewModel, SwapViewModel>) {
         self.offerService = offerService
         offers = Offer.sampleOffers
     }
@@ -35,7 +35,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      The `OfferService` responsible for adding and removing `Offer`s from this class's `offers` dictionary as offers are created, canceled and taken.
      */
-    let offerService: OfferService<OffersViewModel>
+    let offerService: OfferService<OffersViewModel, SwapViewModel>
     
     /**
      The current service fee rate, or `nil` if the current service fee rate is not known.

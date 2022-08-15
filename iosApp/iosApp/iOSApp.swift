@@ -26,7 +26,7 @@ struct iOSApp: App {
             KeyManagerService(databaseService: r.resolve(DatabaseService.self)!)
             
         }
-        container.register(OfferService<OffersViewModel>.self) { r in
+        container.register(OfferService<OffersViewModel, SwapViewModel>.self) { r in
             OfferService(databaseService: r.resolve(DatabaseService.self)!, keyManagerService: r.resolve(KeyManagerService.self)!)
             
         }
@@ -34,25 +34,25 @@ struct iOSApp: App {
         container.register(BlockchainService.self) { r in
             BlockchainService(
                 errorHandler: ErrorViewModel(),
-                offerService: r.resolve(OfferService<OffersViewModel>.self)!,
+                offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!,
                 web3Instance: web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!),
                 commutoSwapAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!
             )
         }
             .inObjectScope(.container)
-        container.resolve(OfferService<OffersViewModel>.self)!.blockchainService = container.resolve(BlockchainService.self)!
+        container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.blockchainService = container.resolve(BlockchainService.self)!
         container.register(P2PService.self) { r in
-            P2PService(errorHandler: ErrorViewModel(), offerService: r.resolve(OfferService<OffersViewModel>.self)!, switrixClient: SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!))
+            P2PService(errorHandler: ErrorViewModel(), offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!, switrixClient: SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!))
         }
             .inObjectScope(.container)
-        container.resolve(OfferService<OffersViewModel>.self)!.p2pService = container.resolve(P2PService.self)!
+        container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.p2pService = container.resolve(P2PService.self)!
         container.register(OffersViewModel.self) { r in
-            OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel>.self)!)
+            OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!)
             
         }
             .inObjectScope(.container)
             .initCompleted { r, viewModel in
-                r.resolve(OfferService.self)!.offerTruthSource = viewModel
+                r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = viewModel
             }
         //container.resolve(BlockchainService.self)!.listen()
     }

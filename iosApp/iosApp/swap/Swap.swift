@@ -115,6 +115,10 @@ class Swap: ObservableObject {
      The ID of the blockchain on which this Swap exists.
      */
     let chainID: BigUInt
+    /**
+     Indicates the current state of this swap, as described in the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     */
+    var state: SwapState
     
     
     /**
@@ -142,6 +146,7 @@ class Swap: ObservableObject {
         - hasSellerClosed: Indicates whether the seller has reclaimed their security deposit (and the unspent service fee, if any, if they are the maker)
         - onChainDisputeRaiser: Corresponds to an on-chain Swap's raw value.
         - chainID: The ID of the blockchain on which this swap exists.
+        - state: Indicates the current state of this swap.
      */
     init(
         isCreated: Bool,
@@ -166,7 +171,8 @@ class Swap: ObservableObject {
         hasBuyerClosed: Bool,
         hasSellerClosed: Bool,
         onChainDisputeRaiser: BigUInt,
-        chainID: BigUInt
+        chainID: BigUInt,
+        state: SwapState
     ) throws {
         self.isCreated = isCreated
         self.requiresFill = requiresFill
@@ -193,7 +199,40 @@ class Swap: ObservableObject {
         self.hasSellerClosed = hasSellerClosed
         self.onChainDisputeRaiser = onChainDisputeRaiser
         self.chainID = chainID
+        self.state = state
     }
+    
+    /**
+     Creates an `SwapStruct` derived from this `Swap`.
+     
+     - Returns: A `SwapStruct` derived from this `Swap`.
+     */
+    func toSwapStruct() -> SwapStruct {
+        return SwapStruct(
+            isCreated: self.isCreated,
+            requiresFill: self.requiresFill,
+            maker: self.maker,
+            makerInterfaceID: self.makerInterfaceID,
+            taker: self.taker,
+            takerInterfaceID: self.takerInterfaceID,
+            stablecoin: self.stablecoin,
+            amountLowerBound: self.amountLowerBound,
+            amountUpperBound: self.amountUpperBound,
+            securityDepositAmount: self.securityDepositAmount,
+            takenSwapAmount: self.takenSwapAmount,
+            serviceFeeAmount: self.serviceFeeAmount,
+            serviceFeeRate: self.serviceFeeRate,
+            direction: self.onChainDirection,
+            settlementMethod: self.onChainSettlementMethod,
+            protocolVersion: self.protocolVersion,
+            isPaymentSent: self.isPaymentSent,
+            isPaymentReceived: self.isPaymentReceived,
+            hasBuyerClosed: self.hasBuyerClosed,
+            hasSellerClosed: self.hasSellerClosed,
+            disputeRaiser: self.onChainDisputeRaiser
+        )
+    }
+    
 }
 
 /**
@@ -234,7 +273,8 @@ extension Swap {
             hasBuyerClosed: false,
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
-            chainID: BigUInt(31337) // Hardhat blockchain ID
+            chainID: BigUInt(31337), // Hardhat blockchain ID,
+            state: .takeOfferTransactionBroadcast
         ),
         sampleSwapIds[1]: try! Swap(
             isCreated: true,
@@ -259,7 +299,8 @@ extension Swap {
             hasBuyerClosed: false,
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
-            chainID: BigUInt(31337) // Hardhat blockchain ID
+            chainID: BigUInt(31337), // Hardhat blockchain ID
+            state: .takeOfferTransactionBroadcast
         ),
     ]
 }

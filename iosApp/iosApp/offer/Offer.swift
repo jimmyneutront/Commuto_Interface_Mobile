@@ -222,7 +222,7 @@ class Offer: ObservableObject {
         - amountLowerBound: The minimum amount of stablecoin that the offer maker is willing to exchange.
         - amountUpperBound: The maximum amount of stablecoin that the offer maker is willing to exchange.
         - securityDepositAmount: The amount of stablecoin that the offer maker is locking in escrow as a security deposit, and the amount of stablecoin that one must lock up in escrow in order to take this offer.
-        - serviceFeeRate: The percentage of the amount of stablecoin exchanged that the offer maker and taker must pay as a service fee,
+        - serviceFeeRate: The percentage times 100 of the amount of stablecoin exchanged that the offer maker and taker must pay as a service fee,
         - direction: The direction of the offer, either `buy` or `sell`.
         - settlementMethods: The settlement methods by which the maker of the offer is willing to accept payment.
         - protocolVersion: Indicates the minimum Commuto Interface version that one must have in order to take this offer.
@@ -305,7 +305,7 @@ class Offer: ObservableObject {
         - onChainSettlementMethods: An updated `Array` of serialized settlement methods as `Data`.
         - logger: An optional `Logger` to log warnings when this is unable to deserialize `Data` in `onChainSettlementMethods`
      */
-    func updateSettlementMethodsFromChain(onChainSettlementMethods: [Data], logger: Logger?) {
+    func updateSettlementMethodsFromChain(onChainSettlementMethods: [Data], logger: Logger? = nil) {
         self.settlementMethods = onChainSettlementMethods.compactMap { onChainSettlementMethod in
             do {
                 return try JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
@@ -370,7 +370,7 @@ extension Offer {
             stablecoin: EthereumAddress("0x663F3ad617193148711d28f5334eE4Ed07016602")!, // DAI on Hardhat
             amountLowerBound: 10_000 * BigUInt(10).power(18),
             amountUpperBound: 20_000 * BigUInt(10).power(18),
-            securityDepositAmount: 1_000 * BigUInt(10).power(18),
+            securityDepositAmount: 2_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             onChainDirection: BigUInt.zero,
             onChainSettlementMethods: [
@@ -397,7 +397,7 @@ extension Offer {
             stablecoin: EthereumAddress("0x2E983A1Ba5e8b38AAAeC4B440B9dDcFBf72E15d1")!, // USDC on Hardhat
             amountLowerBound: 10_000 * BigUInt(10).power(6),
             amountUpperBound: 20_000 * BigUInt(10).power(6),
-            securityDepositAmount: 1_000 * BigUInt(10).power(6),
+            securityDepositAmount: 2_000 * BigUInt(10).power(6),
             serviceFeeRate: BigUInt(10),
             onChainDirection: BigUInt.init(UInt64(1)),
             onChainSettlementMethods: [
