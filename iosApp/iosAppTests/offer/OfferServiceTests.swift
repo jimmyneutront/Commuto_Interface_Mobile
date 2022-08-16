@@ -1454,9 +1454,8 @@ class OfferServiceTests: XCTestCase {
         // Ensure the Offer is in the "taken" state
         XCTAssertEqual(.taken, offer.state)
         
-        // Check that the state of the offer has been persistently updated
-        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())!
-        XCTAssertEqual(OfferState.taken.asString, offerInDatabase.state)
+        // Check that the offer has been deleted from persistent storage
+        XCTAssertNil(try! databaseService.getOffer(id: offerID.asData().base64EncodedString()))
     }
     
 }

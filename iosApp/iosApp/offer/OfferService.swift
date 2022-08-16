@@ -548,7 +548,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 }
                 offerTruthSource.offers[offerToTake.id]?.isTaken = true
                 offerTruthSource.offers.removeValue(forKey: offerToTake.id)
-            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _, newSwap in
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newSwap in
+                logger.notice("takeOffer: removing offer \(offerToTake.id.uuidString) from persistent storage")
+                try databaseService.deleteOffers(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID))
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("takeOffer: encountered error during call for \(offerToTake.id.uuidString): \(error.localizedDescription)")
