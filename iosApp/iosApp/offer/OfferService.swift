@@ -546,6 +546,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 guard var offerTruthSource = offerTruthSource else {
                     throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during takeOffer call for \(offerToTake.id.uuidString)")
                 }
+                offerTruthSource.offers[offerToTake.id]?.isTaken = true
                 offerTruthSource.offers.removeValue(forKey: offerToTake.id)
             }.done(on: DispatchQueue.global(qos: .userInitiated)) { _, newSwap in
                 seal.fulfill(())

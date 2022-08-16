@@ -22,7 +22,7 @@ class Offer: ObservableObject {
     /**
      Corresponds to an on-chain Offer's `isTaken` property.
      */
-    let isTaken: Bool
+    @Published var isTaken: Bool
     /**
      The ID that uniquely identifies the offer, as a `UUID`.
      */
