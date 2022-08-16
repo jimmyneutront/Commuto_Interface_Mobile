@@ -14,7 +14,7 @@ import SwiftUI
 struct OffersView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     /**
-     An object adopting the `OfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
+     An object adopting the `UIOfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
      */
     @ObservedObject var offerTruthSource: TruthSource
     

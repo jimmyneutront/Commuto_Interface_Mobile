@@ -11,11 +11,17 @@ import SwiftUI
 /**
  Displays the main list of offers as `SwapCardView`s in a `List` within a `NavigationView`
  */
-struct SwapsView: View {
+struct SwapsView<TruthSource>: View where TruthSource: UISwapTruthSource {
+    
+    /**
+     An object adopting the `UISwapTruthSource` protocol that acts as a single source of truth for all swap-related data.
+     */
+    @ObservedObject var swapTruthSource: TruthSource
+    
     var body: some View {
         NavigationView {
             List {
-                ForEach(Swap.sampleSwaps.map { $0.1 }, id: \.id) { swap in
+                ForEach(swapTruthSource.swaps.map { $0.1 }, id: \.id) { swap in
                     NavigationLink(destination: Text(swap.id.uuidString)) {
                         SwapCardView(
                             swapDirection: swap.direction.string,
@@ -34,6 +40,8 @@ struct SwapsView: View {
  */
 struct SwapsView_Previews: PreviewProvider {
     static var previews: some View {
-        SwapsView()
+        SwapsView(
+            swapTruthSource: PreviewableSwapTruthSource()
+        )
     }
 }

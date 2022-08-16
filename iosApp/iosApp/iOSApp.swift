@@ -50,9 +50,11 @@ struct iOSApp: App {
             OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!)
             
         }
+        container.register(SwapViewModel.self) { _ in SwapViewModel() }
             .inObjectScope(.container)
             .initCompleted { r, viewModel in
-                r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = viewModel
+                r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = r.resolve(OffersViewModel.self)!
+                r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.swapTruthSource = r.resolve(SwapViewModel.self)!
             }
         container.resolve(BlockchainService.self)!.listen()
         container.resolve(P2PService.self)!.listen()
@@ -70,7 +72,7 @@ struct iOSApp: App {
                 case .offers:
                     OffersView(offerTruthSource: container.resolve(OffersViewModel.self)!)
                 case .swaps:
-                    SwapsView()
+                    SwapsView(swapTruthSource: container.resolve(SwapViewModel.self)!)
                         .frame(maxHeight: .infinity)
                 }
                 Divider()
