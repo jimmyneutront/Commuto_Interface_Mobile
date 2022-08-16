@@ -91,150 +91,108 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     }
     
     var body: some View {
-        let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack {
+        if (!offer.isCreated && offer.cancelingOfferState == .none) {
+            // If isCreated is false and cancelingOfferState is .none, then the offer has been canceled by someone OTHER than the user of this interface, and therefore we don't show any offer info, just this message. Otherwise, if this offer WAS canceled by the user of this interface, we do show offer info, but relabel the "Cancel Offer" button to indicate that the offer has been canceled.
+            Text("This Offer has been canceled.")
+        } else if (offer.isTaken && offer.takingOfferState == .none) {
+            // If isTaken is true and takingOfferState is .none, then the offer has been taken by someone OTHER than the user of this interface, and therefore we don't show any offer info, just this message. Otherwise, if this offer WAS taken by the user of this interface, we do show offer info, but relabel the "Take Offer" button to indicate that the offer has been canceled.
+            Text("This Offer has been taken.")
+        } else {
+            let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack {
-                    HStack {
-                        Text("Direction:")
-                            .font(.title2)
-                        Spacer()
-                    }
-                    .offset(x: 0.0, y: 10.0)
-                    DisclosureGroup(
-                        isExpanded: $isDirectionDescriptionExpanded,
-                        content: {
-                            HStack {
-                                Text(buildDirectionDescriptionString(stablecoinInformation: stablecoinInformation))
-                                    .padding(.bottom, 1)
-                                Spacer()
-                            }
-                        },
-                        label: {
-                            Text(buildDirectionString(stablecoinInformation: stablecoinInformation))
-                                .font(.title)
-                                .bold()
-                                .multilineTextAlignment(.leading)
-                        }
-                    )
-                    .accentColor(Color.primary)
-                    OfferAmountView(stablecoinInformation: stablecoinInformation, minimum: offer.amountLowerBound, maximum: offer.amountUpperBound, securityDeposit: offer.securityDepositAmount)
-                    HStack {
-                        Text("Settlement methods:")
-                            .font(.title2)
-                        Spacer()
-                    }
-                    .padding(.top, 2)
-                }
-                .padding([.leading, .trailing, .top])
-                SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: offer.settlementMethods)
-                    .padding(.leading)
-                VStack(alignment: .leading) {
-                    DisclosureGroup(
-                        isExpanded: $isServiceFeeRateDescriptionExpanded,
-                        content: {
-                            HStack {
-                                Text("To take this offer, you must pay a fee equal to " + String(Double(offer.serviceFeeRate) / 100.0) + " percent of the amount to be exchanged.")
-                                Spacer()
-                            }
-                        },
-                        label: {
-                            Text("Service Fee Rate: " + String(Double(offer.serviceFeeRate) / 100.0) + "%")
+                    VStack {
+                        HStack {
+                            Text("Direction:")
                                 .font(.title2)
-                                .bold()
+                            Spacer()
                         }
-                    )
-                    .accentColor(Color.primary)
-                    ServiceFeeAmountView(
-                        stablecoinInformation: stablecoinInformation,
-                        minimumString: String(offer.serviceFeeRate * offer.amountLowerBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000))),
-                        maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
-                    )
-                    DisclosureGroup(
-                        isExpanded: $isAdvancedDetailsDescriptionExpanded,
-                        content: {
-                            // Note that the empty string should never be displayed, since a "not available" message is displayed if offer is nil.
-                            VStack(alignment: .leading) {
+                        .offset(x: 0.0, y: 10.0)
+                        DisclosureGroup(
+                            isExpanded: $isDirectionDescriptionExpanded,
+                            content: {
                                 HStack {
-                                    Text("Offer ID: " + offer.id.uuidString)
+                                    Text(buildDirectionDescriptionString(stablecoinInformation: stablecoinInformation))
                                         .padding(.bottom, 1)
                                     Spacer()
                                 }
-                                HStack {
-                                    Text("Chain ID: " + String(offer.chainID))
-                                    Spacer()
-                                }
-                            }
-                        },
-                        label: {
-                            Text("Advanced Details")
-                                .font(.title2)
-                                .bold()
-                        }
-                    )
-                    .accentColor(Color.primary)
-                    if (offer.isUserMaker) {
-                        if offer.editingOfferState == .error {
-                            Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
-                                .foregroundColor(Color.red)
-                        }
-                        NavigationLink(destination:
-                                        EditOfferView(
-                                            offer: offer,
-                                            offerTruthSource: offerTruthSource,
-                                            stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
-                                        )
-                        ) {
-                            Text(editOfferButtonLabel)
-                                .font(.largeTitle)
-                                .bold()
-                                .padding(10)
-                                .frame(maxWidth: .infinity)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.primary, lineWidth: 3)
-                                )
-                        }
-                        .accentColor(Color.primary)
-                        if offer.cancelingOfferState == .error {
-                            HStack {
-                                Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occurred")
-                                    .foregroundColor(Color.red)
-                                Spacer()
-                            }
-                        }
-                        Button(
-                            action: {
-                                // Don't let the user try to cancel the offer if it is already canceled or being canceled
-                                if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
-                                    offerTruthSource.cancelOffer(offer)
-                                }
                             },
                             label: {
-                                Text(cancelingOfferButtonLabel)
-                                    .font(.largeTitle)
+                                Text(buildDirectionString(stablecoinInformation: stablecoinInformation))
+                                    .font(.title)
                                     .bold()
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(cancelingOfferButtonOutlineColor, lineWidth: 3)
-                                    )
+                                    .multilineTextAlignment(.leading)
                             }
                         )
-                        .accentColor(Color.red)
-                    } else if (offer.state == .offerOpened) {
-                        if offer.takingOfferState == .error {
-                            Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
-                                .foregroundColor(Color.red)
+                        .accentColor(Color.primary)
+                        OfferAmountView(stablecoinInformation: stablecoinInformation, minimum: offer.amountLowerBound, maximum: offer.amountUpperBound, securityDeposit: offer.securityDepositAmount)
+                        HStack {
+                            Text("Settlement methods:")
+                                .font(.title2)
+                            Spacer()
                         }
-                        // We should only display the "Take Offer" button if the user is NOT the maker and if the offer is in the offerOpened state
-                        Button(
-                            action: {
-                                isShowingTakeOfferSheet = true
+                        .padding(.top, 2)
+                    }
+                    .padding([.leading, .trailing, .top])
+                    SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: offer.settlementMethods)
+                        .padding(.leading)
+                    VStack(alignment: .leading) {
+                        DisclosureGroup(
+                            isExpanded: $isServiceFeeRateDescriptionExpanded,
+                            content: {
+                                HStack {
+                                    Text("To take this offer, you must pay a fee equal to " + String(Double(offer.serviceFeeRate) / 100.0) + " percent of the amount to be exchanged.")
+                                    Spacer()
+                                }
                             },
                             label: {
-                                Text(takeOfferButtonLabel)
+                                Text("Service Fee Rate: " + String(Double(offer.serviceFeeRate) / 100.0) + "%")
+                                    .font(.title2)
+                                    .bold()
+                            }
+                        )
+                        .accentColor(Color.primary)
+                        ServiceFeeAmountView(
+                            stablecoinInformation: stablecoinInformation,
+                            minimumString: String(offer.serviceFeeRate * offer.amountLowerBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000))),
+                            maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
+                        )
+                        DisclosureGroup(
+                            isExpanded: $isAdvancedDetailsDescriptionExpanded,
+                            content: {
+                                // Note that the empty string should never be displayed, since a "not available" message is displayed if offer is nil.
+                                VStack(alignment: .leading) {
+                                    HStack {
+                                        Text("Offer ID: " + offer.id.uuidString)
+                                            .padding(.bottom, 1)
+                                        Spacer()
+                                    }
+                                    HStack {
+                                        Text("Chain ID: " + String(offer.chainID))
+                                        Spacer()
+                                    }
+                                }
+                            },
+                            label: {
+                                Text("Advanced Details")
+                                    .font(.title2)
+                                    .bold()
+                            }
+                        )
+                        .accentColor(Color.primary)
+                        if (offer.isUserMaker) {
+                            if offer.editingOfferState == .error {
+                                Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
+                                    .foregroundColor(Color.red)
+                            }
+                            NavigationLink(destination:
+                                            EditOfferView(
+                                                offer: offer,
+                                                offerTruthSource: offerTruthSource,
+                                                stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+                                            )
+                            ) {
+                                Text(editOfferButtonLabel)
                                     .font(.largeTitle)
                                     .bold()
                                     .padding(10)
@@ -244,23 +202,73 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                                             .stroke(Color.primary, lineWidth: 3)
                                     )
                             }
-                        )
-                        .accentColor(Color.primary)
-                        .sheet(isPresented: $isShowingTakeOfferSheet) {
-                            TakeOfferView(
-                                offerID: offer.id,
-                                offerTruthSource: offerTruthSource
+                            .accentColor(Color.primary)
+                            if offer.cancelingOfferState == .error {
+                                HStack {
+                                    Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occurred")
+                                        .foregroundColor(Color.red)
+                                    Spacer()
+                                }
+                            }
+                            Button(
+                                action: {
+                                    // Don't let the user try to cancel the offer if it is already canceled or being canceled
+                                    if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
+                                        offerTruthSource.cancelOffer(offer)
+                                    }
+                                },
+                                label: {
+                                    Text(cancelingOfferButtonLabel)
+                                        .font(.largeTitle)
+                                        .bold()
+                                        .padding(10)
+                                        .frame(maxWidth: .infinity)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(cancelingOfferButtonOutlineColor, lineWidth: 3)
+                                        )
+                                }
                             )
+                            .accentColor(Color.red)
+                        } else if (offer.state == .offerOpened) {
+                            if offer.takingOfferState == .error {
+                                Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
+                                    .foregroundColor(Color.red)
+                            }
+                            // We should only display the "Take Offer" button if the user is NOT the maker and if the offer is in the offerOpened state
+                            Button(
+                                action: {
+                                    isShowingTakeOfferSheet = true
+                                },
+                                label: {
+                                    Text(takeOfferButtonLabel)
+                                        .font(.largeTitle)
+                                        .bold()
+                                        .padding(10)
+                                        .frame(maxWidth: .infinity)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(Color.primary, lineWidth: 3)
+                                        )
+                                }
+                            )
+                            .accentColor(Color.primary)
+                            .sheet(isPresented: $isShowingTakeOfferSheet) {
+                                TakeOfferView(
+                                    offerID: offer.id,
+                                    offerTruthSource: offerTruthSource
+                                )
+                            }
                         }
                     }
+                    .offset(x: 0.0, y: -10.0)
+                    .padding()
+                    Spacer()
                 }
-                .offset(x: 0.0, y: -10.0)
-                .padding()
-                Spacer()
+                .offset(x:0.0, y: -30.0)
             }
-            .offset(x:0.0, y: -30.0)
+            .navigationBarTitle(Text("Offer"))
         }
-        .navigationBarTitle(Text("Offer"))
     }
     
     /**

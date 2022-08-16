@@ -70,81 +70,89 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     var body: some View {
         if let offer = offerTruthSource.offers[offerID] {
-            let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(
-                chainID: offer.chainID,
-                contractAddress: offer.stablecoin
-            )
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading) {
-                    Text("Take \(offer.direction.string) Offer")
-                        .font(.title)
-                        .bold()
-                    OfferAmountView(
-                        stablecoinInformation: stablecoinInformation,
-                        minimum: offer.amountLowerBound,
-                        maximum: offer.amountUpperBound,
-                        securityDeposit: offer.securityDepositAmount
-                    )
-                    if (offer.amountLowerBound != offer.amountUpperBound) {
-                        Text("Enter an Amount:")
-                        StablecoinAmountField(value: $specifiedStablecoinAmount, formatter: stablecoinFormatter)
-                        ServiceFeeAmountView(
+            if (!offer.isCreated && offer.cancelingOfferState == .none) {
+                // If isCreated is false and cancelingOfferState is .none, then the offer has been canceled by someone OTHER than the user of this interface, and therefore we don't show any offer info, just this message. Otherwise, if this offer WAS canceled by the user of this interface, we do show offer info, but relabel the "Cancel Offer" button to indicate that the offer has been canceled.
+                Text("This Offer has been canceled.")
+            } else if (offer.isTaken && offer.takingOfferState == .none) {
+                // If isTaken is true and takingOfferState is .none, then the offer has been taken by someone OTHER than the user of this interface, and therefore we don't show any offer info, just this message. Otherwise, if this offer WAS taken by the user of this interface, we do show offer info, but relabel the "Take Offer" button to indicate that the offer has been canceled.
+                Text("This Offer has been taken.")
+            } else {
+                let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(
+                    chainID: offer.chainID,
+                    contractAddress: offer.stablecoin
+                )
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading) {
+                        Text("Take \(offer.direction.string) Offer")
+                            .font(.title)
+                            .bold()
+                        OfferAmountView(
                             stablecoinInformation: stablecoinInformation,
-                            amount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
-                            serviceFeeRate: offer.serviceFeeRate
+                            minimum: offer.amountLowerBound,
+                            maximum: offer.amountUpperBound,
+                            securityDeposit: offer.securityDepositAmount
                         )
-                    } else {
-                        ServiceFeeAmountView(
-                            stablecoinInformation: stablecoinInformation,
-                            minimumString: String(offer.serviceFeeRate * offer.amountLowerBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000))),
-                            maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
-                        )
-                    }
-                    Text(createSettlementMethodHeader(numberOfSettlementMethods: offer.settlementMethods.count))
-                        .font(.title2)
-                    ImmutableSettlementMethodSelector(
-                        settlementMethods: offer.settlementMethods,
-                        selectedSettlementMethod: $selectedSettlementMethod,
-                        stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
-                    )
-                    if (offer.takingOfferState != .none && offer.takingOfferState != .error) {
-                        Text(offer.takingOfferState.description)
-                            .font(.title2)
-                    }
-                    if offer.takingOfferState == .error {
-                        Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
-                            .foregroundColor(Color.red)
-                    }
-                    Button(
-                        action: {
-                            if offer.takingOfferState == .none || offer.takingOfferState == .error {
-                                offerTruthSource.takeOffer(
-                                    offer: offer,
-                                    takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
-                                    settlementMethod: selectedSettlementMethod
-                                )
-                            }
-                        },
-                        label: {
-                            Text(createTakeOfferButtonLabel(offer: offer))
-                                .font(.largeTitle)
-                                .bold()
-                                .padding(10)
-                                .frame(maxWidth: .infinity)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(getTakeOfferButtonOutlineColor(offer: offer), lineWidth: 3)
-                                )
+                        if (offer.amountLowerBound != offer.amountUpperBound) {
+                            Text("Enter an Amount:")
+                            StablecoinAmountField(value: $specifiedStablecoinAmount, formatter: stablecoinFormatter)
+                            ServiceFeeAmountView(
+                                stablecoinInformation: stablecoinInformation,
+                                amount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                serviceFeeRate: offer.serviceFeeRate
+                            )
+                        } else {
+                            ServiceFeeAmountView(
+                                stablecoinInformation: stablecoinInformation,
+                                minimumString: String(offer.serviceFeeRate * offer.amountLowerBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000))),
+                                maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
+                            )
                         }
-                    )
-                    .accentColor(Color.primary)
+                        Text(createSettlementMethodHeader(numberOfSettlementMethods: offer.settlementMethods.count))
+                            .font(.title2)
+                        ImmutableSettlementMethodSelector(
+                            settlementMethods: offer.settlementMethods,
+                            selectedSettlementMethod: $selectedSettlementMethod,
+                            stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+                        )
+                        if (offer.takingOfferState != .none && offer.takingOfferState != .error) {
+                            Text(offer.takingOfferState.description)
+                                .font(.title2)
+                        }
+                        if offer.takingOfferState == .error {
+                            Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
+                                .foregroundColor(Color.red)
+                        }
+                        Button(
+                            action: {
+                                if offer.takingOfferState == .none || offer.takingOfferState == .error {
+                                    offerTruthSource.takeOffer(
+                                        offer: offer,
+                                        takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                        settlementMethod: selectedSettlementMethod
+                                    )
+                                }
+                            },
+                            label: {
+                                Text(createTakeOfferButtonLabel(offer: offer))
+                                    .font(.largeTitle)
+                                    .bold()
+                                    .padding(10)
+                                    .frame(maxWidth: .infinity)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(getTakeOfferButtonOutlineColor(offer: offer), lineWidth: 3)
+                                    )
+                            }
+                        )
+                        .accentColor(Color.primary)
+                    }
+                    .padding()
                 }
-                .padding()
-            }
-            .onAppear {
-                // Set up the stablecoin NumberFormatter when this view appears
-                stablecoinFormatter.numberStyle = .currency
-                stablecoinFormatter.maximumFractionDigits = 3
+                .onAppear {
+                    // Set up the stablecoin NumberFormatter when this view appears
+                    stablecoinFormatter.numberStyle = .currency
+                    stablecoinFormatter.maximumFractionDigits = 3
+                }
             }
         } else {
             Text("This Offer is not available.")
