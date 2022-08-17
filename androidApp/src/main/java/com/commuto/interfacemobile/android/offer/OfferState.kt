@@ -17,6 +17,7 @@ package com.commuto.interfacemobile.android.offer
  * announced; otherwise this means that we are waiting for the maker to announce their public key.
  * @property OFFER_OPENED Indicates that the corresponding offer has been opened on chain and the maker's public key has
  * been announced.
+ * @property TAKEN Indicates that the corresponding offer has been taken.
  * @property CANCELING Indicates that the corresponding offer will be canceled, but
  * [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) has not yet been called
  * for it.
@@ -33,6 +34,7 @@ enum class OfferState {
     OPEN_OFFER_TRANSACTION_BROADCAST,
     AWAITING_PUBLIC_KEY_ANNOUNCEMENT,
     OFFER_OPENED,
+    TAKEN,
 
     CANCELING,
     CANCEL_OFFER_TRANSACTION_BROADCAST,
@@ -44,6 +46,7 @@ enum class OfferState {
             OPEN_OFFER_TRANSACTION_BROADCAST -> 1
             AWAITING_PUBLIC_KEY_ANNOUNCEMENT -> 2
             OFFER_OPENED -> 3
+            TAKEN -> 4
             CANCELING -> -1
             CANCEL_OFFER_TRANSACTION_BROADCAST -> -1
             CANCELED -> -1
@@ -55,6 +58,7 @@ enum class OfferState {
             OPEN_OFFER_TRANSACTION_BROADCAST -> "openOfferTxPublished"
             AWAITING_PUBLIC_KEY_ANNOUNCEMENT -> "awaitingPKAnnouncement"
             OFFER_OPENED -> "offerOpened"
+            TAKEN -> "taken"
             CANCELING -> "canceling"
             CANCEL_OFFER_TRANSACTION_BROADCAST -> "cancelOfferTxBroadcast"
             CANCELED -> "canceled"
@@ -85,6 +89,9 @@ enum class OfferState {
                 }
                 "offerOpened" -> {
                     return OFFER_OPENED
+                }
+                "taken" -> {
+                    return TAKEN
                 }
                 "canceling" -> {
                     return CANCELING

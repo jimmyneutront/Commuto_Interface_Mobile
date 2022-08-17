@@ -1,5 +1,6 @@
 package com.commuto.interfacemobile.android.swap
 
+import com.commuto.interfacemobile.android.blockchain.structs.SwapStruct
 import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.SettlementMethod
 import kotlinx.serialization.decodeFromString
@@ -78,6 +79,38 @@ data class Swap(
             }
         }
         settlementMethod = Json.decodeFromString(onChainSettlementMethod.decodeToString())
+    }
+
+    /**
+     * Returns an [SwapStruct] derived from this [Swap].
+     *
+     * @return A [SwapStruct] derived from this [Swap].
+     */
+    fun toSwapStruct(): SwapStruct {
+        return SwapStruct(
+            isCreated = isCreated,
+            requiresFill = requiresFill,
+            maker = maker,
+            makerInterfaceID = makerInterfaceID,
+            taker = taker,
+            takerInterfaceID = takerInterfaceID,
+            stablecoin = stablecoin,
+            amountLowerBound = amountLowerBound,
+            amountUpperBound = amountUpperBound,
+            securityDepositAmount = securityDepositAmount,
+            takenSwapAmount = takenSwapAmount,
+            serviceFeeAmount = serviceFeeAmount,
+            serviceFeeRate = serviceFeeRate,
+            direction = onChainDirection,
+            settlementMethod = onChainSettlementMethod,
+            protocolVersion = protocolVersion,
+            isPaymentSent = isPaymentSent,
+            isPaymentReceived = isPaymentReceived,
+            hasBuyerClosed = hasBuyerClosed,
+            hasSellerClosed = hasSellerClosed,
+            disputeRaiser = onChainDisputeRaiser,
+            chainID = chainID
+        )
     }
 
     companion object {
