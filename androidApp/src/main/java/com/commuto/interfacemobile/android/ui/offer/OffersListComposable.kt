@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.R
-import com.commuto.interfacemobile.android.offer.OfferTruthSource
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 
 /**
@@ -29,11 +27,10 @@ import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
  */
 @Composable
 fun OffersListComposable(
-    offerTruthSource: OfferTruthSource,
+    offerTruthSource: UIOfferTruthSource,
     navController: NavController
 ) {
     val stablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
-    val offers = remember { offerTruthSource.offers }
     Column {
         Box {
             Row(
@@ -70,7 +67,7 @@ fun OffersListComposable(
             OffersNoneFoundComposable()
         } else {
             LazyColumn {
-                for (entry in offers) {
+                for (entry in offerTruthSource.offers) {
                     item {
                         Button(
                             onClick = {

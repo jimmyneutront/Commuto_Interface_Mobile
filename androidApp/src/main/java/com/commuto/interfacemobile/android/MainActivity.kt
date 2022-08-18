@@ -14,6 +14,7 @@ import com.commuto.interfacemobile.android.ui.CurrentTab
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
 import com.commuto.interfacemobile.android.ui.TabButton
 import com.commuto.interfacemobile.android.ui.offer.OffersComposable
+import com.commuto.interfacemobile.android.ui.swap.SwapViewModel
 import com.commuto.interfacemobile.android.ui.swap.SwapsComposable
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -21,14 +22,17 @@ import javax.inject.Inject
 /**
  * The main Activity and entry point into the application.
  *
- * @property offersViewModel The [OffersViewModel] that acts as a single source of truth for all
- * offer-related data.
+ * @property offersViewModel The [OffersViewModel] that acts as a single source of truth for all offer-related data.
+ * @property swapViewModel The [SwapViewModel] that acts as a single source of truth for all swap-related data.
  */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var offersViewModel: OffersViewModel
+
+    @Inject
+    lateinit var swapViewModel: SwapViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +50,9 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
                         CurrentTab.SWAPS -> {
-                            SwapsComposable()
+                            SwapsComposable(
+                                swapTruthSource = swapViewModel
+                            )
                         }
                     }
                 }

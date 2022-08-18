@@ -15,9 +15,14 @@ import androidx.navigation.navArgument
 
 /**
  * Contains the [NavHost] for swaps and displays the [Composable] to which the user has navigated.
+ *
+ * @param swapTruthSource An object implementing [UISwapTruthSource] that acts as a single source of truth for all
+ * swap-related data.
  */
 @Composable
-fun SwapsComposable() {
+fun SwapsComposable(
+    swapTruthSource: UISwapTruthSource
+) {
 
     val navController = rememberNavController()
 
@@ -28,6 +33,7 @@ fun SwapsComposable() {
     ) {
         composable("SwapsListComposable") {
             SwapsListComposable(
+                swapTruthSource = swapTruthSource,
                 navController = navController
             )
         }
@@ -47,5 +53,7 @@ fun SwapsComposable() {
 @Preview
 @Composable
 fun PreviewSwapsComposable() {
-    SwapsComposable()
+    SwapsComposable(
+        swapTruthSource = PreviewableSwapTruthSource()
+    )
 }
