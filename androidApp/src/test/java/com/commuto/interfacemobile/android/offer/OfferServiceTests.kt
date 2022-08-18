@@ -815,7 +815,7 @@ class OfferServiceTests {
         )
         offerTruthSource.offers[offerID] = offer
         val isCreated = if (offer.isCreated) 1L else 0L
-        val isTaken = if (offer.isTaken) 1L else 0L
+        val isTaken = if (offer.isTaken.value) 1L else 0L
         val havePublicKey = if (offer.havePublicKey) 1L else 0L
         val isUserMaker = if (offer.isUserMaker) 1L else 0L
         val encoder = Base64.getEncoder()
@@ -1050,7 +1050,7 @@ class OfferServiceTests {
                     val addedOffer = offerTruthSource.addedOfferChannel.receive()
                     val addedOfferID = offerTruthSource.offers.keys.first()
                     assert(addedOffer.isCreated)
-                    assertFalse(addedOffer.isTaken)
+                    assertFalse(addedOffer.isTaken.value)
                     assertEquals(addedOffer.id, addedOfferID)
                     //TOOD: check proper maker address once WalletService is implemented
                     assertEquals(addedOffer.stablecoin, testingServerResponse.stablecoinAddress)
@@ -1624,6 +1624,9 @@ class OfferServiceTests {
 
             // Ensure the Offer is in the "taken" state
             assertEquals(OfferState.TAKEN, offer.state)
+
+            // Ensure the value of the Offer's isTaken property is true
+            assertTrue(offer.isTaken.value)
 
             // Check that the offer has been deleted from persistent storage
             assertNull(databaseService.getOffer(id = offerIDB64String))
