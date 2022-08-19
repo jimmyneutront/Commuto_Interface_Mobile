@@ -371,7 +371,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
-     On the global `DispatchQueue`, this ensures that an offer with an ID equal to that of `offerToTake` exists on chain, creates and persistently stores a new `KeyPair` and a new `Swap` with the information contained in `offerToTake` and `swapData`. Then, still on the global `DispatchQueue`, this approves token transfer for the proper amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function (via `BlockchainService`), passing the offer ID and new `Swap`, and then updates the state of `offerToTake` to `taken` and the state of the swap to `takeOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Swap` is added to `swapTruthSource` and `offerToTake` is removed from `offerTruthSource`.
+     On the global `DispatchQueue`, this ensures that an offer with an ID equal to that of `offerToTake` exists on chain and is not taken, creates and persistently stores a new `KeyPair` and a new `Swap` with the information contained in `offerToTake` and `swapData`. Then, still on the global `DispatchQueue`, this approves token transfer for the proper amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function (via `BlockchainService`), passing the offer ID and new `Swap`, and then updates the state of `offerToTake` to `taken` and the state of the swap to `takeOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Swap` is added to `swapTruthSource` and `offerToTake` is removed from `offerTruthSource`.
      
      - Parameters:
         - offerToTake: The `Offer` that this function will take.
@@ -383,7 +383,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      
      - Returns: An empty promise that will be fulfilled when the Offer is taken.
      
-     - Throws: An `OfferService.unexpectedNilError` if `blockchainService`, `swapTruthSource`, or `offerTruthSource` is `nil`, or if an offer with an ID equal to that of `offerToTake` does not exist on-chain. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService`, `swapTruthSource`, or `offerTruthSource` is `nil`, or if an offer with an ID equal to that of `offerToTake` does not exist on-chain, or an `OfferServiceError.offerNotAvailableError` if the offer is not created or is already taken. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func takeOffer(
         offerToTake: Offer,
@@ -402,10 +402,14 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         guard let blockchainService = blockchainService else {
                             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during takeOffer call for \(offerToTake.id.uuidString)")
                         }
-                        let offerOnChain = try blockchainService.getOffer(id: offerToTake.id)
-                        // If offerOnChain is nil, then we say isCreated is false
-                        if !(offerOnChain?.isCreated ?? false) {
-                            throw OfferServiceError.unexpectedNilError(desc: "unable to find on-chain offer with id \(offerToTake.id.uuidString)")
+                        guard let offerOnChain = try blockchainService.getOffer(id: offerToTake.id) else {
+                            throw OfferServiceError.unexpectedNilError(desc: "Unable to find on-chain offer with id \(offerToTake.id.uuidString)")
+                        }
+                        if !offerOnChain.isCreated {
+                            throw OfferServiceError.offerNotAvailableError(desc: "Offer \(offerToTake.id.uuidString) does not exist")
+                        }
+                        if offerOnChain.isTaken {
+                            throw OfferServiceError.offerNotAvailableError(desc: "Offer \(offerToTake.id.uuidString) has already been taken")
                         }
                         if let afterAvailabilityCheck = afterAvailabilityCheck {
                             afterAvailabilityCheck()

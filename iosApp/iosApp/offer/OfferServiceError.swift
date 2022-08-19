@@ -24,6 +24,12 @@ enum OfferServiceError: LocalizedError {
      - Parameter desc: A `String` that provides information about the context in which the error was thrown.
      */
     case nonmatchingChainIDError(desc: String)
+    /**
+     Thrown when `OfferService` tries to take an offer that is not available.
+     
+     - Parameter desc: A `String` that provides information about the context in which the error was thrown.
+     */
+    case offerNotAvailableError(desc: String)
 
     /**
      A description providing information about the context in which the error was thrown.
@@ -33,6 +39,8 @@ enum OfferServiceError: LocalizedError {
         case .unexpectedNilError(let desc):
             return desc
         case .nonmatchingChainIDError(let desc):
+            return desc
+        case .offerNotAvailableError(let desc):
             return desc
         }
     }
