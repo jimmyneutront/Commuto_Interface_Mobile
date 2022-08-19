@@ -22,7 +22,8 @@ import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
  * offers in [offerTruthSource], displays a list containing an [OfferCardComposable]-labeled [Button] for each open
  * offer in [offerTruthSource] that navigates to "OfferComposable/ + offer id as a [String]" when pressed.
  *
- * @param offerTruthSource The OffersViewModel that acts as a single source of truth for all offer-related data.
+ * @param offerTruthSource An object implementing [UIOfferTruthSource] that acts as a single source of truth for all
+ * offer-related data.
  * @param navController The [NavController] that controls navigation between offer-related [Composable]s.
  */
 @Composable
