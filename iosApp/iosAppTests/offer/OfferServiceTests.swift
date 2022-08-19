@@ -1265,6 +1265,8 @@ class OfferServiceTests: XCTestCase {
         
         let offerID = UUID()
         
+        let encodedSettlementMethod = try! JSONEncoder().encode(SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA"))
+        
         struct TestingServerResponse: Decodable {
             let commutoSwapAddress: String
             let stablecoinAddress: String
@@ -1274,7 +1276,8 @@ class OfferServiceTests: XCTestCase {
         var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_takeOffer")!
         testingServerUrlComponents.queryItems = [
             URLQueryItem(name: "events", value: "offer-opened"),
-            URLQueryItem(name: "offerID", value: offerID.uuidString)
+            URLQueryItem(name: "offerID", value: offerID.uuidString),
+            URLQueryItem(name: "settlement_method_string", value: String(bytes: encodedSettlementMethod, encoding: .utf8)),
         ]
         var request = URLRequest(url: testingServerUrlComponents.url!)
         request.httpMethod = "GET"

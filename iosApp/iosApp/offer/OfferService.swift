@@ -371,13 +371,13 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
-     On the global `DispatchQueue`, this ensures that an offer with an ID equal to that of `offerToTake` exists on chain, creates and persistently stores a new key pair and a new `Swap` with the information contained in `offerToTake` and `swapData`. Then, still on the global `DispatchQueue`, this approves token transfer for the proper amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [takeOffer] function (via `BlockchainService`), passing the offer ID and new `Swap`, and then updates the state of `offerToTake` to `taken` and the state of the swap to `takeOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Swap` is added to `swapTruthSource` and `offerToTake` is removed from `offerTruthSource`.
+     On the global `DispatchQueue`, this ensures that an offer with an ID equal to that of `offerToTake` exists on chain, creates and persistently stores a new `KeyPair` and a new `Swap` with the information contained in `offerToTake` and `swapData`. Then, still on the global `DispatchQueue`, this approves token transfer for the proper amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function (via `BlockchainService`), passing the offer ID and new `Swap`, and then updates the state of `offerToTake` to `taken` and the state of the swap to `takeOfferTransactionBroadcast`. Then, on the main `DispatchQueue`, the new `Swap` is added to `swapTruthSource` and `offerToTake` is removed from `offerTruthSource`.
      
      - Parameters:
         - offerToTake: The `Offer` that this function will take.
         - swapData: A `ValidatedNewSwapData` containing data necessary for taking `offerToTake`.
         - afterAvailabilityCheck: A closure that will be executed after this has ensured that the offer exists and is not taken.
-        - afterObjectCreation: A closure that will be executed after the new key pair and `Swap` objects are created.
+        - afterObjectCreation: A closure that will be executed after the new `KeyPair` and `Swap` objects are created.
         - afterPersistentStorage: A closure that will be executed after the `Swap` is persistently stored.
         - afterTransferApproval: A closure that will be executed after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
      
@@ -396,7 +396,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         return Promise { seal in
             Promise<Swap> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("takeOffer: checking that \(offerToTake.id.uuidString) is created and not taken")
                     do {
+                        // Try to get the on-chain offer corresponding to offerToTake
                         guard let blockchainService = blockchainService else {
                             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during takeOffer call for \(offerToTake.id.uuidString)")
                         }
