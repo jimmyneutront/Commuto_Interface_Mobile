@@ -1388,9 +1388,11 @@ class OfferServiceTests: XCTestCase {
         
         wait(for: [takingExpectation], timeout: 30.0)
         
-        #warning("TODO: check for swap on chain")
+        let swapOnChain = try! blockchainService.getSwap(id: offerID)!
+        XCTAssertTrue(swapOnChain.isCreated)
         
-        #warning("TODO: check for key pair in KeyManagerService")
+        let keyPair = try! keyManagerService.getKeyPair(interfaceId: swapOnChain.takerInterfaceID)
+        XCTAssertNotNil(keyPair)
         
         // Test the Swap in swapTruthSource
         let swapInTruthSource = swapTruthSource.swaps[offerID]!
@@ -1400,7 +1402,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(EthereumAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")!, swapInTruthSource.maker)
         XCTAssertEqual(Data(), swapInTruthSource.makerInterfaceID)
         #warning("TODO: check taker address once walletService is implemented")
-        #warning("TODO: check taker interface ID once we have swap from chain")
+        XCTAssertEqual(swapInTruthSource.takerInterfaceID, swapOnChain.takerInterfaceID)
         XCTAssertEqual(EthereumAddress(testingServerResponse!.stablecoinAddress)!, swapInTruthSource.stablecoin)
         XCTAssertEqual(10_000 * BigUInt(10).power(18), swapInTruthSource.amountLowerBound)
         XCTAssertEqual(20_000 * BigUInt(10).power(18), swapInTruthSource.amountUpperBound)

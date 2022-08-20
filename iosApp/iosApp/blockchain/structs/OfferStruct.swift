@@ -125,7 +125,7 @@ struct OfferStruct {
      Called by `createFromGetOfferResponse` to get the appropriate message for a `BlockchainService.unexpectedNilError` when `createFromGetOfferResponse` is unable to get the value of a field that is expected in its `response` parameter.
      */
     private static func makeCreationErrorMessage(valueName: String) -> String {
-        return "Got nil while getting " + valueName + " value from getOffer response"
+        return "Got nil while getting \(valueName) value from getOffer response"
     }
     
     /**

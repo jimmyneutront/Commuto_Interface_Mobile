@@ -440,6 +440,34 @@ class BlockchainService {
     }
     
     /**
+     A `Promise` wrapper around CommutoSwap's [getSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-swap) function, via web3swift.
+     
+     - Parameter id: The id of the [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) to get from the blockchain.
+     
+     - Returns: The `SwapStruct` corresponding to `id`, or `nil` if no swap with an id equal to `id` exists.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the chain ID is `nil`, if `nil` is returned during read transaction creation, or if `nil` is returned while getting swap data from the read transaction response.
+     */
+    func getSwap(id: UUID) throws -> SwapStruct? {
+        let method = "getSwap"
+        guard let chainID = w3.provider.network?.chainID else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil chain ID during getSwap call for \(id.uuidString)")
+        }
+        guard let readTransaction = commutoSwap.read(
+            method,
+            parameters: [id.asData()] as [AnyObject],
+            transactionOptions: .defaultOptions
+        ) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating getSwap read transaction for \(id.uuidString)")
+        }
+        let swapOnChain = try readTransaction.call()
+        guard let swapData = swapOnChain["0"] as? [AnyObject] else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while getting offer data from getSwap read transaction response \(id.uuidString)")
+        }
+        return try SwapStruct.createFromGetSwapResponse(response: swapData, chainID: chainID)
+    }
+    
+    /**
      Gets the current chain ID, parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the currenc chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
      - Note: In order to parse a block, the `EventParserProtocol`s created in this function must query a network node for full transaction receipts.
