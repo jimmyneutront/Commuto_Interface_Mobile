@@ -451,6 +451,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 0)
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID] == nil)
+        XCTAssertFalse(openedOffer!.isCreated)
         XCTAssertEqual(openedOffer?.state, .canceled)
         XCTAssertEqual(offerCanceledEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerCanceledEventRepository.removedEvent!.id, expectedOfferID)

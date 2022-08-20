@@ -770,6 +770,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
         DispatchQueue.main.sync {
             if offerTruthSource.offers[event.id]?.chainID == event.chainID {
+                offerTruthSource.offers[event.id]?.isCreated = false
                 offerTruthSource.offers[event.id]?.state = .canceled
                 offerTruthSource.offers.removeValue(forKey: event.id)
             }

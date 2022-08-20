@@ -18,7 +18,7 @@ class Offer: ObservableObject {
     /**
      Corresponds to an on-chain Offer's `isCreated` property.
      */
-    let isCreated: Bool
+    @Published var isCreated: Bool
     /**
      Corresponds to an on-chain Offer's `isTaken` property.
      */
