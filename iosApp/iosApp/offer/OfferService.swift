@@ -267,6 +267,11 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         return Promise { seal in
             Promise<Void> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    // If we can't find the offer in offerTruthSource, we assume it is not taken
+                    guard !(offerTruthSource?.offers[offerID]?.isTaken ?? false) else {
+                        seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offerID) is taken and cannot be canceled."))
+                        return
+                    }
                     logger.notice("cancelOffer: canceling \(offerID.uuidString)")
                     do {
                         logger.notice("cancelOffer: persistently updating offer \(offerID.uuidString) state to canceling")
