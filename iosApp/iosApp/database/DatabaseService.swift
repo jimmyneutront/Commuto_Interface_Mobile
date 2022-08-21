@@ -61,13 +61,9 @@ class DatabaseService {
     let swaps = Table("Swap")
     
     /**
-     A database structure representing an offer ID.
+     A database structure representing an offer or swap ID.
      */
-    let offerId = Expression<String>("offerId")
-    /**
-     A database structure representing a swap ID.
-     */
-    let swapID = Expression<String>("swapID")
+    let id = Expression<String>("id")
     /**
      A database structure representing an interface ID.
      */
@@ -194,7 +190,7 @@ class DatabaseService {
      */
     func createTables() throws {
         try connection.run(offers.create { t in
-            t.column(offerId, unique: true)
+            t.column(id, unique: true)
             t.column(isCreated)
             t.column(isTaken)
             t.column(maker)
@@ -212,7 +208,7 @@ class DatabaseService {
             t.column(offerState)
         })
         try connection.run(settlementMethods.create { t in
-            t.column(offerId)
+            t.column(id)
             t.column(chainID)
             t.column(settlementMethod)
         })
@@ -226,7 +222,7 @@ class DatabaseService {
             t.column(publicKey)
         })
         try connection.run(swaps.create { t in
-            t.column(swapID, unique: true)
+            t.column(id, unique: true)
             t.column(isCreated)
             t.column(requiresFill)
             t.column(maker)
@@ -262,7 +258,7 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             do {
                 try connection.run(offers.insert(
-                    offerId <- offer.id,
+                    id <- offer.id,
                     isCreated <- offer.isCreated,
                     isTaken <- offer.isTaken,
                     maker <- offer.maker,
@@ -280,7 +276,7 @@ class DatabaseService {
                     offerState <- offer.state
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
-            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.offerId" {
+            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.id" {
                 // An Offer with the specified ID already exists in the database, so we do nothing
                 logger.notice("storeOffer: offer with B64 ID \(offer.id) already exists in database")
             }
@@ -297,7 +293,7 @@ class DatabaseService {
      */
     func updateOfferHavePublicKey(offerID: String, _chainID: String, _havePublicKey: Bool) throws {
         _ = try databaseQueue.sync {
-            try connection.run(offers.filter(offerId == offerID && chainID == _chainID).update(havePublicKey <- _havePublicKey))
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(havePublicKey <- _havePublicKey))
         }
         logger.notice("updateOfferHavePublicKey: set value to \(_havePublicKey) for offer with B64 ID \(offerID), if present")
     }
@@ -312,7 +308,7 @@ class DatabaseService {
      */
     func updateOfferState(offerID: String, _chainID: String, state: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(offers.filter(offerId == offerID && chainID == _chainID).update(offerState <- state))
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(offerState <- state))
         }
         logger.notice("updateOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
     }
@@ -326,7 +322,7 @@ class DatabaseService {
      */
     func deleteOffers(offerID: String, _chainID: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(offers.filter(offerId == offerID && chainID == _chainID).delete())
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).delete())
         }
         logger.notice("deleteOffers: deleted offers with B64 ID \(offerID) and chain ID \(_chainID), if present")
     }
@@ -340,10 +336,10 @@ class DatabaseService {
      
      - Returns: A `DatabaseOffer` corresponding to `id`, or `nil` if no such `DatabaseOffer` is found.
      */
-    func getOffer(id: String) throws -> DatabaseOffer? {
+    func getOffer(id _id: String) throws -> DatabaseOffer? {
         var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
-            rowIterator = try connection.prepareRowIterator(offers.filter(offerId == id))
+            rowIterator = try connection.prepareRowIterator(offers.filter(id == _id))
         }
         guard rowIterator != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getOffer call")
@@ -352,12 +348,12 @@ class DatabaseService {
         if result.count > 1 {
             throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Offers found with given offer id \(id)")
         } else if result.count == 1 {
-            guard result[0][offerId] == id else {
-                throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned Offer did not match specified offer ID " + id)
+            guard result[0][id] == _id else {
+                throw DatabaseServiceError.unexpectedQueryResult(message: "Offer ID of returned Offer did not match specified offer ID " + _id)
             }
-            logger.notice("getOffer: returning offer with B64 ID \(id)")
+            logger.notice("getOffer: returning offer with B64 ID \(_id)")
             return DatabaseOffer(
-                id: result[0][offerId],
+                id: result[0][id],
                 isCreated: result[0][isCreated],
                 isTaken: result[0][isTaken],
                 maker: result[0][maker],
@@ -375,7 +371,7 @@ class DatabaseService {
                 state: result[0][offerState]
             )
         } else {
-            logger.notice("getOffer: no offer found with B64 ID \(id)")
+            logger.notice("getOffer: no offer found with B64 ID \(_id)")
             return nil
         }
     }
@@ -390,10 +386,10 @@ class DatabaseService {
      */
     func storeSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [String]) throws {
         _ = try databaseQueue.sync {
-            try connection.run(settlementMethods.filter(offerId == offerID && chainID == _chainID).delete())
+            try connection.run(settlementMethods.filter(id == offerID && chainID == _chainID).delete())
             for _settlementMethod in _settlementMethods {
                 try connection.run(settlementMethods.insert(
-                    offerId <- offerID,
+                    id <- offerID,
                     chainID <- _chainID,
                     settlementMethod <- _settlementMethod
                 ))
@@ -411,7 +407,7 @@ class DatabaseService {
      */
     func deleteSettlementMethods(offerID: String, _chainID: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(settlementMethods.filter(offerId == offerID && chainID == _chainID).delete())
+            try connection.run(settlementMethods.filter(id == offerID && chainID == _chainID).delete())
         }
         logger.notice("deleteSettlementMethods: deleted for offer with B64 ID \(offerID)")
     }
@@ -430,7 +426,7 @@ class DatabaseService {
     func getSettlementMethods(offerID: String, _chainID: String) throws -> [String]? {
         var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
-            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(offerId == offerID && chainID == _chainID))
+            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(id == offerID && chainID == _chainID))
         }
         guard rowIterator != nil else {
             throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getSettlementMethods call")
@@ -562,7 +558,7 @@ class DatabaseService {
         try databaseQueue.sync {
             do {
                 try connection.run(swaps.insert(
-                    swapID <- swap.id,
+                    id <- swap.id,
                     isCreated <- swap.isCreated,
                     requiresFill <- swap.requiresFill,
                     maker <- swap.maker,
@@ -587,7 +583,7 @@ class DatabaseService {
                     chainID <- swap.chainID,
                     swapState <- swap.state
                 ))
-            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Swap.swapID" {
+            } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Swap.id" {
                 // A swap with the specified ID already exists in the database, so we do nothing
                 logger.notice("storeSwap: swap with B64 ID \(swap.id) already exists in database")
             }
@@ -602,11 +598,11 @@ class DatabaseService {
         - chainID: The chain ID of the swap to be updated, as a `String`.
         - state: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `state` field.
      */
-    func updateSwapState(swapID _swapID: String, chainID _chainID: String, state: String) throws {
+    func updateSwapState(swapID: String, chainID _chainID: String, state: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(swaps.filter(swapID == _swapID && chainID == _chainID).update(swapState <- state))
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(swapState <- state))
         }
-        logger.notice("updateSwapState: set value to \(state) for swap with B64 ID \(_swapID), if present")
+        logger.notice("updateSwapState: set value to \(state) for swap with B64 ID \(swapID), if present")
     }
     
     /**
@@ -616,11 +612,11 @@ class DatabaseService {
         - swapID: The ID of the swaps to be removed, as a Base64-`String` of bytes.
         - chainID: The chain ID of the swaps to be removed as a `String`.
      */
-    func deleteSwaps(swapID _swapID: String, chainID _chainID: String) throws {
+    func deleteSwaps(swapID: String, chainID _chainID: String) throws {
         _ = try databaseQueue.sync {
-            try connection.run(swaps.filter(swapID == _swapID && chainID == _chainID).delete())
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).delete())
         }
-        logger.notice("deleteSwaps: deleted swaps with B64 ID \(_swapID) and chain ID \(_chainID), if present")
+        logger.notice("deleteSwaps: deleted swaps with B64 ID \(swapID) and chain ID \(_chainID), if present")
     }
     
     /**
@@ -632,20 +628,20 @@ class DatabaseService {
      
      - Returns: A `DatabaseSwap` corresponding to `id`, or `nil` if no such `DatabaseSwap` is found.
      */
-    func getSwap(id: String) throws -> DatabaseSwap? {
+    func getSwap(id _id: String) throws -> DatabaseSwap? {
         let rowIterator = try databaseQueue.sync {
-            try connection.prepareRowIterator(swaps.filter(swapID == id))
+            try connection.prepareRowIterator(swaps.filter(id == _id))
         }
         let result = try Array(rowIterator)
         if result.count > 1 {
-            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Swaps found with given swap id \(id)")
+            throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Swaps found with given swap id \(_id)")
         } else if result.count == 1 {
-            guard result[0][swapID] == id else {
+            guard result[0][id] == _id else {
                 throw DatabaseServiceError.unexpectedQueryResult(message: "Swap ID of returned ")
             }
-            logger.notice("getSwap: returning swap with B64 ID \(id)")
+            logger.notice("getSwap: returning swap with B64 ID \(_id)")
             return DatabaseSwap(
-                id: result[0][swapID],
+                id: result[0][id],
                 isCreated: result[0][isCreated],
                 requiresFill: result[0][requiresFill],
                 maker: result[0][maker],
@@ -671,7 +667,7 @@ class DatabaseService {
                 state: result[0][swapState]
             )
         } else {
-            logger.notice("getSwap: no swap found with B64 ID \(id)")
+            logger.notice("getSwap: no swap found with B64 ID \(_id)")
             return nil
         }
     }
