@@ -356,6 +356,11 @@ class OfferService (
     suspend fun editOffer(offerID: UUID, newSettlementMethods: List<SettlementMethod>) {
         withContext(Dispatchers.IO) {
             Log.i(logTag, "editOffer: editing $offerID")
+            val offer = offerTruthSource.offers[offerID]
+                ?: throw OfferServiceException(message = "Offer $offerID was not found.")
+            if (offer.isTaken.value) {
+                throw OfferServiceException(message = "Offer $offerID is already taken.")
+            }
             try {
                 Log.i(logTag, "editOffer: serializing settlement methods for $offerID")
                 val onChainSettlementMethods: List<ByteArray> = try {
