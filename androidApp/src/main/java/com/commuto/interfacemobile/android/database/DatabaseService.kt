@@ -60,7 +60,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             withContext(databaseServiceContext) {
                 database.insertOffer(offer)
             }
-            Log.i(logTag, "storeOffer: stored offer with B64 ID ${offer.offerId}")
+            Log.i(logTag, "storeOffer: stored offer with B64 ID ${offer.id}")
         } catch (exception: SQLiteException) {
             /*
             The result code for a UNIQUE constraint failure; see here: https://www.sqlite.org/rescode.html
@@ -69,7 +69,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             if (exception.resultCode.code != 2067) {
                 throw exception
             }
-            Log.i(logTag, "storeOffer: offer with B64 ID ${offer.offerId} already exists in database")
+            Log.i(logTag, "storeOffer: offer with B64 ID ${offer.id} already exists in database")
         }
     }
 
@@ -143,7 +143,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
         return if (dbOffers.size > 1) {
             throw IllegalStateException("Multiple offers found with given offer id $id")
         } else if (dbOffers.size == 1) {
-            check(dbOffers[0].offerId == id) {
+            check(dbOffers[0].id == id) {
                 "Returned offer id $id did not match specified offer id $id"
             }
             Log.i(logTag, "getOffer: returning offer with B64 ID $id")
@@ -360,7 +360,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             withContext(databaseServiceContext) {
                 database.insertSwap(swap)
             }
-            Log.i(logTag, "storeSwap: stored swap with B64 ID ${swap.swapID}")
+            Log.i(logTag, "storeSwap: stored swap with B64 ID ${swap.id}")
         } catch (exception: SQLiteException) {
             /*
             The result code for a UNIQUE constraint failure; see here: https://www.sqlite.org/rescode.html
@@ -369,7 +369,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
             if (exception.resultCode.code != 2067) {
                 throw exception
             }
-            Log.i(logTag, "storeSwap: swap with B64 ID ${swap.swapID} already exists in database")
+            Log.i(logTag, "storeSwap: swap with B64 ID ${swap.id} already exists in database")
         }
     }
     /**
@@ -423,7 +423,7 @@ open class DatabaseService @Inject constructor(private val databaseDriverFactory
         return if (dbSwaps.size > 1) {
             throw IllegalStateException("Multiple swaps found with given id $id")
         } else if (dbSwaps.size == 1) {
-            check(dbSwaps[0].swapID == id) {
+            check(dbSwaps[0].id == id) {
                 "Returned swap id $id did not match specified swap id $id"
             }
             Log.i(logTag, "getSwap: returning swap with B64 ID $id")

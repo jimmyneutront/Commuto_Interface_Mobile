@@ -164,7 +164,7 @@ class DatabaseServiceTest {
     @Test
     fun testStoreAndGetAndDeleteSwap() = runBlocking {
         val swapToStore = Swap(
-            swapID = "a_uuid",
+            id = "a_uuid",
             isCreated = 1L,
             requiresFill = 0L,
             maker = "maker_address",
@@ -191,7 +191,7 @@ class DatabaseServiceTest {
         )
         databaseService.storeSwap(swapToStore)
         val anotherSwapToStore = Swap(
-            swapID = "a_uuid",
+            id = "a_uuid",
             isCreated = 1L,
             requiresFill = 0L,
             maker = "another_maker_address",
@@ -231,7 +231,7 @@ class DatabaseServiceTest {
     @Test
     fun testUpdateSwapState() = runBlocking {
         val swapToStore = Swap(
-            swapID = "a_uuid",
+            id = "a_uuid",
             isCreated = 1L,
             requiresFill = 0L,
             maker = "maker_address",
