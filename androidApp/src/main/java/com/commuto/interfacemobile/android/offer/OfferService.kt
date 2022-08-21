@@ -290,6 +290,9 @@ class OfferService (
      *
      * @param offerID The ID of the Offer to be canceled.
      * @param chainID The ID of the blockchain on which the Offer exists.
+     *
+     * @throws [OfferServiceException] if there is an offer in [offerTruthSource] with an ID equal to [offerID] and its
+     * [Offer.isTaken] value is false.
      */
     suspend fun cancelOffer(
         offerID: UUID,
@@ -297,6 +300,9 @@ class OfferService (
     ) {
         withContext(Dispatchers.IO) {
             Log.i(logTag, "cancelOffer: canceling $offerID")
+            if (offerTruthSource.offers[offerID]?.isTaken?.value == false) {
+                throw OfferServiceException(message = "Offer $offerID is taken and cannot be canceled.")
+            }
             try {
                 Log.i(logTag, "cancelOffer: persistently updating offer $offerID state to " +
                         OfferState.CANCELING.asString)
