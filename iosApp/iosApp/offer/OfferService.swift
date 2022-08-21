@@ -261,7 +261,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      
      - Returns: An empty `Promise` that will be fulfilled when the Offer is canceled.
      
-     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: An `OfferServiceError.offerNotAvailableError` if the `isTaken` property of the `Offer` in in `offerTruthSource` to which `offerID` is mapped is true, or an `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func cancelOffer(offerID: UUID, chainID: BigUInt) -> Promise<Void> {
         return Promise { seal in
@@ -318,13 +318,25 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      
      - Returns: An empty `Promise` that will be fulfilled when the Offer is edited.
      
-     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: An `OfferServiceError.offerNotAvailableError` if the `isTaken` property of the `Offer` in `offerTruthSource` with an ID equal to `offerID` is true, or an `OfferServiceError.unexpectedNilError` if `offerTruthSource` is `nil`, if there is no `Offer`in `offerTruthSource` with an ID equal to `offerID`, or if `blockchainService` is `nil`. Note that because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func editOffer(offerID: UUID, newSettlementMethods: [SettlementMethod]) -> Promise<Void> {
         return Promise { seal in
             Promise<Array<Data>> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("editOffer: editing \(offerID.uuidString)")
+                    guard let offerTruthSource = offerTruthSource else {
+                        seal.reject(OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during editOffer call for \(offerID.uuidString)"))
+                        return
+                    }
+                    guard let offer = offerTruthSource.offers[offerID] else {
+                        seal.reject(OfferServiceError.unexpectedNilError(desc: "Offer \(offerID.uuidString) was not found."))
+                        return
+                    }
+                    guard !offer.isTaken else {
+                        seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offerID.uuidString) is already taken."))
+                        return
+                    }
                     do {
                         logger.notice("editOffer: serializing settlement methods for \(offerID.uuidString)")
                         let onChainSettlementMethods = try newSettlementMethods.compactMap { settlementMethod in
