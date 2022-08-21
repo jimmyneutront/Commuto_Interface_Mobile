@@ -20,7 +20,7 @@ state TEXT NOT NULL
 
 createSettlementMethodTable:
 CREATE TABLE SettlementMethod (
-offerId TEXT NOT NULL,
+id TEXT NOT NULL,
 chainID TEXT NOT NULL,
 settlementMethod TEXT NOT NULL
 );
@@ -90,7 +90,7 @@ VALUES(?, ?, ?, ?, ?, ?, ?,
 ?, ?, ?, ?);
 
 insertSettlementMethod:
-INSERT INTO SettlementMethod(offerId, chainID, settlementMethod)
+INSERT INTO SettlementMethod(id, chainID, settlementMethod)
 VALUES(?, ?, ?);
 
 insertKeyPair:
@@ -155,7 +155,7 @@ WHERE id = ?;
 
 selectSettlementMethodByOfferIdAndChainID:
 SELECT * FROM SettlementMethod
-WHERE offerId = ? AND chainID = ?;
+WHERE id = ? AND chainID = ?;
 
 selectKeyPairByInterfaceId:
 SELECT * FROM KeyPair
@@ -175,7 +175,7 @@ WHERE id = ? AND chainID = ?;
 
 deleteSettlementMethodByOfferIdAndChainID:
 DELETE FROM SettlementMethod
-WHERE offerId = ? AND chainID = ?;
+WHERE id = ? AND chainID = ?;
 
 deleteSwapBySwapIDAndChainID:
 DELETE FROM Swap
