@@ -45,7 +45,11 @@ class BlockchainServiceTest: XCTestCase {
         #warning("TODO: use previewable offer truth source here")
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
-            offerService: OfferService<OffersViewModel, SwapViewModel>(databaseService: databaseService, keyManagerService: keyManagerService),
+            offerService: OfferService<OffersViewModel, SwapViewModel>(
+                databaseService: databaseService,
+                keyManagerService: keyManagerService,
+                swapService: TestSwapService()
+            ),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!
         )

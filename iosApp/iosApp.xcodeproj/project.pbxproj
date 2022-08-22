@@ -76,6 +76,13 @@
 		6D948424289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */; };
 		6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */; };
 		6D9A7282286FD63100458353 /* OfferEditedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9A7281286FD63100458353 /* OfferEditedEvent.swift */; };
+		6D9AAC7628B2F716000E7640 /* SwapNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC7528B2F716000E7640 /* SwapNotifiable.swift */; };
+		6D9AAC7828B2F7C1000E7640 /* SwapService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC7728B2F7C1000E7640 /* SwapService.swift */; };
+		6D9AAC7A28B2FF49000E7640 /* SwapServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC7928B2FF49000E7640 /* SwapServiceError.swift */; };
+		6D9AAC7C28B30CF0000E7640 /* TestSwapService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC7B28B30CF0000E7640 /* TestSwapService.swift */; };
+		6D9AAC7F28B32C61000E7640 /* SwapServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC7E28B32C61000E7640 /* SwapServiceTests.swift */; };
+		6D9AAC8328B3F9D6000E7640 /* TakerInformationAnnouncementParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC8228B3F9D5000E7640 /* TakerInformationAnnouncementParser.swift */; };
+		6D9AAC8528B3FF76000E7640 /* TakerInformationAnnouncement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC8428B3FF76000E7640 /* TakerInformationAnnouncement.swift */; };
 		6D9ABCBD2736399F0034AE01 /* KeyManagerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9ABCBC2736399F0034AE01 /* KeyManagerService.swift */; };
 		6D9D547D28451183007D1093 /* OffersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9D547C28451183007D1093 /* OffersView.swift */; };
 		6DA19783284A8CAD00D2D073 /* CommutoSwapProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA19782284A8CAD00D2D073 /* CommutoSwapProvider.swift */; };
@@ -129,7 +136,7 @@
 		6D0F4D9E2853C5A10089EE9E /* PublicKeyAnnouncement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyAnnouncement.swift; sourceTree = "<group>"; };
 		6D0FD5C72888A9B700B2DE4B /* ServiceFeeRateChangedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceFeeRateChangedEvent.swift; sourceTree = "<group>"; };
 		6D1272D028942B7C00393128 /* PublicKeyAnnouncementCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyAnnouncementCreator.swift; sourceTree = "<group>"; };
-		6D1272D228945BF700393128 /* PublicKeyAnnouncementParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyAnnouncementParser.swift; sourceTree = "<group>"; };
+		6D1272D228945BF700393128 /* PublicKeyAnnouncementParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PublicKeyAnnouncementParser.swift; path = "../New Group/PublicKeyAnnouncementParser.swift"; sourceTree = "<group>"; };
 		6D16AF21289AFD570016EDDB /* ServiceFeeAmountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceFeeAmountView.swift; sourceTree = "<group>"; };
 		6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CINMessageParsers.swift; sourceTree = "<group>"; };
 		6D18F1B4289ECCFB002B667C /* EditOfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditOfferView.swift; sourceTree = "<group>"; };
@@ -187,6 +194,13 @@
 		6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLite.swiftExtensions.swift; sourceTree = "<group>"; };
 		6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTakenEvent.swift; sourceTree = "<group>"; };
 		6D9A7281286FD63100458353 /* OfferEditedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferEditedEvent.swift; sourceTree = "<group>"; };
+		6D9AAC7528B2F716000E7640 /* SwapNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapNotifiable.swift; sourceTree = "<group>"; };
+		6D9AAC7728B2F7C1000E7640 /* SwapService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapService.swift; sourceTree = "<group>"; };
+		6D9AAC7928B2FF49000E7640 /* SwapServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapServiceError.swift; sourceTree = "<group>"; };
+		6D9AAC7B28B30CF0000E7640 /* TestSwapService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSwapService.swift; sourceTree = "<group>"; };
+		6D9AAC7E28B32C61000E7640 /* SwapServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapServiceTests.swift; sourceTree = "<group>"; };
+		6D9AAC8228B3F9D5000E7640 /* TakerInformationAnnouncementParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakerInformationAnnouncementParser.swift; sourceTree = "<group>"; };
+		6D9AAC8428B3FF76000E7640 /* TakerInformationAnnouncement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakerInformationAnnouncement.swift; sourceTree = "<group>"; };
 		6D9ABCBC2736399F0034AE01 /* KeyManagerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyManagerService.swift; sourceTree = "<group>"; };
 		6D9D547C28451183007D1093 /* OffersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OffersView.swift; sourceTree = "<group>"; };
 		6DA19782284A8CAD00D2D073 /* CommutoSwapProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommutoSwapProvider.swift; sourceTree = "<group>"; };
@@ -277,6 +291,9 @@
 				6D0940EE28A340A0009168BE /* Swap.swift */,
 				6D80072528A9E88000510D01 /* SwapState.swift */,
 				6D80072728AA7C6700510D01 /* SwapTruthSource.swift */,
+				6D9AAC7528B2F716000E7640 /* SwapNotifiable.swift */,
+				6D9AAC7728B2F7C1000E7640 /* SwapService.swift */,
+				6D9AAC7928B2FF49000E7640 /* SwapServiceError.swift */,
 			);
 			path = swap;
 			sourceTree = "<group>";
@@ -285,6 +302,7 @@
 			isa = PBXGroup;
 			children = (
 				6D0F4D9E2853C5A10089EE9E /* PublicKeyAnnouncement.swift */,
+				6D9AAC8428B3FF76000E7640 /* TakerInformationAnnouncement.swift */,
 			);
 			path = messages;
 			sourceTree = "<group>";
@@ -304,6 +322,7 @@
 				6D56891B2865530800BDE490 /* OfferServiceTests.swift */,
 				6D84F83928A830CC008A7554 /* OfferTests.swift */,
 				6D80072928AA808500510D01 /* TestSwapTruthSource.swift */,
+				6D9AAC7B28B30CF0000E7640 /* TestSwapService.swift */,
 			);
 			path = offer;
 			sourceTree = "<group>";
@@ -392,12 +411,12 @@
 		6D9291C8284B9FB9002B9E43 /* p2p */ = {
 			isa = PBXGroup;
 			children = (
+				6D9AAC8128B3F9BF000E7640 /* parse */,
+				6D9AAC8028B3F9B6000E7640 /* create */,
 				6D0F4D9D2853C55B0089EE9E /* messages */,
 				6D9291C9284BA082002B9E43 /* P2PService.swift */,
 				6D0F4D9B2853C4F60089EE9E /* OfferMessageNotifiable.swift */,
 				6D2C34102856CEFC0072AD96 /* P2PErrorNotifiable.swift */,
-				6D1272D028942B7C00393128 /* PublicKeyAnnouncementCreator.swift */,
-				6D1272D228945BF700393128 /* PublicKeyAnnouncementParser.swift */,
 			);
 			path = p2p;
 			sourceTree = "<group>";
@@ -419,6 +438,31 @@
 			path = extension;
 			sourceTree = "<group>";
 		};
+		6D9AAC7D28B32C4F000E7640 /* swap */ = {
+			isa = PBXGroup;
+			children = (
+				6D9AAC7E28B32C61000E7640 /* SwapServiceTests.swift */,
+			);
+			path = swap;
+			sourceTree = "<group>";
+		};
+		6D9AAC8028B3F9B6000E7640 /* create */ = {
+			isa = PBXGroup;
+			children = (
+				6D1272D028942B7C00393128 /* PublicKeyAnnouncementCreator.swift */,
+			);
+			path = create;
+			sourceTree = "<group>";
+		};
+		6D9AAC8128B3F9BF000E7640 /* parse */ = {
+			isa = PBXGroup;
+			children = (
+				6D1272D228945BF700393128 /* PublicKeyAnnouncementParser.swift */,
+				6D9AAC8228B3F9D5000E7640 /* TakerInformationAnnouncementParser.swift */,
+			);
+			path = parse;
+			sourceTree = "<group>";
+		};
 		6D9ABCBB273639750034AE01 /* key */ = {
 			isa = PBXGroup;
 			children = (
@@ -431,6 +475,7 @@
 		6DC323CB273A2EB200936686 /* iosAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				6D9AAC7D28B32C4F000E7640 /* swap */,
 				6D02FA85287F606900C89732 /* key */,
 				6D22581B28674CF50001A90E /* database */,
 				6D56891A286552F400BDE490 /* offer */,
@@ -791,6 +836,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D9AAC7F28B32C61000E7640 /* SwapServiceTests.swift in Sources */,
 				6DEE9AE6288AFE0000EF07D8 /* NewOfferDataValidatorTests.swift in Sources */,
 				6D56891C2865530800BDE490 /* OfferServiceTests.swift in Sources */,
 				6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */,
@@ -803,6 +849,7 @@
 				6D9291CD284BC690002B9E43 /* P2PServiceTest.swift in Sources */,
 				6D80072A28AA808500510D01 /* TestSwapTruthSource.swift in Sources */,
 				6DC323D4273A2F1300936686 /* KMServiceTest.swift in Sources */,
+				6D9AAC7C28B30CF0000E7640 /* TestSwapService.swift in Sources */,
 				6D174E2D27AD7DB800E208F7 /* CINMessageParsers.swift in Sources */,
 				6DB0908028A6AF980005A702 /* NewSwapDataValidatorTests.swift in Sources */,
 				6D02FA88287F6A3100C89732 /* KeyPairTests.swift in Sources */,
@@ -813,12 +860,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D9AAC7828B2F7C1000E7640 /* SwapService.swift in Sources */,
 				6D1272D128942B7C00393128 /* PublicKeyAnnouncementCreator.swift in Sources */,
 				6DF801D328A2D18800DB6227 /* CurrentTab.swift in Sources */,
 				6DEE9AE4288AFC6200EF07D8 /* NewOfferDataValidationError.swift in Sources */,
 				6D6B0FC228504926003A24B3 /* BlockchainServiceError.swift in Sources */,
 				6D38E9DF2847DDEF005C1285 /* OfferService.swift in Sources */,
 				6D0940F128A34CA7009168BE /* SwapCardView.swift in Sources */,
+				6D9AAC7A28B2FF49000E7640 /* SwapServiceError.swift in Sources */,
 				6DB8AA8828A40EE600033043 /* TakeOfferView.swift in Sources */,
 				6D0940EF28A340A0009168BE /* Swap.swift in Sources */,
 				6D2C34112856CEFC0072AD96 /* P2PErrorNotifiable.swift in Sources */,
@@ -832,6 +881,7 @@
 				6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */,
 				6DB0907A28A5E7200005A702 /* NewSwapDataValidator.swift in Sources */,
 				6D91C97B27533EBB00D85654 /* DatabaseService.swift in Sources */,
+				6D9AAC7628B2F716000E7640 /* SwapNotifiable.swift in Sources */,
 				6D1272D328945BF700393128 /* PublicKeyAnnouncementParser.swift in Sources */,
 				6DB0907728A5E0940005A702 /* ValidatedNewSwapData.swift in Sources */,
 				6D0F4D9C2853C4F60089EE9E /* OfferMessageNotifiable.swift in Sources */,
@@ -842,8 +892,10 @@
 				6D7CC6A828934BF200917505 /* OfferState.swift in Sources */,
 				6D91C97E2753F9B100D85654 /* DatabaseKeyPair.swift in Sources */,
 				6DEE9AE2288AE39E00EF07D8 /* ValidatedNewOfferData.swift in Sources */,
+				6D9AAC8328B3F9D6000E7640 /* TakerInformationAnnouncementParser.swift in Sources */,
 				6D9D547D28451183007D1093 /* OffersView.swift in Sources */,
 				6D16AF22289AFD570016EDDB /* ServiceFeeAmountView.swift in Sources */,
+				6D9AAC8528B3FF76000E7640 /* TakerInformationAnnouncement.swift in Sources */,
 				6D80072E28AB26E700510D01 /* UISwapTruthSource.swift in Sources */,
 				6D9ABCBD2736399F0034AE01 /* KeyManagerService.swift in Sources */,
 				6D0F4D9F2853C5A10089EE9E /* PublicKeyAnnouncement.swift in Sources */,

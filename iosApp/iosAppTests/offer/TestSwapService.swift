@@ -1,0 +1,21 @@
+//
+//  TestSwapService.swift
+//  iosAppTests
+//
+//  Created by jimmyt on 8/21/22.
+//  Copyright © 2022 orgName. All rights reserved.
+//
+
+import BigInt
+import Foundation
+@testable import iosApp
+
+/**
+ A basic `SwapNotifiable` implementation used to satisfy `OfferService`'s swapService dependency for testing non-swap-related code.
+ */
+class TestSwapService: SwapNotifiable {
+    /**
+     Does nothing, required to adopt `SwapNotifiable`. Should not be used.
+     */
+    func announceTakerInformation(swapID: UUID, chainID: BigUInt) throws {}
+}

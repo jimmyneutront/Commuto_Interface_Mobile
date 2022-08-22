@@ -18,6 +18,14 @@ enum SwapState {
      Indicates that the transaction to take the offer corresponding to the associated swap has been broadcast.
      */
     case takeOfferTransactionBroadcast
+    /**
+     Indicates that the swap has been taken on-chain, and now the swap taker must announce their settlement method information and public key.
+     */
+    case awaitingTakerInformation
+    /**
+     Indicates that the taker has announced their settlement method information and public key. and now the swap maker must announce their settlement method information.
+     */
+    case awaitingMakerInformation
     
     /**
      Returns a `String` corresponding to a particular case of `SwapState`.
@@ -28,6 +36,10 @@ enum SwapState {
             return "taking"
         case .takeOfferTransactionBroadcast:
             return "takeOfferTxBrdcst"
+        case .awaitingTakerInformation:
+            return "awaitingTakerInfo"
+        case .awaitingMakerInformation:
+            return "awaitingMakerInfo"
         }
     }
     
@@ -45,6 +57,10 @@ enum SwapState {
             return .taking
         } else if string == "takeOfferTxBrdcst" {
             return .takeOfferTransactionBroadcast
+        } else if string  == "awaitingTakerInfo" {
+            return .awaitingTakerInformation
+        } else if string == "awaitingMakerInfo" {
+            return .awaitingMakerInformation
         } else {
             return nil
         }

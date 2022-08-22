@@ -204,4 +204,37 @@ class P2PServiceTest: XCTestCase {
         XCTAssertEqual(offerID, createdPublicKeyAnnouncement!.offerId)
     }
     
+    /**
+     Ensure that `P2PService.announceTakerInformation` makes Taker Information Announcements properly.
+     */
+    func testAnnounceTakerInformation() {
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        class TestOfferService : OfferMessageNotifiable {
+            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
+        }
+        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
+        class TestP2PService: P2PService {
+            var receivedMessage: String?
+            override func sendMessage(_ message: String) {
+                receivedMessage = message
+            }
+        }
+        let p2pService = TestP2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
+        
+        // The key pair, the public key of which we use as the maker's key pair
+        let makerKeyPair = try! KeyPair()
+        // The taker's/user's key pair
+        let takerKeyPair = try! KeyPair()
+        
+        let swapID = UUID()
+        
+        try! p2pService.announceTakerInformation(makerPublicKey: makerKeyPair.getPublicKey(), takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: "some_payment_details")
+        let createdTakerInformationAnnouncement = try! parseTakerInformationAnnouncement(messageString: p2pService.receivedMessage!, keyPair: makerKeyPair)
+        XCTAssertEqual(swapID, createdTakerInformationAnnouncement!.swapID)
+        XCTAssertEqual(takerKeyPair.interfaceId, createdTakerInformationAnnouncement!.publicKey.interfaceId)
+        XCTAssertEqual("some_payment_details", createdTakerInformationAnnouncement!.settlementMethodDetails)
+    }
+    
 }

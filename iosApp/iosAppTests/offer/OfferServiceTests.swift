@@ -79,7 +79,12 @@ class OfferServiceTests: XCTestCase {
         
         let offerOpenedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerOpenedEventRepository: offerOpenedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService(),
+            offerOpenedEventRepository: offerOpenedEventRepository
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -221,6 +226,7 @@ class OfferServiceTests: XCTestCase {
         let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
             databaseService: databaseService,
             keyManagerService: keyManagerService,
+            swapService: TestSwapService(),
             offerOpenedEventRepository: offerOpenedEventRepository
         )
         offerService.offerTruthSource = offerTruthSource
@@ -371,7 +377,12 @@ class OfferServiceTests: XCTestCase {
         
         let offerCanceledEventRepository = TestBlockchainEventRepository<OfferCanceledEvent>()
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerCanceledEventRepository: offerCanceledEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService(),
+            offerCanceledEventRepository: offerCanceledEventRepository
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -460,7 +471,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService` handles [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events properly.
+     Ensures that `OfferService` handles [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events properly for offers neither made nor taken by the interface user.
      */
     func testHandleOfferTakenEvent() {
         
@@ -520,7 +531,12 @@ class OfferServiceTests: XCTestCase {
         
         let offerTakenEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerTakenEventRepository: offerTakenEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService(),
+            offerTakenEventRepository: offerTakenEventRepository
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -572,6 +588,145 @@ class OfferServiceTests: XCTestCase {
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID] == nil)
         let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
         XCTAssertEqual(offerInDatabase, nil)
+    }
+    
+    /**
+     Ensures that `OfferService` handles [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events properly for offers taken by the interface user.
+     */
+    func testHandleOfferTakenEventForUserIsTaker() {
+        
+        let newOfferID = UUID()
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        // The public key of this key pair will be the maker's public key (NOT the user's/taker's), so we do NOT want to store the whole key pair persistently
+        let makerKeyPair = try! keyManagerService.generateKeyPair(storeResult: false)
+        let makerInterfaceID = makerKeyPair.interfaceId
+        // We store the maker's public key, as if we received it via the P2P network
+        try! keyManagerService.storePublicKey(pubKey: try! makerKeyPair.getPublicKey())
+        
+        // This is the taker's (user's) key pair, so we do want to store it persistently
+        let takerKeyPair = try! keyManagerService.generateKeyPair(storeResult: true)
+        
+        let makerInterfaceIDString = makerInterfaceID.base64EncodedString()
+        let takerInterfaceIDString = takerKeyPair.interfaceId.base64EncodedString()
+        
+        // Make testing server set up the proper test environment
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_forUserIsMaker_handleOfferTakenEvent")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-taken"),
+            URLQueryItem(name: "offerID", value: newOfferID.uuidString),
+            URLQueryItem(name: "makerInterfaceID", value: makerInterfaceIDString),
+            URLQueryItem(name: "takerInterfaceID", value: takerInterfaceIDString)
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        // Set up node connection
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        #warning("TODO: move this to its own class")
+        class TestOfferTruthSource: OfferTruthSource {
+            var serviceFeeRate: BigUInt?
+            var offers: [UUID: Offer] = [:]
+        }
+        
+        // OfferService should call the announceTakerInformation method of this class, passing a UUID equal to newOfferID to begin the process of announcing taker information
+        class TestSwapService: SwapNotifiable {
+            let expectation = XCTestExpectation(description: "Fulfilled when announceTakerInformation is called")
+            var swapIDForAnnouncement: UUID? = nil
+            var chainIDForAnnouncement: BigUInt? = nil
+            func announceTakerInformation(swapID: UUID, chainID: BigUInt) throws {
+                swapIDForAnnouncement = swapID
+                chainIDForAnnouncement = chainID
+                expectation.fulfill()
+            }
+        }
+        let swapService = TestSwapService()
+        
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: swapService
+        )
+        offerService.offerTruthSource = TestOfferTruthSource()
+        
+        // We have to persistently store a swap with an ID equal to newOfferID and with the maker and taker interface IDs created above, otherwise OfferService won't be able to tell that the offer corresponding to the emitted OfferTaken event was taken by the user of this interface, and SwapService won't be able to get the keys necessary to make the taker info announcement
+        let swapForDatabase = DatabaseSwap(
+            id: newOfferID.asData().base64EncodedString(),
+            isCreated: true,
+            requiresFill: false,
+            maker: "",
+            makerInterfaceID: makerInterfaceIDString,
+            taker: "",
+            takerInterfaceID: takerInterfaceIDString,
+            stablecoin: "",
+            amountLowerBound: "",
+            amountUpperBound: "",
+            securityDepositAmount: "",
+            takenSwapAmount: "",
+            serviceFeeAmount: "",
+            serviceFeeRate: "",
+            onChainDirection: "",
+            onChainSettlementMethod: "",
+            protocolVersion: "",
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "",
+            chainID: "31337",
+            state: ""
+        )
+        try! databaseService.storeSwap(swap: swapForDatabase)
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
+        blockchainService.listen()
+        
+        wait(for: [swapService.expectation], timeout: 60.0)
+        XCTAssertEqual(newOfferID, swapService.swapIDForAnnouncement)
+        XCTAssertEqual(BigUInt(31337), swapService.chainIDForAnnouncement)
+        XCTAssertFalse(errorHandler.gotError)
+        
     }
     
     /**
@@ -639,7 +794,12 @@ class OfferServiceTests: XCTestCase {
         
         let offerEditedEventRepository = TestBlockchainEventRepository()
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService, offerEditedEventRepository: offerEditedEventRepository)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService(),
+            offerEditedEventRepository: offerEditedEventRepository
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -717,7 +877,8 @@ class OfferServiceTests: XCTestCase {
         
         let offerService = OfferService<PreviewableOfferTruthSource, TestSwapTruthSource>(
             databaseService: databaseService,
-            keyManagerService: keyManagerService
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
         )
         
         let offerTruthSource = PreviewableOfferTruthSource()
@@ -827,7 +988,11 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             
@@ -911,7 +1076,11 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             init() {
@@ -1083,7 +1252,11 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             var serviceFeeRate: BigUInt? = BigUInt(1)
@@ -1214,7 +1387,11 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             var serviceFeeRate: BigUInt? = BigUInt(1)
@@ -1307,7 +1484,11 @@ class OfferServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(databaseService: databaseService, keyManagerService: keyManagerService)
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
+        )
         
         class TestOfferTruthSource: OfferTruthSource {
             var serviceFeeRate: BigUInt? = BigUInt(1)

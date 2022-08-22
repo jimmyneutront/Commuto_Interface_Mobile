@@ -23,6 +23,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      - Parameters:
         - databaseService: The `DatabaseService` that the `OfferService` will use for persistent storage.
         - keyManagerService: The `KeyManagerService` that the `OfferService`will use for managing keys.
+        - swapService: An object or struct adopting `SwapNotifiable` that this uses to handle [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events for offers made or taken by the user of this interface.
         - offerOpenedEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferOpenedEvent`s during `handleOfferOpenedEvent` calls.
         - offerEditedEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferEditedEvent`s during `handleOfferEditedEvent` calls.
         - offerCanceledEventRepository: The `BlockchainEventRepository` that the `OfferService` will use to store `OfferCanceledEvent`s during `handleOfferCanceledEvent` calls.
@@ -31,6 +32,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     init(
         databaseService: DatabaseService,
         keyManagerService: KeyManagerService,
+        swapService: SwapNotifiable,
         offerOpenedEventRepository: BlockchainEventRepository<OfferOpenedEvent> = BlockchainEventRepository<OfferOpenedEvent>(),
         offerEditedEventRepository: BlockchainEventRepository<OfferEditedEvent> = BlockchainEventRepository<OfferEditedEvent>(),
         offerCanceledEventRepository: BlockchainEventRepository<OfferCanceledEvent> = BlockchainEventRepository<OfferCanceledEvent>(),
@@ -38,6 +40,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     ) {
         self.databaseService = databaseService
         self.keyManagerService = keyManagerService
+        self.swapService = swapService
         self.offerOpenedEventRepository = offerOpenedEventRepository
         self.offerEditedEventRepository = offerEditedEventRepository
         self.offerCanceledEventRepository = offerCanceledEventRepository
@@ -78,6 +81,11 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      The `KeyManagerService` that this uses for managing keys.
      */
     private let keyManagerService: KeyManagerService
+    
+    /**
+     An object adopting `SwapNotifiable` that `OfferService` uses to announce taker information (for offers taken by the user of this interface) or to create `Swap` objects and await the announcement of taker information (for offers that have been taken and were made by the user of this interface).
+     */
+    private let swapService: SwapNotifiable
     
     /**
      A repository containing `OfferOpenedEvent`s for offers that are open and for which complete offer information has not yet been retrieved.
@@ -639,7 +647,6 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }
             DispatchQueue.main.sync {
                 offerTruthSource.offers[event.id]?.state = .offerOpened
-                print(offerTruthSource.offers[event.id])
             }
             offerOpenedEventRepository.remove(event)
         } else {
@@ -806,6 +813,15 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         logger.notice("handleOfferTakenEvent: handling event for offer \(event.id.uuidString)")
         let offerIdString = event.id.asData().base64EncodedString()
         offerTakenEventRepository.append(event)
+        // If we have in persistent storage a swap with the ID specified in the event, then we are the taker of the offer, and so we must announce taker information.
+        if try databaseService.getSwap(id: event.id.asData().base64EncodedString()) != nil {
+            logger.notice("handleOfferTakenEvent: \(event.id) was taken by the user of this interface, announcing taker info")
+            try swapService.announceTakerInformation(swapID: event.id, chainID: event.chainID)
+        }
+        
+        // Check if an offer with an ID specified in event is in the database, and if it is, check whether the user of this interface is the maker. If the user is the maker, then update the state to awaitingTakerInfo and begin listening for taker information
+        
+        // If execution reaches this point, then the offer corresponding to this event was neither made nor taken by the user of this interface, so we simply remove the offer and its settlement methods.
         try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
         logger.notice("handleOfferTakenEvent: deleted offer \(event.id.uuidString) from persistent storage")
         try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))

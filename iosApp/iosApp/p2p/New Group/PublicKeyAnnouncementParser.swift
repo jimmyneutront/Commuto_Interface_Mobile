@@ -12,9 +12,9 @@ import Foundation
 /**
 Attempts to restore a PublicKeyAnnouncement from a given `String`.
  
- - Parameter messageString: A `String?` from which to try to restore a `PublicKeyAnnouncement`.
+ - Parameter messageString: An optional`String` from which to try to restore a `PublicKeyAnnouncement`.
  
- - Returns: A `PublicKeyAnnouncement?` that will be `nil` if `messageString` does not contain a valid public key announcement, and will be non-`nil` if `messageString` does contain a valid public key announcement.
+ - Returns: An optional `PublicKeyAnnouncement` that will be `nil` if `messageString` does not contain a valid public key announcement, and will be non-`nil` if `messageString` does contain a valid public key announcement.
  */
 func parsePublicKeyAnnouncement(messageString: String?) -> PublicKeyAnnouncement? {
     guard messageString != nil else {
