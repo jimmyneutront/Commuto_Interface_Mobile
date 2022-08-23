@@ -7,6 +7,7 @@ import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.offer.OfferServiceTests
+import com.commuto.interfacemobile.android.offer.TestSwapService
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -46,7 +47,11 @@ class BlockchainServiceTest {
             }
         }
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
-        val offersService = OfferService(databaseService, KeyManagerService(databaseService))
+        val offersService = OfferService(
+            databaseService = databaseService,
+            keyManagerService = KeyManagerService(databaseService),
+            swapService = TestSwapService()
+        )
         OffersViewModel(offersService)
         val blockchainService = BlockchainService(
             TestBlockchainExceptionHandler(),
