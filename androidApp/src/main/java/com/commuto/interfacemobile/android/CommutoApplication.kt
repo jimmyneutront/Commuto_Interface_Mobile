@@ -27,8 +27,8 @@ class CommutoApplication: Application() {
         // TODO: ONLY do this when using an in memory database, NOT when using a production database!
         databaseService.createTables()
         // Start listening to the blockchain
-        blockchainService.listen()
+        // blockchainService.listen()
         // Start listening to the peer-to-peer network
-        p2pService.listen()
+        // p2pService.listen()
     }
 }

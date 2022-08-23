@@ -13,11 +13,17 @@ import Foundation
  */
 enum SwapServiceError: LocalizedError {
     /**
-     Thrown when `OfferService` unexpectedly encounters a `nil` value, either by calling a function or attempting to use an optional property of a class or structure.
+     Thrown when `SwapService` unexpectedly encounters a `nil` value, either by calling a function or attempting to use an optional property of a class or structure.
      
      - Parameter desc: A `String` that provides information about the context in which the error was thrown.
      */
     case unexpectedNilError(desc: String)
+    /**
+     Thrown when `SwapService` encounters an unexpected value, such as a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) struct with a raw `direction` value of 3.
+     
+     - Parameter desc: A `String` that provides information about the context in which the error was thrown.
+     */
+    case invalidValueError(desc: String)
     
     /**
      A description providing information about the context in which the error was thrown.
@@ -25,6 +31,8 @@ enum SwapServiceError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .unexpectedNilError(let desc):
+            return desc
+        case .invalidValueError(let desc):
             return desc
         }
     }

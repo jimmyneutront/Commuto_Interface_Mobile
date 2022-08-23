@@ -619,7 +619,7 @@ class OfferServiceTests: XCTestCase {
         }
         
         let responseExpectation = XCTestExpectation(description: "Get response from testing server")
-        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_forUserIsMaker_handleOfferTakenEvent")!
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_forUserIsTaker_handleOfferTakenEvent")!
         testingServerUrlComponents.queryItems = [
             URLQueryItem(name: "events", value: "offer-opened-taken"),
             URLQueryItem(name: "offerID", value: newOfferID.uuidString),
@@ -666,6 +666,7 @@ class OfferServiceTests: XCTestCase {
                 chainIDForAnnouncement = chainID
                 expectation.fulfill()
             }
+            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
         }
         let swapService = TestSwapService()
         
@@ -725,6 +726,159 @@ class OfferServiceTests: XCTestCase {
         wait(for: [swapService.expectation], timeout: 60.0)
         XCTAssertEqual(newOfferID, swapService.swapIDForAnnouncement)
         XCTAssertEqual(BigUInt(31337), swapService.chainIDForAnnouncement)
+        XCTAssertFalse(errorHandler.gotError)
+        
+    }
+    
+    /**
+     Ensures that `OfferService` handles [OfferTaken] events properly for offers made by the interface user.
+     */
+    func testHandleOfferTakenEventForUserIsMaker() {
+        let offerID = UUID()
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let keyPair = try! keyManagerService.generateKeyPair(storeResult: true)
+        
+        // Make testing server set up the proper test environment
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_forUserIsMaker_handleOfferTakenEvent")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-taken"),
+            URLQueryItem(name: "offerID", value: offerID.uuidString),
+            URLQueryItem(name: "interfaceID", value: keyPair.interfaceId.base64EncodedString())
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        // Set up node connection
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        #warning("TODO: move this to its own class")
+        class TestOfferTruthSource: OfferTruthSource {
+            var serviceFeeRate: BigUInt?
+            var offers: [UUID: Offer] = [:]
+        }
+        let offerTruthSource = TestOfferTruthSource()
+        
+        // OfferService should call the handleNewSwap method of this class, passing a UUID equal to offerID
+        class TestSwapService: SwapNotifiable {
+            let expectation = XCTestExpectation(description: "Fulfilled when handleNewSwap is called")
+            var swapID: UUID? = nil
+            var chainID: BigUInt? = nil
+            func announceTakerInformation(swapID: UUID, chainID: BigUInt) throws {}
+            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {
+                self.swapID = swapID
+                self.chainID = chainID
+                expectation.fulfill()
+            }
+        }
+        let swapService = TestSwapService()
+        
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: swapService
+        )
+        offerService.offerTruthSource = offerTruthSource
+        
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        let p2pErrorHandler = TestP2PErrorHandler()
+        
+        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
+        
+        class TestP2PService: P2PService {
+            override func announcePublicKey(offerID: UUID, keyPair: KeyPair) {}
+        }
+        let testP2PService = TestP2PService(errorHandler: p2pErrorHandler, offerService: offerService, switrixClient: switrixClient)
+        offerService.p2pService = testP2PService
+        
+        // We have to persistently store an offer with an ID equal to offerID and isUserMaker set to true, so that OfferService calls handleNewSwap
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: offerID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: keyPair.interfaceId,
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.zero,
+            onChainSettlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: true,
+            state: .offerOpened
+        )!
+        offerTruthSource.offers[offerID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
+        blockchainService.listen()
+        
+        wait(for: [swapService.expectation], timeout: 60.0)
+        XCTAssertEqual(offerID, swapService.swapID)
+        XCTAssertEqual(BigUInt(31337), swapService.chainID)
         XCTAssertFalse(errorHandler.gotError)
         
     }
@@ -1083,9 +1237,6 @@ class OfferServiceTests: XCTestCase {
         )
         
         class TestOfferTruthSource: OfferTruthSource {
-            init() {
-                offers = [:]
-            }
             let offerAddedExpectation = XCTestExpectation(description: "Fulfilled when an offer is added to the offers dictionary")
             var offers: [UUID : Offer] = [:] {
                 didSet {

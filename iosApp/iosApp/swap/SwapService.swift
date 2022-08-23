@@ -41,6 +41,11 @@ class SwapService: SwapNotifiable {
     var swapTruthSource: SwapTruthSource? = nil
     
     /**
+     The `BlockchainService` that this uses to interact with the blockchain.
+     */
+    var blockchainService: BlockchainService? = nil
+    
+    /**
      The `P2PService` that this uses for interacting with the peer-to-peer network.
      */
     var p2pService: P2PService? = nil
@@ -105,6 +110,100 @@ class SwapService: SwapNotifiable {
         DispatchQueue.main.async {
             swapTruthSource.swaps[swapID]?.state = .awaitingMakerInformation
         }
+    }
+    
+    /**
+     Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified  swap ID, creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation`using the on chain swap, and maps `swapID`  to the new `Swap` on the main `DispatchQueue`.
+     
+     - Parameters:
+        - swapID: The ID of the swap for which to update state.
+        - chainID The ID of the blockchain on which the swap exists.
+     
+     - Throws `SwapServiceError.unexpectedNilError` of `swapTruthSource` is `nil`.
+     */
+    func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {
+        logger.notice("handleNewSwap: getting on-chain struct for \(swapID)")
+        guard let blockchainService = blockchainService else {
+            throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during handleNewSwap call for \(swapID.uuidString)")
+        }
+        guard let swapOnChain = try blockchainService.getSwap(id: swapID) else {
+            logger.error("handleNewSwap: could not find \(swapID.uuidString) on chain, throwing error")
+            throw SwapServiceError.unexpectedNilError(desc: "Could not find \(swapID.uuidString) on chain")
+        }
+        let direction: OfferDirection = try {
+            switch(swapOnChain.direction) {
+            case BigUInt(0):
+                return OfferDirection.buy
+            case BigUInt(1):
+                return OfferDirection.sell
+            default:
+                throw SwapServiceError.invalidValueError(desc: "Swap \(swapID.uuidString) has invalid direction: \(String(swapOnChain.direction))")
+            }
+        }()
+        let newSwap = try Swap(
+            isCreated: swapOnChain.isCreated,
+            requiresFill: swapOnChain.requiresFill,
+            id: swapID,
+            maker: swapOnChain.maker,
+            makerInterfaceID: swapOnChain.makerInterfaceID,
+            taker: swapOnChain.taker,
+            takerInterfaceID: swapOnChain.takerInterfaceID,
+            stablecoin: swapOnChain.stablecoin,
+            amountLowerBound: swapOnChain.amountLowerBound,
+            amountUpperBound: swapOnChain.amountUpperBound,
+            securityDepositAmount: swapOnChain.securityDepositAmount,
+            takenSwapAmount: swapOnChain.takenSwapAmount,
+            serviceFeeAmount: swapOnChain.serviceFeeAmount,
+            serviceFeeRate: swapOnChain.serviceFeeRate,
+            direction: direction,
+            onChainSettlementMethod: swapOnChain.settlementMethod,
+            protocolVersion: swapOnChain.protocolVersion,
+            isPaymentSent: swapOnChain.isPaymentSent,
+            isPaymentReceived: swapOnChain.isPaymentReceived,
+            hasBuyerClosed: swapOnChain.hasBuyerClosed,
+            hasSellerClosed: swapOnChain.hasSellerClosed,
+            onChainDisputeRaiser: swapOnChain.disputeRaiser,
+            chainID: chainID,
+            state: .awaitingTakerInformation
+        )
+        #warning("TODO: check for taker information once SettlementMethodService is implemented")
+        // Persistently store new swap object
+        logger.notice("handleNewSwap: persistently storing \(swapID.uuidString)")
+        let newSwapForDatabase = DatabaseSwap(
+            id: newSwap.id.asData().base64EncodedString(),
+            isCreated: newSwap.isCreated,
+            requiresFill: newSwap.requiresFill,
+            maker: newSwap.maker.addressData.toHexString(),
+            makerInterfaceID: newSwap.makerInterfaceID.base64EncodedString(),
+            taker: newSwap.taker.addressData.toHexString(),
+            takerInterfaceID: newSwap.takerInterfaceID.base64EncodedString(),
+            stablecoin: newSwap.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(newSwap.amountLowerBound),
+            amountUpperBound: String(newSwap.amountUpperBound),
+            securityDepositAmount: String(newSwap.securityDepositAmount),
+            takenSwapAmount: String(newSwap.takenSwapAmount),
+            serviceFeeAmount: String(newSwap.serviceFeeAmount),
+            serviceFeeRate: String(newSwap.serviceFeeRate),
+            onChainDirection: String(newSwap.onChainDirection),
+            onChainSettlementMethod: newSwap.onChainSettlementMethod.base64EncodedString(),
+            protocolVersion: String(newSwap.protocolVersion),
+            isPaymentSent: newSwap.isPaymentSent,
+            isPaymentReceived: newSwap.isPaymentReceived,
+            hasBuyerClosed: newSwap.hasBuyerClosed,
+            hasSellerClosed: newSwap.hasSellerClosed,
+            onChainDisputeRaiser: String(newSwap.onChainDisputeRaiser),
+            chainID: String(newSwap.chainID),
+            state: newSwap.state.asString
+        )
+        try databaseService.storeSwap(swap: newSwapForDatabase)
+        // Add new Swap to swapTruthSource
+        guard var swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleNewSwap call for \(swapID.uuidString)")
+        }
+        DispatchQueue.main.async {
+            swapTruthSource.swaps[swapID] = newSwap
+        }
+        logger.notice("handleNewSwap: successfully handled \(swapID.uuidString)")
     }
     
 }

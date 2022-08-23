@@ -8,6 +8,7 @@
 
 import BigInt
 import Switrix
+import web3swift
 import XCTest
 
 @testable import iosApp
@@ -79,11 +80,11 @@ class SwapServiceTests: XCTestCase {
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
         
         class TestP2PService: P2PService {
-            var makerPublicKey: PublicKey? = nil
+            var makerPublicKey: iosApp.PublicKey? = nil
             var takerKeyPair: KeyPair? = nil
             var swapID: UUID? = nil
             var paymentDetails: String? = nil
-            override func announceTakerInformation(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
+            override func announceTakerInformation(makerPublicKey: iosApp.PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
                 self.makerPublicKey = makerPublicKey
                 self.takerKeyPair = takerKeyPair
                 self.swapID = swapID
@@ -106,4 +107,97 @@ class SwapServiceTests: XCTestCase {
         XCTAssertEqual(swapInDatabase!.state, "awaitingMakerInfo")
         
     }
+    
+    /**
+     Ensures that `SwapService` handles new swaps made by the user of the interface properly.
+     */
+    func testHandleNewSwap() {
+        let newOfferID = UUID()
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_swapservice_handleNewSwap")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-taken"),
+            URLQueryItem(name: "offerID", value: newOfferID.uuidString),
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let swapService = SwapService(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        
+        class TestSwapTruthSource: SwapTruthSource {
+            let swapAddedExpectation = XCTestExpectation(description: "Fulfilled when a swap is added to the swaps dictionary")
+            var swaps: [UUID : Swap] = [:] {
+                didSet {
+                    // We want to ignore initialization and only fulfill when a new swap is added
+                    if swaps.keys.count != 0 {
+                        swapAddedExpectation.fulfill()
+                    }
+                }
+            }
+        }
+        let swapTruthSource = TestSwapTruthSource()
+        swapService.swapTruthSource = swapTruthSource
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        #warning("TODO: move this to its own class")
+        class TestOfferService: OfferNotifiable {
+            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
+            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
+            func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) {}
+        }
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: TestOfferService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        swapService.blockchainService = blockchainService
+        
+        try! swapService.handleNewSwap(swapID: newOfferID, chainID: BigUInt(31337))
+        
+        wait(for: [swapTruthSource.swapAddedExpectation], timeout: 60.0)
+        XCTAssertEqual(newOfferID, swapTruthSource.swaps.keys.first!)
+        
+    }
+    
 }

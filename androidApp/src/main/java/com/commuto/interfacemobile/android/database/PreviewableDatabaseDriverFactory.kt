@@ -5,6 +5,7 @@ import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver
 import javax.inject.Inject
 import javax.inject.Singleton
 
+//TODO: Rename this TestableDatabaseDriverFactory and move it to testing code
 /**
  * Provides [SqlDriver]s as in-memory [JdbcSqliteDriver]s. Note that this should only be used for testing and
  * previewing; it will cause a crash when run on an Android device.
