@@ -1,10 +1,12 @@
 package com.commuto.interfacemobile.android.swap
 
 import android.util.Log
+import com.commuto.interfacedesktop.db.Swap as DatabaseSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.extension.asByteArray
 import com.commuto.interfacemobile.android.key.KeyManagerService
+import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.p2p.P2PService
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,10 @@ import javax.inject.Singleton
  *
  * @property databaseService The [DatabaseService] that this [SwapService] uses for persistent storage.
  * @property keyManagerService The [KeyManagerService] that this [SwapService] will use for managing keys.
+ * @property swapTruthSource The [SwapTruthSource] in which this is responsible for maintaining an accurate list of
+ * swaps. If this is not yet initialized, event handling methods will throw the corresponding error.
+ * @property blockchainService The [BlockchainService] that this uses to interact with the blockchain.
+ * @property p2pService The [P2PService] that this uses for interacting with the peer-to-peer network.
  */
 @Singleton
 class SwapService @Inject constructor(
@@ -29,6 +35,8 @@ class SwapService @Inject constructor(
 ): SwapNotifiable {
 
     private lateinit var swapTruthSource: SwapTruthSource
+
+    private lateinit var blockchainService: BlockchainService
 
     private lateinit var p2pService: P2PService
 
@@ -44,6 +52,18 @@ class SwapService @Inject constructor(
             "swapTruthSource is already initialized"
         }
         swapTruthSource = newTruthSource
+    }
+
+    /**
+     * Used to set the [blockchainService] property. This can only be called once.
+     *
+     * @param newBlockchainService The new value of the [blockchainService] property, which cannot be null.
+     */
+    fun setBlockchainService(newBlockchainService: BlockchainService) {
+        check(!::blockchainService.isInitialized) {
+            "blockchainService is already initialized"
+        }
+        blockchainService = newBlockchainService
     }
 
     /**
@@ -73,7 +93,7 @@ class SwapService @Inject constructor(
      * @param chainID The ID of the blockchain on which the swap exists.
      */
     override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {
-        Log.i(logTag, "announceTakerInformation: preparing to announce for ${swapID}")
+        Log.i(logTag, "announceTakerInformation: preparing to announce for $swapID")
         val encoder = Base64.getEncoder()
         val swapIDString = encoder.encodeToString(swapID.asByteArray())
         databaseService.updateSwapState(
@@ -86,9 +106,7 @@ class SwapService @Inject constructor(
         }
         // Since we are the taker of this swap, we should have it in persistent storage
         val swapInDatabase = databaseService.getSwap(id = swapIDString)
-        if (swapInDatabase == null) {
-            throw SwapServiceException("Could not find swap $swapID in persistent storage")
-        }
+            ?: throw SwapServiceException("Could not find swap $swapID in persistent storage")
         val decoder = Base64.getDecoder()
         val makerInterfaceID = try {
             decoder.decode(swapInDatabase.makerInterfaceID)
@@ -102,9 +120,7 @@ class SwapService @Inject constructor(
         maker's public key, we should have said public key in storage.
          */
         val makerPublicKey = keyManagerService.getPublicKey(makerInterfaceID)
-        if (makerPublicKey == null) {
-            throw SwapServiceException("Could not find maker's public key for $swapID")
-        }
+            ?: throw SwapServiceException("Could not find maker's public key for $swapID")
         val takerInterfaceID = try {
             decoder.decode(swapInDatabase.takerInterfaceID)
         } catch (exception: Exception) {
@@ -116,9 +132,7 @@ class SwapService @Inject constructor(
         storage.
          */
         val takerKeyPair = keyManagerService.getKeyPair(takerInterfaceID)
-        if (takerKeyPair == null) {
-            throw SwapServiceException("Could not find taker's (user's) key pair for $swapID")
-        }
+            ?: throw SwapServiceException("Could not find taker's (user's) key pair for $swapID")
         // TODO: get actual payment details once settlementMethodService is implemented
         val settlementMethodDetailsString = "TEMPORARY"
         Log.i(logTag, "announceTakerInformation: announcing for $swapID")
@@ -138,4 +152,85 @@ class SwapService @Inject constructor(
             swapTruthSource.swaps[swapID]?.state = SwapState.AWAITING_MAKER_INFORMATION
         }
     }
+
+    /**
+     * Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified
+     * swap ID, creates and persistently stores a new [Swap] with state [SwapState.AWAITING_TAKER_INFORMATION] using the
+     * on chain swap, and maps [swapID] to the new [Swap] on the main coroutine dispatcher.
+     */
+    override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {
+        Log.i(logTag, "handleNewSwap: getting on-chain struct for $swapID")
+        val swapOnChain = blockchainService.getSwap(id = swapID)
+        if (swapOnChain == null) {
+            Log.e(logTag, "handleNewSwap: could not find $swapID on chain, throwing exception")
+            throw SwapServiceException("Could not find $swapID on chain")
+        }
+        val direction: OfferDirection = when (swapOnChain.direction) {
+            BigInteger.ZERO -> OfferDirection.BUY
+            BigInteger.ONE -> OfferDirection.SELL
+            else -> throw SwapServiceException("Swap $swapID has invalid direction: ${swapOnChain.direction}")
+        }
+        val newSwap = Swap(
+            isCreated = swapOnChain.isCreated,
+            requiresFill = swapOnChain.requiresFill,
+            id = swapID,
+            maker = swapOnChain.maker,
+            makerInterfaceID = swapOnChain.makerInterfaceID,
+            taker = swapOnChain.taker,
+            takerInterfaceID = swapOnChain.takerInterfaceID,
+            stablecoin = swapOnChain.stablecoin,
+            amountLowerBound = swapOnChain.amountLowerBound,
+            amountUpperBound = swapOnChain.amountUpperBound,
+            securityDepositAmount = swapOnChain.securityDepositAmount,
+            takenSwapAmount = swapOnChain.takenSwapAmount,
+            serviceFeeAmount = swapOnChain.serviceFeeAmount,
+            serviceFeeRate = swapOnChain.serviceFeeRate,
+            direction = direction,
+            onChainSettlementMethod = swapOnChain.settlementMethod,
+            protocolVersion = swapOnChain.protocolVersion,
+            isPaymentSent = swapOnChain.isPaymentSent,
+            isPaymentReceived = swapOnChain.isPaymentReceived,
+            hasBuyerClosed = swapOnChain.hasBuyerClosed,
+            hasSellerClosed = swapOnChain.hasSellerClosed,
+            onChainDisputeRaiser = swapOnChain.disputeRaiser,
+            chainID = swapOnChain.chainID,
+            state = SwapState.AWAITING_TAKER_INFORMATION,
+        )
+        // TODO: check for taker information once SettlementMethodService is implemented
+        Log.i(logTag, "handleNewSwap: persistently storing $swapID")
+        val encoder = Base64.getEncoder()
+        val swapForDatabase = DatabaseSwap(
+            id = encoder.encodeToString(swapID.asByteArray()),
+            isCreated = if (newSwap.isCreated) 1L else 0L,
+            requiresFill = if (newSwap.requiresFill) 1L else 0L,
+            maker = newSwap.maker,
+            makerInterfaceID = encoder.encodeToString(newSwap.makerInterfaceID),
+            taker = newSwap.taker,
+            takerInterfaceID = encoder.encodeToString(newSwap.takerInterfaceID),
+            stablecoin = newSwap.stablecoin,
+            amountLowerBound = newSwap.amountLowerBound.toString(),
+            amountUpperBound = newSwap.amountUpperBound.toString(),
+            securityDepositAmount = newSwap.securityDepositAmount.toString(),
+            takenSwapAmount = newSwap.takenSwapAmount.toString(),
+            serviceFeeAmount = newSwap.serviceFeeAmount.toString(),
+            serviceFeeRate = newSwap.serviceFeeRate.toString(),
+            onChainDirection = newSwap.onChainDirection.toString(),
+            settlementMethod = encoder.encodeToString(newSwap.onChainSettlementMethod),
+            protocolVersion = newSwap.protocolVersion.toString(),
+            isPaymentSent = if (newSwap.isPaymentSent) 1L else 0L,
+            isPaymentReceived = if (newSwap.isPaymentReceived) 1L else 0L,
+            hasBuyerClosed = if (newSwap.hasBuyerClosed) 1L else 0L,
+            hasSellerClosed = if (newSwap.hasSellerClosed) 1L else 0L,
+            disputeRaiser = newSwap.onChainDisputeRaiser.toString(),
+            chainID = newSwap.chainID.toString(),
+            state = newSwap.state.asString,
+        )
+        databaseService.storeSwap(swapForDatabase)
+        // Add new Swap to swapTruthSource
+        withContext(Dispatchers.Main) {
+            swapTruthSource.addSwap(newSwap)
+        }
+        Log.i(logTag, "handleNewSwap: successfully handled $swapID")
+    }
+
 }
