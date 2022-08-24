@@ -250,7 +250,7 @@ open class P2PService constructor(private val exceptionHandler: P2PExceptionNoti
         swapID: UUID,
         settlementMethodDetails: String,
     ) {
-        Log.i(logTag, "announcePublicKey: creating for $swapID")
+        Log.i(logTag, "sendTakerInformation: creating for $swapID")
         // Setup encoder
         val encoder = Base64.getEncoder()
 
@@ -294,7 +294,7 @@ open class P2PService constructor(private val exceptionHandler: P2PExceptionNoti
         val messageString = Json.encodeToString(message)
 
         // Send message string
-        Log.i(logTag, "announceTakerInformation: sending for swap $swapID")
+        Log.i(logTag, "sendTakerInformation: sending for swap $swapID")
         sendMessage(messageString)
     }
 
