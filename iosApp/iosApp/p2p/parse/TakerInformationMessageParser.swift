@@ -1,5 +1,5 @@
 //
-//  parseTakerInformationAnnouncement.swift
+//  parseTakerInformationMessage.swift
 //  iosApp
 //
 //  Created by jimmyt on 8/22/22.
@@ -10,16 +10,16 @@ import CryptoKit
 import Foundation
 
 /**
- Attempts to restire a `TakerInformationAnnouncement` from a given `String` using a supplied `KeyPair`.
+ Attempts to restore a `TakerInformationMessage` from a given `String` using a supplied `KeyPair`.
  
  - Parameters:
-    - messageString: An optional `String` from which to try to  restore a `TakerInformationAnnouncement`
+    - messageString: An optional `String` from which to try to restore a `TakerInformationMessage`
     - keyPair: The `KeyPair` with which this will attempt to decrypt the message's symmetric key and initialization vector.
  
  - Returns:
-    - An optional `TakerInformationAnnouncement` that will be `nil` if `messageString` does not contain a valid Taker Information Announcement encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
+    - An optional `TakerInformationMessage` that will be `nil` if `messageString` does not contain a valid Taker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
  */
-func parseTakerInformationAnnouncement(messageString: String?, keyPair: KeyPair) throws -> TakerInformationAnnouncement? {
+func parseTakerInformationMessage(messageString: String?, keyPair: KeyPair) throws -> TakerInformationMessage? {
     // Restore message NSDictionary
     guard let messageData = messageString?.data(using: String.Encoding.utf8) else {
         return nil
@@ -55,7 +55,7 @@ func parseTakerInformationAnnouncement(messageString: String?, keyPair: KeyPair)
     guard let payload = try JSONSerialization.jsonObject(with: decryptedPayloadData) as? NSDictionary else {
         return nil
     }
-    // Ensure that the message is a taker information announcement
+    // Ensure that the message is a taker information message
     guard let messageType = payload["msgType"] as? String else {
         return nil
     }
@@ -97,5 +97,5 @@ func parseTakerInformationAnnouncement(messageString: String?, keyPair: KeyPair)
     guard let swapIDString = payload["swapId"] as? String, let swapID = UUID(uuidString: swapIDString) else {
         return nil
     }
-    return TakerInformationAnnouncement(swapID: swapID, publicKey: publicKey, settlementMethodDetails: settlementMethodDetails)
+    return TakerInformationMessage(swapID: swapID, publicKey: publicKey, settlementMethodDetails: settlementMethodDetails)
 }

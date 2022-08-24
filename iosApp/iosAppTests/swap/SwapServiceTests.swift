@@ -13,11 +13,14 @@ import XCTest
 
 @testable import iosApp
 
+/**
+ Tests for `SwapService`
+ */
 class SwapServiceTests: XCTestCase {
     /**
-     Ensures that `SwapService` announces taker information correctly..
+     Ensures that `SwapService` sends taker information correctly.
      */
-    func testAnnounceTakerInformation() {
+    func testSendTakerInformation() {
         
         // Set up DatabaseService and KeyManagerService
         let databaseService = try! DatabaseService()
@@ -30,7 +33,7 @@ class SwapServiceTests: XCTestCase {
             keyManagerService: keyManagerService
         )
         
-        // The ID of the swap for which taker information will be announced
+        // The ID of the swap for which taker information will be sent
         let swapID = UUID()
         
         // The public key of this key pair will be the maker's public key (NOT the user's/taker's), so we do NOT want to store the whole key pair persistently
@@ -40,7 +43,7 @@ class SwapServiceTests: XCTestCase {
         // This is the taker's (user's) key pair, so we do want to store it persistently
         let takerKeyPair = try! keyManagerService.generateKeyPair(storeResult: true)
         
-        // We must persistently store a swap with an ID equal to swapID and the maker and taker interface IDs from the keys created above, otherwise SwapService won't be able to get the keys necessary to make the taker info announcement
+        // We must persistently store a swap with an ID equal to swapID and the maker and taker interface IDs from the keys created above, otherwise SwapService won't be able to get the keys necessary to make the taker info message
         let swapForDatabase = DatabaseSwap(
             id: swapID.asData().base64EncodedString(),
             isCreated: true,
@@ -84,7 +87,7 @@ class SwapServiceTests: XCTestCase {
             var takerKeyPair: KeyPair? = nil
             var swapID: UUID? = nil
             var paymentDetails: String? = nil
-            override func announceTakerInformation(makerPublicKey: iosApp.PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
+            override func sendTakerInformation(makerPublicKey: iosApp.PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
                 self.makerPublicKey = makerPublicKey
                 self.takerKeyPair = takerKeyPair
                 self.swapID = swapID
@@ -95,7 +98,7 @@ class SwapServiceTests: XCTestCase {
         swapService.p2pService = p2pService
         swapService.swapTruthSource = TestSwapTruthSource()
         
-        try! swapService.announceTakerInformation(swapID: swapID, chainID: BigUInt(31337))
+        try! swapService.sendTakerInformationMessage(swapID: swapID, chainID: BigUInt(31337))
         
         XCTAssertEqual(p2pService.makerPublicKey!.interfaceId, makerKeyPair.interfaceId)
         XCTAssertEqual(p2pService.takerKeyPair!.interfaceId, takerKeyPair.interfaceId)

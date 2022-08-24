@@ -205,9 +205,9 @@ class P2PServiceTest: XCTestCase {
     }
     
     /**
-     Ensure that `P2PService.announceTakerInformation` makes Taker Information Announcements properly.
+     Ensure that `P2PService.sendTakerInformation` sends [Taker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt)s properly.
      */
-    func testAnnounceTakerInformation() {
+    func testSendTakerInformation() {
         class TestP2PErrorHandler : P2PErrorNotifiable {
             func handleP2PError(_ error: Error) {}
         }
@@ -230,11 +230,11 @@ class P2PServiceTest: XCTestCase {
         
         let swapID = UUID()
         
-        try! p2pService.announceTakerInformation(makerPublicKey: makerKeyPair.getPublicKey(), takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: "some_payment_details")
-        let createdTakerInformationAnnouncement = try! parseTakerInformationAnnouncement(messageString: p2pService.receivedMessage!, keyPair: makerKeyPair)
-        XCTAssertEqual(swapID, createdTakerInformationAnnouncement!.swapID)
-        XCTAssertEqual(takerKeyPair.interfaceId, createdTakerInformationAnnouncement!.publicKey.interfaceId)
-        XCTAssertEqual("some_payment_details", createdTakerInformationAnnouncement!.settlementMethodDetails)
+        try! p2pService.sendTakerInformation(makerPublicKey: makerKeyPair.getPublicKey(), takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: "some_payment_details")
+        let createdTakerInformationMessage = try! parseTakerInformationMessage(messageString: p2pService.receivedMessage!, keyPair: makerKeyPair)
+        XCTAssertEqual(swapID, createdTakerInformationMessage!.swapID)
+        XCTAssertEqual(takerKeyPair.interfaceId, createdTakerInformationMessage!.publicKey.interfaceId)
+        XCTAssertEqual("some_payment_details", createdTakerInformationMessage!.settlementMethodDetails)
     }
     
 }

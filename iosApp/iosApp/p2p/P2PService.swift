@@ -264,8 +264,17 @@ class P2PService {
         try sendMessage(announcement)
     }
     
-    func announceTakerInformation(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
-        logger.notice("announceTakerInformation: creating for \(swapID.uuidString)")
+    /**
+     Creates a [Taker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) using the supplied maker's public key, taker's/user's key pair, swap ID and taker's payment details, and sends it using the `sendMessage` function.
+     
+     - Parameters:
+        - makerPublicKey: The public key of the swap maker, to whom information is being sent.
+        - takerKeyPair: The taker's/user's key pair, which will be used to sign this message.
+        - swapID: The ID of the swap for which information is being sent.
+        - paymentDetails: The settlement method details being sent.
+     */
+    func sendTakerInformation(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
+        logger.notice("sendTakerInformation: creating for \(swapID.uuidString)")
         // Create Base64-encoded string of the taker's (user's) public key in PKCS#1 bytes
         let makerPublicKeyString = try takerKeyPair.pubKeyToPkcs1Bytes().base64EncodedString()
         
@@ -311,7 +320,7 @@ class P2PService {
         let messageString = String(decoding: try JSONSerialization.data(withJSONObject: message), as: UTF8.self)
         
         // Send message string
-        logger.notice("announceTakerInformation: sending for swap \(swapID.uuidString)")
+        logger.notice("sendTakerInformation: sending for swap \(swapID.uuidString)")
         try sendMessage(messageString)
     }
     

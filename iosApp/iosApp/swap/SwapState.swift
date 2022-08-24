@@ -19,11 +19,11 @@ enum SwapState {
      */
     case takeOfferTransactionBroadcast
     /**
-     Indicates that the swap has been taken on-chain, and now the swap taker must announce their settlement method information and public key.
+     Indicates that the swap has been taken on-chain, and now the swap taker must send their settlement method information and public key to the maker.
      */
     case awaitingTakerInformation
     /**
-     Indicates that the taker has announced their settlement method information and public key. and now the swap maker must announce their settlement method information.
+     Indicates that the taker has sent their settlement method information and public key to the maker, and now the swap maker must send their settlement method information to the taker.
      */
     case awaitingMakerInformation
     

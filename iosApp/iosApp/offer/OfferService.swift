@@ -83,7 +83,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     private let keyManagerService: KeyManagerService
     
     /**
-     An object adopting `SwapNotifiable` that `OfferService` uses to announce taker information (for offers taken by the user of this interface) or to create `Swap` objects and await the announcement of taker information (for offers that have been taken and were made by the user of this interface).
+     An object adopting `SwapNotifiable` that `OfferService` uses to send taker information (for offers taken by the user of this interface) or to create `Swap` objects and await receiving taker information (for offers that have been taken and were made by the user of this interface).
      */
     private let swapService: SwapNotifiable
     
@@ -803,7 +803,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository` and checks if the user of this interface is  the taker of the offer. If so, then this calls `swapService.announceTakerInformation`. If not, this checks if the user of this interface is the maker of the offer. If so, this calls `swapService.handleNewSwap`. If the user of this interface is NOT the taker of the offer, (regardless of whether the user  is or is not the maker) this removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerTakenEventsRepository`, and then checks that the chain ID of the event matches the chain ID of the `Offer` mapped to the offer ID specified in `event` in `offerTruthSource`'s `offers` dictionary on the main thread. If they do not match, this returns. If they do match, then this synchronously removes the `Offer` from said `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository` and checks if the user of this interface is  the taker of the offer. If so, then this calls `swapService.sendTakerInformationMessage`. If not, this checks if the user of this interface is the maker of the offer. If so, this calls `swapService.handleNewSwap`. If the user of this interface is NOT the taker of the offer, (regardless of whether the user is or is not the maker) this removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerTakenEventsRepository`, and then checks that the chain ID of the event matches the chain ID of the `Offer` mapped to the offer ID specified in `event` in `offerTruthSource`'s `offers` dictionary on the main thread. If they do not match, this returns. If they do match, then this synchronously removes the `Offer` from said `offers` dictionary on the main thread.
      
      - Parameter event: The `OfferTakenEvent` of which `OfferService` is being notified.
      
@@ -813,18 +813,18 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         logger.notice("handleOfferTakenEvent: handling event for offer \(event.id.uuidString)")
         let offerIdString = event.id.asData().base64EncodedString()
         offerTakenEventRepository.append(event)
-        // If we have in persistent storage a swap with the ID specified in the event, then we are the taker of the offer, and so we must announce taker information.
+        // If we have in persistent storage a swap with the ID specified in the event, then we are the taker of the offer, and so we must send taker information.
         if try databaseService.getSwap(id: event.id.asData().base64EncodedString()) != nil {
-            logger.notice("handleOfferTakenEvent: \(event.id) was taken by the user of this interface, announcing taker info")
-            try swapService.announceTakerInformation(swapID: event.id, chainID: event.chainID)
+            logger.notice("handleOfferTakenEvent: \(event.id) was taken by the user of this interface, sending taker info")
+            try swapService.sendTakerInformationMessage(swapID: event.id, chainID: event.chainID)
         } else {
             let offerInDatabase = try databaseService.getOffer(id: event.id.asData().base64EncodedString())
-            // If we have the offer in persistent  storage and we are the maker, then we update state to indicate that we are waiting for taker information
+            // If we have the offer in persistent storage and we are the maker, then we update handle the new swap
             if offerInDatabase != nil && (offerInDatabase?.isUserMaker ?? false) {
                 logger.notice("handleOfferTakenEvent: \(event.id) was made by the user of this interface, handling new swap")
                 try swapService.handleNewSwap(swapID: event.id, chainID: event.chainID)
             }
-            // Regardless of whether we are or are not the maker of this offer, we  are not the taker, so we remove the offer and its settlement methods.
+            // Regardless of whether we are or are not the maker of this offer, we are not the taker, so we remove the offer and its settlement methods.
             try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
             logger.notice("handleOfferTakenEvent: deleted offer \(event.id.uuidString) from persistent storage")
             try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))

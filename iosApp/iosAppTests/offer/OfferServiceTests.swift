@@ -656,14 +656,14 @@ class OfferServiceTests: XCTestCase {
             var offers: [UUID: Offer] = [:]
         }
         
-        // OfferService should call the announceTakerInformation method of this class, passing a UUID equal to newOfferID to begin the process of announcing taker information
+        // OfferService should call the sendTakerInformationMessage method of this class, passing a UUID equal to newOfferID to begin the process of sending taker information
         class TestSwapService: SwapNotifiable {
-            let expectation = XCTestExpectation(description: "Fulfilled when announceTakerInformation is called")
-            var swapIDForAnnouncement: UUID? = nil
-            var chainIDForAnnouncement: BigUInt? = nil
-            func announceTakerInformation(swapID: UUID, chainID: BigUInt) throws {
-                swapIDForAnnouncement = swapID
-                chainIDForAnnouncement = chainID
+            let expectation = XCTestExpectation(description: "Fulfilled when sendTakerInformationMessage is called")
+            var swapIDForMessage: UUID? = nil
+            var chainIDForMessage: BigUInt? = nil
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {
+                swapIDForMessage = swapID
+                chainIDForMessage = chainID
                 expectation.fulfill()
             }
             func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
@@ -677,7 +677,7 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.offerTruthSource = TestOfferTruthSource()
         
-        // We have to persistently store a swap with an ID equal to newOfferID and with the maker and taker interface IDs created above, otherwise OfferService won't be able to tell that the offer corresponding to the emitted OfferTaken event was taken by the user of this interface, and SwapService won't be able to get the keys necessary to make the taker info announcement
+        // We have to persistently store a swap with an ID equal to newOfferID and with the maker and taker interface IDs created above, otherwise OfferService won't be able to tell that the offer corresponding to the emitted OfferTaken event was taken by the user of this interface, and SwapService won't be able to get the keys necessary to make the taker info message
         let swapForDatabase = DatabaseSwap(
             id: newOfferID.asData().base64EncodedString(),
             isCreated: true,
@@ -724,14 +724,14 @@ class OfferServiceTests: XCTestCase {
         blockchainService.listen()
         
         wait(for: [swapService.expectation], timeout: 60.0)
-        XCTAssertEqual(newOfferID, swapService.swapIDForAnnouncement)
-        XCTAssertEqual(BigUInt(31337), swapService.chainIDForAnnouncement)
+        XCTAssertEqual(newOfferID, swapService.swapIDForMessage)
+        XCTAssertEqual(BigUInt(31337), swapService.chainIDForMessage)
         XCTAssertFalse(errorHandler.gotError)
         
     }
     
     /**
-     Ensures that `OfferService` handles [OfferTaken] events properly for offers made by the interface user.
+     Ensures that `OfferService` handles [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events properly for offers made by the interface user.
      */
     func testHandleOfferTakenEventForUserIsMaker() {
         let offerID = UUID()
@@ -789,7 +789,7 @@ class OfferServiceTests: XCTestCase {
             let expectation = XCTestExpectation(description: "Fulfilled when handleNewSwap is called")
             var swapID: UUID? = nil
             var chainID: BigUInt? = nil
-            func announceTakerInformation(swapID: UUID, chainID: BigUInt) throws {}
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
             func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {
                 self.swapID = swapID
                 self.chainID = chainID

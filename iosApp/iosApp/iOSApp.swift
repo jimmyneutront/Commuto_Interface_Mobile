@@ -31,7 +31,6 @@ struct iOSApp: App {
             
         }
             .inObjectScope(.container)
-        
         // Register the SwapService singleton
         container.register(SwapService.self) { resolver in
             SwapService(
@@ -62,13 +61,15 @@ struct iOSApp: App {
             .inObjectScope(.container)
         // Provide BlockchainService to OfferService
         container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.blockchainService = container.resolve(BlockchainService.self)!
+        #warning("TODO: Provide BlockchainService to SwapService")
         // Register the P2PService singleton
         container.register(P2PService.self) { r in
             P2PService(errorHandler: ErrorViewModel(), offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!, switrixClient: SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!))
         }
             .inObjectScope(.container)
-        // Provide P2pService to OfferService
+        // Provide P2PService to OfferService
         container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.p2pService = container.resolve(P2PService.self)!
+        #warning("TODO: Provide P2PService to SwapService")
         // Register the OffersViewModel singleton
         container.register(OffersViewModel.self) { r in
             OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!)
@@ -82,6 +83,7 @@ struct iOSApp: App {
                 r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = r.resolve(OffersViewModel.self)!
                 // Provide SwapViewModel to OfferService as its swapTruthSource
                 r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.swapTruthSource = r.resolve(SwapViewModel.self)!
+                #warning("TODO: Provide SwapViewModel to SwapService as its swapTruthSource")
             }
         // Begin listening to the blockchain
         //container.resolve(BlockchainService.self)!.listen()

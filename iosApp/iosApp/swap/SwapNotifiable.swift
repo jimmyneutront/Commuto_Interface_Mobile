@@ -14,19 +14,19 @@ import BigInt
  */
 protocol SwapNotifiable {
     /**
-     The function called by `OfferService` in order to announce taker information for an offer that has been taken by the user of this interface.
+     The function called by `OfferService` in order to send taker information for an offer that has been taken by the user of this interface.
      
      - Parameters:
-        - swapID: The ID of the swap for which the structure or class adopting this protocol should announce taker information.
+        - swapID: The ID of the swap for which the structure or class adopting this protocol should send taker information.
         - chainID: The ID of the blockchain on which the taken offer exists.
      */
-    func announceTakerInformation(swapID: UUID, chainID: BigUInt) throws
+    func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws
     
     /**
-     The function called by  `OfferService` when an offer made by the user of this interface has been taken.
+     The function called by `OfferService` when an offer made by the user of this interface has been taken.
      
      - Parameters:
-        - swapID: The ID of the offfer that has been taken.
+        - swapID: The ID of the offer that has been taken.
         - chainID: The ID of the blockchain on which the taken offer exists.
      */
     func handleNewSwap(swapID: UUID, chainID: BigUInt) throws
