@@ -7,7 +7,7 @@
 //
 
 /**
- A protocol that a structure or class must adopt in order to receive offer-related messages by `P2PService`.
+ A protocol that a structure or class must adopt in order to be notified of offer-related messages by `P2PService`.
  */
 protocol OfferMessageNotifiable {
     /**

@@ -64,7 +64,13 @@ struct iOSApp: App {
         #warning("TODO: Provide BlockchainService to SwapService")
         // Register the P2PService singleton
         container.register(P2PService.self) { r in
-            P2PService(errorHandler: ErrorViewModel(), offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!, switrixClient: SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!))
+            P2PService(
+                errorHandler: ErrorViewModel(),
+                offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!,
+                swapService: r.resolve(SwapService.self)!,
+                switrixClient: SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!),
+                keyManagerService: r.resolve(KeyManagerService.self)!
+            )
         }
             .inObjectScope(.container)
         // Provide P2PService to OfferService

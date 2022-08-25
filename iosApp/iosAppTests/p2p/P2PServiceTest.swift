@@ -47,14 +47,20 @@ class P2PServiceTest: XCTestCase {
      */
     func test_runListenLoop() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         class TestP2PErrorHandler : P2PErrorNotifiable {
             func handleP2PError(_ error: Error) {}
         }
-        class TestOfferService : OfferMessageNotifiable {
-            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
+        let p2pService = P2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: TestOfferMessageNotifiable(),
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         p2pService.listenLoop()
         wait(for: [unfulfillableExpectation], timeout: 10.0)
     }
@@ -64,14 +70,20 @@ class P2PServiceTest: XCTestCase {
      */
     func test_runListen() {
         let unfulfillableExpectation = XCTestExpectation(description: "Test the listen loop")
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         class TestP2PErrorHandler : P2PErrorNotifiable {
             func handleP2PError(_ error: Error) {}
         }
-        class TestOfferService : OfferMessageNotifiable {
-            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
+        let p2pService = P2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: TestOfferMessageNotifiable(),
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         p2pService.listen()
         wait(for: [unfulfillableExpectation], timeout: 60.0)
     }
@@ -110,7 +122,13 @@ class P2PServiceTest: XCTestCase {
         let expectedPKA = PublicKeyAnnouncement(offerId: offerId, pubKey: try! keyPair.getPublicKey())
         let offerService = TestOfferService(expectedPKA: expectedPKA)
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
-        let p2pService = P2PService(errorHandler: TestP2PErrorHandler(), offerService: offerService, switrixClient: switrixClient)
+        let p2pService = P2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: offerService,
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         p2pService.listen()
         
         let publicKeyAnnouncementPayload: [String:Any] = [
@@ -149,6 +167,9 @@ class P2PServiceTest: XCTestCase {
      Tests `P2PService`'s error handling logic by ensuring that it handles unknown token errors properly.
      */
     func testListenErrorHandling() {
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         class TestP2PErrorHandler: P2PErrorNotifiable {
             init(_ eE: XCTestExpectation) {
                 errorExpectation = eE
@@ -164,12 +185,15 @@ class P2PServiceTest: XCTestCase {
         }
         let errorExpectation = XCTestExpectation(description: "We expect to get an error here")
         let errorHandler = TestP2PErrorHandler(errorExpectation)
-        class TestOfferService : OfferMessageNotifiable {
-            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
-        }
         
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
-        let p2pService = P2PService(errorHandler: errorHandler, offerService: TestOfferService(), switrixClient: switrixClient)
+        let p2pService = P2PService(
+            errorHandler: errorHandler,
+            offerService: TestOfferMessageNotifiable(),
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         p2pService.listen()
         wait(for: [errorExpectation], timeout: 60.0)
         XCTAssertTrue((try! errorHandler.errorPromise!.wait() as! SwitrixError).errorCode == "M_UNKNOWN_TOKEN")
@@ -179,11 +203,11 @@ class P2PServiceTest: XCTestCase {
      Ensure that `P2PService.announcePublicKey` makes Public Key Announcements properly.
      */
     func testAnnouncePublicKey() {
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
         class TestP2PErrorHandler : P2PErrorNotifiable {
             func handleP2PError(_ error: Error) {}
-        }
-        class TestOfferService : OfferMessageNotifiable {
-            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         class TestP2PService: P2PService {
@@ -192,7 +216,13 @@ class P2PServiceTest: XCTestCase {
                 receivedMessage = message
             }
         }
-        let p2pService = TestP2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
+        let p2pService = TestP2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: TestOfferMessageNotifiable(),
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         
         let keyPair = try! KeyPair()
         let offerID = UUID()
@@ -208,11 +238,12 @@ class P2PServiceTest: XCTestCase {
      Ensure that `P2PService.sendTakerInformation` sends [Taker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt)s properly.
      */
     func testSendTakerInformation() {
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        #warning("TODO: move this to its own class")
         class TestP2PErrorHandler : P2PErrorNotifiable {
             func handleP2PError(_ error: Error) {}
-        }
-        class TestOfferService : OfferMessageNotifiable {
-            func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) {}
         }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         class TestP2PService: P2PService {
@@ -221,20 +252,120 @@ class P2PServiceTest: XCTestCase {
                 receivedMessage = message
             }
         }
-        let p2pService = TestP2PService(errorHandler: TestP2PErrorHandler(), offerService: TestOfferService(), switrixClient: switrixClient)
+        let p2pService = TestP2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: TestOfferMessageNotifiable(),
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         
-        // The key pair, the public key of which we use as the maker's key pair
+        // The key pair, the public key of which we use as the maker's public key
         let makerKeyPair = try! KeyPair()
         // The taker's/user's key pair
         let takerKeyPair = try! KeyPair()
         
         let swapID = UUID()
         
+        // Send the information
         try! p2pService.sendTakerInformation(makerPublicKey: makerKeyPair.getPublicKey(), takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: "some_payment_details")
         let createdTakerInformationMessage = try! parseTakerInformationMessage(messageString: p2pService.receivedMessage!, keyPair: makerKeyPair)
         XCTAssertEqual(swapID, createdTakerInformationMessage!.swapID)
         XCTAssertEqual(takerKeyPair.interfaceId, createdTakerInformationMessage!.publicKey.interfaceId)
         XCTAssertEqual("some_payment_details", createdTakerInformationMessage!.settlementMethodDetails)
+    }
+    
+    /**
+     Ensure that `P2PService.parseEvents` handles `TakerInformationMessage`s properly.
+     */
+    func testParseTakerInformationMessage() {
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        // Since we are the maker, we want the maker's key pair in persistent storage.
+        let makerKeyPair = try! keyManagerService.generateKeyPair(storeResult: true)
+        // Since we are the maker, we do NOT want the taker's key pair in persistent storage.
+        let takerKeyPair = try! KeyPair()
+        
+        let swapID = UUID()
+        
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
+        
+        class TestSwapService: SwapMessageNotifiable {
+            var message: TakerInformationMessage? = nil
+            func handleTakerInformationMessage(_ message: TakerInformationMessage) {
+                self.message = message
+            }
+        }
+        let swapService = TestSwapService()
+        
+        let takerInformationMessageString = try! createTakerInformationMessage(makerPublicKey: makerKeyPair.getPublicKey(), takerKeyPair: takerKeyPair, swapID: swapID, settlementMethodDetails: "settlement_method_details")
+        
+        let takerInformationMessageEventContent = SwitrixMessageEventContent(body: takerInformationMessageString)
+        
+        let takerInformationMessageEvent = SwitrixClientEvent(content: takerInformationMessageEventContent, eventId: "", originServerTimestamp: 0, roomId: "", sender: "", type: "m.room.message")
+        
+        let p2pService = P2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: TestOfferMessageNotifiable(),
+            swapService: swapService,
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
+        try! p2pService.parseEvents([takerInformationMessageEvent])
+        
+        XCTAssertEqual(swapID, swapService.message!.swapID)
+        XCTAssertEqual(takerKeyPair.interfaceId, swapService.message!.publicKey.interfaceId)
+        XCTAssertEqual("settlement_method_details", swapService.message!.settlementMethodDetails)
+        
+    }
+    
+    /**
+     Ensure that `P2PService.sendMakerInformation` sends [Maker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt)s properly.
+     */
+    func testSendMakerInformation() {
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        #warning("TODO: move this to its own class")
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
+        class TestP2PService: P2PService {
+            var receivedMessage: String?
+            override func sendMessage(_ message: String) {
+                receivedMessage = message
+            }
+        }
+        let p2pService = TestP2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: TestOfferMessageNotifiable(),
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
+        
+        // The key pair, the public key of which we use as the taker's key pair
+        let takerKeyPair = try! KeyPair()
+        // The maker's/user's key pair
+        let makerKeyPair = try! KeyPair()
+        
+        let swapID = UUID()
+        
+        // Send the information
+        try! p2pService.sendMakerInformation(takerPublicKey: takerKeyPair.getPublicKey(), makerKeyPair: makerKeyPair, swapID: swapID, settlementMethodDetails: "some_payment_details")
+        let message = try! JSONSerialization.jsonObject(with: p2pService.receivedMessage!.data(using: String.Encoding.utf8)!) as! NSDictionary
+        // Parse sent information
+        let createdMakerInformationMessage = try! parseMakerInformationMessage(message: message, keyPair: takerKeyPair, publicKey: makerKeyPair.getPublicKey())
+        // Validate sent information
+        XCTAssertEqual(swapID, createdMakerInformationMessage!.swapID)
+        XCTAssertEqual("some_payment_details", createdMakerInformationMessage!.settlementMethodDetails)
+        
     }
     
 }

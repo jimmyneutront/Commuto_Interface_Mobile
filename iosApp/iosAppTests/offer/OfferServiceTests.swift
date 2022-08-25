@@ -246,7 +246,13 @@ class OfferServiceTests: XCTestCase {
                 keyPairForAnnouncement = keyPair
             }
         }
-        let testP2PService = TestP2PService(errorHandler: p2pErrorHandler, offerService: offerService, switrixClient: switrixClient)
+        let testP2PService = TestP2PService(
+            errorHandler: p2pErrorHandler,
+            offerService: offerService,
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         offerService.p2pService = testP2PService
         
         let offer = Offer(
@@ -815,7 +821,13 @@ class OfferServiceTests: XCTestCase {
         class TestP2PService: P2PService {
             override func announcePublicKey(offerID: UUID, keyPair: KeyPair) {}
         }
-        let testP2PService = TestP2PService(errorHandler: p2pErrorHandler, offerService: offerService, switrixClient: switrixClient)
+        let testP2PService = TestP2PService(
+            errorHandler: p2pErrorHandler,
+            offerService: offerService,
+            swapService: TestSwapMessageNotifiable(),
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
         offerService.p2pService = testP2PService
         
         // We have to persistently store an offer with an ID equal to offerID and isUserMaker set to true, so that OfferService calls handleNewSwap

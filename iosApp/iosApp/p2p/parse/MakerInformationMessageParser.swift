@@ -1,8 +1,8 @@
 //
-//  parseTakerInformationMessage.swift
+//  MakerInformationMessageParser.swift
 //  iosApp
 //
-//  Created by jimmyt on 8/22/22.
+//  Created by jimmyt on 8/25/22.
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
@@ -10,22 +10,16 @@ import CryptoKit
 import Foundation
 
 /**
- Attempts to restore a `TakerInformationMessage` from a given `String` using a supplied `KeyPair`.
+ Attempts to restore a `MakerInformationMessage` from a given `NSDictionary` using a supplied `KeyPair`.
  
  - Parameters:
-    - messageString: An optional `String` from which to try to restore a `TakerInformationMessage`.
-    - keyPair: The `KeyPair` with which this will attempt to decrypt the message's symmetric key and initialization vector.
+    - message: An optional `NSDictionary` from which to try to restore a `MakerInformationMessage`.
+    - keyPair: The `KeyPair` with which this will attempt to decrypt the message's symmetric key and initialization vector. The interface ID of this key pair should be that specified in the message's "recipient" field.
+    - publicKey: The `PublicKey` with which this will attempt to verify  the message's signature. The interface ID of this public key should be that specified in the message's "sender" field.
  
- - Returns: An optional `TakerInformationMessage` that will be `nil` if `messageString` does not contain a valid Taker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
+ - Returns: An optional `MakerInformationMessage` that will be `nil` if `message` does not contain a valid Maker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
  */
-func parseTakerInformationMessage(messageString: String?, keyPair: KeyPair) throws -> TakerInformationMessage? {
-    // Restore message NSDictionary
-    guard let messageData = messageString?.data(using: String.Encoding.utf8) else {
-        return nil
-    }
-    guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
-        return nil
-    }
+func parseMakerInformationMessage(message: NSDictionary, keyPair: KeyPair, publicKey: PublicKey) throws -> MakerInformationMessage? {
     // Ensure that the recipient interface ID matches that of our key pair
     guard let recipientInterfaceIDString = message["recipient"] as? String, let recipientInterfaceID = Data(base64Encoded: recipientInterfaceIDString) else {
         return nil
@@ -49,7 +43,6 @@ func parseTakerInformationMessage(messageString: String?, keyPair: KeyPair) thro
     }
     let encryptedPayload = SymmetricallyEncryptedData(data: encryptedPayloadData, iv: decryptedIV)
     let decryptedPayloadData = try symmetricKey.decrypt(data: encryptedPayload)
-    
     // Restore payload object
     guard let payload = try JSONSerialization.jsonObject(with: decryptedPayloadData) as? NSDictionary else {
         return nil
@@ -58,14 +51,7 @@ func parseTakerInformationMessage(messageString: String?, keyPair: KeyPair) thro
     guard let messageType = payload["msgType"] as? String else {
         return nil
     }
-    guard messageType == "takerInfo" else {
-        return nil
-    }
-    // Get the taker's public key
-    guard let publicKeyString = payload["pubKey"] as? String, let publicKeyBytes = Data(base64Encoded: publicKeyString) else {
-        return nil
-    }
-    guard let publicKey = try? PublicKey(publicKeyBytes: publicKeyBytes) else {
+    guard messageType == "makerInfo" else {
         return nil
     }
     // Check that the interface ID of the taker's public key matches the value in the "sender" field of the message
@@ -96,5 +82,5 @@ func parseTakerInformationMessage(messageString: String?, keyPair: KeyPair) thro
     guard let swapIDString = payload["swapId"] as? String, let swapID = UUID(uuidString: swapIDString) else {
         return nil
     }
-    return TakerInformationMessage(swapID: swapID, publicKey: publicKey, settlementMethodDetails: settlementMethodDetails)
+    return MakerInformationMessage(swapID: swapID, settlementMethodDetails: settlementMethodDetails)
 }

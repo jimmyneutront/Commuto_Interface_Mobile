@@ -26,6 +26,14 @@ enum SwapState {
      Indicates that the taker has sent their settlement method information and public key to the maker, and now the swap maker must send their settlement method information to the taker.
      */
     case awaitingMakerInformation
+    /**
+     Indicates that the maker has sent their settlement method information to the taker, and that the swap is a maker-as-seller swap and the maker must now fill the swap. If the swap is a maker-as-buyer swap, this is not used.
+     */
+    case awaitingFilling
+    /**
+     If the swap is a maker-as-seller swap, this indicates that the maker has filled the swap, and the buyer must now send payment for the stablecoin they are purchasing. If the swap is a maker-as-buyer swap, this indicates that the maker has sent their settlement method information to the taker, and the buyer must now send payment for the stablecoin they are purchasing.
+     */
+    case awaitingPaymentSent
     
     /**
      Returns a `String` corresponding to a particular case of `SwapState`.
@@ -40,6 +48,10 @@ enum SwapState {
             return "awaitingTakerInfo"
         case .awaitingMakerInformation:
             return "awaitingMakerInfo"
+        case .awaitingFilling:
+            return "awaitingFilling"
+        case .awaitingPaymentSent:
+            return "awaitingPaymentSent"
         }
     }
     
@@ -61,6 +73,10 @@ enum SwapState {
             return .awaitingTakerInformation
         } else if string == "awaitingMakerInfo" {
             return .awaitingMakerInformation
+        } else if string == "awaitingFilling" {
+            return .awaitingFilling
+        } else if string == "awaitingPaymentSent" {
+            return .awaitingPaymentSent
         } else {
             return nil
         }

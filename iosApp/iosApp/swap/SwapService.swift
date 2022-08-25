@@ -13,8 +13,8 @@ import BigInt
 /**
  The main Swap Service. It is responsible for processing and organizing swap-related data that it receives from `BlockchainService`, `P2PService` and `OfferService` in order to maintain an accurate list of all swaps in a `SwapTruthSource`.
  */
-class SwapService: SwapNotifiable {
-    
+class SwapService: SwapNotifiable, SwapMessageNotifiable {
+
     /**
      Initializes a new SwapService object.
      
@@ -204,6 +204,65 @@ class SwapService: SwapNotifiable {
             swapTruthSource.swaps[swapID] = newSwap
         }
         logger.notice("handleNewSwap: successfully handled \(swapID.uuidString)")
+    }
+    
+    /**
+     The function called by `P2PService` to notify `SwapService` of a `TakerInformationMessage`.
+     
+     Once notified, this checks that there exists in `swapTruthSource` a `Swap` with the ID specified in `message`. If there is, this checks that the interface ID of the public key contained in `message` is equal to the interface ID of the swap taker. If it is, this persistently stores the public key in `message`, securely persistently stores the payment information in `message`, updates the state of the swap to `SwapState.awaitingMakerInformation` (both persistently and in `swapTruthSource` on the main `DispatchQueue`), creates and sends a Maker Information Message. Then, if the swap is a maker-as-seller swap, this updates the state of the swap to `SwapState.awaitingFilling`. Otherwise, the swap is a maker-as-buyer swap, and this updates the state of the swap to `SwapState.awaitingPaymentSent`. The state is updated both persistently and in `swapTruthSource`.
+     
+     - Parameter message: The `TakerInformationMessage` to handle.
+     
+     - Throws `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil` or if `p2pService` is `nil`, or if `keyManagerService` does not have the key pair with the interface ID specified in `message`.
+     */
+    func handleTakerInformationMessage(_ message: TakerInformationMessage) throws {
+        logger.notice("handleTakerInformationMessage: handling message for offer \(message.swapID.uuidString)")
+        guard let swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleTakerInformationMessage call for \(message.swapID.uuidString)")
+        }
+        let swap = swapTruthSource.swaps[message.swapID]
+        if let swap = swap {
+            if message.publicKey.interfaceId == swap.takerInterfaceID {
+                logger.notice("handleTakerInformationMessage: persistently storing public key \(message.publicKey.interfaceId.base64EncodedString()) for \(message.swapID.uuidString)")
+                try keyManagerService.storePublicKey(pubKey: message.publicKey)
+                #warning("TODO: securely store taker settlement method information once SettlementMethodService is implemented")
+                logger.notice("handleTakerInformationMessage: updating \(message.swapID.uuidString) to \(SwapState.awaitingMakerInformation.asString)")
+                try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingMakerInformation.asString)
+                DispatchQueue.main.async {
+                    swap.state = SwapState.awaitingMakerInformation
+                }
+                #warning("TODO: get actual settlement method details once SettlementMethodService is implemented")
+                guard let makerKeyPair = try keyManagerService.getKeyPair(interfaceId: swap.makerInterfaceID) else {
+                    throw SwapServiceError.unexpectedNilError(desc: "Could not find key pair for \(message.swapID.uuidString) while handling Taker Information Message")
+                }
+                let settlementMethodDetailsString = "TEMPORARY"
+                guard let p2pService = p2pService else {
+                    throw SwapServiceError.unexpectedNilError(desc: "p2pService was nil during handleTakerInformationMessage call for \(message.swapID.uuidString)")
+                }
+                logger.notice("handleTakerInformationMessage: sending for \(message.swapID.uuidString)")
+                try p2pService.sendMakerInformation(takerPublicKey: message.publicKey, makerKeyPair: makerKeyPair, swapID: swap.id, settlementMethodDetails: settlementMethodDetailsString)
+                logger.notice("handleTakerInformationMessage: sent for \(message.swapID.uuidString)")
+                switch swap.direction {
+                case .buy:
+                    logger.notice("handleTakerInformationMessage: updating state of BUY swap \(message.swapID.uuidString)")
+                    try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingPaymentSent.asString)
+                    DispatchQueue.main.async {
+                        swap.state = SwapState.awaitingMakerInformation
+                    }
+                case .sell:
+                    logger.notice("handleTakerInformationMessage: updating state of SELL swap \(message.swapID.uuidString)")
+                    try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingFilling.asString)
+                    DispatchQueue.main.async {
+                        swap.state = SwapState.awaitingFilling
+                    }
+                }
+                
+            } else {
+                logger.warning("handleTakerInformationMessage: got message for \(message.swapID.uuidString) that was not sent by swap taker")
+            }
+        } else {
+            logger.warning("handleTakerInformationMessage: got message for \(message.swapID.uuidString) which was not found in swapTruthSource")
+        }
     }
     
 }

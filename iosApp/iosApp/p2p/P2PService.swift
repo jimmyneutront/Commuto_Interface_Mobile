@@ -21,16 +21,26 @@ class P2PService {
      Initializes a new P2PService object.
      
      - Parameters:
-        - errorHandler: An object that conforms to the `P2PErrorNotifiable` protocol, to which this will pass errors when they occur.
-        - offerService: An object that comforms to the `OfferMessageNotifiable` protocol, to which this will pass offer-related messages.
+        - errorHandler: An object that adopts the `P2PErrorNotifiable` protocol, to which this will pass errors when they occur.
+        - offerService: An object that adopts the `OfferMessageNotifiable` protocol, to which this will pass offer-related messages.
+        - swapService: An object that adopts the `SwapMessageNotifiable` protocol, to which this will pass swap-related messages.
         - switrixClient: A `SwitrixClient` instance used to interact with a Matrix Homeserver.
+        - keyManagerService: A `KeyManagerService` from which this gets key pairs when attempting to decrypt encrypted messages.
      
      - Returns: A new `P2PService` instance.
      */
-    init(errorHandler: P2PErrorNotifiable, offerService: OfferMessageNotifiable, switrixClient: SwitrixClient) {
+    init(
+        errorHandler: P2PErrorNotifiable,
+        offerService: OfferMessageNotifiable,
+        swapService: SwapMessageNotifiable,
+        switrixClient: SwitrixClient,
+        keyManagerService: KeyManagerService
+    ) {
         self.errorHandler = errorHandler
         self.offerService = offerService
+        self.swapService = swapService
         self.switrixClient = switrixClient
+        self.keyManagerService = keyManagerService
     }
     
     /**
@@ -49,9 +59,19 @@ class P2PService {
     private let offerService: OfferMessageNotifiable
     
     /**
+     An object to which `P2PService` will pass swap-related messages when they occur.
+     */
+    private let swapService: SwapMessageNotifiable
+    
+    /**
      A `SwitrixClient` instance used to interact with a Matrix Homeserver.
      */
     let switrixClient: SwitrixClient
+    
+    /**
+     A `KeyManagerService` from which this gets key pairs when attempting to decrypt encrypted messages.
+     */
+    private let keyManagerService: KeyManagerService
     
     /**
      The token at the end of the last batch of non-empty Matrix events that was parsed. (The value specified here is that from the beginning of the Commuto Interface Network testing room.) This should be updated every time a new batch of events is parsed.
@@ -211,15 +231,38 @@ class P2PService {
      
      - Parameter events: a list of `SwitrixClientEvent`s.
      */
-    private func parseEvents(_ events: [SwitrixClientEvent]) throws {
+    func parseEvents(_ events: [SwitrixClientEvent]) throws {
         let messageEvents = events.filter { event in
             return event.type == "m.room.message"
         }
         self.logger.notice("parseEvents: parsing \(messageEvents.count) m.room.message events")
         for event in messageEvents {
+            // Handle unencrypted messages
             if let pka = parsePublicKeyAnnouncement(messageString: (event.content as? SwitrixMessageEventContent)?.body) {
                 self.logger.notice("parseEvents: got Public Key Announcement message in event with Matrix event ID: \(event.eventId)")
                 try offerService.handlePublicKeyAnnouncement(pka)
+            } else {
+                // If execution reaches this point, then we have already tried to get every possible unencrypted message from the event being handled. Therefore, we now try to get an encrypted message from the event: We attempt to turn the event content to data via UTF8 encoding, and then we attempt to create a JSON NSDictionary from that Data. If this is successful, we check for a recipient field, and attempt to create an interface ID from the contents of that field. Then we check keyManagerService to determine if we have a key pair with that interface ID. If we do, then we have determined that the event contains an encrypted message sent to us, and we attempt to parse it.
+                guard let messageData = (event.content as? SwitrixMessageEventContent)?.body.data(using: String.Encoding.utf8) else {
+                    // If we can't get Data from the event, then we stop handling it and move on
+                    break
+                }
+                guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
+                    // If we can't use JSON serialization to create an NSDictionary from the message data, we stop handling the event and move on
+                    break
+                }
+                guard let recipientInterfaceIDString = message["recipient"] as? String, let recipientInterfaceID = Data(base64Encoded: recipientInterfaceIDString) else {
+                    // If the message doesn't have a "recipient" field or if we can't create a recipient interface ID from the contents of the "recipient" field, then we stop handling it and move on
+                    break
+                }
+                guard let recipientKeyPair = try keyManagerService.getKeyPair(interfaceId: recipientInterfaceID) else {
+                    // If we don't have a key pair with the interface ID specified in the "recipient" field, then we don't have the private key necessary to decrypt the message, (meaning we aren't the intended recipient) so we stop handling it and move on
+                    break
+                }
+                if let takerInformationMessage = try parseTakerInformationMessage(messageString: (event.content as? SwitrixMessageEventContent)?.body, keyPair: recipientKeyPair) {
+                    self.logger.notice("parseEvents: got Taker Information Message in event with Matrix event ID: \(event.eventId)")
+                    try swapService.handleTakerInformationMessage(takerInformationMessage)
+                }
             }
         }
     
@@ -275,52 +318,24 @@ class P2PService {
      */
     func sendTakerInformation(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
         logger.notice("sendTakerInformation: creating for \(swapID.uuidString)")
-        // Create Base64-encoded string of the taker's (user's) public key in PKCS#1 bytes
-        let makerPublicKeyString = try takerKeyPair.pubKeyToPkcs1Bytes().base64EncodedString()
-        
-        #warning("TODO: note that we use a UUID string for the swap ID")
-        // Create payload Dictionary
-        let payload = [
-            "msgType": "takerInfo",
-            "pubKey": makerPublicKeyString,
-            "swapId": swapID.uuidString,
-            "paymentDetails": paymentDetails
-        ]
-        
-        // Create payload UTF8-bytes
-        let payloadUTF8Bytes = try JSONSerialization.data(withJSONObject: payload)
-        
-        // Generate a new AES-256 key and initialization vector, and encrypt the payload bytes
-        let symmetricKey = try newSymmetricKey()
-        let encryptedPayload = try symmetricKey.encrypt(data: payloadUTF8Bytes)
-        
-        // Create signature of encrypted payload
-        let encryptedPayloadDataDigest = SHA256.hash(data: encryptedPayload.encryptedData)
-        var encryptedPayloadDataHashByteArray = [UInt8]()
-        for byte: UInt8 in encryptedPayloadDataDigest.makeIterator() {
-            encryptedPayloadDataHashByteArray.append(byte)
-        }
-        let encryptedPayloadDataHash = Data(bytes: encryptedPayloadDataHashByteArray, count: encryptedPayloadDataHashByteArray.count)
-        let payloadSignature = try takerKeyPair.sign(data: encryptedPayloadDataHash)
-        
-        // Encrypt symmetric key and initialization vector with maker's public key
-        let encryptedKey = try makerPublicKey.encrypt(clearData: symmetricKey.keyData)
-        let encryptedInitializationVector = try makerPublicKey.encrypt(clearData: encryptedPayload.initializationVectorData)
-        
-        // Create message Dictionary
-        let message = [
-            "sender": takerKeyPair.interfaceId.base64EncodedString(),
-            "recipient": makerPublicKey.interfaceId.base64EncodedString(),
-            "encryptedKey": encryptedKey.base64EncodedString(),
-            "encryptedIV": encryptedInitializationVector.base64EncodedString(),
-            "payload": encryptedPayload.encryptedData.base64EncodedString(),
-            "signature": payloadSignature.base64EncodedString()
-        ]
-        // Create message string
-        let messageString = String(decoding: try JSONSerialization.data(withJSONObject: message), as: UTF8.self)
-        
-        // Send message string
-        logger.notice("sendTakerInformation: sending for swap \(swapID.uuidString)")
+        let messageString = try createTakerInformationMessage(makerPublicKey: makerPublicKey, takerKeyPair: takerKeyPair, swapID: swapID, settlementMethodDetails: paymentDetails)
+        logger.notice("sendTakerInformation: sending for \(swapID.uuidString)")
+        try sendMessage(messageString)
+    }
+    
+    /**
+     Creates a [Maker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) using the supplied taker's public key, maker's/user's key pair, swap ID and maker's payment details, and sends it using the `sendMessage` function.
+     
+     - Parameters:
+        - takerPublicKey: The public key of the swap taker, to whom information is being sent.
+        - makerKeyPair: The maker's/user's key pair, which will be used to sign this message.
+        - swapID: The ID of the swap for which information is being sent.
+        - settlementMethodDetails: The settlement method details being sent.
+     */
+    func sendMakerInformation(takerPublicKey: PublicKey, makerKeyPair: KeyPair, swapID: UUID, settlementMethodDetails: String) throws {
+        logger.notice("sendMakerInformation: creating for \(swapID.uuidString)")
+        let messageString = try createMakerInformationMessage(takerPublicKey: takerPublicKey, makerKeyPair: makerKeyPair, swapID: swapID, settlementMethodDetails: settlementMethodDetails)
+        logger.notice("sendMakerInformation: sending for \(swapID.uuidString)")
         try sendMessage(messageString)
     }
     
