@@ -10,7 +10,7 @@ import CryptoKit
 import Foundation
 
 /**
- Attempts to restore a `MakerInformationMessage` from a given `NSDictionary` using a supplied `KeyPair`.
+ Attempts to restore a `MakerInformationMessage` from a given `NSDictionary` using a supplied `KeyPair` and `PublicKey`.
  
  - Parameters:
     - message: An optional `NSDictionary` from which to try to restore a `MakerInformationMessage`.
@@ -54,7 +54,7 @@ func parseMakerInformationMessage(message: NSDictionary, keyPair: KeyPair, publi
     guard messageType == "makerInfo" else {
         return nil
     }
-    // Check that the interface ID of the taker's public key matches the value in the "sender" field of the message
+    // Check that the interface ID of the maker's public key matches the value in the "sender" field of the message
     guard let senderInterfaceIDString = message["sender"] as? String, let senderInterfaceID = Data(base64Encoded: senderInterfaceIDString) else {
         return nil
     }

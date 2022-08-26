@@ -10,22 +10,15 @@ import CryptoKit
 import Foundation
 
 /**
- Attempts to restore a `TakerInformationMessage` from a given `String` using a supplied `KeyPair`.
+ Attempts to restore a `TakerInformationMessage` from a given `NSDictionary` using a supplied `KeyPair`.
  
  - Parameters:
-    - messageString: An optional `String` from which to try to restore a `TakerInformationMessage`.
+    - message: An optional `NSDictionary` from which to try to restore a `TakerInformationMessage`.
     - keyPair: The `KeyPair` with which this will attempt to decrypt the message's symmetric key and initialization vector.
  
- - Returns: An optional `TakerInformationMessage` that will be `nil` if `messageString` does not contain a valid Taker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
+ - Returns: An optional `TakerInformationMessage` that will be `nil` if `message` does not contain a valid Taker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
  */
-func parseTakerInformationMessage(messageString: String?, keyPair: KeyPair) throws -> TakerInformationMessage? {
-    // Restore message NSDictionary
-    guard let messageData = messageString?.data(using: String.Encoding.utf8) else {
-        return nil
-    }
-    guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
-        return nil
-    }
+func parseTakerInformationMessage(message: NSDictionary, keyPair: KeyPair) throws -> TakerInformationMessage? {
     // Ensure that the recipient interface ID matches that of our key pair
     guard let recipientInterfaceIDString = message["recipient"] as? String, let recipientInterfaceID = Data(base64Encoded: recipientInterfaceIDString) else {
         return nil
@@ -49,7 +42,6 @@ func parseTakerInformationMessage(messageString: String?, keyPair: KeyPair) thro
     }
     let encryptedPayload = SymmetricallyEncryptedData(data: encryptedPayloadData, iv: decryptedIV)
     let decryptedPayloadData = try symmetricKey.decrypt(data: encryptedPayload)
-    
     // Restore payload object
     guard let payload = try JSONSerialization.jsonObject(with: decryptedPayloadData) as? NSDictionary else {
         return nil

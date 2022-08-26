@@ -209,14 +209,14 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      The function called by `P2PService` to notify `SwapService` of a `TakerInformationMessage`.
      
-     Once notified, this checks that there exists in `swapTruthSource` a `Swap` with the ID specified in `message`. If there is, this checks that the interface ID of the public key contained in `message` is equal to the interface ID of the swap taker. If it is, this persistently stores the public key in `message`, securely persistently stores the payment information in `message`, updates the state of the swap to `SwapState.awaitingMakerInformation` (both persistently and in `swapTruthSource` on the main `DispatchQueue`), creates and sends a Maker Information Message. Then, if the swap is a maker-as-seller swap, this updates the state of the swap to `SwapState.awaitingFilling`. Otherwise, the swap is a maker-as-buyer swap, and this updates the state of the swap to `SwapState.awaitingPaymentSent`. The state is updated both persistently and in `swapTruthSource`.
+     Once notified, this checks that there exists in `swapTruthSource` a `Swap` with the ID specified in `message`. If there is, this checks that the interface ID of the public key contained in `message` is equal to the interface ID of the swap taker. If it is, this persistently stores the public key in `message`, securely persistently stores the payment information in `message`, updates the state of the swap to `SwapState.awaitingMakerInformation` (both persistently and in `swapTruthSource` on the main `DispatchQueue`), and creates and sends a Maker Information Message. Then, if the swap is a maker-as-seller swap, this updates the state of the swap to `SwapState.awaitingFilling`. Otherwise, the swap is a maker-as-buyer swap, and this updates the state of the swap to `SwapState.awaitingPaymentSent`. The state is updated both persistently and in `swapTruthSource`.
      
      - Parameter message: The `TakerInformationMessage` to handle.
      
      - Throws `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil` or if `p2pService` is `nil`, or if `keyManagerService` does not have the key pair with the interface ID specified in `message`.
      */
     func handleTakerInformationMessage(_ message: TakerInformationMessage) throws {
-        logger.notice("handleTakerInformationMessage: handling message for offer \(message.swapID.uuidString)")
+        logger.notice("handleTakerInformationMessage: handling for \(message.swapID.uuidString)")
         guard let swapTruthSource = swapTruthSource else {
             throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleTakerInformationMessage call for \(message.swapID.uuidString)")
         }
@@ -244,19 +244,18 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 logger.notice("handleTakerInformationMessage: sent for \(message.swapID.uuidString)")
                 switch swap.direction {
                 case .buy:
-                    logger.notice("handleTakerInformationMessage: updating state of BUY swap \(message.swapID.uuidString)")
+                    logger.notice("handleTakerInformationMessage: updating state of BUY swap \(message.swapID.uuidString) to \(SwapState.awaitingPaymentSent.asString)")
                     try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingPaymentSent.asString)
                     DispatchQueue.main.async {
                         swap.state = SwapState.awaitingMakerInformation
                     }
                 case .sell:
-                    logger.notice("handleTakerInformationMessage: updating state of SELL swap \(message.swapID.uuidString)")
+                    logger.notice("handleTakerInformationMessage: updating state of SELL swap \(message.swapID.uuidString) to \(SwapState.awaitingFilling.asString)")
                     try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingFilling.asString)
                     DispatchQueue.main.async {
                         swap.state = SwapState.awaitingFilling
                     }
                 }
-                
             } else {
                 logger.warning("handleTakerInformationMessage: got message for \(message.swapID.uuidString) that was not sent by swap taker")
             }

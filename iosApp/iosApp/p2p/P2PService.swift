@@ -259,7 +259,7 @@ class P2PService {
                     // If we don't have a key pair with the interface ID specified in the "recipient" field, then we don't have the private key necessary to decrypt the message, (meaning we aren't the intended recipient) so we stop handling it and move on
                     break
                 }
-                if let takerInformationMessage = try parseTakerInformationMessage(messageString: (event.content as? SwitrixMessageEventContent)?.body, keyPair: recipientKeyPair) {
+                if let takerInformationMessage = try parseTakerInformationMessage(message: message, keyPair: recipientKeyPair) {
                     self.logger.notice("parseEvents: got Taker Information Message in event with Matrix event ID: \(event.eventId)")
                     try swapService.handleTakerInformationMessage(takerInformationMessage)
                 }

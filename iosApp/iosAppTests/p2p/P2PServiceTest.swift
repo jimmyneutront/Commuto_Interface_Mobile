@@ -269,7 +269,8 @@ class P2PServiceTest: XCTestCase {
         
         // Send the information
         try! p2pService.sendTakerInformation(makerPublicKey: makerKeyPair.getPublicKey(), takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: "some_payment_details")
-        let createdTakerInformationMessage = try! parseTakerInformationMessage(messageString: p2pService.receivedMessage!, keyPair: makerKeyPair)
+        let message = try! JSONSerialization.jsonObject(with: p2pService.receivedMessage!.data(using: String.Encoding.utf8)!) as! NSDictionary
+        let createdTakerInformationMessage = try! parseTakerInformationMessage(message: message, keyPair: makerKeyPair)
         XCTAssertEqual(swapID, createdTakerInformationMessage!.swapID)
         XCTAssertEqual(takerKeyPair.interfaceId, createdTakerInformationMessage!.publicKey.interfaceId)
         XCTAssertEqual("some_payment_details", createdTakerInformationMessage!.settlementMethodDetails)
