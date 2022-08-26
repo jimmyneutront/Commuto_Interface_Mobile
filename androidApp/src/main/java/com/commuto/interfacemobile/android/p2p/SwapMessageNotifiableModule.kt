@@ -1,6 +1,5 @@
 package com.commuto.interfacemobile.android.p2p
 
-import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.swap.SwapService
 import dagger.Binds
 import dagger.Module
@@ -22,5 +21,5 @@ interface SwapMessageNotifiableModule {
      * [SwapMessageNotifiable].
      */
     @Binds
-    fun bindSwapNotifiable(impl: SwapService): SwapMessageNotifiable
+    fun bindSwapMessageNotifiable(impl: SwapService): SwapMessageNotifiable
 }

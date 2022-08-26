@@ -192,9 +192,9 @@ open class P2PService constructor(
     }
 
     /**
-     * Parses a [List] of [Event.RoomEvent]s, filters out all non-text-message events, attempts to
-     * create message objects from the content bodies of text message events, if present, and then
-     * passes any offer-related message objects to [offerService].
+     * Parses a [List] of [Event.RoomEvent]s, filters out all non-text-message events, attempts to create message
+     * objects from the content bodies of text message events, if present, and then passes any offer-related message
+     * objects to [offerService] and any swap-related messages to [swapService].
      *
      * @param events A [List] of [Event.RoomEvent]s.
      */

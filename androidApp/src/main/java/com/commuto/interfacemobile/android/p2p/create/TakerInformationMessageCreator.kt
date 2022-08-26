@@ -3,7 +3,7 @@ package com.commuto.interfacemobile.android.p2p.create
 import com.commuto.interfacemobile.android.key.keys.KeyPair
 import com.commuto.interfacemobile.android.key.keys.PublicKey
 import com.commuto.interfacemobile.android.key.keys.newSymmetricKey
-import com.commuto.interfacemobile.android.p2p.serializable.messages.SerializableTakerInformationMessage
+import com.commuto.interfacemobile.android.p2p.serializable.messages.SerializableEncryptedMessage
 import com.commuto.interfacemobile.android.p2p.serializable.payloads.SerializableTakerInformationMessagePayload
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -57,7 +57,7 @@ fun createTakerInformationMessage(
     val encryptedIV = makerPublicKey.encrypt(encryptedPayload.initializationVector)
 
     // Create message object
-    val message = SerializableTakerInformationMessage(
+    val message = SerializableEncryptedMessage(
         sender = encoder.encodeToString(takerKeyPair.interfaceId),
         recipient = encoder.encodeToString(makerPublicKey.interfaceId),
         encryptedKey = encoder.encodeToString(encryptedKey),
