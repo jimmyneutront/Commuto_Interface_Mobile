@@ -168,7 +168,7 @@ data class Swap(
                 serviceFeeRate = BigInteger.valueOf(100),
                 direction = OfferDirection.BUY,
                 onChainSettlementMethod =
-                """
+                    """
                     {
                         "f": "USD",
                         "p": "1.00",

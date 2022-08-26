@@ -18,6 +18,7 @@ import com.commuto.interfacemobile.android.offer.validation.ValidatedNewSwapData
 import com.commuto.interfacemobile.android.offer.validation.validateNewOfferData
 import com.commuto.interfacemobile.android.p2p.P2PExceptionNotifiable
 import com.commuto.interfacemobile.android.p2p.P2PService
+import com.commuto.interfacemobile.android.p2p.TestSwapMessageNotifiable
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.swap.SwapNotifiable
 import com.commuto.interfacemobile.android.swap.SwapState
@@ -289,7 +290,9 @@ class OfferServiceTests {
         class TestP2PService: P2PService(
             exceptionHandler = p2pExceptionHandler,
             offerService = offerService,
-            mxClient = mxClient
+            swapService = TestSwapMessageNotifiable(),
+            mxClient = mxClient,
+            keyManagerService = keyManagerService,
         ) {
             var offerIDForAnnouncement: UUID? = null
             var keyPairForAnnouncement: KeyPair? = null
@@ -871,7 +874,9 @@ class OfferServiceTests {
         P2PService(
             exceptionHandler = p2pExceptionHandler,
             offerService = offerService,
-            mxClient = mxClient
+            swapService = TestSwapMessageNotifiable(),
+            mxClient = mxClient,
+            keyManagerService = keyManagerService,
         )
         /*
         We have to persistently store an offer with an ID equal to offerID and isUserMaker set to true, so that

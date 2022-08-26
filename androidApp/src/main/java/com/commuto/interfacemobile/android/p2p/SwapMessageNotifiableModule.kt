@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.p2p
 
 import com.commuto.interfacemobile.android.offer.OfferService
+import com.commuto.interfacemobile.android.swap.SwapService
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -8,18 +9,18 @@ import dagger.hilt.components.SingletonComponent
 
 /**
  * A Dagger [Module] that tells Dagger what to inject into objects that depend on an object implementing
- * [OfferMessageNotifiable]
+ * [SwapMessageNotifiable]
  */
 @Module
 @InstallIn(SingletonComponent::class)
-interface OfferMessageNotifiableModule {
+interface SwapMessageNotifiableModule {
     /**
-     * A Dagger Binding that tells Dagger to inject an instance of [OfferService] into objects that depend on an object
+     * A Dagger Binding that tells Dagger to inject an instance of [SwapService] into objects that depend on an object
      * implementing [SwapMessageNotifiable].
      *
      * @param impl The type of object that will be injected into objects that depend on an object implementing
-     * [OfferMessageNotifiable].
+     * [SwapMessageNotifiable].
      */
     @Binds
-    fun bindOfferNotifiable(impl: OfferService): OfferMessageNotifiable
+    fun bindSwapNotifiable(impl: SwapService): SwapMessageNotifiable
 }
