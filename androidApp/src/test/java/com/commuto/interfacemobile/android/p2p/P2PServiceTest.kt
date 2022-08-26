@@ -321,7 +321,7 @@ class P2PServiceTest {
         }
 
         val createdTakerInformationMessage = parseTakerInformationMessage(
-            messageString = p2pService.receivedMessage!!,
+            message = Json.decodeFromString<SerializableEncryptedMessage>(p2pService.receivedMessage!!),
             keyPair = makerKeyPair
         )
         assertEquals(swapID, createdTakerInformationMessage!!.swapID)
