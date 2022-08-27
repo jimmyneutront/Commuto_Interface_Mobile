@@ -15,7 +15,7 @@ import java.util.*
 /**
  * Attempts to restore a [TakerInformationMessage] from a given [String] using a supplied [KeyPair].
  *
- * @param message An optional [String] from which to try to restore a [TakerInformationMessage].
+ * @param message An optional [SerializableEncryptedMessage] from which to try to restore a [TakerInformationMessage].
  * @param keyPair The [KeyPair] with which this will attempt to decrypt the message's symmetric key and initialization
  * vector.
  *
