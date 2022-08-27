@@ -264,4 +264,51 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
+    /**
+     The function called by `P2PService` to notify `SwapService` of a `MakerInformationMessage`.
+     
+     Once notified, this checks that there exists in `swapTruthSource` a `Swap` with the ID specified in `message`. If there is, this checks that the interface ID of the message sender is equal to the interface ID of the swap maker and that the interface ID of the message's intended recipient is equal to the interface ID of the swap taker. If they are, this securely persistently stores the settlement method information in `message`. Then, if this swap is a maker-as-buyer swap, this updates the state of the swap to `SwapState.awaitingPaymentSent`. Otherwise, the swap is a maker-as-seller swap, and this updates the state of the swap to `SwapState.awaitingFilling`. The state is updated both persistently and in `swapTruthSource`.
+     
+     - Parameters:
+        - message: The `MakerInformationMessage` to handle.
+        - senderInterfaceID: The interface ID of the message's sender.
+        - recipientInterfaceID: The interface ID of the message's intented recipient.
+     
+     - Throws `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`.
+     */
+    func handleMakerInformationMessage(_ message: MakerInformationMessage, senderInterfaceID: Data, recipientInterfaceID: Data) throws {
+        logger.notice("handleMakerInformationMessage: handling for \(message.swapID.uuidString)")
+        guard let swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleMakerInformationMessage call for \(message.swapID.uuidString)")
+        }
+        let swap = swapTruthSource.swaps[message.swapID]
+        if let swap = swap {
+            if senderInterfaceID != swap.makerInterfaceID {
+                logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) that was not sent by swap maker")
+                return
+            }
+            if recipientInterfaceID != swap.takerInterfaceID {
+                logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) with recipient interface ID \(recipientInterfaceID.base64EncodedString()) that doesn't match taker interface ID \(swap.takerInterfaceID.base64EncodedString())")
+                return
+            }
+            #warning("TODO: securely store maker settlement method information once SettlementMethodService is implemented")
+            switch swap.direction {
+            case .buy:
+                logger.notice("handleMakerInformationMessage: updating state of BUY swap \(message.swapID.uuidString) to \(SwapState.awaitingPaymentSent.asString)")
+                try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingPaymentSent.asString)
+                DispatchQueue.main.async {
+                    swap.state = SwapState.awaitingPaymentSent
+                }
+            case .sell:
+                logger.notice("handleMakerInformationMessage: updating state of SELL swap \(message.swapID.uuidString) to \(SwapState.awaitingFilling.asString)")
+                try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingFilling.asString)
+                DispatchQueue.main.async {
+                    swap.state = SwapState.awaitingFilling
+                }
+            }
+        } else {
+            logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) which was not found in swapTruthSource")
+        }
+    }
+    
 }

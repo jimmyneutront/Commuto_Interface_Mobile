@@ -301,6 +301,7 @@ class P2PServiceTest: XCTestCase {
             func handleTakerInformationMessage(_ message: TakerInformationMessage) {
                 self.message = message
             }
+            func handleMakerInformationMessage(_ message: MakerInformationMessage, senderInterfaceID: Data, recipientInterfaceID: Data) throws {}
         }
         let swapService = TestSwapService()
         
@@ -366,6 +367,64 @@ class P2PServiceTest: XCTestCase {
         // Validate sent information
         XCTAssertEqual(swapID, createdMakerInformationMessage!.swapID)
         XCTAssertEqual("some_payment_details", createdMakerInformationMessage!.settlementMethodDetails)
+        
+    }
+    
+    /**
+     Ensure that `P2PService.parseEvents` handles `MakerInformationMessage`s properly.
+     */
+    func testParseMakerInformationMessage() {
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        // Since we are the taker, we want the taker's key pair in persistent storage
+        let takerKeyPair = try! keyManagerService.generateKeyPair(storeResult: true)
+        // Since we are the taker, we do NOT want the maker's key pair in persistent storage
+        let makerKeyPair = try! KeyPair()
+        try! keyManagerService.storePublicKey(pubKey: makerKeyPair.getPublicKey())
+        
+        let swapID = UUID()
+        
+        #warning("TODO: move this to its own class")
+        class TestP2PErrorHandler : P2PErrorNotifiable {
+            func handleP2PError(_ error: Error) {}
+        }
+        let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
+        
+        class TestSwapService: SwapMessageNotifiable {
+            var message: MakerInformationMessage? = nil
+            var senderInterfaceID: Data? = nil
+            var recipientInterfaceID: Data? = nil
+            func handleTakerInformationMessage(_ message: TakerInformationMessage) {}
+            func handleMakerInformationMessage(_ message: MakerInformationMessage, senderInterfaceID: Data, recipientInterfaceID: Data) throws {
+                self.message = message
+                self.senderInterfaceID = senderInterfaceID
+                self.recipientInterfaceID = recipientInterfaceID
+            }
+        }
+        let swapService = TestSwapService()
+        
+        let makerInformationMessageString = try! createMakerInformationMessage(takerPublicKey: takerKeyPair.getPublicKey(), makerKeyPair: makerKeyPair, swapID: swapID, settlementMethodDetails: "maker_settlement_method_details")
+        
+        let makerInformationMessageEventContent = SwitrixMessageEventContent(body: makerInformationMessageString)
+        
+        let makerInformationMessageEvent = SwitrixClientEvent(content: makerInformationMessageEventContent, eventId: "", originServerTimestamp: 0, roomId: "", sender: "", type: "m.room.message")
+        
+        let p2pService = P2PService(
+            errorHandler: TestP2PErrorHandler(),
+            offerService: TestOfferMessageNotifiable(),
+            swapService: swapService,
+            switrixClient: switrixClient,
+            keyManagerService: keyManagerService
+        )
+        try! p2pService.parseEvents([makerInformationMessageEvent])
+        
+        XCTAssertEqual(swapID, swapService.message!.swapID)
+        XCTAssertEqual("maker_settlement_method_details", swapService.message!.settlementMethodDetails)
+        XCTAssertEqual(makerKeyPair.interfaceId, swapService.senderInterfaceID!)
+        XCTAssertEqual(takerKeyPair.interfaceId, swapService.recipientInterfaceID)
+        
         
     }
     

@@ -260,8 +260,22 @@ class P2PService {
                     break
                 }
                 if let takerInformationMessage = try parseTakerInformationMessage(message: message, keyPair: recipientKeyPair) {
-                    self.logger.notice("parseEvents: got Taker Information Message in event with Matrix event ID: \(event.eventId)")
+                    self.logger.notice("parseEvents: got Taker Information Message in event with Matrix event ID \(event.eventId)")
                     try swapService.handleTakerInformationMessage(takerInformationMessage)
+                } else {
+                    // If execution reaches this point, then we have already tried to get every possible encrytped message that doesn't require us to have the sender's public key. Therefore we check for a recipient field, and attempt to create an interface ID from the contents of that field, and then check keyManagerService to determine if we have a public key with that interface ID. If we do, then we continue attempting to parse the message. If we do not, we log a warning and break.
+                    guard let senderInterfaceIDString = message["sender"] as? String, let senderInterfaceID = Data(base64Encoded: senderInterfaceIDString) else {
+                        self.logger.warning("parseEvents: could not get sender interface ID from message in event with Matrix event ID \(event.eventId) sent to this interface")
+                        break
+                    }
+                    guard let senderPublicKey = try keyManagerService.getPublicKey(interfaceId: senderInterfaceID) else {
+                        self.logger.warning("parseEvents: could not find sender's public key for message sent to this interface in event with Matrix event ID \(event.eventId)")
+                        break
+                    }
+                    if let makerInformationMessage = try parseMakerInformationMessage(message: message, keyPair: recipientKeyPair, publicKey: senderPublicKey) {
+                        self.logger.notice("parseEvents: got Maker Information Message in event with Matrix event ID \(event.eventId)")
+                        try swapService.handleMakerInformationMessage(makerInformationMessage, senderInterfaceID: senderInterfaceID, recipientInterfaceID: recipientInterfaceID)
+                    }
                 }
             }
         }

@@ -6,6 +6,7 @@
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
+import Foundation
 @testable import iosApp
 
 /**
@@ -16,4 +17,8 @@ class TestSwapMessageNotifiable: SwapMessageNotifiable {
      Does nothing, required to adopt `SwapMessageNotifiable`. Should not be used.
      */
     func handleTakerInformationMessage(_ message: TakerInformationMessage) {}
+    /**
+     Does nothing, required to adopt `SwapMessageNotifiable`. Should not be used.
+     */
+    func handleMakerInformationMessage(_ message: MakerInformationMessage, senderInterfaceID: Data, recipientInterfaceID: Data) throws {}
 }
