@@ -847,12 +847,16 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      The function called by `P2PService` to notify `OfferService` of a `PublicKeyAnnouncement`.
      
-     Once notified, `OfferService` checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it checks the offer's `havePublicKey` and `state` properties. If `havePublicKey` is true or `state` is at or beyond `offerOpened`, then it returns because this interface already has the public key for this offer. Otherwise, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker, and if the offer has not already passed through the `offerOpened` state, updates its `state` property to `offerOpened`. It updates these properties in persistent storage as well.
+     Once notified, `OfferService` checks for a key pair in `keyManagerService` with an interface ID equal to that of the public key contained in `message`. If such a key pair is present, then this returns, to avoid storing the user's own public key. Otherwise, if no such key pair exists in `keyManagerService`, this checks that the public key in `message` is not already saved in persistent storage via `keyManagerService`, and does so if it is not. Then this checks `offerTruthSource` for an offer with the ID specified in `message` and an interface ID equal to that of the public key in `message`. If it finds such an offer, it checks the offer's `havePublicKey` and `state` properties. If `havePublicKey` is true or `state` is at or beyond `offerOpened`, then it returns because this interface already has the public key for this offer. Otherwise, it updates the offer's `havePublicKey` property to true, to indicate that we have the public key necessary to take the offer and communicate with its maker, and if the offer has not already passed through the `offerOpened` state, updates its `state` property to `offerOpened`. It updates these properties in persistent storage as well.
      
      - Parameter message: The `PublicKeyAnnouncement` of which `OfferService` is being notified.
      */
     func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) throws {
         logger.notice("handlePublicKeyAnnouncement: handling announcement for offer \(message.offerId.uuidString)")
+        if try keyManagerService.getKeyPair(interfaceId: message.publicKey.interfaceId) == nil {
+            logger.notice("handlePublicKeyAnnouncement: detected announcement for \(message.offerId.uuidString) made by the user of this interface")
+            return
+        }
         if try keyManagerService.getPublicKey(interfaceId: message.publicKey.interfaceId) == nil {
             try keyManagerService.storePublicKey(pubKey: message.publicKey)
             logger.notice("handlePublicKeyAnnouncement: persistently stored new public key with interface ID \(message.publicKey.interfaceId.base64EncodedString()) for offer \(message.offerId.uuidString)")
@@ -869,7 +873,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             return
         }
         /*
-         If we already have the public key for an offer and/or that offer is at or beyond the offerOpened state (such as an offer made by this interface's user), then we do nothing.
+         If we already have the public key for an offer and/or that offer is at or beyond the offerOpened state, then we do nothing.
          */
         guard offer.havePublicKey == false && offer.state.indexNumber < OfferState.offerOpened.indexNumber else {
             logger.notice("handlePublicKeyAnnouncement: got announcement for offer for which public key was already obtained: \(message.offerId.uuidString)")

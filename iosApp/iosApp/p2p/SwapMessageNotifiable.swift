@@ -24,7 +24,7 @@ protocol SwapMessageNotifiable {
      - Parameters:
         - message: the new `MakerInformationMessage` of which the structure or class adopting this protocol is being notified, and should handle in the implementation of this function.
         - senderInterfaceID: The interface ID of the message's sender.
-        - recipientInterfaceID: The interface ID of the message's intented recipient.
+        - recipientInterfaceID: The interface ID of the message's intended recipient.
      */
     func handleMakerInformationMessage(_ message: MakerInformationMessage, senderInterfaceID: Data, recipientInterfaceID: Data) throws
 }

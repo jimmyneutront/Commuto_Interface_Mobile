@@ -425,7 +425,6 @@ class P2PServiceTest: XCTestCase {
         XCTAssertEqual(makerKeyPair.interfaceId, swapService.senderInterfaceID!)
         XCTAssertEqual(takerKeyPair.interfaceId, swapService.recipientInterfaceID)
         
-        
     }
     
 }

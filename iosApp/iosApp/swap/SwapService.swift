@@ -272,7 +272,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      - Parameters:
         - message: The `MakerInformationMessage` to handle.
         - senderInterfaceID: The interface ID of the message's sender.
-        - recipientInterfaceID: The interface ID of the message's intented recipient.
+        - recipientInterfaceID: The interface ID of the message's intended recipient.
      
      - Throws `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`.
      */
