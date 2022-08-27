@@ -853,7 +853,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      */
     func handlePublicKeyAnnouncement(_ message: PublicKeyAnnouncement) throws {
         logger.notice("handlePublicKeyAnnouncement: handling announcement for offer \(message.offerId.uuidString)")
-        if try keyManagerService.getKeyPair(interfaceId: message.publicKey.interfaceId) == nil {
+        if try keyManagerService.getKeyPair(interfaceId: message.publicKey.interfaceId) != nil {
             logger.notice("handlePublicKeyAnnouncement: detected announcement for \(message.offerId.uuidString) made by the user of this interface")
             return
         }
