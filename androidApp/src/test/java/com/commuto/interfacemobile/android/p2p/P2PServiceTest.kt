@@ -485,6 +485,7 @@ class P2PServiceTest {
         val takerKeyPair = keyManagerService.generateKeyPair(storeResult = true)
         // Since we are the taker, we do NOT want the maker's key pair in persistent storage
         val makerKeyPair = KeyPair()
+        keyManagerService.storePublicKey(makerKeyPair.getPublicKey())
 
         val swapID = UUID.randomUUID()
 
