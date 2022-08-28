@@ -486,6 +486,12 @@ class OfferService (
                     ?: throw OfferServiceException("Unable to find specified settlement method in list of settlement " +
                             "methods accepted by offer maker")
                 // TODO: Get proper taker address here
+                val swapRole = when (offerToTake.direction) {
+                    // The maker is offering to buy, so we are selling
+                    OfferDirection.BUY -> SwapRole.TAKER_AND_SELLER
+                    // The maker is offering to sell, so we are buying
+                    OfferDirection.SELL -> SwapRole.TAKER_AND_BUYER
+                }
                 val newSwap = Swap(
                     isCreated = true,
                     requiresFill = requiresFill,
@@ -511,6 +517,7 @@ class OfferService (
                     onChainDisputeRaiser = BigInteger.ZERO,
                     chainID = offerToTake.chainID,
                     state = SwapState.TAKING,
+                    role = swapRole
                 )
                 afterObjectCreation?.invoke()
                 Log.i(logTag, "takeOffer: persistently storing ${offerToTake.id}")
@@ -541,6 +548,7 @@ class OfferService (
                     disputeRaiser = newSwap.onChainDisputeRaiser.toString(),
                     chainID = newSwap.chainID.toString(),
                     state = newSwap.state.asString,
+                    role = newSwap.role.asString
                 )
                 databaseService.storeSwap(swapForDatabase)
                 afterPersistentStorage?.invoke()

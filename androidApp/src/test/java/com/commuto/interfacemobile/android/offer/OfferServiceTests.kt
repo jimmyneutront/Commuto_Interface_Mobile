@@ -758,6 +758,7 @@ class OfferServiceTests {
             disputeRaiser = "",
             chainID = "",
             state = "",
+            role = "",
         )
         databaseService.storeSwap(swapForDatabase)
 
@@ -1931,6 +1932,7 @@ class OfferServiceTests {
                 disputeRaiser = swapInTruthSource.onChainDisputeRaiser.toString(),
                 chainID = swapInTruthSource.chainID.toString(),
                 state = swapInTruthSource.state.asString,
+                role = swapInTruthSource.role.asString
             )
             assertEquals(expectedSwapInDatabase.id, swapInDatabase!!.id)
             assertEquals(expectedSwapInDatabase.isCreated, swapInDatabase.isCreated)
@@ -1954,6 +1956,7 @@ class OfferServiceTests {
             assertEquals(expectedSwapInDatabase.disputeRaiser, swapInDatabase.disputeRaiser)
             assertEquals(expectedSwapInDatabase.chainID, swapInDatabase.chainID)
             assertEquals(expectedSwapInDatabase.state, swapInDatabase.state)
+            assertEquals(expectedSwapInDatabase.role, swapInDatabase.role)
 
             // Ensure the Offer is in the "taken" state
             assertEquals(OfferState.TAKEN, offer.state)
