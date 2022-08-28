@@ -18,14 +18,19 @@ struct SwapsView<TruthSource>: View where TruthSource: UISwapTruthSource {
      */
     @ObservedObject var swapTruthSource: TruthSource
     
+    /**
+     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.hardhatStablecoinInfoRepo` if no other value is provided.
+     */
+    let stablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
+    
     var body: some View {
         NavigationView {
             List {
                 ForEach(swapTruthSource.swaps.map { $0.1 }, id: \.id) { swap in
-                    NavigationLink(destination: Text(swap.id.uuidString)) {
+                    NavigationLink(destination: SwapView(swap: swap)) {
                         SwapCardView(
                             swapDirection: swap.direction.string,
-                            stablecoinCode: "STBL"
+                            stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: swap.chainID, contractAddress: swap.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
                         )
                     }
                 }

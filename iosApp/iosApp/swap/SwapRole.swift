@@ -28,7 +28,7 @@ enum SwapRole {
     case takerAndSeller
     
     /**
-     Returns a `String` corresponding to a particular case of `SwapRole`
+     Returns a `String` corresponding to a particular case of `SwapRole`.
      */
     var asString: String {
         switch self {

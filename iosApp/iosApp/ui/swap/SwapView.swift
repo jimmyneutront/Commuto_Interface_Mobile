@@ -1,0 +1,431 @@
+//
+//  SwapView.swift
+//  iosApp
+//
+//  Created by jimmyt on 8/27/22.
+//  Copyright © 2022 orgName. All rights reserved.
+//
+
+import SwiftUI
+import BigInt
+
+/**
+ Displays information about a specific [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+ */
+struct SwapView: View {
+    
+    /**
+     The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.hardhatStablecoinInfoRepo` if no other value is provided.
+     */
+    let stablecoinInfoRepo = StablecoinInformationRepository.hardhatStablecoinInfoRepo
+    
+    /**
+     The [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) about which this `SwapView` displays information.
+     */
+    @ObservedObject var swap: Swap
+    
+    /**
+     The direction component of the counterparty's role, as a human readable string. (either "Buyer" if the counterparty is the buyer and the user is the seller, or "Seller" if the counterparty is the seller and the user is the buyer)
+     */
+    var counterPartyDirection: String {
+        switch swap.role {
+        case .makerAndBuyer, .takerAndBuyer:
+            // We are the buyer, so the counterparty must be the seller
+            return "Seller"
+        case .makerAndSeller, .takerAndSeller:
+            // We are the seller, so the counterparty must be the buyer
+            return "Buyer"
+        }
+    }
+    
+    var body: some View {
+        let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: swap.chainID, contractAddress: swap.stablecoin)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading) {
+                Text("Role:")
+                    .font(.title2)
+                Text(createRoleDescription(role: swap.role, stablecoinInformation: stablecoinInformation))
+                    .font(.title)
+                    .bold()
+                SwapAmountView(
+                    stablecoinInformation: stablecoinInformation,
+                    amount: swap.takenSwapAmount,
+                    securityDeposit: swap.securityDepositAmount,
+                    serviceFee: swap.serviceFeeAmount
+                )
+                Text("Settlement method:")
+                    .font(.title2)
+                SwapSettlementMethodView(
+                    stablecoinInformation: stablecoinInformation,
+                    settlementMethod: swap.settlementMethod,
+                    swapAmount: swap.takenSwapAmount
+                )
+                Text("\(counterPartyDirection)'s Details:")
+                    .font(.title2)
+                Text("TEMPORARY")
+                    .font(.title)
+                    .bold()
+                Text("Your Details:")
+                    .font(.title2)
+                Text("TEMPORARY")
+                    .font(.title)
+                    .bold()
+            }
+            .frame(
+                maxWidth: .infinity,
+                alignment: .topLeading
+            )
+            .padding([.leading, .trailing])
+            VStack(alignment: .leading) {
+                Text("State:")
+                    .font(.title2)
+                SwapStateView(
+                    swapState: swap.state,
+                    userRole: swap.role,
+                    settlementMethodCurrency: swap.settlementMethod.currency
+                )
+                ActionButton(
+                    swapState: swap.state,
+                    userRole: swap.role
+                )
+                Button(
+                    action: {},
+                    label: {
+                        Text("Chat")
+                            .font(.largeTitle)
+                            .bold()
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.primary, lineWidth: 3)
+                            )
+                    }
+                )
+                .accentColor(.primary)
+                Button(
+                    action: {},
+                    label: {
+                        Text("Raise Dispute")
+                            .font(.largeTitle)
+                            .bold()
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.red, lineWidth: 3)
+                            )
+                    }
+                )
+                .accentColor(.red)
+            }
+            .frame(
+                maxWidth: .infinity,
+                alignment: .topLeading
+            )
+            .padding([.leading, .trailing, .bottom])
+        }
+        .navigationBarTitle(Text("Swap"))
+    }
+    
+    /**
+     Creates a role description string (such as "Buying USDC as maker" or "Selling DAI as taker") given the user's `SwapRole` and an optional `StablecoinInformation`.
+     
+     - Parameters:
+        - role: The user's `SwapRole` for this swap.
+        - stablecoinInformation: An optional `StablecoinInformation` for this swap's stablecoin. If this is `nil`, this uses the symbol "Unknown Stablecoin".
+     
+     - Returns: A role description.
+     */
+    func createRoleDescription(role: SwapRole, stablecoinInformation: StablecoinInformation?) -> String {
+        var direction: String {
+            switch swap.role {
+            case .makerAndBuyer, .takerAndBuyer:
+                return "Buying"
+            case .makerAndSeller, .takerAndSeller:
+                return "Selling"
+            }
+        }
+        let currencyCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+        var role: String {
+            switch swap.role {
+            case .makerAndBuyer, .makerAndSeller:
+                return "Maker"
+            case .takerAndBuyer, .takerAndSeller:
+                return "Taker"
+            }
+        }
+        return "\(direction) \(currencyCode) as \(role)"
+    }
+    
+}
+
+/**
+ A view that displays the amount, service fee, and security deposit for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+ */
+struct SwapAmountView: View {
+    /**
+     An optional `StablecoinInformation` for the swap's stablecoin.
+     */
+    let stablecoinInformation: StablecoinInformation?
+    /**
+     The swap's `takenSwapAmount` divided by ten raised to the power of the stablecoin's decimal count, as a `String`.
+     */
+    let amountString: String
+    /**
+     The swap's `serviceFeeAmount` divided by ten raised to the power of the stablecoin's decimal count, as a `String`.
+     */
+    let serviceFeeString: String
+    /**
+     The swap's `securityDepositAmount` divided by ten raised to the power of the stablecoin's decimal count, as a `String`.
+     */
+    let securityDepositString: String
+    
+    /**
+     Creates a new `SwapAmountView`.
+     
+     - Parameters:
+        - stablecoinInformation: An optional `StablecoinInformation` for the swap's stablecoin. If this is `nil`, the currency code "Unknown Stablecoin" will be used, and the amounts will be displayed in token base units.
+        - amount: The `Swap`'s `takenSwapAmount`.
+        - securityDeposit: The `Swap`'s `securityDepositAmount`.
+        - serviceFee: The `Swap`'s `serviceFeeAmount`.
+     */
+    init(stablecoinInformation: StablecoinInformation?, amount: BigUInt, securityDeposit: BigUInt, serviceFee: BigUInt) {
+        self.stablecoinInformation = stablecoinInformation
+        let stablecoinDecimal = stablecoinInformation?.decimal ?? 1
+        amountString = String(amount / BigUInt(10).power(stablecoinDecimal))
+        serviceFeeString = String(serviceFee / BigUInt(10).power(stablecoinDecimal))
+        securityDepositString = String(securityDeposit / BigUInt(10).power(stablecoinDecimal))
+    }
+    
+    var body: some View {
+        let currencyCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+        let amountHeader = (stablecoinInformation != nil) ? "Amount: " : "Amount (in token base units):"
+        Text(amountHeader)
+            .font(.title2)
+        Text("\(amountString) \(currencyCode)")
+            .font(.title2).bold()
+        Text("Service Fee Amount:")
+            .font(.title2)
+        Text("\(serviceFeeString) \(currencyCode)")
+            .font(.title2).bold()
+        Text("Security Deposit Amount:")
+            .font(.title2)
+        Text("\(securityDepositString) \(currencyCode)")
+            .font(.title2).bold()
+    }
+}
+
+/**
+ Displays a card containing information about the swap's settlement method.
+ */
+struct SwapSettlementMethodView: View {
+    /**
+     A human readable string describing the currency and transfer method, such as "EUR via SEPA"
+     */
+    let currencyDescription: String
+    /**
+     A human readable string describing the price for the settlement method, such as "Price: 0.94 EUR/DAI" or "Price: 1.00 USD/USDC"
+     */
+    let priceDescription: String
+    /**
+     A human readable string describing the total traditional currency cost of this swap, such as "15000 EUR" or "1000 USD".
+     */
+    let totalString: String
+    
+    /**
+     Creates a new `SwapSettlementMethodView`.
+     
+     - Parameters:
+        - stablecoinInformation: An optional `StablecoinInformation` for the swap's stablecoin. If this is `nil`, `priceDescription` will be "Unable to determine price" and `totalString` will be "Unable to calculate total".
+        - settlementMethod: The swap's `SettlementMethod`.
+        - swapAmount: The swap's taken swap amount.
+     */
+    init(stablecoinInformation: StablecoinInformation?, settlementMethod: SettlementMethod, swapAmount: BigUInt) {
+        currencyDescription = "\(settlementMethod.currency) via \(settlementMethod.method)"
+        if let stablecoinInformation = stablecoinInformation {
+            priceDescription = "Price: \(settlementMethod.price) \(settlementMethod.currency)/\(stablecoinInformation.currencyCode)"
+            let amountString = String(swapAmount / BigUInt(10).power(stablecoinInformation.decimal))
+            let amountDecimal = Decimal(string: amountString)
+            let priceDecimal = Decimal(string: settlementMethod.price)
+            if let amountDecimal = amountDecimal, let priceDecimal = priceDecimal {
+                let total = amountDecimal * priceDecimal
+                totalString = "\(String(describing: total)) \(settlementMethod.currency)"
+            } else {
+                totalString = "Unable to calculate total"
+            }
+        } else {
+            priceDescription = "Unable to determine price"
+            totalString = "Unable to calculate total"
+        }
+        
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(currencyDescription)
+                .padding(1)
+            Text(priceDescription)
+                .padding(1)
+            Text("Total: \(totalString)")
+                .padding(1)
+        }
+        .padding(20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.primary, lineWidth: 3)
+        )
+    }
+    
+}
+
+/**
+ Displays a human readable string describing the swap's current state.
+ */
+struct SwapStateView: View {
+    
+    /**
+     The `state` property of the `Swap` that this view represents.
+     */
+    let swapState: SwapState
+    /**
+     The `role` property of the `Swap` that this view represents.
+     */
+    let userRole: SwapRole
+    /**
+     The currency code of this `Swap`'s settlement method.
+     */
+    let settlementMethodCurrency: String
+    /**
+     A name by which we can refer to the stablecoin buyer. If the user is the buyer, this is "you". If the user is the seller, this is "buyer".
+     */
+    var buyerName: String {
+        switch userRole {
+        case .makerAndBuyer, .takerAndBuyer:
+            // The user is the buyer, so the buyer's name is "you"
+            return "you"
+        case .makerAndSeller, .takerAndSeller:
+            // The user is the seller, so the buyer's name is "buyer"
+            return "buyer"
+        }
+    }
+    /**
+     A name by which we can refer to the stablecoin seller. If the user is the buyer, this is "seller". If the user is the seller, this is "you".
+     */
+    var sellerName: String {
+        switch userRole {
+        case .makerAndBuyer, .takerAndBuyer:
+            // The user is the buyer, so the seller's name is "seller"
+            return "seller"
+        case .makerAndSeller, .takerAndSeller:
+            // The user is the seller, so the seller's name is "you"
+            return "you"
+        }
+    }
+    
+    /**
+     A string describing `swapState` based on the value of `userRole`.
+     */
+    var stateDescription: String {
+        switch swapState {
+        case .taking:
+            return "Taking Offer..."
+        case .takeOfferTransactionBroadcast:
+            return "Awaiting confirmation that offer is taken"
+        case .awaitingTakerInformation:
+            switch userRole {
+            case .makerAndBuyer, .makerAndSeller:
+                // We are the maker, so we are waiting to receive settlement method information from the taker
+                return "Waiting to receive details from taker"
+            case .takerAndBuyer, .takerAndSeller:
+                // We are the taker, so we are sending settlement method information to the maker
+                return "Sending details to maker"
+            }
+        case .awaitingMakerInformation:
+            switch userRole {
+            case .makerAndBuyer, .makerAndSeller:
+                // We are the maker, so we are sending settlement method information to the taker
+                return "Sending details to taker"
+            case .takerAndBuyer, .takerAndSeller:
+                // We are the taker, so we are waiting to receive settlement method information from the maker
+                return "Waiting to receive details from maker"
+            }
+        case .awaitingFilling:
+            // The offer should only be in this state if it is a maker-as-seller offer, therefore if we are not the maker and seller, we are waiting for the maker/seller to fill the swap
+            switch userRole {
+            case .makerAndSeller:
+                return "Waiting for you to fill swap"
+            default:
+                return "Waiting for maker to fill swap"
+            }
+        case .awaitingPaymentSent:
+            return "Waiting for \(buyerName) to send \(settlementMethodCurrency)"
+        }
+    }
+    
+    var body: some View {
+        Text(stateDescription)
+            .font(.title)
+            .bold()
+    }
+}
+
+/**
+ Displays a button allowing the user to execute the current action that must be completed in order to continue the swap process, or displays nothing if the user cannot execute said action.
+ 
+ For example, if the current state of the swap is `SwapState.awaitingPaymentSent` and the user is the buyer, then the user must confirm that they have sent payment in order for the swap process to continue. Therefore this will display a button with the label "Confirm Payment is Sent" which allows the user to do so. However, if the user is the seller, they cannot confirm payment is sent, since that is the buyer's responsibility. In that case, this would display nothing.
+ */
+struct ActionButton: View {
+    
+    /**
+     The `state` property of the `Swap` that this view represents.
+     */
+    let swapState: SwapState
+    /**
+     The `role` property of the `Swap` that this view represents.
+     */
+    let userRole: SwapRole
+    
+    var body: some View {
+        if swapState == .awaitingFilling && userRole == .makerAndBuyer {
+            // If the swap state is awaitingFilling and we are the maker and buyer, then we display the "Fill Swap" button
+            actionButtonBuilder(action: {}, labelText: "Fill Swap")
+        } else if swapState == .awaitingPaymentSent && (userRole == .makerAndBuyer || userRole == .takerAndBuyer) {
+            // If the swap state is awaitingPaymentSent and we are the buyer, then we display the "Confirm Payment is Sent" button
+            actionButtonBuilder(action: {}, labelText: "Confirm Payment is Sent")
+        }
+    }
+    
+    /**
+     Displays a button with the specified `labelText` with a primary-colored rounded rectangle overlay that performs `action` when clicked.
+     
+     - Parameters:
+        - action: The closure to execute when the button is clicked.
+        - labelText: The `String` that will be displayed as the label of this button.
+     */
+    @ViewBuilder
+    func actionButtonBuilder(action: @escaping () -> Void, labelText: String) -> some View {
+        Button(
+            action: action,
+            label: {
+                Text(labelText)
+                    .font(.largeTitle)
+                    .bold()
+                    .padding(10)
+                    .frame(maxWidth: .infinity)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.primary, lineWidth: 3)
+                    )
+            }
+        )
+        .accentColor(.primary)
+    }
+    
+}
+
+struct SwapView_Previews: PreviewProvider {
+    static var previews: some View {
+        SwapView(swap: Swap.sampleSwaps[Swap.sampleSwapIds[0]]!)
+    }
+}

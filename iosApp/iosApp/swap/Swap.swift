@@ -270,7 +270,7 @@ extension Swap {
             amountUpperBound: 20_000 * BigUInt(10).power(18),
             securityDepositAmount: 2_000 * BigUInt(10).power(18),
             takenSwapAmount: 15_000 * BigUInt(10).power(18),
-            serviceFeeAmount: BigUInt(150),
+            serviceFeeAmount: BigUInt(150) * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             direction: .buy,
             onChainSettlementMethod:
@@ -288,7 +288,7 @@ extension Swap {
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID,
-            state: .takeOfferTransactionBroadcast,
+            state: .awaitingPaymentSent,
             role: .makerAndBuyer
         ),
         sampleSwapIds[1]: try! Swap(
@@ -304,7 +304,7 @@ extension Swap {
             amountUpperBound: 20_000 * BigUInt(10).power(6),
             securityDepositAmount: 2_000 * BigUInt(10).power(6),
             takenSwapAmount: 15_000 * BigUInt(10).power(6),
-            serviceFeeAmount: BigUInt(150),
+            serviceFeeAmount: BigUInt(150) * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             direction: .buy,
             onChainSettlementMethod:

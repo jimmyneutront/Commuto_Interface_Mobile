@@ -80,11 +80,13 @@ struct OfferAmountView: View {
  */
 struct OfferAmountView_Previews: PreviewProvider {
     static var previews: some View {
-        OfferAmountView(
-            stablecoinInformation: nil,
-            minimum: BigUInt(10_000),
-            maximum: BigUInt(20_000),
-            securityDeposit: BigUInt(2_000)
-        )
+        Group {
+            OfferAmountView(
+                stablecoinInformation: nil,
+                minimum: BigUInt(10_000),
+                maximum: BigUInt(20_000),
+                securityDeposit: BigUInt(2_000)
+            )
+        }
     }
 }
