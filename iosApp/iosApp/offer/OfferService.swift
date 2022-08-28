@@ -470,6 +470,16 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         }) else {
                             throw OfferServiceError.unexpectedNilError(desc: "Unable to find specified settlement method in list of settlement methods accepted by offer maker")
                         }
+                        var swapRole: SwapRole {
+                            switch offerToTake.direction {
+                            case .buy:
+                                // The maker is offering to buy, so we are selling
+                                return SwapRole.takerAndSeller
+                            case .sell:
+                                // The maker is offering to sell, so we are buying
+                                return SwapRole.takerAndBuyer
+                            }
+                        }
                         let newSwap = try Swap(
                             isCreated: true,
                             requiresFill: requiresFill,
@@ -494,7 +504,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                             hasSellerClosed: false,
                             onChainDisputeRaiser: BigUInt.zero,
                             chainID: offerToTake.chainID,
-                            state: .taking
+                            state: .taking,
+                            role: swapRole
                         )
                         if let afterObjectCreation = afterObjectCreation {
                             afterObjectCreation()
@@ -531,7 +542,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     hasSellerClosed: newSwap.hasSellerClosed,
                     onChainDisputeRaiser: String(newSwap.onChainDisputeRaiser),
                     chainID: String(newSwap.chainID),
-                    state: newSwap.state.asString
+                    state: newSwap.state.asString,
+                    role: newSwap.role.asString
                 )
                 try databaseService.storeSwap(swap: newSwapForDatabase)
                 if let afterPersistentStorage = afterPersistentStorage {

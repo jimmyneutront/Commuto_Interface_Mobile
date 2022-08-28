@@ -20,59 +20,59 @@ struct DatabaseSwap: Equatable {
      */
     let requiresFill: Bool
     /**
-     The `maker` property of a `Swap` as a `String`
+     The `maker` property of a `Swap` as a `String`.
      */
     let maker: String
     /**
-     The `makerInterfaceID` property of a `Swap` as a `String`
+     The `makerInterfaceID` property of a `Swap` as a `String`.
      */
     let makerInterfaceID: String
     /**
-     The `taker` property of a `Swap` as a `String`
+     The `taker` property of a `Swap` as a `String`.
      */
     let taker: String
     /**
-     The `takerInterfaceID` property of a `Swap` as a `String`
+     The `takerInterfaceID` property of a `Swap` as a `String`.
      */
     let takerInterfaceID: String
     /**
-     The `stablecoin` property of a `Swap` as a `String`
+     The `stablecoin` property of a `Swap` as a `String`.
      */
     let stablecoin: String
     /**
-     The `amountLowerBound` property of a `Swap` as a `String`
+     The `amountLowerBound` property of a `Swap` as a `String`.
      */
     let amountLowerBound: String
     /**
-     The `amountUpperBound` property of a `Swap` as a `String`
+     The `amountUpperBound` property of a `Swap` as a `String`.
      */
     let amountUpperBound: String
     /**
-     The `securityDepositAmount` property of a `Swap` as a `String`
+     The `securityDepositAmount` property of a `Swap` as a `String`.
      */
     let securityDepositAmount: String
     /**
-     The `takenSwapAmount` property of a `Swap` as a `String`
+     The `takenSwapAmount` property of a `Swap` as a `String`.
      */
     let takenSwapAmount: String
     /**
-     The `serviceFeeAmount` property of a `Swap` as a `String`
+     The `serviceFeeAmount` property of a `Swap` as a `String`.
      */
     let serviceFeeAmount: String
     /**
-     The `serviceFeeRate` property of a `Swap` as a `String`
+     The `serviceFeeRate` property of a `Swap` as a `String`.
      */
     let serviceFeeRate: String
     /**
-     The `onChainDirection` property of a `Swap` as a `String`
+     The `onChainDirection` property of a `Swap` as a `String`.
      */
     let onChainDirection: String
     /**
-     The `onChainSettlementMethod` property of a `Swap` as a `String`
+     The `onChainSettlementMethod` property of a `Swap` as a `String`.
      */
     let onChainSettlementMethod: String
     /**
-     The `protocolVersion` property of a `Swap` as a `String`
+     The `protocolVersion` property of a `Swap` as a `String`.
      */
     let protocolVersion: String
     /**
@@ -92,15 +92,19 @@ struct DatabaseSwap: Equatable {
      */
     let hasSellerClosed: Bool
     /**
-     The `onChainDisputeRaiser` property of a `Swap` as a `String`
+     The `onChainDisputeRaiser` property of a `Swap` as a `String`.
      */
     let onChainDisputeRaiser: String
     /**
-     The `chainID` property of a `Swap` as a `String`
+     The `chainID` property of a `Swap` as a `String`.
      */
     let chainID: String
     /**
-     The `state` property of a `State` as a `String`.
+     The `state` property of a `Swap` as a `String`.
      */
     let state: String
+    /**
+     The `role` property of a `Swap` as a `String`.
+     */
+    let role: String
 }

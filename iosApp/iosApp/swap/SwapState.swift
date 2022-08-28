@@ -58,7 +58,7 @@ enum SwapState {
     /**
      Attempts to create a `SwapState` corresponding to the given `String`, or returns `nil` if no case corresponds to the given `String`.
      
-     - Parameter string: The `String` from which this attempts to create a corresponding `SwapState
+     - Parameter string: The `String` from which this attempts to create a corresponding `SwapState`
      
      - Returns: A `SwapState` corresponding to `string`, or `nil` if no such `SwapState` exists.
      */

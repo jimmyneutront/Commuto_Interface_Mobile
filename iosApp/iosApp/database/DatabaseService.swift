@@ -181,9 +181,13 @@ class DatabaseService {
      */
     let offerState = Expression<String>("state")
     /**
-     A database structure representing an `Swaps`'s `state` property.
+     A database structure representing a `Swaps`'s `state` property.
      */
     let swapState = Expression<String>("state")
+    /**
+     A database structure representing a `Swap`'s `role` property.
+     */
+    let swapRole = Expression<String>("role")
     
     /**
      Creates all necessary database tables.
@@ -246,6 +250,7 @@ class DatabaseService {
             t.column(disputeRaiser)
             t.column(chainID)
             t.column(swapState)
+            t.column(swapRole)
         })
     }
     
@@ -581,7 +586,8 @@ class DatabaseService {
                     hasSellerClosed <- swap.hasSellerClosed,
                     disputeRaiser <- swap.onChainDisputeRaiser,
                     chainID <- swap.chainID,
-                    swapState <- swap.state
+                    swapState <- swap.state,
+                    swapRole <- swap.role
                 ))
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Swap.id" {
                 // A swap with the specified ID already exists in the database, so we do nothing
@@ -664,7 +670,8 @@ class DatabaseService {
                 hasSellerClosed: result[0][hasSellerClosed],
                 onChainDisputeRaiser: result[0][disputeRaiser],
                 chainID: result[0][chainID],
-                state: result[0][swapState]
+                state: result[0][swapState],
+                role: result[0][swapRole]
             )
         } else {
             logger.notice("getSwap: no swap found with B64 ID \(_id)")

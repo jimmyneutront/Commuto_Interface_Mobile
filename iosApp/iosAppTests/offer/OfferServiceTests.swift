@@ -708,7 +708,8 @@ class OfferServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: "",
             chainID: "31337",
-            state: ""
+            state: "",
+            role: ""
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
@@ -1797,7 +1798,8 @@ class OfferServiceTests: XCTestCase {
             hasSellerClosed: swapInTruthSource.hasSellerClosed,
             onChainDisputeRaiser: String(swapInTruthSource.onChainDisputeRaiser),
             chainID: String(swapInTruthSource.chainID),
-            state: swapInTruthSource.state.asString
+            state: swapInTruthSource.state.asString,
+            role: "takerAndSeller"
         )
         XCTAssertEqual(expectedSwapInDatabase, swapInDatabase)
         

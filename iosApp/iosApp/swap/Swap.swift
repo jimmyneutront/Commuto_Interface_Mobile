@@ -119,6 +119,10 @@ class Swap: ObservableObject {
      Indicates the current state of this swap, as described in the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      */
     var state: SwapState
+    /**
+     Indicates the interface user's role for this swap.
+     */
+    let role: SwapRole
     
     
     /**
@@ -147,6 +151,7 @@ class Swap: ObservableObject {
         - onChainDisputeRaiser: Corresponds to an on-chain Swap's raw value.
         - chainID: The ID of the blockchain on which this swap exists.
         - state: Indicates the current state of this swap.
+        - role: Indicates the interface user's role for this swap.
      */
     init(
         isCreated: Bool,
@@ -172,7 +177,8 @@ class Swap: ObservableObject {
         hasSellerClosed: Bool,
         onChainDisputeRaiser: BigUInt,
         chainID: BigUInt,
-        state: SwapState
+        state: SwapState,
+        role: SwapRole
     ) throws {
         self.isCreated = isCreated
         self.requiresFill = requiresFill
@@ -200,6 +206,7 @@ class Swap: ObservableObject {
         self.onChainDisputeRaiser = onChainDisputeRaiser
         self.chainID = chainID
         self.state = state
+        self.role = role
     }
     
     /**
@@ -281,7 +288,8 @@ extension Swap {
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID,
-            state: .takeOfferTransactionBroadcast
+            state: .takeOfferTransactionBroadcast,
+            role: .makerAndBuyer
         ),
         sampleSwapIds[1]: try! Swap(
             isCreated: true,
@@ -314,7 +322,8 @@ extension Swap {
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
-            state: .takeOfferTransactionBroadcast
+            state: .takeOfferTransactionBroadcast,
+            role: .takerAndSeller
         ),
     ]
 }

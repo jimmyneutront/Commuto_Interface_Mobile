@@ -206,7 +206,8 @@ class DatabaseServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: "dispute_raiser",
             chainID: "chain_id",
-            state: "a_state_here"
+            state: "a_state_here",
+            role: "a_role_here"
         )
         try dbService.storeSwap(swap: swapToStore)
         let anotherSwapToStore = DatabaseSwap(
@@ -233,7 +234,8 @@ class DatabaseServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: "another_dispute_raiser",
             chainID: "another_chain_id",
-            state: "another_state_here"
+            state: "another_state_here",
+            role: "a_role_here"
         )
         // This should do nothing and not throw
         try dbService.storeSwap(swap: anotherSwapToStore)
@@ -273,7 +275,8 @@ class DatabaseServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: "dispute_raiser",
             chainID: "chain_id",
-            state: "a_state_here"
+            state: "a_state_here",
+            role: "a_role_here"
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapState(swapID: "a_uuid", chainID: "chain_id", state: "a_new_state_here")

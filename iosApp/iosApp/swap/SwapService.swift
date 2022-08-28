@@ -113,7 +113,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
-     Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified swap ID, creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation` using the on chain swap, and maps `swapID` lto the new `Swap` on the main `DispatchQueue`.
+     Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified swap ID, creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation` using the on chain swap, and maps `swapID` lto the new `Swap` on the main `DispatchQueue`. This should only be called for swaps made by the user of this interface.
      
      - Parameters:
         - swapID: The ID of the swap for which to update state.
@@ -140,6 +140,14 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 throw SwapServiceError.invalidValueError(desc: "Swap \(swapID.uuidString) has invalid direction: \(String(swapOnChain.direction))")
             }
         }()
+        var swapRole: SwapRole {
+            switch direction {
+            case .buy:
+                return SwapRole.makerAndBuyer
+            case .sell:
+                return SwapRole.makerAndSeller
+            }
+        }
         let newSwap = try Swap(
             isCreated: swapOnChain.isCreated,
             requiresFill: swapOnChain.requiresFill,
@@ -164,7 +172,8 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             hasSellerClosed: swapOnChain.hasSellerClosed,
             onChainDisputeRaiser: swapOnChain.disputeRaiser,
             chainID: chainID,
-            state: .awaitingTakerInformation
+            state: .awaitingTakerInformation,
+            role: swapRole
         )
         #warning("TODO: check for taker information once SettlementMethodService is implemented")
         // Persistently store new swap object
@@ -193,7 +202,8 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             hasSellerClosed: newSwap.hasSellerClosed,
             onChainDisputeRaiser: String(newSwap.onChainDisputeRaiser),
             chainID: String(newSwap.chainID),
-            state: newSwap.state.asString
+            state: newSwap.state.asString,
+            role: newSwap.role.asString
         )
         try databaseService.storeSwap(swap: newSwapForDatabase)
         // Add new Swap to swapTruthSource

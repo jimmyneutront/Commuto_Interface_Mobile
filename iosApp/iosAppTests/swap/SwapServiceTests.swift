@@ -68,7 +68,8 @@ class SwapServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: "",
             chainID: "31337",
-            state: ""
+            state: "",
+            role: ""
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
@@ -293,7 +294,8 @@ class SwapServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
             chainID: BigUInt(31337),
-            state: SwapState.awaitingTakerInformation
+            state: SwapState.awaitingTakerInformation,
+            role: SwapRole.makerAndSeller
         )
         swapTruthSource.swaps[swapID] = swap
         let swapForDatabase = DatabaseSwap(
@@ -320,7 +322,8 @@ class SwapServiceTests: XCTestCase {
             hasSellerClosed: swap.hasSellerClosed,
             onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
             chainID: String(swap.chainID),
-            state: swap.state.asString
+            state: swap.state.asString,
+            role: swap.role.asString
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
@@ -412,7 +415,8 @@ class SwapServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
             chainID: BigUInt(31337),
-            state: SwapState.awaitingMakerInformation
+            state: SwapState.awaitingMakerInformation,
+            role: SwapRole.takerAndBuyer
         )
         swapTruthSource.swaps[swapID] = swap
         let swapForDatabase = DatabaseSwap(
@@ -439,7 +443,8 @@ class SwapServiceTests: XCTestCase {
             hasSellerClosed: swap.hasSellerClosed,
             onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
             chainID: String(swap.chainID),
-            state: swap.state.asString
+            state: swap.state.asString,
+            role: swap.role.asString
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
