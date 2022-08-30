@@ -1931,7 +1931,7 @@ class OfferServiceTests {
                 hasSellerClosed = 0L,
                 disputeRaiser = swapInTruthSource.onChainDisputeRaiser.toString(),
                 chainID = swapInTruthSource.chainID.toString(),
-                state = swapInTruthSource.state.asString,
+                state = swapInTruthSource.state.value.asString,
                 role = swapInTruthSource.role.asString
             )
             assertEquals(expectedSwapInDatabase.id, swapInDatabase!!.id)

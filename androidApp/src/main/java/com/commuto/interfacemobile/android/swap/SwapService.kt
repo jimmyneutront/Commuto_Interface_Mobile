@@ -105,7 +105,7 @@ class SwapService @Inject constructor(
             state = SwapState.AWAITING_TAKER_INFORMATION.asString
         )
         withContext(Dispatchers.Main) {
-            swapTruthSource.swaps[swapID]?.state = SwapState.AWAITING_TAKER_INFORMATION
+            swapTruthSource.swaps[swapID]?.state?.value = SwapState.AWAITING_TAKER_INFORMATION
         }
         // Since we are the taker of this swap, we should have it in persistent storage
         val swapInDatabase = databaseService.getSwap(id = swapIDString)
@@ -152,7 +152,7 @@ class SwapService @Inject constructor(
             state = SwapState.AWAITING_MAKER_INFORMATION.asString
         )
         withContext(Dispatchers.Main) {
-            swapTruthSource.swaps[swapID]?.state = SwapState.AWAITING_MAKER_INFORMATION
+            swapTruthSource.swaps[swapID]?.state?.value = SwapState.AWAITING_MAKER_INFORMATION
         }
     }
 
@@ -231,7 +231,7 @@ class SwapService @Inject constructor(
             hasSellerClosed = if (newSwap.hasSellerClosed) 1L else 0L,
             disputeRaiser = newSwap.onChainDisputeRaiser.toString(),
             chainID = newSwap.chainID.toString(),
-            state = newSwap.state.asString,
+            state = newSwap.state.value.asString,
             role = newSwap.role.asString,
         )
         databaseService.storeSwap(swapForDatabase)
@@ -278,7 +278,7 @@ class SwapService @Inject constructor(
                     state = SwapState.AWAITING_MAKER_INFORMATION.asString,
                 )
                 withContext(Dispatchers.Main) {
-                    swap.state = SwapState.AWAITING_MAKER_INFORMATION
+                    swap.state.value = SwapState.AWAITING_MAKER_INFORMATION
                 }
                 // TODO: get actual settlement method details once SettlementMethodService is implemented
                 val makerKeyPair = keyManagerService.getKeyPair(swap.makerInterfaceID)
@@ -303,7 +303,7 @@ class SwapService @Inject constructor(
                             state = SwapState.AWAITING_PAYMENT_SENT.asString,
                         )
                         withContext(Dispatchers.Main) {
-                            swap.state = SwapState.AWAITING_PAYMENT_SENT
+                            swap.state.value = SwapState.AWAITING_PAYMENT_SENT
                         }
                     }
                     OfferDirection.SELL -> {
@@ -315,7 +315,7 @@ class SwapService @Inject constructor(
                             state = SwapState.AWAITING_FILLING.asString,
                         )
                         withContext(Dispatchers.Main) {
-                            swap.state = SwapState.AWAITING_FILLING
+                            swap.state.value = SwapState.AWAITING_FILLING
                         }
                     }
                 }
@@ -375,7 +375,7 @@ class SwapService @Inject constructor(
                         state = SwapState.AWAITING_PAYMENT_SENT.asString,
                     )
                     withContext(Dispatchers.Main) {
-                        swap.state = SwapState.AWAITING_PAYMENT_SENT
+                        swap.state.value = SwapState.AWAITING_PAYMENT_SENT
                     }
                 }
                 OfferDirection.SELL -> {
@@ -387,7 +387,7 @@ class SwapService @Inject constructor(
                         state = SwapState.AWAITING_FILLING.asString,
                     )
                     withContext(Dispatchers.Main) {
-                        swap.state = SwapState.AWAITING_FILLING
+                        swap.state.value = SwapState.AWAITING_FILLING
                     }
                 }
             }
