@@ -578,6 +578,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 logger.notice("takeOffer: took \(newSwap.id.uuidString)")
                 offerToTake.state = .taken
                 try databaseService.updateOfferState(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID), state: offerToTake.state.asString)
+                // The swap is not currently being used by any views, so the state need not be updated on the main DispatchQueue
                 newSwap.state = .takeOfferTransactionBroadcast
                 try databaseService.updateSwapState(swapID: newSwap.id.asData().base64EncodedString(), chainID: String(newSwap.chainID), state: newSwap.state.asString)
                 logger.notice("takeOffer: adding \(newSwap.id.uuidString) to swapTruthSource and removing \(offerToTake.id.uuidString) from offerTruthSource")

@@ -118,7 +118,7 @@ class Swap: ObservableObject {
     /**
      Indicates the current state of this swap, as described in the [Commuto Interface Specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      */
-    var state: SwapState
+    @Published var state: SwapState
     /**
      Indicates the interface user's role for this swap.
      */
