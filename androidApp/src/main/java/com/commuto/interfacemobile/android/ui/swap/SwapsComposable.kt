@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import java.util.*
 
 /**
  * Contains the [NavHost] for swaps and displays the [Composable] to which the user has navigated.
@@ -41,8 +42,9 @@ fun SwapsComposable(
             "SwapComposable/{id}",
             arguments = listOf(navArgument("id") { type = NavType.StringType })
         ) { backStackEntry ->
-            val idString = backStackEntry.arguments?.getString("id") ?: "No ID specified"
-            Text(idString)
+            val id = try { UUID.fromString(backStackEntry.arguments?.getString("id")) }
+            catch (e: Throwable) { null }
+            SwapComposable(swapTruthSource = swapTruthSource, id = id)
         }
     }
 }
