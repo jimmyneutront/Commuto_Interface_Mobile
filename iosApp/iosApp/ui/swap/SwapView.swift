@@ -44,7 +44,7 @@ struct SwapView: View {
             VStack(alignment: .leading) {
                 Text("Role:")
                     .font(.title2)
-                Text(createRoleDescription(role: swap.role, stablecoinInformation: stablecoinInformation))
+                Text(createRoleDescription(swapRole: swap.role, stablecoinInformation: stablecoinInformation))
                     .font(.title)
                     .bold()
                 SwapAmountView(
@@ -137,9 +137,9 @@ struct SwapView: View {
      
      - Returns: A role description.
      */
-    func createRoleDescription(role: SwapRole, stablecoinInformation: StablecoinInformation?) -> String {
+    func createRoleDescription(swapRole: SwapRole, stablecoinInformation: StablecoinInformation?) -> String {
         var direction: String {
-            switch swap.role {
+            switch swapRole {
             case .makerAndBuyer, .takerAndBuyer:
                 return "Buying"
             case .makerAndSeller, .takerAndSeller:
@@ -148,7 +148,7 @@ struct SwapView: View {
         }
         let currencyCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
         var role: String {
-            switch swap.role {
+            switch swapRole {
             case .makerAndBuyer, .makerAndSeller:
                 return "Maker"
             case .takerAndBuyer, .takerAndSeller:
@@ -387,8 +387,8 @@ struct ActionButton: View {
     let userRole: SwapRole
     
     var body: some View {
-        if swapState == .awaitingFilling && userRole == .makerAndBuyer {
-            // If the swap state is awaitingFilling and we are the maker and buyer, then we display the "Fill Swap" button
+        if swapState == .awaitingFilling && userRole == .makerAndSeller {
+            // If the swap state is awaitingFilling and we are the maker and seller, then we display the "Fill Swap" button
             actionButtonBuilder(action: {}, labelText: "Fill Swap")
         } else if swapState == .awaitingPaymentSent && (userRole == .makerAndBuyer || userRole == .takerAndBuyer) {
             // If the swap state is awaitingPaymentSent and we are the buyer, then we display the "Confirm Payment is Sent" button
@@ -424,6 +424,9 @@ struct ActionButton: View {
     
 }
 
+/**
+ Displays a preview of `SwapView` with a sample `Swap`.
+ */
 struct SwapView_Previews: PreviewProvider {
     static var previews: some View {
         SwapView(swap: Swap.sampleSwaps[Swap.sampleSwapIds[0]]!)
