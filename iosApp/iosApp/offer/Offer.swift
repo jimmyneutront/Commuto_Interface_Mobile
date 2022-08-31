@@ -430,7 +430,7 @@ extension Offer {
             onChainSettlementMethods: [
                 """
                 {
-                    "f": "BUSD",
+                    "f": "BSD",
                     "p": "1.00",
                     "m": "SANDDOLLAR"
                 }

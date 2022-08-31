@@ -304,7 +304,7 @@ extension Swap {
             amountUpperBound: 20_000 * BigUInt(10).power(6),
             securityDepositAmount: 2_000 * BigUInt(10).power(6),
             takenSwapAmount: 15_000 * BigUInt(10).power(6),
-            serviceFeeAmount: BigUInt(150) * BigUInt(10).power(18),
+            serviceFeeAmount: BigUInt(150) * BigUInt(10).power(6),
             serviceFeeRate: BigUInt(100),
             direction: .buy,
             onChainSettlementMethod:

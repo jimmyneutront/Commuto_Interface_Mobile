@@ -83,7 +83,12 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                 )
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading) {
-                        Text("Take \(offer.direction.string) Offer")
+                        Text("Take Offer")
+                            .font(.title)
+                            .bold()
+                        Text("You are:")
+                            .font(.title2)
+                        Text(createRoleDescription(offerDirection: offer.direction, stablecoinInformation: stablecoinInformation, selectedSettlementMethod: selectedSettlementMethod))
                             .font(.title)
                             .bold()
                         OfferAmountView(
@@ -159,12 +164,62 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
         }
     }
     
+    /**
+     Creates a header for the settlement method selector.
+     
+     - Parameter numberOfSettlementMethods: The size of this offer's settlement method list.
+     
+     - Returns A `String` to be used as the header for the settlement method selector
+     */
     func createSettlementMethodHeader(numberOfSettlementMethods: Int) -> String {
         if numberOfSettlementMethods == 1 {
             return "Settlement Method:"
         } else {
             return "Settlement Methods:"
         }
+    }
+    
+    /**
+     Creates a role description string (such as "Buying USDC with USD" or "Selling DAI for EUR", or "Buying BUSD").
+     
+     - Parameters:
+        - offerDirection: The offer's direction.
+        - stablecoinInformation: An optional `StablecoinInformation` for the offer's stablecoin.
+        - selectedSettlementMethod: The currently selected settlement method that the user (taker) and the maker will use to exchange traditional currency payment.
+     
+     - Returns: A role description `String`.
+     */
+    func createRoleDescription(offerDirection: OfferDirection, stablecoinInformation: StablecoinInformation?, selectedSettlementMethod: SettlementMethod?) -> String {
+        var direction: String {
+            switch offerDirection {
+            case .buy:
+                // The maker is offering to buy stablecoin, so the user of this interface (the taker) is selling stablecoin
+                return "Selling"
+            case .sell:
+                // The maker is offering to sell stablecoin, so the user of this interface (the maker) is buying stablecoin
+                return "Buying"
+            }
+        }
+        let stablecoinCurrencyCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+        var directionPreposition: String {
+            switch offerDirection {
+            case .buy:
+                // The string will be "Selling ... for ..."
+                return "for"
+            case .sell:
+                // The string will be "Buying ... with ..."
+                return "with"
+            }
+        }
+        var currencyPhrase: String {
+            if let selectedSettlementMethod = selectedSettlementMethod {
+                // If the user has selected a settlement method, we want to include the currency of that settlement method in the role description.
+                return " \(directionPreposition) \(selectedSettlementMethod.currency)"
+            } else {
+                return ""
+            }
+        }
+        return "\(direction) \(stablecoinCurrencyCode)\(currencyPhrase)"
     }
     
 }

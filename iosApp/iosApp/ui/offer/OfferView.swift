@@ -101,7 +101,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
             let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)
             ScrollView(.vertical, showsIndicators: false) {
                 VStack {
-                    VStack {
+                    VStack(alignment: .leading) {
                         HStack {
                             Text("Direction:")
                                 .font(.title2)
@@ -119,12 +119,19 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                             },
                             label: {
                                 Text(buildDirectionString(stablecoinInformation: stablecoinInformation))
-                                    .font(.title)
+                                    .font(.title2)
                                     .bold()
                                     .multilineTextAlignment(.leading)
                             }
                         )
                         .accentColor(Color.primary)
+                        if (!offer.isUserMaker) {
+                            Text("If you take this offer, you will:")
+                                .font(.title2)
+                            Text(createRoleDescription(offerDirection: offer.direction, stablecoinInformation: stablecoinInformation))
+                                .font(.title)
+                                .bold()
+                        }
                         OfferAmountView(stablecoinInformation: stablecoinInformation, minimum: offer.amountLowerBound, maximum: offer.amountUpperBound, securityDeposit: offer.securityDepositAmount)
                         HStack {
                             Text("Settlement methods:")
@@ -299,6 +306,30 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
         // We should never get the empty string here because no offer information will be displayed if offer is nil
         return "This is a " + offer.direction.string + " offer: The maker of this offer wants to " + offer.direction.string.lowercased() + " " + stablecoinName + " in exchange for fiat."
     }
+    
+    /**
+     Creates a role discription string (such as "Buy USDC" or "Sell DAI" for the user, based on the direction of the offer. This should only be displayed if the user is not the maker of the offer.
+     
+     - Parameters:
+        - offerDescription: The `direction` property of the `Offer`.
+        - stablecoinInformation: An optional `StablecoinInformation` for this offer's stablecoin. If this is `nil`, this uses the symbol "Unknown Stablecoin".
+     
+     - Returns: A role description.
+     */
+    func createRoleDescription(offerDirection: OfferDirection, stablecoinInformation: StablecoinInformation?) -> String {
+        var direction: String {
+            switch offerDirection {
+            case .buy:
+                // The maker is offering to buy stablecoin, so if the user of this interface takes the offer, they must sell stablecoin
+                return "Sell"
+            case .sell:
+                // The maker is offering to sell stablecoin, so if the user of this interface takes the offer, they must buy stablecoin
+                return "Buy"
+            }
+        }
+        return "\(direction) \(stablecoinInformation?.currencyCode ?? "Unknown Stablecoin")"
+    }
+    
 }
 
 /**
