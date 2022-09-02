@@ -31,6 +31,10 @@ enum SwapState {
      */
     case awaitingFilling
     /**
+     Indicates that the swap is a maker-as-seller swap and that the transaction to fill the swap has been broadcast.
+     */
+    case fillSwapTransactionBroadcast
+    /**
      If the swap is a maker-as-seller swap, this indicates that the maker has filled the swap, and the buyer must now send payment for the stablecoin they are purchasing. If the swap is a maker-as-buyer swap, this indicates that the maker has sent their settlement method information to the taker, and the buyer must now send payment for the stablecoin they are purchasing.
      */
     case awaitingPaymentSent
@@ -50,6 +54,8 @@ enum SwapState {
             return "awaitingMakerInfo"
         case .awaitingFilling:
             return "awaitingFilling"
+        case .fillSwapTransactionBroadcast:
+            return "fillSwapTransactionBroadcast"
         case .awaitingPaymentSent:
             return "awaitingPaymentSent"
         }
@@ -75,6 +81,8 @@ enum SwapState {
             return .awaitingMakerInformation
         } else if string == "awaitingFilling" {
             return .awaitingFilling
+        } else if string == "fillSwapTransactionBroadcast" {
+            return .fillSwapTransactionBroadcast
         } else if string == "awaitingPaymentSent" {
             return .awaitingPaymentSent
         } else {

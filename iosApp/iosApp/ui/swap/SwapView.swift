@@ -358,6 +358,8 @@ struct SwapStateView: View {
             default:
                 return "Waiting for maker to fill swap"
             }
+        case .fillSwapTransactionBroadcast:
+            return "Awaiting confirmation that swap is filled"
         case .awaitingPaymentSent:
             return "Waiting for \(buyerName) to send \(settlementMethodCurrency)"
         }

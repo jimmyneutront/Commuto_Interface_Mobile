@@ -22,7 +22,7 @@ class Swap: ObservableObject {
     /**
      Corresponds to an on-chain Swap's `requiresFill` property.
      */
-    let requiresFill: Bool
+    var requiresFill: Bool
     /**
      The ID that uniquely identifies this swap, as a `UUID`.
      */

@@ -24,6 +24,10 @@ enum SwapServiceError: LocalizedError {
      - Parameter desc: A `String` that provides information about the context in which the error was thrown.
      */
     case invalidValueError(desc: String)
+    /**
+     Thrown when `SwapService` determines that an on-chain function call cannot be executed because its transaction will revert.
+     */
+    case transactionWillRevertError(desc: String)
     
     /**
      A description providing information about the context in which the error was thrown.
@@ -33,6 +37,8 @@ enum SwapServiceError: LocalizedError {
         case .unexpectedNilError(let desc):
             return desc
         case .invalidValueError(let desc):
+            return desc
+        case .transactionWillRevertError(let desc):
             return desc
         }
     }

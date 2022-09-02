@@ -474,4 +474,157 @@ class SwapServiceTests: XCTestCase {
         
     }
     
+    /**
+     Ensures that `SwapService.fillSwap` and `BlockchainService.fillSwap` function properly.
+     */
+    func testFillSwap() {
+        
+        let swapID = UUID()
+        
+        struct TestingServerResponse: Decodable {
+            let stablecoinAddress: String
+            let commutoSwapAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_swapservice_fillSwap")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-taken"),
+            URLQueryItem(name: "swapID", value: swapID.uuidString)
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let swapService = SwapService(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        
+        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
+            var gotError = false
+            func handleBlockchainError(_ error: Error) {
+                gotError = true
+            }
+        }
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        #warning("TODO: move this to its own class")
+        class TestOfferService: OfferNotifiable {
+            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
+            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
+            func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) {}
+        }
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: TestOfferService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        swapService.blockchainService = blockchainService
+        
+        let swap = try! Swap(
+            isCreated: true,
+            requiresFill: true,
+            id: swapID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            makerInterfaceID: Data(),
+            taker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            takerInterfaceID: Data(),
+            stablecoin: EthereumAddress(testingServerResponse!.stablecoinAddress)!,
+            amountLowerBound: BigUInt(10000),
+            amountUpperBound: BigUInt(10000),
+            securityDepositAmount: BigUInt(1000),
+            takenSwapAmount: BigUInt(10000),
+            serviceFeeAmount: BigUInt(100),
+            serviceFeeRate: BigUInt(100),
+            direction: .sell,
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
+            protocolVersion: BigUInt.zero,
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: BigUInt.zero,
+            chainID: BigUInt(31337),
+            state: SwapState.awaitingFilling,
+            role: SwapRole.makerAndSeller
+        )
+        let swapForDatabase = DatabaseSwap(
+            id: swap.id.asData().base64EncodedString(),
+            isCreated: swap.isCreated,
+            requiresFill: swap.requiresFill,
+            maker: swap.maker.addressData.toHexString(),
+            makerInterfaceID: swap.makerInterfaceID.base64EncodedString(),
+            taker: swap.taker.addressData.toHexString(),
+            takerInterfaceID: swap.takerInterfaceID.base64EncodedString(),
+            stablecoin: swap.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(swap.amountLowerBound),
+            amountUpperBound: String(swap.amountUpperBound),
+            securityDepositAmount: String(swap.securityDepositAmount),
+            takenSwapAmount: String(swap.takenSwapAmount),
+            serviceFeeAmount: String(swap.serviceFeeAmount),
+            serviceFeeRate: String(swap.serviceFeeRate),
+            onChainDirection: String(swap.onChainDirection),
+            onChainSettlementMethod: swap.onChainSettlementMethod.base64EncodedString(),
+            protocolVersion: String(swap.protocolVersion),
+            isPaymentSent: swap.isPaymentSent,
+            isPaymentReceived: swap.isPaymentReceived,
+            hasBuyerClosed: swap.hasBuyerClosed,
+            hasSellerClosed: swap.hasSellerClosed,
+            onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
+            chainID: String(swap.chainID),
+            state: swap.state.asString,
+            role: swap.role.asString
+        )
+        try! databaseService.storeSwap(swap: swapForDatabase)
+        
+        let expectation = XCTestExpectation(description: "Fulfilled after fillSwap is executed")
+        
+        swapService.fillSwap(swapToFill: swap).done {
+            expectation.fulfill()
+        }.cauterize()
+        
+        wait(for: [expectation], timeout: 20.0)
+        
+        XCTAssertEqual(SwapState.fillSwapTransactionBroadcast, swap.state)
+        
+        let swapInDatabase = try! databaseService.getSwap(id: swap.id.asData().base64EncodedString())
+        XCTAssertEqual(SwapState.fillSwapTransactionBroadcast.asString, swapInDatabase?.state)
+        
+    }
+    
 }

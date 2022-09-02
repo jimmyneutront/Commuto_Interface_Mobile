@@ -125,7 +125,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                             }
                         )
                         .accentColor(Color.primary)
-                        if (!offer.isUserMaker) {
+                        if !offer.isUserMaker {
                             Text("If you take this offer, you will:")
                                 .font(.title2)
                             Text(createRoleDescription(offerDirection: offer.direction, stablecoinInformation: stablecoinInformation))
