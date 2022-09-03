@@ -159,7 +159,9 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 return blockchainService.fillSwap(id: swapToFill.id).map { ($0, swapToFill) }
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, filledSwap in
                 logger.notice("fillSwap: filled \(filledSwap.id.uuidString)")
-                try databaseService.updateSwapState(swapID: filledSwap.id.asData().base64EncodedString(), chainID: String(filledSwap.chainID), state: SwapState.fillSwapTransactionBroadcast.asString)
+                let swapIDString = filledSwap.id.asData().base64EncodedString()
+                try databaseService.updateSwapState(swapID: swapIDString, chainID: String(filledSwap.chainID), state: SwapState.fillSwapTransactionBroadcast.asString)
+                try databaseService.updateSwapRequiresFill(swapID: swapIDString, chainID: String(filledSwap.chainID), requiresFill: false)
                 // This is not a @Published property, so we can update it from a background thread
                 filledSwap.requiresFill = false
             }.done(on: DispatchQueue.main) { _, filledSwap in

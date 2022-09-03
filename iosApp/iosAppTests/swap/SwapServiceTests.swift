@@ -588,6 +588,7 @@ class SwapServiceTests: XCTestCase {
         
         let swapInDatabase = try! databaseService.getSwap(id: swap.id.asData().base64EncodedString())
         XCTAssertEqual(SwapState.fillSwapTransactionBroadcast.asString, swapInDatabase?.state)
+        XCTAssertFalse(swapInDatabase!.requiresFill)
         
     }
     
