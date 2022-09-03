@@ -116,13 +116,13 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      Attempts to fill a maker-as-seller [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap), using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
-     On the global `DispatchQueue`, this ensures that the the user is the maker and stablecoin seller of the swap to fill, and that the swap to fill can actually be filled. Then, still on the global `DispatchQueue`, this approves token transfer for the taken swap amount to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) function (via `BlockchainService`), persistently updates the state of the swap to `fillSwapTransactionBroadcast`, and sets the `Swap` Finally, on the main `DispatchQueue`, this updates the state of the `Swap` object to `fillSwapTransactionBroadcast`.
+     On the global `DispatchQueue`, this ensures that the user is the maker and stablecoin seller of `swapToFill`, and that `swapToFill` can actually be filled. Then this approves token transfer for `swapToFill.takenSwapAmount` to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) function (via `blockchainService`), persistently updates the state of the swap to `fillSwapTransactionBroadcast`, and sets `swapToFill.requiresFill` to false. Finally, on the main `DispatchQueue`, this updates the state of `swapToFill` to `fillSwapTransactionBroadcast`.
      
      - Parameter swapToFill: The `Swap` that this function will fill.
      
      - Returns: An empty promise that will be fulfilled with the Swap is filled.
      
-     - Throws: An `SwapServiceError.transactionWillRevertError` if `swapToFill` is not a maker-as-seller swap and the user is not the maker, or if the swap's state is not `awaitingFilling`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
+     - Throws: An `SwapServiceError.transactionWillRevertError` if `swapToFill` is not a maker-as-seller swap and the user is not the maker, or if `swapToFill`'s state is not `awaitingFilling`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
      */
     func fillSwap(
         swapToFill: Swap

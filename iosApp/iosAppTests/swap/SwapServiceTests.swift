@@ -621,6 +621,7 @@ class SwapServiceTests: XCTestCase {
         wait(for: [expectation], timeout: 20.0)
         
         XCTAssertEqual(SwapState.fillSwapTransactionBroadcast, swap.state)
+        XCTAssertFalse(swap.requiresFill)
         
         let swapInDatabase = try! databaseService.getSwap(id: swap.id.asData().base64EncodedString())
         XCTAssertEqual(SwapState.fillSwapTransactionBroadcast.asString, swapInDatabase?.state)
