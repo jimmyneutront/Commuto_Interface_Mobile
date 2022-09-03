@@ -1,4 +1,4 @@
-package com.commuto.interfacemobile.android.offer
+package com.commuto.interfacemobile.android.swap
 
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap

@@ -1,6 +1,6 @@
-package com.commuto.interfacemobile.android.offer
+package com.commuto.interfacemobile.android.swap
 
-import com.commuto.interfacemobile.android.swap.SwapNotifiable
+import com.commuto.interfacemobile.android.offer.OfferService
 import java.math.BigInteger
 import java.util.*
 

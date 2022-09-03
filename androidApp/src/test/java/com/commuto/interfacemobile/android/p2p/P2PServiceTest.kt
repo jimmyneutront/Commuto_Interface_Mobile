@@ -62,12 +62,6 @@ class P2PServiceTest {
                 }
             }
         ).apply { accessToken.value = System.getenv("MXKY") }
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            @Throws
-            override fun handleP2PException(exception: Exception) {
-                throw exception
-            }
-        }
         val p2pService = P2PService(
             exceptionHandler = TestP2PExceptionHandler(),
             offerService = TestOfferMessageNotifiable(),
@@ -110,12 +104,6 @@ class P2PServiceTest {
             }
         ).apply { accessToken.value = System.getenv("MXKY") }
 
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            @Throws
-            override fun handleP2PException(exception: Exception) {
-                throw exception
-            }
-        }
         class TestOfferService constructor(val expectedPKA: PublicKeyAnnouncement) : OfferMessageNotifiable {
             val publicKeyAnnouncementChannel = Channel<PublicKeyAnnouncement>()
             override suspend fun handlePublicKeyAnnouncement(message: PublicKeyAnnouncement) {
@@ -185,6 +173,7 @@ class P2PServiceTest {
                 }
             }
         ).apply { accessToken.value = System.getenv("MXKY") }
+        // We need this TestP2PExceptionHandler to test exception handling logic
         class TestP2PExceptionHandler : P2PExceptionNotifiable {
             val exceptionChannel = Channel<Exception>()
             override fun handleP2PException(exception: Exception) {
@@ -222,9 +211,6 @@ class P2PServiceTest {
         databaseService.createTables()
         val keyManagerService = KeyManagerService(databaseService)
 
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            override fun handleP2PException(exception: Exception) {}
-        }
         val p2pExceptionHandler = TestP2PExceptionHandler()
 
         val mxClient = MatrixClientServerApiClient(
@@ -278,9 +264,7 @@ class P2PServiceTest {
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
         val keyManagerService = KeyManagerService(databaseService)
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            override fun handleP2PException(exception: Exception) {}
-        }
+
         val p2pExceptionHandler = TestP2PExceptionHandler()
         val mxClient = MatrixClientServerApiClient(
             baseUrl = Url("https://matrix.org"),
@@ -348,9 +332,6 @@ class P2PServiceTest {
 
         val swapID = UUID.randomUUID()
 
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            override fun handleP2PException(exception: Exception) {}
-        }
         val p2pExceptionHandler = TestP2PExceptionHandler()
         val mxClient = MatrixClientServerApiClient(
             baseUrl = Url("https://matrix.org"),
@@ -419,10 +400,7 @@ class P2PServiceTest {
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
         val keyManagerService = KeyManagerService(databaseService)
-        // TODO: move this to its own class
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            override fun handleP2PException(exception: Exception) {}
-        }
+
         val mxClient = MatrixClientServerApiClient(
             baseUrl = Url("https://matrix.org"),
             httpClientFactory = {
@@ -489,10 +467,6 @@ class P2PServiceTest {
 
         val swapID = UUID.randomUUID()
 
-        // TODO: move this to its own class
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            override fun handleP2PException(exception: Exception) {}
-        }
         val mxClient = MatrixClientServerApiClient(
             baseUrl = Url("https://matrix.org"),
             httpClientFactory = {

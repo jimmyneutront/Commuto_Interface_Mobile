@@ -6,8 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import com.commuto.interfacedesktop.db.Offer as DatabaseOffer
 import com.commuto.interfacedesktop.db.Swap as DatabaseSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainEventRepository
-import com.commuto.interfacemobile.android.blockchain.BlockchainExceptionNotifiable
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.TestBlockchainExceptionHandler
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
@@ -16,12 +16,14 @@ import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.key.keys.KeyPair
 import com.commuto.interfacemobile.android.offer.validation.ValidatedNewSwapData
 import com.commuto.interfacemobile.android.offer.validation.validateNewOfferData
-import com.commuto.interfacemobile.android.p2p.P2PExceptionNotifiable
 import com.commuto.interfacemobile.android.p2p.P2PService
+import com.commuto.interfacemobile.android.p2p.TestP2PExceptionHandler
 import com.commuto.interfacemobile.android.p2p.TestSwapMessageNotifiable
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.swap.SwapNotifiable
 import com.commuto.interfacemobile.android.swap.SwapState
+import com.commuto.interfacemobile.android.swap.TestSwapService
+import com.commuto.interfacemobile.android.swap.TestSwapTruthSource
 import com.commuto.interfacemobile.android.ui.offer.PreviewableOfferTruthSource
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import io.ktor.client.*
@@ -129,6 +131,7 @@ class OfferServiceTests {
             BlockchainEventRepository(),
         )
 
+        // We need this TestOfferTruthSource to track added offers
         class TestOfferTruthSource: OfferTruthSource {
             init {
                 offerService.setOfferTruthSource(this)
@@ -149,12 +152,6 @@ class OfferServiceTests {
         }
         val offerTruthSource = TestOfferTruthSource()
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -260,27 +257,9 @@ class OfferServiceTests {
             BlockchainEventRepository(),
         )
 
-        class TestOfferTruthSource: OfferTruthSource {
-            init {
-                offerService.setOfferTruthSource(this)
-            }
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {
-                offers[offer.id] = offer
-            }
-            override fun removeOffer(id: UUID) {
-                offers.remove(id)
-            }
-        }
         val offerTruthSource = TestOfferTruthSource()
+        offerService.setOfferTruthSource(offerTruthSource)
 
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            @Throws
-            override fun handleP2PException(exception: Exception) {
-                throw exception
-            }
-        }
         val p2pExceptionHandler = TestP2PExceptionHandler()
 
         val mxClient = MatrixClientServerApiClient(
@@ -348,12 +327,6 @@ class OfferServiceTests {
         )
         databaseService.storeOffer(offerForDatabase)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -445,6 +418,7 @@ class OfferServiceTests {
             BlockchainEventRepository(),
         )
 
+        // We need this TestOfferTruthSource in order to track added and removed offers
         class TestOfferTruthSource: OfferTruthSource {
             init {
                 offerService.setOfferTruthSource(this)
@@ -468,12 +442,6 @@ class OfferServiceTests {
         }
         val offerTruthSource = TestOfferTruthSource()
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -586,6 +554,7 @@ class OfferServiceTests {
             BlockchainEventRepository(),
         )
 
+        // We need this TestOfferTruthSource in order to track removed offers
         class TestOfferTruthSource: OfferTruthSource {
             init {
                 offerService.setOfferTruthSource(this)
@@ -606,12 +575,6 @@ class OfferServiceTests {
         }
         val offerTruthSource = TestOfferTruthSource()
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -692,18 +655,6 @@ class OfferServiceTests {
 
         val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
-        // TODO: move this to its own class
-        class TestOfferTruthSource: OfferTruthSource {
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {
-                offers[offer.id] = offer
-            }
-            override fun removeOffer(id: UUID) {
-                offers.remove(id)
-            }
-        }
-
         /*
         OfferService should call the sendTakerInformation method of this class, passing a UUID equal to newOfferID
         to begin the process of sending taker information
@@ -762,12 +713,6 @@ class OfferServiceTests {
         )
         databaseService.storeSwap(swapForDatabase)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -830,17 +775,6 @@ class OfferServiceTests {
         // Set up node connection
         val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
-        // TODO: move this to its own class
-        class TestOfferTruthSource: OfferTruthSource {
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {
-                offers[offer.id] = offer
-            }
-            override fun removeOffer(id: UUID) {
-                offers.remove(id)
-            }
-        }
         val offerTruthSource = TestOfferTruthSource()
 
         // OfferService should call the handleNewSwap method of this class, passing a UUID equal to offerID
@@ -862,12 +796,6 @@ class OfferServiceTests {
         )
         offerService.setOfferTruthSource(offerTruthSource)
 
-        class TestP2PExceptionHandler : P2PExceptionNotifiable {
-            @Throws
-            override fun handleP2PException(exception: Exception) {
-                throw exception
-            }
-        }
         val p2pExceptionHandler = TestP2PExceptionHandler()
         val mxClient = MatrixClientServerApiClient(
             baseUrl = Url("https://matrix.org"),
@@ -923,12 +851,6 @@ class OfferServiceTests {
         )
         databaseService.storeOffer(offerForDatabase)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -1021,28 +943,9 @@ class OfferServiceTests {
             BlockchainEventRepository(),
         )
 
-        class TestOfferTruthSource: OfferTruthSource {
-            init {
-                offerService.setOfferTruthSource(this)
-            }
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {
-                offers[offer.id] = offer
-            }
-
-            override fun removeOffer(id: UUID) {
-                offers.remove(id)
-            }
-        }
         val offerTruthSource = TestOfferTruthSource()
+        offerService.setOfferTruthSource(offerTruthSource)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -1241,23 +1144,9 @@ class OfferServiceTests {
             serviceFeeRateChangedEventRepository,
         )
 
-        class TestOfferTruthSource: OfferTruthSource {
-            init {
-                offerService.setOfferTruthSource(this)
-            }
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {}
-            override fun removeOffer(id: UUID) {}
-        }
         val offerTruthSource = TestOfferTruthSource()
+        offerService.setOfferTruthSource(offerTruthSource)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -1317,6 +1206,7 @@ class OfferServiceTests {
             BlockchainEventRepository(),
         )
 
+        // We need this TestOfferTruthSource to track added offers
         class TestOfferTruthSource: OfferTruthSource {
             init {
                 offerService.setOfferTruthSource(this)
@@ -1334,12 +1224,6 @@ class OfferServiceTests {
         }
         val offerTruthSource = TestOfferTruthSource()
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -1379,7 +1263,7 @@ class OfferServiceTests {
                     assert(addedOffer.isCreated.value)
                     assertFalse(addedOffer.isTaken.value)
                     assertEquals(addedOffer.id, addedOfferID)
-                    //TOOD: check proper maker address once WalletService is implemented
+                    // TODO: check proper maker address once WalletService is implemented
                     assertEquals(addedOffer.stablecoin, testingServerResponse.stablecoinAddress)
                     assertEquals(addedOffer.amountLowerBound, BigInteger.valueOf(100_000))
                     assertEquals(addedOffer.amountUpperBound, BigInteger.valueOf(200_000))
@@ -1509,27 +1393,9 @@ class OfferServiceTests {
             TestSwapService(),
         )
 
-        class TestOfferTruthSource: OfferTruthSource {
-            init {
-                offerService.setOfferTruthSource(this)
-            }
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {
-                offers[offer.id] = offer
-            }
-            override fun removeOffer(id: UUID) {
-                offers.remove(id)
-            }
-        }
         val offerTruthSource = TestOfferTruthSource()
+        offerService.setOfferTruthSource(offerTruthSource)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -1643,27 +1509,9 @@ class OfferServiceTests {
             TestSwapService(),
         )
 
-        class TestOfferTruthSource: OfferTruthSource {
-            init {
-                offerService.setOfferTruthSource(this)
-            }
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {
-                offers[offer.id] = offer
-            }
-            override fun removeOffer(id: UUID) {
-                offers.remove(id)
-            }
-        }
-        TestOfferTruthSource()
+        val offerTruthSource = TestOfferTruthSource()
+        offerService.setOfferTruthSource(offerTruthSource)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
@@ -1758,26 +1606,12 @@ class OfferServiceTests {
             BlockchainEventRepository(),
         )
 
-        class TestOfferTruthSource: OfferTruthSource {
-            init {
-                offerService.setOfferTruthSource(this)
-            }
-            override var offers = mutableStateMapOf<UUID, Offer>()
-            override var serviceFeeRate = mutableStateOf<BigInteger?>(null)
-            override fun addOffer(offer: Offer) {}
-            override fun removeOffer(id: UUID) {}
-        }
         val offerTruthSource = TestOfferTruthSource()
+        offerService.setOfferTruthSource(offerTruthSource)
 
         val swapTruthSource = TestSwapTruthSource()
         offerService.setSwapTruthSource(newTruthSource = swapTruthSource)
 
-        class TestBlockchainExceptionHandler: BlockchainExceptionNotifiable {
-            var gotError = false
-            override fun handleBlockchainException(exception: Exception) {
-                gotError = true
-            }
-        }
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
