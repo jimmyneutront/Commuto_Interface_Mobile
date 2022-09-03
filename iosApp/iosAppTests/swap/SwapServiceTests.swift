@@ -73,10 +73,6 @@ class SwapServiceTests: XCTestCase {
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
-        
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
         
         class TestP2PService: P2PService {
@@ -160,6 +156,7 @@ class SwapServiceTests: XCTestCase {
             keyManagerService: keyManagerService
         )
         
+        // We need this TestSwapTruthSource declaration to track when swaps are added
         class TestSwapTruthSource: SwapTruthSource {
             let swapAddedExpectation = XCTestExpectation(description: "Fulfilled when a swap is added to the swaps dictionary")
             var swaps: [UUID : Swap] = [:] {
@@ -174,22 +171,7 @@ class SwapServiceTests: XCTestCase {
         let swapTruthSource = TestSwapTruthSource()
         swapService.swapTruthSource = swapTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
-        
-        #warning("TODO: move this to its own class")
-        class TestOfferService: OfferNotifiable {
-            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
-            func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
-            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
-            func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
-            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) {}
-        }
         
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
@@ -229,10 +211,6 @@ class SwapServiceTests: XCTestCase {
             databaseService: databaseService,
             keyManagerService: keyManagerService
         )
-        #warning("TODO: move this to its own class")
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
         
@@ -524,22 +502,7 @@ class SwapServiceTests: XCTestCase {
             keyManagerService: keyManagerService
         )
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
-        
-        #warning("TODO: move this to its own class")
-        class TestOfferService: OfferNotifiable {
-            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
-            func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
-            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
-            func handleOfferTakenEvent(_ event: OfferTakenEvent) {}
-            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) {}
-        }
         
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,

@@ -86,6 +86,7 @@ class OfferServiceTests: XCTestCase {
             offerOpenedEventRepository: offerOpenedEventRepository
         )
         
+        // We need this new TestOfferTruthSource declaration because we need to track added offers
         class TestOfferTruthSource: OfferTruthSource {
             
             init() {
@@ -109,12 +110,6 @@ class OfferServiceTests: XCTestCase {
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -196,16 +191,6 @@ class OfferServiceTests: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        class TestOfferTruthSource: OfferTruthSource {
-            
-            init() {
-                offers = [:]
-            }
-            var serviceFeeRate: BigUInt?
-            
-            var offers: [UUID: Offer]
-            
-        }
         let offerTruthSource = TestOfferTruthSource()
         
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent> {
@@ -231,9 +216,6 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.offerTruthSource = offerTruthSource
         
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let p2pErrorHandler = TestP2PErrorHandler()
         
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
@@ -295,12 +277,6 @@ class OfferServiceTests: XCTestCase {
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -390,6 +366,7 @@ class OfferServiceTests: XCTestCase {
             offerCanceledEventRepository: offerCanceledEventRepository
         )
         
+        // We need this TestOfferTruthSource declaration because we need to track added and removed offers
         class TestOfferTruthSource: OfferTruthSource {
             
             init() {
@@ -419,13 +396,6 @@ class OfferServiceTests: XCTestCase {
         
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
-        
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         
         let errorHandler = TestBlockchainErrorHandler()
         let blockchainService = BlockchainService(
@@ -544,6 +514,7 @@ class OfferServiceTests: XCTestCase {
             offerTakenEventRepository: offerTakenEventRepository
         )
         
+        // We need this TestOfferTruthSource declaration because we have to track removed offers
         class TestOfferTruthSource: OfferTruthSource {
             
             init() {
@@ -571,13 +542,6 @@ class OfferServiceTests: XCTestCase {
         
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
-        
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         
         let errorHandler = TestBlockchainErrorHandler()
         let blockchainService = BlockchainService(
@@ -656,12 +620,6 @@ class OfferServiceTests: XCTestCase {
         // Set up node connection
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        #warning("TODO: move this to its own class")
-        class TestOfferTruthSource: OfferTruthSource {
-            var serviceFeeRate: BigUInt?
-            var offers: [UUID: Offer] = [:]
-        }
-        
         // OfferService should call the sendTakerInformationMessage method of this class, passing a UUID equal to newOfferID to begin the process of sending taker information
         class TestSwapService: SwapNotifiable {
             let expectation = XCTestExpectation(description: "Fulfilled when sendTakerInformationMessage is called")
@@ -713,12 +671,6 @@ class OfferServiceTests: XCTestCase {
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -784,14 +736,9 @@ class OfferServiceTests: XCTestCase {
         // Set up node connection
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        #warning("TODO: move this to its own class")
-        class TestOfferTruthSource: OfferTruthSource {
-            var serviceFeeRate: BigUInt?
-            var offers: [UUID: Offer] = [:]
-        }
         let offerTruthSource = TestOfferTruthSource()
         
-        // OfferService should call the handleNewSwap method of this class, passing a UUID equal to offerID
+        // OfferService should call the handleNewSwap method of this class, passing a UUID equal to offerID. We need this new TestSwapService declaration to track when handleNewSwap is called
         class TestSwapService: SwapNotifiable {
             let expectation = XCTestExpectation(description: "Fulfilled when handleNewSwap is called")
             var swapID: UUID? = nil
@@ -812,9 +759,6 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.offerTruthSource = offerTruthSource
         
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let p2pErrorHandler = TestP2PErrorHandler()
         
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
@@ -872,12 +816,6 @@ class OfferServiceTests: XCTestCase {
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -968,27 +906,9 @@ class OfferServiceTests: XCTestCase {
             offerEditedEventRepository: offerEditedEventRepository
         )
         
-        class TestOfferTruthSource: OfferTruthSource {
-            
-            init() {
-                offers = [:]
-            }
-            
-            var serviceFeeRate: BigUInt?
-            
-            var offers: [UUID: Offer]
-            
-        }
-        
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -1161,6 +1081,7 @@ class OfferServiceTests: XCTestCase {
             swapService: TestSwapService()
         )
         
+        // We need this TestOfferTruthSource declaration in order to track setting of the service fee rate
         class TestOfferTruthSource: OfferTruthSource {
             
             init() {
@@ -1182,12 +1103,6 @@ class OfferServiceTests: XCTestCase {
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -1249,6 +1164,7 @@ class OfferServiceTests: XCTestCase {
             swapService: TestSwapService()
         )
         
+        // We need this TestOfferTruthSource in order to track added offers
         class TestOfferTruthSource: OfferTruthSource {
             let offerAddedExpectation = XCTestExpectation(description: "Fulfilled when an offer is added to the offers dictionary")
             var offers: [UUID : Offer] = [:] {
@@ -1265,12 +1181,6 @@ class OfferServiceTests: XCTestCase {
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -1422,20 +1332,9 @@ class OfferServiceTests: XCTestCase {
             swapService: TestSwapService()
         )
         
-        class TestOfferTruthSource: OfferTruthSource {
-            var serviceFeeRate: BigUInt? = BigUInt(1)
-            var offers: [UUID : Offer] = [:]
-        }
-        
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -1557,20 +1456,10 @@ class OfferServiceTests: XCTestCase {
             swapService: TestSwapService()
         )
         
-        class TestOfferTruthSource: OfferTruthSource {
-            var serviceFeeRate: BigUInt? = BigUInt(1)
-            var offers: [UUID : Offer] = [:]
-        }
-        
         let offerTruthSource = TestOfferTruthSource()
+        offerTruthSource.serviceFeeRate = BigUInt(1)
         offerService.offerTruthSource = offerTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -1654,23 +1543,13 @@ class OfferServiceTests: XCTestCase {
             swapService: TestSwapService()
         )
         
-        class TestOfferTruthSource: OfferTruthSource {
-            var serviceFeeRate: BigUInt? = BigUInt(1)
-            var offers: [UUID : Offer] = [:]
-        }
-        
         let offerTruthSource = TestOfferTruthSource()
+        offerTruthSource.serviceFeeRate = BigUInt(1)
         offerService.offerTruthSource = offerTruthSource
         
         let swapTruthSource = TestSwapTruthSource()
         offerService.swapTruthSource = swapTruthSource
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(

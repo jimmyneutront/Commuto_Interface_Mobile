@@ -11,7 +11,7 @@ import Foundation
 @testable import iosApp
 
 /**
- A basic `SwapNotifiable` implementation used to satisfy `OfferService`'s swapService dependency for testing non-swap-related code.
+ A basic `SwapNotifiable` implementation used to satisfy `OfferService`'s `swapService` dependency for testing non-swap-related code.
  */
 class TestSwapService: SwapNotifiable {
     /**

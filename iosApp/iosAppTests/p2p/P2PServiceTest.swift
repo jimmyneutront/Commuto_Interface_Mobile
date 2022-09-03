@@ -50,9 +50,6 @@ class P2PServiceTest: XCTestCase {
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
         let p2pService = P2PService(
             errorHandler: TestP2PErrorHandler(),
@@ -73,9 +70,6 @@ class P2PServiceTest: XCTestCase {
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: ProcessInfo.processInfo.environment["MXKY"]!)
         let p2pService = P2PService(
             errorHandler: TestP2PErrorHandler(),
@@ -103,9 +97,6 @@ class P2PServiceTest: XCTestCase {
         let offerIdBytes = offerId.uuid
         let offerIdData = Data(fromArray: [offerIdBytes.0, offerIdBytes.1, offerIdBytes.2, offerIdBytes.3, offerIdBytes.4, offerIdBytes.5, offerIdBytes.6, offerIdBytes.7, offerIdBytes.8, offerIdBytes.9, offerIdBytes.10, offerIdBytes.11, offerIdBytes.12, offerIdBytes.13, offerIdBytes.14, offerIdBytes.15])
         
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         class TestOfferService : OfferMessageNotifiable {
             init(expectedPKA: PublicKeyAnnouncement) {
                 self.expectedPKA = expectedPKA
@@ -170,6 +161,7 @@ class P2PServiceTest: XCTestCase {
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
+        // We need this TestP2PErrorHandler to test errhr handling
         class TestP2PErrorHandler: P2PErrorNotifiable {
             init(_ eE: XCTestExpectation) {
                 errorExpectation = eE
@@ -206,9 +198,6 @@ class P2PServiceTest: XCTestCase {
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         class TestP2PService: P2PService {
             var receivedMessage: String?
@@ -241,10 +230,6 @@ class P2PServiceTest: XCTestCase {
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
-        #warning("TODO: move this to its own class")
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         class TestP2PService: P2PService {
             var receivedMessage: String?
@@ -291,9 +276,6 @@ class P2PServiceTest: XCTestCase {
         
         let swapID = UUID()
         
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         
         class TestSwapService: SwapMessageNotifiable {
@@ -333,10 +315,6 @@ class P2PServiceTest: XCTestCase {
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
-        #warning("TODO: move this to its own class")
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         class TestP2PService: P2PService {
             var receivedMessage: String?
@@ -386,10 +364,6 @@ class P2PServiceTest: XCTestCase {
         
         let swapID = UUID()
         
-        #warning("TODO: move this to its own class")
-        class TestP2PErrorHandler : P2PErrorNotifiable {
-            func handleP2PError(_ error: Error) {}
-        }
         let switrixClient = SwitrixClient(homeserver: "https://matrix.org", token: "not_a_real_token")
         
         class TestSwapService: SwapMessageNotifiable {

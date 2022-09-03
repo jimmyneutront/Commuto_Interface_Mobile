@@ -31,12 +31,7 @@ class BlockchainServiceTest: XCTestCase {
      */
     func runBlockchainService() {
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
+        
         let errorHandler = TestBlockchainErrorHandler()
         
         let databaseService = try! DatabaseService()
@@ -90,12 +85,6 @@ class BlockchainServiceTest: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         class TestOfferService: OfferNotifiable {
@@ -191,12 +180,6 @@ class BlockchainServiceTest: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         class TestOfferService: OfferNotifiable {
@@ -298,12 +281,6 @@ class BlockchainServiceTest: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         class TestOfferService: OfferNotifiable {
@@ -406,12 +383,6 @@ class BlockchainServiceTest: XCTestCase {
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
-        class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
-            var gotError = false
-            func handleBlockchainError(_ error: Error) {
-                gotError = true
-            }
-        }
         let errorHandler = TestBlockchainErrorHandler()
         
         class TestOfferService: OfferNotifiable {
@@ -484,6 +455,7 @@ class BlockchainServiceTest: XCTestCase {
          */
         let w3 = web3(provider: Web3HttpProvider(URL(string: "http://localhost:8546")!)!)
         
+        // We need this TestBlockchainErrorHandler implementation to test handling of errors
         class TestBlockchainErrorHandler: BlockchainErrorNotifiable {
             init(_ eE: XCTestExpectation) {
                 errorExpectation = eE
