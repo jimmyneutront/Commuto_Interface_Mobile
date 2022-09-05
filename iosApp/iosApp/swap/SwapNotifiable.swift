@@ -30,4 +30,9 @@ protocol SwapNotifiable {
         - chainID: The ID of the blockchain on which the taken offer exists.
      */
     func handleNewSwap(swapID: UUID, chainID: BigUInt) throws
+    
+    /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `SwapFilledEvent`.
+     */
+    func handleSwapFilledEvent(_ event: SwapFilledEvent) throws
 }

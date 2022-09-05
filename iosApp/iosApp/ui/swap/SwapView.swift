@@ -385,12 +385,12 @@ struct SwapStateView: View {
 struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
     
     /**
-     The [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which this `ActionButton` displays a button.
+     The `Swap` for which this `ActionButton` displays a button.
      */
     @ObservedObject var swap: Swap
     
     /**
-     The `SwapTruthSource` that acts as a single source of truth for all swap-related data.
+     The `UISwapTruthSource` that acts as a single source of truth for all swap-related data.
      */
     @ObservedObject var swapTruthSource: TruthSource
     

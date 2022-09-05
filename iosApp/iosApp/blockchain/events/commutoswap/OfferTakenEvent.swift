@@ -23,7 +23,7 @@ class OfferTakenEvent: Equatable {
     let interfaceId: Data
     let chainID: BigUInt
     /**
-     Creates a new `OfferTakenEvent` given a web3swift `EventParserResultProtocol` containing information from an [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) event, or returns `nil` oi the passed `EventParserResultProtocol` doesn't contain information from an OfferTaken event.
+     Creates a new `OfferTakenEvent` given a web3swift `EventParserResultProtocol` containing information from an [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) event, or returns `nil` if the passed `EventParserResultProtocol` doesn't contain information from an OfferTaken event.
      
      - Parameters:
         - result: A web3swift `EventParserResultProtocol`, from which this attempts to create an `OfferTakenEvent`.

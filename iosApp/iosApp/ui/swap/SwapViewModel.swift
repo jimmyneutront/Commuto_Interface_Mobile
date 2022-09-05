@@ -43,7 +43,7 @@ class SwapViewModel: UISwapTruthSource {
      
      - Parameters:
         - swap: The `Swap` of which to set the `fillingSwapState`.
-        - state: The value to which the `Swap`'s `fillingSwapState` will be set.
+        - state: The value to which `swap`'s `fillingSwapState` will be set.
      */
     private func setFillingSwapState(swap: Swap, state: FillingSwapState) {
         DispatchQueue.main.async {
@@ -70,7 +70,7 @@ class SwapViewModel: UISwapTruthSource {
                 ).pipe(to: seal.resolve)
             }
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] in
-            logger.notice("fillSwap: successfully filled swap \(swap.id.uuidString)")
+            logger.notice("fillSwap: successfully filled \(swap.id.uuidString)")
             setFillingSwapState(swap: swap, state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
             logger.error("fillSwap: got error during fillSwap call for \(swap.id.uuidString). Error: \(error.localizedDescription)")

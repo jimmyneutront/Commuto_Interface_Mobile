@@ -47,7 +47,7 @@ enum FillingSwapState {
         case .approving:
             return "Approving token transfer..."
         case .filling:
-            return "Filling the offer..."
+            return "Filling the swap..."
         case .completed:
             return "Swap successfully filled."
         case .error:

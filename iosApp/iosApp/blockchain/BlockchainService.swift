@@ -21,16 +21,18 @@ class BlockchainService {
      Initializes a new BlockchainService object.
      
      - Parameters:
-        - errorHandler: An object that conforms to the `BlockchainErrorNotifiable` protocol, to which this will pass errors when they occur.
-        - offerService: An object that comforms to the `OfferMessageNotifiable` protocol, to which this will pass offer-related events.
+        - errorHandler: An object that adopts the `BlockchainErrorNotifiable` protocol, to which this will pass errors when they occur.
+        - offerService: An object that adopts the `OfferNotifiable` protocol, to which this will pass offer-related events.
+        - swapService: An object that adopts the `SwapNotifiable` protocol, to which this will pass swap-related events.
         - web3Instance: A web3swift `web3` instance that this will use to interact with the EVM-compatible blockchain.
         - commutoSwapAddress: The `EthereumAddress` of the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol)
      
      - Returns: A new `BlockchainService` instance.
      */
-    init(errorHandler: BlockchainErrorNotifiable, offerService: OfferNotifiable, web3Instance: web3, commutoSwapAddress: EthereumAddress) {
+    init(errorHandler: BlockchainErrorNotifiable, offerService: OfferNotifiable, swapService: SwapNotifiable, web3Instance: web3, commutoSwapAddress: EthereumAddress) {
         self.errorHandler = errorHandler
         self.offerService = offerService
+        self.swapService = swapService
         w3 = web3Instance
         self.commutoSwapAddress = commutoSwapAddress
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
@@ -65,6 +67,11 @@ class BlockchainService {
      An object to which `BlockchainService` will pass offer-related events when they occur.
      */
     private let offerService: OfferNotifiable
+    
+    /**
+     An object to which `BlockchainService` will pass swap-related events when they occur.
+     */
+    private let swapService: SwapNotifiable
     
     /**
      The block number of the most recently parsed block.
@@ -529,11 +536,15 @@ class BlockchainService {
         guard let serviceFeeRateChangedParser = commutoSwap.createEventParser("ServiceFeeRateChanged", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping ServiceFeeRateChanged event parser")
         }
+        guard let swapFilledEventParser = commutoSwap.createEventParser("SwapFilled", filter: eventFilter) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping SwapFilled event parser")
+        }
         events.append(contentsOf: try offerOpenedEventParser.parseBlock(block))
         events.append(contentsOf: try offerEditedEventParser.parseBlock(block))
         events.append(contentsOf: try offerCanceledEventParser.parseBlock(block))
         events.append(contentsOf: try offerTakenEventParser.parseBlock(block))
         events.append(contentsOf: try serviceFeeRateChangedParser.parseBlock(block))
+        events.append(contentsOf: try swapFilledEventParser.parseBlock(block))
         try handleEvents(events, chainID: chainID)
     }
     
@@ -578,6 +589,12 @@ class BlockchainService {
                 }
                 logger.info("handleEvents: handling ServiceFeeRateChanged event")
                 try offerService.handleServiceFeeRateChangedEvent(event)
+            } else if result.eventName == "SwapFilled" {
+                guard let event = SwapFilledEvent(result, chainID: chainID) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating SwapFilled event from EventParserResultProtocol")
+                }
+                logger.info("handleEvents: handling SwapFilled event")
+                try swapService.handleSwapFilledEvent(event)
             }
         }
     }

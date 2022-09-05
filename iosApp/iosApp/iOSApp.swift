@@ -54,6 +54,7 @@ struct iOSApp: App {
             BlockchainService(
                 errorHandler: ErrorViewModel(),
                 offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!,
+                swapService: r.resolve(SwapService.self)!,
                 web3Instance: web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!),
                 commutoSwapAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!
             )

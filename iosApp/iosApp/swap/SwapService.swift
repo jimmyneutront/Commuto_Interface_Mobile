@@ -394,4 +394,6 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
+    func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
+    
 }

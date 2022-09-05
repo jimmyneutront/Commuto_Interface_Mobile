@@ -115,6 +115,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -282,6 +283,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -401,6 +403,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -547,6 +550,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -631,6 +635,7 @@ class OfferServiceTests: XCTestCase {
                 expectation.fulfill()
             }
             func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
         }
         let swapService = TestSwapService()
         
@@ -676,6 +681,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -749,6 +755,7 @@ class OfferServiceTests: XCTestCase {
                 self.chainID = chainID
                 expectation.fulfill()
             }
+            func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
         }
         let swapService = TestSwapService()
         
@@ -821,6 +828,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -914,6 +922,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -1108,6 +1117,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -1186,6 +1196,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -1340,6 +1351,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -1465,6 +1477,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -1555,6 +1568,7 @@ class OfferServiceTests: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )

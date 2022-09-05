@@ -128,7 +128,7 @@ class Swap: ObservableObject {
      */
     @Published var fillingSwapState = FillingSwapState.none
     /**
-     (This property is used only if the user of this interface is the maker of this swap and is selling stablecoin.) The `Error` that we encountered during the swap filling process, or `nil` of no such error has occured.
+     (This property is used only if the user of this interface is the maker of this swap and is selling stablecoin.) The `Error` that we encountered during the swap filling process, or `nil` of no such error has occurred.
      */
     var fillingSwapError: Error? = nil
     

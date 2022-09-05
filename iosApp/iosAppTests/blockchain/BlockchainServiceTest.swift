@@ -45,6 +45,7 @@ class BlockchainServiceTest: XCTestCase {
                 keyManagerService: keyManagerService,
                 swapService: TestSwapService()
             ),
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress("0x687F36336FCAB8747be1D41366A416b41E7E1a96")!
         )
@@ -99,6 +100,7 @@ class BlockchainServiceTest: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -229,6 +231,7 @@ class BlockchainServiceTest: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -330,6 +333,7 @@ class BlockchainServiceTest: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -432,6 +436,7 @@ class BlockchainServiceTest: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -443,6 +448,79 @@ class BlockchainServiceTest: XCTestCase {
         XCTAssertFalse(offerService.gotOfferTakenEvent)
         XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
         XCTAssertFalse(errorHandler.gotError)
+        
+    }
+    
+    /**
+     Tests `BlockchainService` to  ensure it detects and handles [SwapFilled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swapfilled) events properly.
+     */
+    func testListenSwapFilled() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let swapID: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_blockchainservice_listen")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-taken-swapFilled")
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = false
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertFalse(gotError)
+        let expectedOfferID = UUID(uuidString: testingServerResponse!.swapID)!
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        class TestSwapService: SwapNotifiable {
+            
+            let swapFilledExpectation = XCTestExpectation(description: "Fulfilled when handleSwapFilledEvent is called")
+            var swapFilledEvent: SwapFilledEvent? = nil
+            
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            
+            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            
+            func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {
+                swapFilledEvent = event
+                swapFilledExpectation.fulfill()
+            }
+            
+        }
+        
+        let swapService = TestSwapService()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: TestOfferService(),
+            swapService: swapService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        blockchainService.listen()
+        
+        wait(for: [swapService.swapFilledExpectation], timeout: 60.0)
+        XCTAssertEqual(expectedOfferID, swapService.swapFilledEvent!.id)
         
     }
     
@@ -483,6 +561,7 @@ class BlockchainServiceTest: XCTestCase {
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: TestOfferService(),
+            swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress("0x0000000000000000000000000000000000000000")!
         )
