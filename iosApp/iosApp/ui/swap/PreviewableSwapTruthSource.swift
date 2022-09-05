@@ -24,4 +24,9 @@ class PreviewableSwapTruthSource: UISwapTruthSource {
      A dictionary mapping swap IDs (as `UUID`s) to `Swap`s, which is the single source of truth for all swap-related data.
      */
     @Published var swaps: [UUID : Swap]
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
+     */
+    func fillSwap(swap: Swap) {}
 }

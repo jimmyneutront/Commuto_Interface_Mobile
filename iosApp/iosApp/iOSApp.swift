@@ -82,7 +82,7 @@ struct iOSApp: App {
             
         }
         // Register the SwapViewModel singleton
-        container.register(SwapViewModel.self) { _ in SwapViewModel() }
+        container.register(SwapViewModel.self) { r in SwapViewModel(swapService: r.resolve(SwapService.self)!) }
             .inObjectScope(.container)
             .initCompleted { r, viewModel in
                 // Provide OffersViewModel to OfferService as its offerTruthSource

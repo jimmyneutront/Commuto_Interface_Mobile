@@ -123,6 +123,14 @@ class Swap: ObservableObject {
      Indicates the interface user's role for this swap.
      */
     let role: SwapRole
+    /**
+     (This property is used only if the user of this interface is the maker of this swap and is selling stablecoin.) This indicates whether we are currently filling this swap, and if so, what part of the swap filling process we are in.
+     */
+    @Published var fillingSwapState = FillingSwapState.none
+    /**
+     (This property is used only if the user of this interface is the maker of this swap and is selling stablecoin.) The `Error` that we encountered during the swap filling process, or `nil` of no such error has occured.
+     */
+    var fillingSwapError: Error? = nil
     
     
     /**

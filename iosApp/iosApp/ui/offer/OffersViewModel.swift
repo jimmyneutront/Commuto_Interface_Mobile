@@ -28,7 +28,7 @@ class OffersViewModel: UIOfferTruthSource {
     }
     
     /**
-     OfferersViewModel's `Logger`.
+     OffersViewModel's `Logger`.
      */
     private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "OffersViewModel")
     
@@ -310,7 +310,7 @@ class OffersViewModel: UIOfferTruthSource {
                 afterTransferApproval: { self.setTakingOfferState(offerID: offer.id, state: .taking) }
             )
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
-            self.logger.notice("takeOffer: successfully took offer \(offer.id.uuidString)")
+            logger.notice("takeOffer: successfully took offer \(offer.id.uuidString)")
             setTakingOfferState(offerID: offer.id, state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
             logger.error("takeOffer: got error during takeOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")

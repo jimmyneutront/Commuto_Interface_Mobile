@@ -12,7 +12,7 @@ import BigInt
 /**
  Displays information about a specific [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
  */
-struct SwapView: View {
+struct SwapView<TruthSource>: View where TruthSource: UISwapTruthSource {
     
     /**
      The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.hardhatStablecoinInfoRepo` if no other value is provided.
@@ -23,6 +23,11 @@ struct SwapView: View {
      The [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) about which this `SwapView` displays information.
      */
     @ObservedObject var swap: Swap
+    
+    /**
+     The `SwapTruthSource` that acts as a single source of truth for all swap-related data.
+     */
+    @ObservedObject var swapTruthSource: TruthSource
     
     /**
      The direction component of the counterparty's role, as a human readable string. (either "Buyer" if the counterparty is the buyer and the user is the seller, or "Seller" if the counterparty is the seller and the user is the buyer)
@@ -85,8 +90,8 @@ struct SwapView: View {
                     settlementMethodCurrency: swap.settlementMethod.currency
                 )
                 ActionButton(
-                    swapState: swap.state,
-                    userRole: swap.role
+                    swap: swap,
+                    swapTruthSource: swapTruthSource
                 )
                 Button(
                     action: {},
@@ -377,22 +382,46 @@ struct SwapStateView: View {
  
  For example, if the current state of the swap is `SwapState.awaitingPaymentSent` and the user is the buyer, then the user must confirm that they have sent payment in order for the swap process to continue. Therefore this will display a button with the label "Confirm Payment is Sent" which allows the user to do so. However, if the user is the seller, they cannot confirm payment is sent, since that is the buyer's responsibility. In that case, this would display nothing.
  */
-struct ActionButton: View {
+struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
     
     /**
-     The `state` property of the `Swap` that this view represents.
+     The [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which this `ActionButton` displays a button.
      */
-    let swapState: SwapState
+    @ObservedObject var swap: Swap
+    
     /**
-     The `role` property of the `Swap` that this view represents.
+     The `SwapTruthSource` that acts as a single source of truth for all swap-related data.
      */
-    let userRole: SwapRole
+    @ObservedObject var swapTruthSource: TruthSource
     
     var body: some View {
-        if swapState == .awaitingFilling && userRole == .makerAndSeller {
+        if (swap.state == .awaitingFilling) && swap.role == .makerAndSeller {
             // If the swap state is awaitingFilling and we are the maker and seller, then we display the "Fill Swap" button
-            actionButtonBuilder(action: {}, labelText: "Fill Swap")
-        } else if swapState == .awaitingPaymentSent && (userRole == .makerAndBuyer || userRole == .takerAndBuyer) {
+            if swap.fillingSwapState != .none && swap.fillingSwapState != .error {
+                Text(swap.fillingSwapState.description)
+                    .font(.title2)
+            }
+            if swap.fillingSwapState == .error {
+                Text(swap.fillingSwapError?.localizedDescription ?? "An unknown error occured")
+                    .foregroundColor(Color.red)
+            }
+            actionButtonBuilder(
+                action: {
+                    if (swap.fillingSwapState == .none || swap.fillingSwapState == .error) {
+                        swapTruthSource.fillSwap(swap: swap)
+                    }
+                },
+                labelText: {
+                    if swap.fillingSwapState == .none || swap.fillingSwapState == .error {
+                        return "Fill Swap"
+                    } else if swap.fillingSwapState == .completed {
+                        return "Swap Filled"
+                    } else {
+                        return "Filling Swap"
+                    }
+                }()
+            )
+        } else if swap.state == .awaitingPaymentSent && (swap.role == .makerAndBuyer || swap.role == .takerAndBuyer) {
             // If the swap state is awaitingPaymentSent and we are the buyer, then we display the "Confirm Payment is Sent" button
             actionButtonBuilder(action: {}, labelText: "Confirm Payment is Sent")
         }
@@ -431,6 +460,9 @@ struct ActionButton: View {
  */
 struct SwapView_Previews: PreviewProvider {
     static var previews: some View {
-        SwapView(swap: Swap.sampleSwaps[Swap.sampleSwapIds[0]]!)
+        SwapView(
+            swap: Swap.sampleSwaps[Swap.sampleSwapIds[0]]!,
+            swapTruthSource: PreviewableSwapTruthSource()
+        )
     }
 }

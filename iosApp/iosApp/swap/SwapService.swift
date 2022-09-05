@@ -118,14 +118,19 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      
      On the global `DispatchQueue`, this ensures that the user is the maker and stablecoin seller of `swapToFill`, and that `swapToFill` can actually be filled. Then this approves token transfer for `swapToFill.takenSwapAmount` to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract, calls the CommutoSwap contract's [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) function (via `blockchainService`), persistently updates the state of the swap to `fillSwapTransactionBroadcast`, and sets `swapToFill.requiresFill` to false. Finally, on the main `DispatchQueue`, this updates the state of `swapToFill` to `fillSwapTransactionBroadcast`.
      
-     - Parameter swapToFill: The `Swap` that this function will fill.
+     - Parameters:
+        - swapToFill: The `Swap` that this function will fill.
+        - afterPossibilityCheck: A closure that will be executed after this has ensured that the swap can be filled.
+        - afterTransferApproval: A closure that will be executed after the token transfer approval to the [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) contract is completed.
      
      - Returns: An empty promise that will be fulfilled with the Swap is filled.
      
      - Throws: An `SwapServiceError.transactionWillRevertError` if `swapToFill` is not a maker-as-seller swap and the user is not the maker, or if `swapToFill`'s state is not `awaitingFilling`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
      */
     func fillSwap(
-        swapToFill: Swap
+        swapToFill: Swap,
+        afterPossibilityCheck: (() -> Void)? = nil,
+        afterTransferApproval: (() -> Void)? = nil
     ) -> Promise<Void> {
         return Promise { seal in
             Promise<Swap> { seal in
@@ -140,6 +145,9 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                         guard swapToFill.state == .awaitingFilling else {
                             throw SwapServiceError.transactionWillRevertError(desc: "This Swap cannot currently be filled")
                         }
+                        if let afterPossibilityCheck = afterPossibilityCheck {
+                            afterPossibilityCheck()
+                        }
                         seal.fulfill(swapToFill)
                     } catch {
                         seal.reject(error)
@@ -152,6 +160,9 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 }
                 return blockchainService.approveTokenTransfer(tokenAddress: swapToFill.stablecoin, destinationAddress: blockchainService.commutoSwapAddress, amount: swapToFill.takenSwapAmount).map { ($0, swapToFill) }
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, swapToFill -> Promise<(Void, Swap)> in
+                if let afterTransferApproval = afterTransferApproval {
+                    afterTransferApproval()
+                }
                 logger.notice("fillSwap: filling \(swapToFill.id.uuidString)")
                 guard let blockchainService = blockchainService else {
                     throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during fillSwap call for \(swapToFill.id.uuidString)")

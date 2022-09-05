@@ -27,7 +27,7 @@ struct SwapsView<TruthSource>: View where TruthSource: UISwapTruthSource {
         NavigationView {
             List {
                 ForEach(swapTruthSource.swaps.map { $0.1 }, id: \.id) { swap in
-                    NavigationLink(destination: SwapView(swap: swap)) {
+                    NavigationLink(destination: SwapView(swap: swap, swapTruthSource: swapTruthSource)) {
                         SwapCardView(
                             swapDirection: swap.direction.string,
                             stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: swap.chainID, contractAddress: swap.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
