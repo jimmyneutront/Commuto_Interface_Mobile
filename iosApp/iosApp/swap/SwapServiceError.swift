@@ -28,6 +28,12 @@ enum SwapServiceError: LocalizedError {
      Thrown when `SwapService` determines that an on-chain function call cannot be executed because its transaction will revert.
      */
     case transactionWillRevertError(desc: String)
+    /**
+     Thrown when the chain ID of a `Swap` does not match the chain ID of an event with an ID equal to that of the swap.
+     
+     - Parameter desc: A `String` that provides information about the context in which the error was thrown.
+     */
+    case nonmatchingChainIDError(desc: String)
     
     /**
      A description providing information about the context in which the error was thrown.
@@ -39,6 +45,8 @@ enum SwapServiceError: LocalizedError {
         case .invalidValueError(let desc):
             return desc
         case .transactionWillRevertError(let desc):
+            return desc
+        case .nonmatchingChainIDError(let desc):
             return desc
         }
     }

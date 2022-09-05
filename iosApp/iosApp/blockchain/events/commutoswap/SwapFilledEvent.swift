@@ -31,5 +31,12 @@ class SwapFilledEvent {
         id = resultID
         self.chainID = chainID
     }
+    /**
+     Creates a new `SwapFilled` event with the given `id` and `chainID`
+     */
+    init(id: UUID, chainID: BigUInt) {
+        self.id = id
+        self.chainID = chainID
+    }
     
 }

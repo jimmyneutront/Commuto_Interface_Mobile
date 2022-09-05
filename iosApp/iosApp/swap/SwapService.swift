@@ -394,6 +394,44 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
-    func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
+    /**
+     The function called by `BlockchainService` to notify `SwapService` of a `SwapFilledEvent`.
+     
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the swap and the chain ID of `event` match. Then, if the role of the swap is `makerAndBuyer` or `takerAndSeller`, it logs a warning, since `SwapFilled` events should not be emitted for such swaps. Otherwise, the role is `makerAndSeller` or `takerAndBuyer`, and this persistently sets the state of the swap to `awitingPaymentSent` and requiresFill to `false`, and then does the same to the `Swap` object on the main `DispatchQueue`.
+     
+     - Parameter event: The `SwapFilledEvent` of which `SwapService` is being notified.
+     
+     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or `SwapServiceError.nonmatchingChainIDError` if the chain ID of `event` and the `Swap` with the ID specified in `event` do not match.
+     */
+    func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {
+        logger.notice("handleSwapFilledEvent: handing for \(event.id.uuidString)")
+        guard let swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleSwapFilledEvent call")
+        }
+        if let swap = swapTruthSource.swaps[event.id] {
+            if swap.chainID != event.chainID {
+                throw SwapServiceError.nonmatchingChainIDError(desc: "Chain ID of SwapFilledEvent did not match chain ID of Swap in handleSwapFilledEvent call. SwapFilledEvent.chainID: \(String(event.chainID)), Swap.chainID: \(String(swap.chainID)), SwapFilledEvent.id: \(event.id.uuidString)")
+            }
+            // At this point, we have ensured that the chain ID of the event and the swap match, so we can proceed safely
+            switch (swap.role) {
+            case .makerAndBuyer, .takerAndSeller:
+                // If we are the maker of and buyer in or taker of and seller in the swap, no SwapFilled event should be emitted for that swap
+                logger.warning("handleSwapFilledEvent: unexpectedly got event for \(event.id.uuidString) with role \(swap.role.asString)")
+            case .makerAndSeller, .takerAndBuyer:
+                logger.info("handleSwapFilledEvent: handing for \(event.id.uuidString) as \(swap.role.asString)")
+                // We have gotten confirmation that our fillSwap transaction has been confirmed, so we update the state of the swap to indicate that we are waiting for the buyer to send traditional currency payment
+                let swapIDB64String = event.id.asData().base64EncodedString()
+                try databaseService.updateSwapRequiresFill(swapID: swapIDB64String, chainID: String(event.chainID), requiresFill: false)
+                try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.awaitingPaymentSent.asString)
+                swap.requiresFill = false
+                DispatchQueue.main.async {
+                    swap.state = .awaitingPaymentSent
+                }
+            }
+        } else {
+            logger.notice("handleSwapFilledEvent: \(event.id) not made or taken by user")
+            return
+        }
+    }
     
 }
