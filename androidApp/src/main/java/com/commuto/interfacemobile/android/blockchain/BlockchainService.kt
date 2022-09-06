@@ -8,6 +8,7 @@ import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import com.commuto.interfacemobile.android.extension.asByteArray
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
+import com.commuto.interfacemobile.android.swap.SwapNotifiable
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.future.await
@@ -58,12 +59,18 @@ import javax.inject.Singleton
 @Singleton
 class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifiable,
                          private val offerService: OfferNotifiable,
+                         private val swapService: SwapNotifiable,
                          private val web3: Web3j,
                          commutoSwapAddress: String) {
 
-    @Inject constructor(errorHandler: BlockchainExceptionNotifiable, offerService: OfferNotifiable):
+    @Inject constructor(
+        errorHandler: BlockchainExceptionNotifiable,
+        offerService: OfferNotifiable,
+        swapService: SwapNotifiable
+    ):
             this(errorHandler,
                 offerService,
+                swapService,
                 Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE"))),
                 "0x687F36336FCAB8747be1D41366A416b41E7E1a96"
             )
@@ -459,6 +466,7 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
             eventResponses.add(commutoSwap.getOfferCanceledEvents(receipt))
             eventResponses.add(commutoSwap.getOfferTakenEvents(receipt))
             eventResponses.add(commutoSwap.getServiceFeeRateChangedEvents(receipt))
+            eventResponses.add(commutoSwap.getSwapFilledEvents(receipt))
         }
         return eventResponses.flatten()
     }
@@ -498,6 +506,12 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
                     Log.i(logTag, "handleEventResponses: handling ServiceFeeRateChangedEvent")
                     offerService.handleServiceFeeRateChangedEvent(
                         ServiceFeeRateChangedEvent.fromEventResponse(eventResponse)
+                    )
+                }
+                is CommutoSwap.SwapFilledEventResponse -> {
+                    Log.i(logTag, "handleEventResponses: handling SwapFilledEventResponse")
+                    swapService.handleSwapFilledEvent(
+                        SwapFilledEvent.fromEventResponse(eventResponse, chainID)
                     )
                 }
             }

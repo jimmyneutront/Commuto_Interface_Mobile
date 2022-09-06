@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
 import com.commuto.interfacemobile.android.blockchain.TestBlockchainExceptionHandler
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.SwapFilledEvent
 import com.commuto.interfacedesktop.db.Swap as DatabaseSwap
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
@@ -26,9 +27,11 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import net.folivo.trixnity.clientserverapi.client.MatrixClientServerApiClient
 import org.junit.Assert.assertEquals
@@ -214,6 +217,7 @@ class SwapServiceTests {
         val blockchainService = BlockchainService(
             exceptionHandler = exceptionHandler,
             offerService = TestOfferService(),
+            swapService = swapService,
             web3 = w3,
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
@@ -522,6 +526,7 @@ class SwapServiceTests {
         val blockchainService = BlockchainService(
             exceptionHandler = exceptionHandler,
             offerService = TestOfferService(),
+            swapService = swapService,
             web3 = w3,
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
@@ -600,6 +605,65 @@ class SwapServiceTests {
         assertEquals(0L, swapInDatabase!!.requiresFill)
         assertEquals(SwapState.FILL_SWAP_TRANSACTION_BROADCAST.asString, swapInDatabase.state)
 
+    }
+
+    /**
+     * Tests [BlockchainService] to ensure it detects and handles
+     * [SwapFilled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swapfilled) events properly.
+     */
+    @Test
+    fun testHandleSwapFilledEvent() {
+        @Serializable
+        data class TestingServerResponse(val commutoSwapAddress: String, val swapID: String)
+
+        val testingServiceUrl = "http://localhost:8546/test_blockchainservice_listen"
+        val testingServerClient = HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json()
+            }
+            install(HttpTimeout) {
+                socketTimeoutMillis = 90_000
+                requestTimeoutMillis = 90_000
+            }
+        }
+        val testingServerResponse: TestingServerResponse = runBlocking {
+            testingServerClient.get(testingServiceUrl) {
+                url {
+                    parameters.append("events", "offer-opened-taken-swapFilled")
+                }
+            }.body()
+        }
+        val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
+
+        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+
+        val exceptionHandler = TestBlockchainExceptionHandler()
+
+        // We need this TestSwapService to track handling of SwapFilled events
+        class TestSwapService: SwapNotifiable {
+            val swapFilledEventChannel = Channel<SwapFilledEvent>()
+            override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent) {
+                swapFilledEventChannel.send(swapFilledEvent)
+            }
+        }
+        val swapService = TestSwapService()
+
+        val blockchainService = BlockchainService(
+            exceptionHandler,
+            TestOfferService(),
+            swapService,
+            w3,
+            testingServerResponse.commutoSwapAddress
+        )
+        blockchainService.listen()
+        runBlocking {
+            withTimeout(60_000) {
+                val event = swapService.swapFilledEventChannel.receive()
+                assertEquals(expectedSwapID, event.swapID)
+            }
+        }
     }
 
 }

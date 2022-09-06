@@ -64,7 +64,7 @@ class OfferServiceTests {
     }
 
     /**
-     * Ensures that `OfferService` handles
+     * Ensures that [OfferService] handles
      * [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events properly for
      * offers NOT made by the interface user.
      */
@@ -155,10 +155,11 @@ class OfferServiceTests {
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
-            exceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = exceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
         val encoder = Base64.getEncoder()
@@ -332,6 +333,7 @@ class OfferServiceTests {
         val blockchainService = BlockchainService(
             exceptionHandler = exceptionHandler,
             offerService = offerService,
+            swapService = TestSwapService(),
             web3 = w3,
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
@@ -445,10 +447,11 @@ class OfferServiceTests {
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
-            exceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = exceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
 
@@ -578,10 +581,11 @@ class OfferServiceTests {
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
-            exceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = exceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
         val encoder = Base64.getEncoder()
@@ -666,8 +670,8 @@ class OfferServiceTests {
                 swapIDChannel.send(swapID)
                 chainIDChannel.send(chainID)
             }
-
             override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent) {}
         }
         val swapService = TestSwapService()
 
@@ -718,6 +722,7 @@ class OfferServiceTests {
         val blockchainService = BlockchainService(
             exceptionHandler = exceptionHandler,
             offerService = offerService,
+            swapService = TestSwapService(),
             web3 = w3,
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
@@ -786,6 +791,7 @@ class OfferServiceTests {
                 swapIDChannel.send(swapID)
                 chainIDChannel.send(chainID)
             }
+            override suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent) {}
         }
         val swapService = TestSwapService()
 
@@ -856,6 +862,7 @@ class OfferServiceTests {
         val blockchainService = BlockchainService(
             exceptionHandler = exceptionHandler,
             offerService = offerService,
+            swapService = TestSwapService(),
             web3 = w3,
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
@@ -949,10 +956,11 @@ class OfferServiceTests {
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
-            exceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = exceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
         val encoder = Base64.getEncoder()
@@ -1150,10 +1158,11 @@ class OfferServiceTests {
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
-            exceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = exceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
         runBlocking {
@@ -1227,10 +1236,11 @@ class OfferServiceTests {
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
-            exceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = exceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
 
         val offerSettlementMethods = listOf(SettlementMethod(
@@ -1401,6 +1411,7 @@ class OfferServiceTests {
         val blockchainService = BlockchainService(
             exceptionHandler = exceptionHandler,
             offerService = offerService,
+            swapService = TestSwapService(),
             web3 = w3,
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
@@ -1517,6 +1528,7 @@ class OfferServiceTests {
         val blockchainService = BlockchainService(
             exceptionHandler = exceptionHandler,
             offerService = offerService,
+            swapService = TestSwapService(),
             web3 = w3,
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
@@ -1615,10 +1627,11 @@ class OfferServiceTests {
         val exceptionHandler = TestBlockchainExceptionHandler()
 
         val blockchainService = BlockchainService(
-            exceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = exceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
 
         val offer = Offer(

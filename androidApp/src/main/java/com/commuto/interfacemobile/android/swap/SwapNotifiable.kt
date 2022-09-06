@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.swap
 
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.SwapFilledEvent
 import com.commuto.interfacemobile.android.offer.OfferService
 import java.math.BigInteger
 import java.util.*
@@ -29,4 +30,10 @@ interface SwapNotifiable {
      * @param chainID The ID of the blockchain on which the taken offer exists.
      */
     suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger)
+
+    /**
+     * The function called by [BlockchainService] in order to notify the class implementing this interface of a
+     * [SwapFilledEvent].
+     */
+    suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent)
 }

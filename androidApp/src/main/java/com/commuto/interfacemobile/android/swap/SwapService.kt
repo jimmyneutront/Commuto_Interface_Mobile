@@ -3,6 +3,7 @@ package com.commuto.interfacemobile.android.swap
 import android.util.Log
 import com.commuto.interfacedesktop.db.Swap as DatabaseSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.SwapFilledEvent
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.extension.asByteArray
 import com.commuto.interfacemobile.android.key.KeyManagerService
@@ -471,5 +472,7 @@ class SwapService @Inject constructor(
                     "in swapTruthSource")
         }
     }
+
+    override suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent) {}
 
 }

@@ -7,6 +7,7 @@ import com.commuto.interfacemobile.android.key.KeyManagerService
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.offer.OfferServiceTests
+import com.commuto.interfacemobile.android.offer.TestOfferService
 import com.commuto.interfacemobile.android.swap.SwapServiceTests
 import com.commuto.interfacemobile.android.swap.TestSwapService
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
@@ -49,8 +50,9 @@ class BlockchainServiceTest {
         )
         OffersViewModel(offersService)
         val blockchainService = BlockchainService(
-            TestBlockchainExceptionHandler(),
-            offersService
+            errorHandler = TestBlockchainExceptionHandler(),
+            offerService = offersService,
+            swapService = TestSwapService(),
         )
         blockchainService.listenLoop()
     }
@@ -101,10 +103,11 @@ class BlockchainServiceTest {
         val offerService = TestOfferService()
 
         val blockchainService = BlockchainService(
-            blockchainExceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = blockchainExceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         runBlocking {
             assertEquals(blockchainService.getServiceFeeRateAsync().await(), BigInteger.valueOf(100L))
@@ -183,10 +186,11 @@ class BlockchainServiceTest {
         val offerService = TestOfferService()
 
         val blockchainService = BlockchainService(
-            blockchainExceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = blockchainExceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
         runBlocking {
@@ -258,10 +262,11 @@ class BlockchainServiceTest {
         val offerService = TestOfferService()
 
         val blockchainService = BlockchainService(
-            blockchainExceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = blockchainExceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
         runBlocking {
@@ -333,10 +338,11 @@ class BlockchainServiceTest {
         val offerService = TestOfferService()
 
         val blockchainService = BlockchainService(
-            blockchainExceptionHandler,
-            offerService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+            exceptionHandler = blockchainExceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
         blockchainService.listen()
         runBlocking {
@@ -387,10 +393,11 @@ class BlockchainServiceTest {
         val offerService = TestOfferService()
 
         val blockchainService = BlockchainService(
-            blockchainExceptionHandler,
-            offerService,
-            w3,
-            "0x0000000000000000000000000000000000000000"
+            exceptionHandler = blockchainExceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = "0x0000000000000000000000000000000000000000"
         )
         blockchainService.listen()
         runBlocking {
