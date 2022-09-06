@@ -27,11 +27,9 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import net.folivo.trixnity.clientserverapi.client.MatrixClientServerApiClient
 import org.junit.Assert.assertEquals
@@ -608,62 +606,105 @@ class SwapServiceTests {
     }
 
     /**
-     * Tests [BlockchainService] to ensure it detects and handles
-     * [SwapFilled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swapfilled) events properly.
+     * Ensure that [SwapService] handles [SwapFilledEvent]s properly.
      */
     @Test
-    fun testHandleSwapFilledEvent() {
-        @Serializable
-        data class TestingServerResponse(val commutoSwapAddress: String, val swapID: String)
+    fun testHandleSwapFilledEvent() = runBlocking {
+        // Set up DatabaseService and KeyManagerService
+        val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
+        databaseService.createTables()
+        val keyManagerService = KeyManagerService(databaseService)
 
-        val testingServiceUrl = "http://localhost:8546/test_blockchainservice_listen"
-        val testingServerClient = HttpClient(OkHttp) {
-            install(ContentNegotiation) {
-                json()
-            }
-            install(HttpTimeout) {
-                socketTimeoutMillis = 90_000
-                requestTimeoutMillis = 90_000
-            }
-        }
-        val testingServerResponse: TestingServerResponse = runBlocking {
-            testingServerClient.get(testingServiceUrl) {
-                url {
-                    parameters.append("events", "offer-opened-taken-swapFilled")
-                }
-            }.body()
-        }
-        val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
+        // The ID of the swap being filled
+        val swapID = UUID.randomUUID()
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
-
-        val exceptionHandler = TestBlockchainExceptionHandler()
-
-        // We need this TestSwapService to track handling of SwapFilled events
-        class TestSwapService: SwapNotifiable {
-            val swapFilledEventChannel = Channel<SwapFilledEvent>()
-            override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
-            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
-            override suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent) {
-                swapFilledEventChannel.send(swapFilledEvent)
-            }
-        }
-        val swapService = TestSwapService()
-
-        val blockchainService = BlockchainService(
-            exceptionHandler,
-            TestOfferService(),
-            swapService,
-            w3,
-            testingServerResponse.commutoSwapAddress
+        val event = SwapFilledEvent(
+            swapID = swapID,
+            chainID = BigInteger.valueOf(31337)
         )
-        blockchainService.listen()
-        runBlocking {
-            withTimeout(60_000) {
-                val event = swapService.swapFilledEventChannel.receive()
-                assertEquals(expectedSwapID, event.swapID)
-            }
-        }
+
+        val swapService = SwapService(
+            databaseService = databaseService,
+            keyManagerService = keyManagerService,
+        )
+
+        // Create swap, add it to swapTruthSource, and save it persistently
+        val swapTruthSource = TestSwapTruthSource()
+        swapService.setSwapTruthSource(swapTruthSource)
+        val swap = Swap(
+            isCreated = true,
+            requiresFill = true,
+            id = swapID,
+            maker = "",
+            makerInterfaceID = ByteArray(0),
+            taker = "",
+            takerInterfaceID = ByteArray(0),
+            stablecoin = "",
+            amountLowerBound = BigInteger.ZERO,
+            amountUpperBound = BigInteger.ZERO,
+            securityDepositAmount = BigInteger.ZERO,
+            takenSwapAmount = BigInteger.ZERO,
+            serviceFeeAmount = BigInteger.ZERO,
+            serviceFeeRate = BigInteger.ZERO,
+            direction = OfferDirection.SELL,
+            onChainSettlementMethod =
+            """
+                  {
+                      "f": "USD",
+                      "p": "1.00",
+                      "m": "SWIFT"
+                  }
+                  """.trimIndent().encodeToByteArray(),
+            protocolVersion = BigInteger.ZERO,
+            isPaymentSent = false,
+            isPaymentReceived = false,
+            hasBuyerClosed = false,
+            hasSellerClosed = false,
+            onChainDisputeRaiser = BigInteger.ZERO,
+            chainID = BigInteger.valueOf(31337L),
+            state = SwapState.AWAITING_FILLING,
+            role = SwapRole.MAKER_AND_SELLER,
+        )
+        swapTruthSource.swaps[swapID] = swap
+        val encoder = Base64.getEncoder()
+        val swapForDatabase = DatabaseSwap(
+            id = encoder.encodeToString(swapID.asByteArray()),
+            isCreated = 1L,
+            requiresFill = 1L,
+            maker = swap.maker,
+            makerInterfaceID = encoder.encodeToString(swap.makerInterfaceID),
+            taker = swap.taker,
+            takerInterfaceID = encoder.encodeToString(swap.takerInterfaceID),
+            stablecoin = swap.stablecoin,
+            amountLowerBound = swap.amountLowerBound.toString(),
+            amountUpperBound = swap.amountUpperBound.toString(),
+            securityDepositAmount = swap.securityDepositAmount.toString(),
+            takenSwapAmount = swap.takenSwapAmount.toString(),
+            serviceFeeAmount = swap.serviceFeeAmount.toString(),
+            serviceFeeRate = swap.serviceFeeRate.toString(),
+            onChainDirection = swap.onChainDirection.toString(),
+            settlementMethod = encoder.encodeToString(swap.onChainSettlementMethod),
+            protocolVersion = swap.protocolVersion.toString(),
+            isPaymentSent = 0L,
+            isPaymentReceived = 0L,
+            hasBuyerClosed = 0L,
+            hasSellerClosed = 0L,
+            disputeRaiser = swap.onChainDisputeRaiser.toString(),
+            chainID = swap.chainID.toString(),
+            state = swap.state.value.asString,
+            role = swap.role.asString
+        )
+        databaseService.storeSwap(swapForDatabase)
+
+        swapService.handleSwapFilledEvent(event = event)
+
+        assertEquals(SwapState.AWAITING_PAYMENT_SENT, swap.state.value)
+        assertFalse(swap.requiresFill)
+
+        val swapInDatabase = databaseService.getSwap(encoder.encodeToString(swapID.asByteArray()))
+        assertEquals(SwapState.AWAITING_PAYMENT_SENT.asString, swapInDatabase!!.state)
+        assertEquals(0L, swapInDatabase.requiresFill)
+
     }
 
 }

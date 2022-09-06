@@ -21,5 +21,5 @@ class TestSwapService: SwapNotifiable {
     /**
      * Does nothing, required to adopt [SwapNotifiable]. Should not be used.
      */
-    override suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent) {}
+    override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
 }

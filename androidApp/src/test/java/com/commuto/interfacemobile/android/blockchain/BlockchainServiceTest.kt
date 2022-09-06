@@ -8,6 +8,7 @@ import com.commuto.interfacemobile.android.offer.OfferNotifiable
 import com.commuto.interfacemobile.android.offer.OfferService
 import com.commuto.interfacemobile.android.offer.OfferServiceTests
 import com.commuto.interfacemobile.android.offer.TestOfferService
+import com.commuto.interfacemobile.android.swap.SwapNotifiable
 import com.commuto.interfacemobile.android.swap.SwapServiceTests
 import com.commuto.interfacemobile.android.swap.TestSwapService
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
@@ -351,6 +352,65 @@ class BlockchainServiceTest {
                 assertEquals(receivedOfferOpenedEvent.offerID, expectedOfferId)
                 val receivedOfferEditedEvent = offerService.offerEditedEventChannel.receive()
                 assertEquals(receivedOfferEditedEvent.offerID, expectedOfferId)
+            }
+        }
+    }
+
+    /**
+     * Tests [BlockchainService] to ensure it detects and handles
+     * [SwapFilled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swapfilled) events properly.
+     */
+    @Test
+    fun testListenSwapFilled() {
+        @Serializable
+        data class TestingServerResponse(val commutoSwapAddress: String, val swapID: String)
+
+        val testingServiceUrl = "http://localhost:8546/test_blockchainservice_listen"
+        val testingServerClient = HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json()
+            }
+            install(HttpTimeout) {
+                socketTimeoutMillis = 90_000
+                requestTimeoutMillis = 90_000
+            }
+        }
+        val testingServerResponse: TestingServerResponse = runBlocking {
+            testingServerClient.get(testingServiceUrl) {
+                url {
+                    parameters.append("events", "offer-opened-taken-swapFilled")
+                }
+            }.body()
+        }
+        val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
+
+        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+
+        val exceptionHandler = TestBlockchainExceptionHandler()
+
+        // We need this TestSwapService to track handling of SwapFilled events
+        class TestSwapService: SwapNotifiable {
+            val swapFilledEventChannel = Channel<SwapFilledEvent>()
+            override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {
+                swapFilledEventChannel.send(event)
+            }
+        }
+        val swapService = TestSwapService()
+
+        val blockchainService = BlockchainService(
+            exceptionHandler,
+            TestOfferService(),
+            swapService,
+            w3,
+            testingServerResponse.commutoSwapAddress
+        )
+        blockchainService.listen()
+        runBlocking {
+            withTimeout(60_000) {
+                val event = swapService.swapFilledEventChannel.receive()
+                assertEquals(expectedSwapID, event.swapID)
             }
         }
     }

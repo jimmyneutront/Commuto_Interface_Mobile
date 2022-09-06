@@ -35,5 +35,5 @@ interface SwapNotifiable {
      * The function called by [BlockchainService] in order to notify the class implementing this interface of a
      * [SwapFilledEvent].
      */
-    suspend fun handleSwapFilledEvent(swapFilledEvent: SwapFilledEvent)
+    suspend fun handleSwapFilledEvent(event: SwapFilledEvent)
 }
