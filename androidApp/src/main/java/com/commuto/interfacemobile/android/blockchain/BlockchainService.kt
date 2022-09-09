@@ -40,6 +40,7 @@ import javax.inject.Singleton
  * occur.
  * @property offerService: An object to which [BlockchainService] will pass offer-related events
  * when they occur.
+ * @property swapService An object to which [BlockchainService] will pass swap-related events when they occur.
  * @property web3 The [Web3j] instance that [BlockchainService] uses to interact with the
  * EVM-compatible blockchain.
  * @property creds Blockchain credentials used for signing transactions.
@@ -395,6 +396,18 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
      */
     fun fillSwapAsync(id: UUID): Deferred<TransactionReceipt> {
         return commutoSwap.fillSwap(id.asByteArray()).sendAsync().asDeferred()
+    }
+
+    /**
+     * A [Deferred] wrapper around the [CommutoSwap.reportPaymentSent] method.
+     *
+     * @param id The ID of the [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which to
+     * report sending payment.
+     *
+     * @return A [Deferred] with a [TransactionReceipt] result.
+     */
+    fun reportPaymentSentAsync(id: UUID): Deferred<TransactionReceipt> {
+        return commutoSwap.reportPaymentSent(id.asByteArray()).sendAsync().asDeferred()
     }
 
     /**
