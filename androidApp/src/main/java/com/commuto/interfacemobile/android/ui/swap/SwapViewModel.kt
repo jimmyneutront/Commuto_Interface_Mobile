@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.commuto.interfacemobile.android.swap.FillingSwapState
+import com.commuto.interfacemobile.android.swap.ReportingPaymentSentState
 import com.commuto.interfacemobile.android.swap.Swap
 import com.commuto.interfacemobile.android.swap.SwapService
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +55,18 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
     }
 
     /**
+     * Sets the value of [Swap.reportingPaymentSentState] of [swap] to [state] on the main coroutine dispatcher.
+     *
+     * @param swap The [Swap] of which to set the [Swap.reportingPaymentSentState] value.
+     * @param state The value to which [swap]'s [Swap.reportingPaymentSentState] value will be set.
+     */
+    private suspend fun setReportingPaymentSentState(swap: Swap, state: ReportingPaymentSentState) {
+        withContext(Dispatchers.Main) {
+            swap.reportingPaymentSentState.value = state
+        }
+    }
+
+    /**
      * Attempts to fill a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
      *
      * @param swap The [Swap] to fill.
@@ -92,6 +105,46 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
                 setFillingSwapState(
                     swap = swap,
                     state = FillingSwapState.EXCEPTION
+                )
+            }
+        }
+    }
+
+    /**
+     * Attempts to report that a buyer has sent fiat payment for a
+     * [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap). This may only be used by the buyer in
+     * [swap].
+     *
+     * @param swap The [Swap] for which to report sending payment.
+     */
+    override fun reportPaymentSent(swap: Swap) {
+        viewModelScope.launch {
+            setReportingPaymentSentState(
+                swap = swap,
+                state = ReportingPaymentSentState.CHECKING
+            )
+            try {
+                logger.info("reportPaymentSent: reporting for ${swap.id}")
+                swapService.reportPaymentSent(
+                    swap = swap,
+                    afterPossibilityCheck = {
+                        setReportingPaymentSentState(
+                            swap = swap,
+                            state = ReportingPaymentSentState.REPORTING,
+                        )
+                    },
+                )
+                logger.info("reportPaymentSent: successfully reported for ${swap.id}")
+                setReportingPaymentSentState(
+                    swap = swap,
+                    state = ReportingPaymentSentState.COMPLETED
+                )
+            } catch (exception: Exception) {
+                logger.error("reportPaymentSent: got exception during reportPaymentSent call for ${swap.id}", exception)
+                swap.reportingPaymentSentException = exception
+                setReportingPaymentSentState(
+                    swap = swap,
+                    state = ReportingPaymentSentState.EXCEPTION
                 )
             }
         }
