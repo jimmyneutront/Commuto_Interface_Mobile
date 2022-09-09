@@ -481,7 +481,7 @@ class BlockchainService {
      
      - Returns: An empty `Promise` that will be fulfilled when the swap is opened.
      
-     - Throws: `BlockchainServiceError.unexpectedNilError` if `null` is returned during write transaction creation.
+     - Throws: `BlockchainServiceError.unexpectedNilError` if `nil` is returned during write transaction creation.
      */
     func fillSwap(id: UUID) -> Promise<Void> {
         return Promise { seal in
@@ -492,6 +492,38 @@ class BlockchainService {
                 transactionOptions: .defaultOptions
             ) else {
                 seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Found nil while creating fillSwap write transaction"))
+                return
+            }
+            #warning("TODO: this is temporary, will be improved when WalletService is implemented")
+            writeTransaction.transactionOptions.from = ethKeyStore.addresses!.first!
+            writeTransaction.transactionOptions.gasLimit = .manual(BigUInt(30000000))
+            writeTransaction.transactionOptions.gasPrice = .manual(BigUInt(30000000))
+            writeTransaction.sendPromise(password: ethPassword).done { TransactionSendingResult in
+                seal.fulfill_()
+            }.catch { error in
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     A `Promise` wrapper around CommutoSwap's [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#reportPaymentSent) function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     
+     - Parameter id: The ID of the [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which to report sending payment.
+     
+     - Returns: An empty `Promise` that will be fulfilled when payment sending is successfully reported.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if `nil` is returned during write transaction creation.
+     */
+    func reportPaymentSent(id: UUID) -> Promise<Void> {
+        return Promise { seal in
+            let method = "reportPaymentSent"
+            guard let writeTransaction = commutoSwap.write(
+                method,
+                parameters: [id.asData()] as [AnyObject],
+                transactionOptions: .defaultOptions
+            ) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Found nil while creating reportPaymentSent write transaction"))
                 return
             }
             #warning("TODO: this is temporary, will be improved when WalletService is implemented")

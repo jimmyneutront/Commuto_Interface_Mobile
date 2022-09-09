@@ -125,7 +125,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      
      - Returns: An empty promise that will be fulfilled with the Swap is filled.
      
-     - Throws: An `SwapServiceError.transactionWillRevertError` if `swapToFill` is not a maker-as-seller swap and the user is not the maker, or if `swapToFill`'s state is not `awaitingFilling`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
+     - Throws: A `SwapServiceError.transactionWillRevertError` if `swapToFill` is not a maker-as-seller swap and the user is not the maker, or if `swapToFill`'s state is not `awaitingFilling`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
      */
     func fillSwap(
         swapToFill: Swap,
@@ -180,6 +180,63 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("fillSwap: encountered error during call for \(swapToFill.id.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     Reports that payment has been sent to the seller in a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     
+     On the global `DispatchQueue`, this ensures that the user is the buyer in `swap` and that reporting payment sending is currently possible for `swap`. Then this calls the CommutoSwap contract's [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) function (via `blockchainService`), and persistently updates the state of the swap to `reportPaymentSentTransactionBroadcast`. Finally, on the main `DispatchQueue`, this updates the state of `swap` to `reportPaymentSentTransactionBroadcast`.
+     
+     - Parameters:
+        - swap: The `Swap` for which this function will report the sending of payment.
+        - afterPossibilityCheck: A closure that will be executed after this has ensured that payment sending can be reported for the swap.
+     
+     - Returns: An empty promise that will be fulfilled when payment sending has been reported.
+     
+     - Throws: A `SwapServiceError.transactionWillRevertError` if the user is not the buyer for `swap`, or if `swapToFill`'s state is not `awaitingPaymentSent`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
+     */
+    func reportPaymentSent(
+        swap: Swap,
+        afterPossibilityCheck: (() -> Void)? = nil
+    ) -> Promise<Void> {
+        return Promise { seal in
+            Promise<Swap> { seal in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.logger.notice("reportPaymentSent: checking reporting is possible for \(swap.id.uuidString)")
+                    do {
+                        // Ensure that the user is the buyer for the swap
+                        guard swap.role == .makerAndBuyer || swap.role == .takerAndBuyer else {
+                            throw SwapServiceError.transactionWillRevertError(desc: "Only the Buyer can report sending payment")
+                        }
+                        // Ensure that this swap is awaiting reporting of payment sent
+                        guard swap.state == .awaitingPaymentSent else {
+                            throw SwapServiceError.transactionWillRevertError(desc: "Payment sending cannot currently be reported for this swap")
+                        }
+                        if let afterPossibilityCheck = afterPossibilityCheck {
+                            afterPossibilityCheck()
+                        }
+                        seal.fulfill(swap)
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] swap -> Promise<(Void, Swap)> in
+                logger.notice("reportPaymentSent: reporting \(swap.id.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during reportPaymentSent call for \(swap.id.uuidString)")
+                }
+                return blockchainService.reportPaymentSent(id: swap.id).map { ($0, swap) }
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, swap in
+                logger.notice("reportPaymentSent: reported for \(swap.id)")
+                try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.reportPaymentSentTransactionBroadcast.asString)
+            }.done(on: DispatchQueue.main) { _, swap in
+                swap.state = .reportPaymentSentTransactionBroadcast
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("reportPaymentSent: encountered error during call for \(swap.id.uuidString): \(error.localizedDescription)")
                 seal.reject(error)
             }
         }
@@ -397,11 +454,11 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      The function called by `BlockchainService` to notify `SwapService` of a `SwapFilledEvent`.
      
-     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the swap and the chain ID of `event` match. Then, if the role of the swap is `makerAndBuyer` or `takerAndSeller`, it logs a warning, since `SwapFilled` events should not be emitted for such swaps. Otherwise, the role is `makerAndSeller` or `takerAndBuyer`, and this persistently sets the state of the swap to `awitingPaymentSent` and requiresFill to `false`, and then does the same to the `Swap` object on the main `DispatchQueue`.
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the chain ID of the swap and the chain ID of `event` match. Then, if the role of the swap is `makerAndBuyer` or `takerAndSeller`, it logs a warning, since `SwapFilledEvent`s should not be emitted for such swaps. Otherwise, the role is `makerAndSeller` or `takerAndBuyer`, and this persistently sets the state of the swap to `awitingPaymentSent` and requiresFill to `false`, and then does the same to the `Swap` object on the main `DispatchQueue`.
      
      - Parameter event: The `SwapFilledEvent` of which `SwapService` is being notified.
      
-     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or `SwapServiceError.nonmatchingChainIDError` if the chain ID of `event` and the `Swap` with the ID specified in `event` do not match.
+     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or `SwapServiceError.nonmatchingChainIDError` if the chain ID of `event` and the chain ID of the `Swap` with the ID specified in `event` do not match.
      */
     func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {
         logger.notice("handleSwapFilledEvent: handing for \(event.id.uuidString)")
@@ -419,7 +476,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 logger.warning("handleSwapFilledEvent: unexpectedly got event for \(event.id.uuidString) with role \(swap.role.asString)")
             case .makerAndSeller, .takerAndBuyer:
                 logger.info("handleSwapFilledEvent: handing for \(event.id.uuidString) as \(swap.role.asString)")
-                // We have gotten confirmation that our fillSwap transaction has been confirmed, so we update the state of the swap to indicate that we are waiting for the buyer to send traditional currency payment
+                // We have gotten confirmation that the fillSwap transaction has been confirmed, so we update the state of the swap to indicate that we are waiting for the buyer to send traditional currency payment
                 let swapIDB64String = event.id.asData().base64EncodedString()
                 try databaseService.updateSwapRequiresFill(swapID: swapIDB64String, chainID: String(event.chainID), requiresFill: false)
                 try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.awaitingPaymentSent.asString)
