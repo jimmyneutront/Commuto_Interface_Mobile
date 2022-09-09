@@ -636,6 +636,7 @@ class OfferServiceTests: XCTestCase {
             }
             func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
+            func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
         }
         let swapService = TestSwapService()
         
@@ -756,6 +757,7 @@ class OfferServiceTests: XCTestCase {
                 expectation.fulfill()
             }
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
+            func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
         }
         let swapService = TestSwapService()
         

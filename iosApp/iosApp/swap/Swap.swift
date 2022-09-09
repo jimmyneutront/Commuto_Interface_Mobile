@@ -136,7 +136,7 @@ class Swap: ObservableObject {
      */
     @Published var reportingPaymentSentState = ReportingPaymentSentState.none
     /**
-     (This property is used only if the user of this interface is the buyer in this swap.) The `Error` that we encountered during the reporting-payment-sent process, or `nil` if no such error has occured.
+     (This property is used only if the user of this interface is the buyer in this swap.) The `Error` that we encountered during the reporting-payment-sent process, or `nil` if no such error has occurred.
      */
     var reportingPaymentSentError: Error? = nil
     

@@ -441,7 +441,7 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
                 },
                 labelText: {
                     if swap.reportingPaymentSentState == .none || swap.reportingPaymentSentState == .error {
-                        return "Report that Payment Is Sentt"
+                        return "Report that Payment Is Sent"
                     } else if swap.reportingPaymentSentState == .completed {
                         return "Reported that Payment Is Sent"
                     } else {

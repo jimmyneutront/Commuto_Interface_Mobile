@@ -26,4 +26,8 @@ class TestSwapService: SwapNotifiable {
      Does nothing, required to adopt `SwapNotifiable`. Should not be used.
      */
     func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
+    /**
+     Does nothing, required to adopt `SwapNotifiable`. Should not be used.
+     */
+    func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
 }

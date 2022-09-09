@@ -22,7 +22,7 @@ class SwapFilledEvent {
      */
     let chainID: BigUInt
     /**
-     Creates a new `SwapFilledEvent` given a web3swift `EventParserResultProtocol` containing information from a [SwapFilled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swapfilled) event, or returns `nil` if the passed `EventParserResultProtocol` doesn't contain information from an SwapFilled event.
+     Creates a new `SwapFilledEvent` given a web3swift `EventParserResultProtocol` containing information from a [SwapFilled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swapfilled) event, or returns `nil` if the passed `EventParserResultProtocol` doesn't contain information from a SwapFilled event.
      */
     init?(_ result: EventParserResultProtocol, chainID: BigUInt) {
         guard let resultID = UUID.from(data: result.decodedResult["swapID"] as? Data) else {
@@ -32,7 +32,7 @@ class SwapFilledEvent {
         self.chainID = chainID
     }
     /**
-     Creates a new `SwapFilled` event with the given `id` and `chainID`
+     Creates a new `SwapFilledEvent` with the given `id` and `chainID`.
      */
     init(id: UUID, chainID: BigUInt) {
         self.id = id

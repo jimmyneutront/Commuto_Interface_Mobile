@@ -491,4 +491,6 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
+    func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
+    
 }

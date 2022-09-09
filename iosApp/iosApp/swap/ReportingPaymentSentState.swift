@@ -10,10 +10,25 @@
  Indicates whether we are currently reporting that payment has been sent for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap). If we are, then this indicates the part of the payment reporting process we are currently in.
  */
 enum ReportingPaymentSentState {
+    /**
+     Indicates that we are not currently reporting that payment is sent for the corresponding swap.
+     */
     case none
+    /**
+     Indicates that we are currently checking if we can report that payment is sent for the swap.
+     */
     case checking
+    /**
+     Indicates that we are currently calling CommutoSwap's [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) function for the swap.
+     */
     case reporting
+    /**
+     Indicates that we have reported that payment is sent for the corresponding swap.
+     */
     case completed
+    /**
+     Indicates that we encountered an error while reporting that payment is sent for the corresponding swap.
+     */
     case error
     
     /**

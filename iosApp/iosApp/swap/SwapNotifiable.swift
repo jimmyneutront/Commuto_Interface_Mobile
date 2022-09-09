@@ -35,4 +35,9 @@ protocol SwapNotifiable {
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `SwapFilledEvent`.
      */
     func handleSwapFilledEvent(_ event: SwapFilledEvent) throws
+    
+    /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `PaymentSentEvent`.
+     */
+    func handlePaymentSentEvent(_ event: PaymentSentEvent) throws
 }
