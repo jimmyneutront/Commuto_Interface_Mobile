@@ -196,7 +196,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      
      - Returns: An empty promise that will be fulfilled when payment sending has been reported.
      
-     - Throws: A `SwapServiceError.transactionWillRevertError` if the user is not the buyer for `swap`, or if `swapToFill`'s state is not `awaitingPaymentSent`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
+     - Throws: A `SwapServiceError.transactionWillRevertError` if the user is not the buyer for `swap`, or if `swap`'s state is not `awaitingPaymentSent`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
      */
     func reportPaymentSent(
         swap: Swap,

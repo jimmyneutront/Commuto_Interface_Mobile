@@ -425,7 +425,30 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
             )
         } else if swap.state == .awaitingPaymentSent && (swap.role == .makerAndBuyer || swap.role == .takerAndBuyer) {
             // If the swap state is awaitingPaymentSent and we are the buyer, then we display the "Confirm Payment is Sent" button
-            actionButtonBuilder(action: {}, labelText: "Confirm Payment is Sent")
+            if swap.reportingPaymentSentState != .none && swap.reportingPaymentSentState != .error {
+                Text(swap.reportingPaymentSentState.description)
+                    .font(.title2)
+            }
+            if swap.reportingPaymentSentState == .error {
+                Text(swap.reportingPaymentSentError?.localizedDescription ?? "An unknown error occured")
+                    .foregroundColor(Color.red)
+            }
+            actionButtonBuilder(
+                action: {
+                    if (swap.fillingSwapState == .none || swap.fillingSwapState == .error) {
+                        swapTruthSource.reportPaymentSent(swap: swap)
+                    }
+                },
+                labelText: {
+                    if swap.reportingPaymentSentState == .none || swap.reportingPaymentSentState == .error {
+                        return "Report that Payment Is Sentt"
+                    } else if swap.reportingPaymentSentState == .completed {
+                        return "Reported that Payment Is Sent"
+                    } else {
+                        return "Reporting that Payment Is Sent"
+                    }
+                }()
+            )
         }
     }
     

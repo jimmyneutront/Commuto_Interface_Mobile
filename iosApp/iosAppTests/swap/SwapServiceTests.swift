@@ -714,7 +714,6 @@ class SwapServiceTests: XCTestCase {
      */
     func testReportPaymentSent() {
         
-        
         let swapID = UUID()
         
         struct TestingServerResponse: Decodable {
