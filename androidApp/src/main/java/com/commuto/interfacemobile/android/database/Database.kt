@@ -220,6 +220,20 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     }
 
     /**
+     * Updates the [Swap.isPaymentSent] property of the [Swap] with the specified [swapID] and [chainID].
+     * @param swapID The ID of the [Swap] to be updated.
+     * @param chainID The ID of the blockchain on which the [Swap] to be updated exists.
+     * @param isPaymentSent The new value of the [Swap.isPaymentSent] property.
+     */
+    internal fun updateSwapIsPaymentSent(swapID: String, chainID: String, isPaymentSent: Long) {
+        dbQuery.updateSwapIsPaymentSentBySwapIDAndChainID(
+            isPaymentSent = isPaymentSent,
+            id = swapID,
+            chainID = chainID,
+        )
+    }
+
+    /**
      * Updates the [Swap.state] property of the [Swap] with the specified [swapID] and [chainID].
      * @param swapID The ID of the [Swap] to be updated.
      * @param chainID The ID of the blockchain on which the [Swap] to be updated exists.
