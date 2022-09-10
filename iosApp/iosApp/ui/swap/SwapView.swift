@@ -369,6 +369,8 @@ struct SwapStateView: View {
             return "Waiting for \(buyerName) to send \(settlementMethodCurrency)"
         case .reportPaymentSentTransactionBroadcast:
             return "Awaiting confirmation reporting that payment is sent"
+        case .awaitingPaymentReceived:
+            return "Waiting for \(sellerName) to receive \(settlementMethodCurrency)"
         }
     }
     

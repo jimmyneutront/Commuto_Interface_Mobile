@@ -612,6 +612,20 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseSwap`'s `isPaymentSent` field.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - isPaymentSent: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `isPaymentSent` field.
+     */
+    func updateSwapIsPaymentSent(swapID: String, chainID _chainID: String, isPaymentSent _isPaymentSent: Bool) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(isPaymentSent <- _isPaymentSent))
+        }
+    }
+    
+    /**
      Updates a persistently stored `DatabaseSwap`'s `state` field.
      
      - Parameters:

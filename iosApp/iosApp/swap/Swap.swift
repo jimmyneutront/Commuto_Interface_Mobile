@@ -94,7 +94,7 @@ class Swap: ObservableObject {
     /**
      Corresponds to an on-chain Swap's `isPaymentSent` property.
      */
-    let isPaymentSent: Bool
+    var isPaymentSent: Bool
     /**
      Corresponds to an on-chain Swap's `isPaymentReceived` property.
      */

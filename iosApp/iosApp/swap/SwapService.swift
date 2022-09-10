@@ -491,6 +491,35 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
-    func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
+    /**
+     The function called by  `BlockchainService` to notify `SwapService` of a `PaymentSentEvent`.
+     
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the chain ID of the swap and the chain ID of `event` match. Then it persistently sets the swap's `isPaymentSent` field to `true` and the state of the swap to `awaitingPaymentReceived`, and then does the same to the `Swap` object on the main `DispatchQueue`.
+     
+     - Parameter event: The `PaymentSentEvent` of which `SwapService` is being notified.
+     
+     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or `SwapServiceError.nonmatchingChainIDError` if if the chain ID of `event` and the chain ID of the `Swap` with the ID specified in `event` do not match.
+     */
+    func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {
+        logger.notice("handlePaymentSentEvent: handling for \(event.id.uuidString)")
+        guard let swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handlePaymentSentEvent call")
+        }
+        if let swap = swapTruthSource.swaps[event.id] {
+            if swap.chainID != event.chainID {
+                throw SwapServiceError.nonmatchingChainIDError(desc: "Chain ID of PaymentSentEvent did not match chain ID of Swap in handlePaymentSentEvent call. PaymentSentEvent.chainID: \(String(event.chainID)), Swap.chainID: \(String(swap.chainID)), PaymentSentEvent.id: \(event.id.uuidString)")
+            }
+            // At this point, we have ensured that the chain ID of the event and the swap match, so we can proceed safely
+            let swapIDB64String = event.id.asData().base64EncodedString()
+            try databaseService.updateSwapIsPaymentSent(swapID: swapIDB64String, chainID: String(event.chainID), isPaymentSent: true)
+            try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.awaitingPaymentReceived.asString)
+            swap.isPaymentSent = true
+            DispatchQueue.main.async {
+                swap.state = .awaitingPaymentReceived
+            }
+        } else {
+            logger.info("handlePaymentSentEvent: got event for \(event.id.uuidString) which was not found in swapTruthSource")
+        }
+    }
     
 }
