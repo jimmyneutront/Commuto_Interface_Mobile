@@ -1,5 +1,6 @@
 package com.commuto.interfacemobile.android.swap
 
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.PaymentSentEvent
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.SwapFilledEvent
 import com.commuto.interfacemobile.android.offer.OfferService
 import java.math.BigInteger
@@ -22,4 +23,8 @@ class TestSwapService: SwapNotifiable {
      * Does nothing, required to adopt [SwapNotifiable]. Should not be used.
      */
     override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
+    /**
+     * Does nothing, required to adopt [SwapNotifiable]. Should not be used.
+     */
+    override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
 }
