@@ -466,7 +466,7 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
             actionButtonBuilder(
                 action: {
                     if (swap.reportingPaymentReceivedState == .none || swap.reportingPaymentReceivedState == .error) {
-                        swapTruthSource.reportPaymentSent(swap: swap)
+                        swapTruthSource.reportPaymentReceived(swap: swap)
                     }
                 },
                 labelText: {

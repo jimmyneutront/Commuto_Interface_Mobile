@@ -580,4 +580,6 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
+    func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
+    
 }
