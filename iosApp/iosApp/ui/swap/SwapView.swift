@@ -373,6 +373,8 @@ struct SwapStateView: View {
             return "Waiting for \(sellerName) to receive \(settlementMethodCurrency)"
         case .reportPaymentReceivedTransactionBroadcast:
             return "Awaiting confirmation of reporting that payment is received"
+        case .awaitingClosing:
+            return "Waiting for you to close swap"
         }
     }
     

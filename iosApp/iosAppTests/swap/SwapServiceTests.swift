@@ -686,7 +686,6 @@ class SwapServiceTests: XCTestCase {
         
         // Call handleSwapFilledEvent on background DispatchQueue so that the closures it runs on the main DispatchQueue are executed in time for us to test their results
         DispatchQueue.global().async {
-            // call swapService.handleSwapFilledEvent
             try! swapService.handleSwapFilledEvent(event)
             
             // We run this in the main DispatchQueue because queues are FIFO and this must be run after the closures that handleSwapFilledEvent passes to DispatchQueue.main.async are executed
@@ -936,11 +935,10 @@ class SwapServiceTests: XCTestCase {
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
-        let expectation = XCTestExpectation(description: "Fulfilled after handleSwapFilledEvent and test assertions are executed")
+        let expectation = XCTestExpectation(description: "Fulfilled after handlePaymentSentEvent and test assertions are executed")
         
         // Call handlePaymentSentEvent on background DispatchQueue so that the closures it runs on the main DispatchQueue are executed in time for us to test their results
         DispatchQueue.global().async {
-            // call swapService.handlePaymentSentEvent
             try! swapService.handlePaymentSentEvent(event)
             
             // We run this in the main DispatchQueue because queues are FIFO and this must be run after the closures that handlePaymentSentEvent passes to DispatchQueue.main.async are executed
@@ -1097,6 +1095,120 @@ class SwapServiceTests: XCTestCase {
         
         let swapInDatabase = try! databaseService.getSwap(id: swap.id.asData().base64EncodedString())
         XCTAssertEqual(SwapState.reportPaymentReceivedTransactionBroadcast.asString, swapInDatabase?.state)
+        
+    }
+    
+    /**
+     Ensure that `SwapService` handles `PaymentReceivedEvent`s properly.
+     */
+    func testHandlePaymentReceivedEvent() {
+        // Set up DatabaseService and KeyManagerService
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        // The ID of the swap for which payment is being sent
+        let swapID = UUID()
+        
+        // The PaymentReceivedEvent to be handled
+        let event = PaymentReceivedEvent(id: swapID, chainID: BigUInt(31337))
+        
+        let swapService = SwapService(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        
+        // Create swap, add it to swapTruthSource, and save it persistently
+        let swapTruthSource = TestSwapTruthSource()
+        // Provide swapTruthSource to swapService
+        swapService.swapTruthSource = swapTruthSource
+        let swap = try! Swap(
+            isCreated: true,
+            requiresFill: false,
+            id: swapID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            makerInterfaceID: Data(),
+            taker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            takerInterfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            takenSwapAmount: BigUInt.zero,
+            serviceFeeAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            direction: .buy,
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
+            protocolVersion: BigUInt.zero,
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: BigUInt.zero,
+            chainID: BigUInt(31337),
+            state: SwapState.reportPaymentSentTransactionBroadcast,
+            role: SwapRole.makerAndBuyer
+        )
+        swapTruthSource.swaps[swapID] = swap
+        let swapForDatabase = DatabaseSwap(
+            id: swap.id.asData().base64EncodedString(),
+            isCreated: swap.isCreated,
+            requiresFill: swap.requiresFill,
+            maker: swap.maker.addressData.toHexString(),
+            makerInterfaceID: swap.makerInterfaceID.base64EncodedString(),
+            taker: swap.taker.addressData.toHexString(),
+            takerInterfaceID: swap.takerInterfaceID.base64EncodedString(),
+            stablecoin: swap.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(swap.amountLowerBound),
+            amountUpperBound: String(swap.amountUpperBound),
+            securityDepositAmount: String(swap.securityDepositAmount),
+            takenSwapAmount: String(swap.takenSwapAmount),
+            serviceFeeAmount: String(swap.serviceFeeAmount),
+            serviceFeeRate: String(swap.serviceFeeRate),
+            onChainDirection: String(swap.onChainDirection),
+            onChainSettlementMethod: swap.onChainSettlementMethod.base64EncodedString(),
+            protocolVersion: String(swap.protocolVersion),
+            isPaymentSent: swap.isPaymentSent,
+            isPaymentReceived: swap.isPaymentReceived,
+            hasBuyerClosed: swap.hasBuyerClosed,
+            hasSellerClosed: swap.hasSellerClosed,
+            onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
+            chainID: String(swap.chainID),
+            state: swap.state.asString,
+            role: swap.role.asString
+        )
+        try! databaseService.storeSwap(swap: swapForDatabase)
+        
+        let expectation = XCTestExpectation(description: "Fulfilled after handlePaymentReceivedEvent and test assertions are executed")
+        
+        // Call handlePaymentReceivedEvent on background DispatchQueue so that the closures it runs on the main DispatchQueue are executed in time for us to test their results
+        DispatchQueue.global().async {
+            try! swapService.handlePaymentReceivedEvent(event)
+            
+            // We run this in the main DispatchQueue because queues are FIFO and this must be run after the closures that handlePaymentReceivedEvent passes to DispatchQueue.main.async are executed
+            DispatchQueue.main.async {
+                // Ensure that SwapService updates swap state and isPaymentReceived in swapTruthSource
+                XCTAssertEqual(SwapState.awaitingClosing, swap.state)
+                XCTAssertTrue(swap.isPaymentReceived)
+                
+                expectation.fulfill()
+            }
+        }
+        
+        // Wait for our assertions to be executed
+        wait(for: [expectation], timeout: 10.0)
+        
+        // Ensure that SwapService updates swap state and isPaymentReceived in persistent storage
+        let swapInDatabase = try! databaseService.getSwap(id: swap.id.asData().base64EncodedString())
+        XCTAssertEqual(SwapState.awaitingClosing.asString, swapInDatabase!.state)
+        XCTAssertTrue(swapInDatabase!.isPaymentReceived)
         
     }
     
