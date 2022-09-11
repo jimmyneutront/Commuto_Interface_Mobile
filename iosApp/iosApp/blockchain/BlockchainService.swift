@@ -539,6 +539,38 @@ class BlockchainService {
     }
     
     /**
+     A `Promise` wrapper around CommutoSwap's [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
+     
+     - Parameter id: The ID of the [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which to report sending payment.
+     
+     - Returns: An empty `Promise` that will be fulfilled when receipt of payment is successfully reported.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if `nil` is returned during write transaction creation.
+     */
+    func reportPaymentReceived(id: UUID) -> Promise<Void> {
+        return Promise { seal in
+            let method = "reportPaymentReceived"
+            guard let writeTransaction = commutoSwap.write(
+                method,
+                parameters: [id.asData()] as [AnyObject],
+                transactionOptions: .defaultOptions
+            ) else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Found nil while creating reportPaymentSent write transaction"))
+                return
+            }
+            #warning("TODO: this is temporary, will be improved when WalletService is implemented")
+            writeTransaction.transactionOptions.from = ethKeyStore.addresses!.first!
+            writeTransaction.transactionOptions.gasLimit = .manual(BigUInt(30000000))
+            writeTransaction.transactionOptions.gasPrice = .manual(BigUInt(30000000))
+            writeTransaction.sendPromise(password: ethPassword).done { TransactionSendingResult in
+                seal.fulfill_()
+            }.catch { error in
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
      Gets the current chain ID, parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the currenc chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
      - Note: In order to parse a block, the `EventParserProtocol`s created in this function must query a network node for full transaction receipts.

@@ -46,6 +46,10 @@ enum SwapState {
      This indicates that the seller must confirm that they have received fiat currency payment from the buyer.
      */
     case awaitingPaymentReceived
+    /**
+     This indicates that the seller's transaction to report that they have received payment has been broadcast.
+     */
+    case reportPaymentReceivedTransactionBroadcast
     
     /**
      Returns a `String` corresponding to a particular case of `SwapState`.
@@ -70,6 +74,8 @@ enum SwapState {
             return "reportPaymentSentTransactionBroadcast"
         case .awaitingPaymentReceived:
             return "awaitingPaymentReceived"
+        case .reportPaymentReceivedTransactionBroadcast:
+            return "reportPaymentReceivedTransactionBroadcast"
         }
     }
     
@@ -101,6 +107,8 @@ enum SwapState {
             return .reportPaymentSentTransactionBroadcast
         } else if string == "awaitingPaymentReceived" {
             return .awaitingPaymentReceived
+        } else if string == "reportPaymentReceivedTransactionBroadcast" {
+            return .reportPaymentReceivedTransactionBroadcast
         } else {
             return nil
         }

@@ -242,6 +242,64 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
+    
+    /**
+     Reports that payment has been received by the seller in a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     
+     On the global `DispatchQueue`, this ensures that the user is the seller in `swap` and that reporting the receipt of payment is currently possible for `swap`. Then this calls the CommutoSwap contract's [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) function (via `blockchainService`), and persistently updates the state of the swap to `reportPaymentReceivedTransactionBroadcast`. Finally, on the main `DispatchQueue`, this updates the state of `swap` to `reportPaymentReceivedTransactionBroadcast`.
+     
+     - Parameters:
+        - swap: The `Swap` for which this function will report the receipt of payment.
+        - afterPossibilityCheck: A closure that will be executed after this has ensured that payment receipt can be reported for the swap.
+     
+     - Returns: An empty promise that will be fulfilled when payment receipt has been reported.
+     
+     - Throws: A `SwapServiceError.transactionWillRevertError` if the user is not the seller for `swap`, or if `swap`'s state is not `awaitingPaymentReceived`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
+     */
+    func reportPaymentReceived(
+        swap: Swap,
+        afterPossibilityCheck: (() -> Void)? = nil
+    ) -> Promise<Void> {
+        return Promise { seal in
+            Promise<Swap> { seal in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.logger.notice("reportPaymentReceived: checking reporting is possible for \(swap.id.uuidString)")
+                    do {
+                        // Ensure that the user is the seller for the swap
+                        guard swap.role == .makerAndSeller || swap.role == .takerAndSeller else {
+                            throw SwapServiceError.transactionWillRevertError(desc: "Only the Seller can report receiving payment")
+                        }
+                        // Ensure that this swap is awaiting reporting of payment received
+                        guard swap.state == .awaitingPaymentReceived else {
+                            throw SwapServiceError.transactionWillRevertError(desc: "Receiving payment cannot currently be reported for this swap")
+                        }
+                        if let afterPossibilityCheck = afterPossibilityCheck {
+                            afterPossibilityCheck()
+                        }
+                        seal.fulfill(swap)
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] swap -> Promise<(Void, Swap)> in
+                logger.notice("reportPaymentReceived: reporting \(swap.id.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during reportPaymentReceived call for \(swap.id.uuidString)")
+                }
+                return blockchainService.reportPaymentReceived(id: swap.id).map { ($0, swap) }
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, swap in
+                logger.notice("reportPaymentReceived: reported for \(swap.id)")
+                try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.reportPaymentReceivedTransactionBroadcast.asString)
+            }.done(on: DispatchQueue.main) { _, swap in
+                swap.state = .reportPaymentReceivedTransactionBroadcast
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("reportPaymentReceived: encountered error during call for \(swap.id.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
     /**
      Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified swap ID, creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation` using the on chain swap, and maps `swapID` lto the new `Swap` on the main `DispatchQueue`. This should only be called for swaps made by the user of this interface.
      
