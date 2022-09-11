@@ -54,6 +54,7 @@
 		6D6CE885284479490009B815 /* OfferCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6CE884284479490009B815 /* OfferCardView.swift */; };
 		6D6F190B287DFD7F00B9BCA1 /* PreviewableOfferTruthSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6F190A287DFD7E00B9BCA1 /* PreviewableOfferTruthSource.swift */; };
 		6D6F190D287E02DC00B9BCA1 /* SettlementMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6F190C287E02DC00B9BCA1 /* SettlementMethod.swift */; };
+		6D6F955E28CE36FA005BA2CC /* ReportingPaymentReceivedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6F955D28CE36FA005BA2CC /* ReportingPaymentReceivedState.swift */; };
 		6D70A5CA28665E50003FEDF3 /* OfferTruthSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */; };
 		6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */; };
 		6D70A5CE2866A64E003FEDF3 /* DatabaseServiceError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D70A5CD2866A64E003FEDF3 /* DatabaseServiceError.swift */; };
@@ -189,6 +190,7 @@
 		6D6CE884284479490009B815 /* OfferCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCardView.swift; sourceTree = "<group>"; };
 		6D6F190A287DFD7E00B9BCA1 /* PreviewableOfferTruthSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewableOfferTruthSource.swift; sourceTree = "<group>"; };
 		6D6F190C287E02DC00B9BCA1 /* SettlementMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethod.swift; sourceTree = "<group>"; };
+		6D6F955D28CE36FA005BA2CC /* ReportingPaymentReceivedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportingPaymentReceivedState.swift; sourceTree = "<group>"; };
 		6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTruthSource.swift; sourceTree = "<group>"; };
 		6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainEventRepository.swift; sourceTree = "<group>"; };
 		6D70A5CD2866A64E003FEDF3 /* DatabaseServiceError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseServiceError.swift; sourceTree = "<group>"; };
@@ -331,6 +333,7 @@
 				6DE0F04428BABBDD007F7AED /* SwapRole.swift */,
 				6DA79ED328C59E94005680AC /* FillingSwapState.swift */,
 				6DF4327528CBA1810034FCA4 /* ReportingPaymentSentState.swift */,
+				6D6F955D28CE36FA005BA2CC /* ReportingPaymentReceivedState.swift */,
 			);
 			path = swap;
 			sourceTree = "<group>";
@@ -997,6 +1000,7 @@
 				6D6F190D287E02DC00B9BCA1 /* SettlementMethod.swift in Sources */,
 				6D18F1C0289F7890002B667C /* EditingOfferState.swift in Sources */,
 				6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */,
+				6D6F955E28CE36FA005BA2CC /* ReportingPaymentReceivedState.swift in Sources */,
 				6D096CE92872121700A36764 /* OfferView.swift in Sources */,
 				6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */,
 				6DA19783284A8CAD00D2D073 /* CommutoSwapProvider.swift in Sources */,

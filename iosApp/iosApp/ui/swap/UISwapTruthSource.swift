@@ -27,4 +27,10 @@ protocol UISwapTruthSource: SwapTruthSource, ObservableObject {
      */
     func reportPaymentSent(swap: Swap)
     
+    /**
+     Attempts to report that a seller has received fiat payment for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap). This may only be used by the seller in `swap`.
+     
+     - Parameter swap: The `Swap` to fill.
+     */
+    func reportPaymentReceived(swap: Swap)
 }

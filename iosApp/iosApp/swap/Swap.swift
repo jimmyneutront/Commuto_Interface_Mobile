@@ -139,6 +139,14 @@ class Swap: ObservableObject {
      (This property is used only if the user of this interface is the buyer in this swap.) The `Error` that we encountered during the reporting-payment-sent process, or `nil` if no such error has occurred.
      */
     var reportingPaymentSentError: Error? = nil
+    /**
+     (This property is used only if the user of this interface is the seller in this swap.) This indicates whether we are currently reporting that we have received fiat payment from the buyer in this swap, and if so, what part of the payment-received-reporting process we are in.
+     */
+    @Published var reportingPaymentReceivedState = ReportingPaymentReceivedState.none
+    /**
+     (This property is used only if the user of this interface is the seller in this swap.) The `Error` that we encountered during the reporting-payment-received process, or `nil` if no such error has occurred.
+     */
+    var reportingPaymentReceivedError: Error? = nil
     
     
     /**

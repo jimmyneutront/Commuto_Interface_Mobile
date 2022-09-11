@@ -65,6 +65,19 @@ class SwapViewModel: UISwapTruthSource {
     }
     
     /**
+     Sets the `reportingPaymentReceivedState` property of `swap` to `state` on the main `DispatchQueue`.
+     
+     - Parameters:
+        - swap: The `Swap` of which to set the `reportingPaymentReceivedState`.
+        - state: The value to which `swap`'s `reportingPaymentReceivedState` will be set.
+     */
+    private func setReportingPaymentReceivedState(swap: Swap, state: ReportingPaymentReceivedState) {
+        DispatchQueue.main.async {
+            swap.reportingPaymentReceivedState = state
+        }
+    }
+    
+    /**
      Attempts to fill a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
      
      - Parameter swap: The `Swap` to fill.
@@ -118,4 +131,32 @@ class SwapViewModel: UISwapTruthSource {
             setReportingPaymentSentState(swap: swap, state: .error)
         }
     }
+    
+    /**
+     Attempts to report that a seller has received fiat payment for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap). This may only be used by the seller in `swap`.
+     
+     - Parameter swap: The `Swap` for which to report receiving payment.
+     */
+    func reportPaymentReceived(
+        swap: Swap
+    ) {
+        setReportingPaymentReceivedState(swap: swap, state: .checking)
+        Promise<Void> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("reportPaymentReceived: reporting for \(swap.id.uuidString)")
+                swapService.reportPaymentReceived(
+                    swap: swap,
+                    afterPossibilityCheck: { self.setReportingPaymentReceivedState(swap: swap, state: .reporting) }
+                ).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] in
+            logger.notice("reportPaymentReceived: successfully reported for \(swap.id.uuidString)")
+            setReportingPaymentReceivedState(swap: swap, state: .completed)
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+            logger.error("reportPaymentReceived: got error during reportPaymentReceived call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
+            swap.reportingPaymentReceivedError = error
+            setReportingPaymentReceivedState(swap: swap, state: .error)
+        }
+    }
+    
 }

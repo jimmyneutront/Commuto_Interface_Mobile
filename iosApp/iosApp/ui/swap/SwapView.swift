@@ -439,7 +439,7 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
             }
             actionButtonBuilder(
                 action: {
-                    if (swap.fillingSwapState == .none || swap.fillingSwapState == .error) {
+                    if (swap.reportingPaymentSentState == .none || swap.reportingPaymentSentState == .error) {
                         swapTruthSource.reportPaymentSent(swap: swap)
                     }
                 },
@@ -450,6 +450,32 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
                         return "Reported that Payment Is Sent"
                     } else {
                         return "Reporting that Payment Is Sent"
+                    }
+                }()
+            )
+        } else if swap.state == .awaitingPaymentReceived && (swap.role == .makerAndSeller || swap.role == .takerAndSeller) {
+            // If the swap state is awaitingPaymentReceived and we are the seller, then we display the "Confirm Payment is Received" button
+            if swap.reportingPaymentReceivedState != .none && swap.reportingPaymentReceivedState != .error {
+                Text(swap.reportingPaymentReceivedState.description)
+                    .font(.title2)
+            }
+            if swap.reportingPaymentReceivedState == .error {
+                Text(swap.reportingPaymentReceivedError?.localizedDescription ?? "An unknown error occured")
+                    .foregroundColor(Color.red)
+            }
+            actionButtonBuilder(
+                action: {
+                    if (swap.reportingPaymentReceivedState == .none || swap.reportingPaymentReceivedState == .error) {
+                        swapTruthSource.reportPaymentSent(swap: swap)
+                    }
+                },
+                labelText: {
+                    if swap.reportingPaymentReceivedState == .none || swap.reportingPaymentReceivedState == .error {
+                        return "Report that Payment Is Received"
+                    } else if swap.reportingPaymentSentState == .completed {
+                        return "Reported that Payment Is Received"
+                    } else {
+                        return "Reporting that Payment Is Received"
                     }
                 }()
             )
