@@ -483,6 +483,32 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
                     }
                 }()
             )
+        } else if swap.state == .awaitingClosing {
+            // We can now close the swap, so we display the "Close Swap" button
+            if swap.closingSwapState != .none && swap.closingSwapState != .error {
+                Text(swap.closingSwapState.description)
+                    .font(.title2)
+            }
+            if swap.closingSwapState == .error {
+                Text(swap.closingSwapError?.localizedDescription ?? "An unknown error occured")
+                    .foregroundColor(Color.red)
+            }
+            actionButtonBuilder(
+                action: {
+                    if (swap.closingSwapState == .none || swap.closingSwapState == .error) {
+                        swapTruthSource.closeSwap(swap: swap)
+                    }
+                },
+                labelText: {
+                    if swap.closingSwapState == .none || swap.closingSwapState == .error {
+                        return "Close Swap"
+                    } else if swap.reportingPaymentSentState == .completed {
+                        return "Swap Closed"
+                    } else {
+                        return "Closing Swap"
+                    }
+                }()
+            )
         }
     }
     

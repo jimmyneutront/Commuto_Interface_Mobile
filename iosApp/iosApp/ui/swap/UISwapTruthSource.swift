@@ -33,4 +33,11 @@ protocol UISwapTruthSource: SwapTruthSource, ObservableObject {
      - Parameter swap: The `Swap` to fill.
      */
     func reportPaymentReceived(swap: Swap)
+    
+    /**
+     Attempts to close a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+     
+     - Parameter swap: The `Swap` to close.
+     */
+    func closeSwap(swap: Swap)
 }

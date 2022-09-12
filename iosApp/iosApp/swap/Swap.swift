@@ -147,6 +147,14 @@ class Swap: ObservableObject {
      (This property is used only if the user of this interface is the seller in this swap.) The `Error` that we encountered during the reporting-payment-received process, or `nil` if no such error has occurred.
      */
     var reportingPaymentReceivedError: Error? = nil
+    /**
+     This indicates whether we are currently closing this swap, and if so, what part of the swap-closing process we are in.
+     */
+    @Published var closingSwapState = ClosingSwapState.none
+    /**
+     The `Error` that we encountered during the swap closing process, or `nil` if no such error has occured.
+     */
+    var closingSwapError: Error? = nil
     
     
     /**

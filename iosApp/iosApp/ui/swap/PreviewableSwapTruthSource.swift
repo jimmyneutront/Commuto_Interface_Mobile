@@ -39,4 +39,9 @@ class PreviewableSwapTruthSource: UISwapTruthSource {
      Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
      */
     func reportPaymentReceived(swap: Swap) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
+     */
+    func closeSwap(swap: Swap) {}
 }

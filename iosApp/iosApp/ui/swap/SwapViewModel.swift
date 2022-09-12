@@ -78,6 +78,19 @@ class SwapViewModel: UISwapTruthSource {
     }
     
     /**
+     Sets the `closingSwapState` property of `swap` to `state` on the main `DispatchQueue`.
+     
+     - Parameters:
+        - swap: The `Swap` of which to set the `closingSwapState`.
+        - state: The value to which `swap`'s `closingSwapState` will be set.
+     */
+    private func setClosingSwapState(swap: Swap, state: ClosingSwapState) {
+        DispatchQueue.main.async {
+            swap.closingSwapState = state
+        }
+    }
+    
+    /**
      Attempts to fill a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
      
      - Parameter swap: The `Swap` to fill.
@@ -156,6 +169,33 @@ class SwapViewModel: UISwapTruthSource {
             logger.error("reportPaymentReceived: got error during reportPaymentReceived call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
             swap.reportingPaymentReceivedError = error
             setReportingPaymentReceivedState(swap: swap, state: .error)
+        }
+    }
+    
+    /**
+     Attempts to close a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+     
+     - Parameter swap: The `Swap` to close.
+     */
+    func closeSwap(
+        swap: Swap
+    ) {
+        setClosingSwapState(swap: swap, state: .checking)
+        Promise<Void> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("closeSwap: closing \(swap.id.uuidString)")
+                swapService.closeSwap(
+                    swap: swap,
+                    afterPossibilityCheck: { self.setReportingPaymentReceivedState(swap: swap, state: .reporting) }
+                ).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] in
+            logger.notice("closeSwap: successfully closed \(swap.id.uuidString)")
+            setClosingSwapState(swap: swap, state: .completed)
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+            logger.error("closeSwap: got error during closeSwap call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
+            swap.closingSwapError = error
+            setClosingSwapState(swap: swap, state: .error)
         }
     }
     
