@@ -375,6 +375,8 @@ struct SwapStateView: View {
             return "Awaiting confirmation of reporting that payment is received"
         case .awaitingClosing:
             return "Waiting for you to close swap"
+        case .closeSwapTransactionBroadcast:
+            return "Awaiting confirmation that swap is closed"
         }
     }
     

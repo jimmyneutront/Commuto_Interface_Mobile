@@ -301,6 +301,59 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
+     Attempts a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     
+     On the global `DispatchQueue`, this ensures that `swap` can be closed.. Then this calls the CommutoSwap contract's [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) function (via `blockchainService`), and persistently updates the state of the swap to `closed` and sets the swap's `hasBuyerClosed` or `hasSellerClosed` property to `true`, depending on whether the user is the buyer or seller in the swap. Finally, this does the same to `swap`, updating `state` on the main `DispatchQueue`.
+     
+     - Parameters:
+        - swap: The `Swap` this function will close.
+        - afterPossibilityCheck: A closure that will be executed after this has ensured `swap` can be closed.
+     
+     - Returns: An empty promise that will be fulfilled when `swap` has been closed.
+     
+     - Throws: A `SwapServiceError.transactionWillRevertError` if `swap`'s state is not `awaitingClosing`, or a `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`.
+     */
+    func closeSwap(
+        swap: Swap,
+        afterPossibilityCheck: (() -> Void)? = nil
+    ) -> Promise<Void> {
+        return Promise { seal in
+            Promise<Swap> { seal in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.logger.notice("closeSwap: checking if \(swap.id.uuidString) can be closed")
+                    do {
+                        // Ensure that this swap is awaiting closing
+                        guard swap.state == .awaitingClosing else {
+                            throw SwapServiceError.transactionWillRevertError(desc: "This swap cannot currently be closed")
+                        }
+                        if let afterPossibilityCheck = afterPossibilityCheck {
+                            afterPossibilityCheck()
+                        }
+                        seal.fulfill(swap)
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] swap -> Promise<(Void, Swap)> in
+                logger.notice("closeSwap: closing \(swap.id.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during closeSwap call for \(swap.id.uuidString)")
+                }
+                return blockchainService.closeSwap(id: swap.id).map { ($0, swap) }
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, swap in
+                logger.notice("closeSwap: reported for \(swap.id)")
+                try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.closeSwapTransactionBroadcast.asString)
+            }.done(on: DispatchQueue.main) { _, swap in
+                swap.state = .closeSwapTransactionBroadcast
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("closeSwap: encountered error during call for \(swap.id.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
      Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified swap ID, creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation` using the on chain swap, and maps `swapID` lto the new `Swap` on the main `DispatchQueue`. This should only be called for swaps made by the user of this interface.
      
      - Parameters:
