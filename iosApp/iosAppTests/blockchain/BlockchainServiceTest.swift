@@ -522,6 +522,8 @@ class BlockchainServiceTest: XCTestCase {
             
             func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
             
+            func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {}
+            
         }
         
         let swapService = TestSwapService()
@@ -598,6 +600,8 @@ class BlockchainServiceTest: XCTestCase {
             }
             
             func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
+            
+            func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {}
             
         }
         
@@ -676,6 +680,8 @@ class BlockchainServiceTest: XCTestCase {
                 paymentReceivedExpectation.fulfill()
             }
             
+            func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {}
+            
         }
         
         let swapService = TestSwapService()
@@ -691,6 +697,85 @@ class BlockchainServiceTest: XCTestCase {
         
         wait(for: [swapService.paymentReceivedExpectation], timeout: 60.0)
         XCTAssertEqual(expectedOfferID, swapService.paymentReceivedEvent!.id)
+        
+    }
+    
+    /**
+     Tests `BlockchainService` to  ensure it detects and handles [BuyerClosed](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#buyerclosed) events properly.
+     */
+    func testListenBuyerClosed() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let swapID: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_blockchainservice_listen")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-taken-SwapFilled-PaymentSent-Received-BuyerClosed")
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = false
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertFalse(gotError)
+        let expectedOfferID = UUID(uuidString: testingServerResponse!.swapID)!
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        class TestSwapService: SwapNotifiable {
+            
+            let buyerClosedExpectation = XCTestExpectation(description: "Fulfilled when handleBuyerClosedEvent is called")
+            var buyerClosedEvent: BuyerClosedEvent? = nil
+            
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            
+            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            
+            func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
+            
+            func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
+            
+            func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
+            
+            func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {
+                buyerClosedEvent = event
+                buyerClosedExpectation.fulfill()
+            }
+            
+        }
+        
+        let swapService = TestSwapService()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: TestOfferService(),
+            swapService: swapService,
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        blockchainService.listen()
+        
+        wait(for: [swapService.buyerClosedExpectation], timeout: 60.0)
+        XCTAssertEqual(expectedOfferID, swapService.buyerClosedEvent!.id)
         
     }
     
@@ -738,5 +823,7 @@ class BlockchainServiceTest: XCTestCase {
         blockchainService.listen()
         wait(for: [errorExpectation], timeout: 20.0)
         assert(try! (errorHandler.errorPromise!.wait() as! Web3Error).errorDescription == "Node response is empty")
+        
     }
+    
 }

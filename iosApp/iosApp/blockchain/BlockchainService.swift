@@ -641,6 +641,9 @@ class BlockchainService {
         guard let paymentReceivedEventParser = commutoSwap.createEventParser("PaymentReceived", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping PaymentReceived event parser")
         }
+        guard let buyerClosedEventParser = commutoSwap.createEventParser("BuyerClosed", filter: eventFilter) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping BuyerClosed event parser")
+        }
         events.append(contentsOf: try offerOpenedEventParser.parseBlock(block))
         events.append(contentsOf: try offerEditedEventParser.parseBlock(block))
         events.append(contentsOf: try offerCanceledEventParser.parseBlock(block))
@@ -649,6 +652,7 @@ class BlockchainService {
         events.append(contentsOf: try swapFilledEventParser.parseBlock(block))
         events.append(contentsOf: try paymentSentEventParser.parseBlock(block))
         events.append(contentsOf: try paymentReceivedEventParser.parseBlock(block))
+        events.append(contentsOf: try buyerClosedEventParser.parseBlock(block))
         try handleEvents(events, chainID: chainID)
     }
     
@@ -711,6 +715,12 @@ class BlockchainService {
                 }
                 logger.info("handleEvents: handling PaymentReceived event")
                 try swapService.handlePaymentReceivedEvent(event)
+            } else if result.eventName == "BuyerClosed" {
+                guard let event = BuyerClosedEvent(result, chainID: chainID) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating BuyerClosed event from EventParserResultProtocol")
+                }
+                logger.info("handleEvents: handling BuyerClosed event")
+                try swapService.handleBuyerClosedEvent(event)
             }
         }
     }

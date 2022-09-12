@@ -638,6 +638,7 @@ class OfferServiceTests: XCTestCase {
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
             func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
+            func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {}
         }
         let swapService = TestSwapService()
         
@@ -760,6 +761,7 @@ class OfferServiceTests: XCTestCase {
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
             func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
+            func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {}
         }
         let swapService = TestSwapService()
         

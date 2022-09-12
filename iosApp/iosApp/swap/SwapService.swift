@@ -664,4 +664,6 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
+    func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {}
+    
 }
