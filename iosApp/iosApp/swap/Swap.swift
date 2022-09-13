@@ -102,7 +102,7 @@ class Swap: ObservableObject {
     /**
      Corresponds to an on-chain Swap's `hasBuyerClosed` property.
      */
-    let hasBuyerClosed: Bool
+    var hasBuyerClosed: Bool
     /**
      Corresponds to an on-chain Swap's `hasSellerClosed` property.
      */

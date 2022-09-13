@@ -55,9 +55,13 @@ enum SwapState {
      */
     case awaitingClosing
     /**
-     This indicates that the user's transaction to close the swap has been broadcastt.
+     This indicates that the user's transaction to close the swap has been broadcast.
      */
     case closeSwapTransactionBroadcast
+    /**
+     This indicates that the user has successfully closed the swap.
+     */
+    case closed
     
     /**
      Returns a `String` corresponding to a particular case of `SwapState`.
@@ -88,6 +92,8 @@ enum SwapState {
             return "awaitingClosing"
         case .closeSwapTransactionBroadcast:
             return "closeSwapTransactionBroadcast"
+        case .closed:
+            return "closed"
         }
     }
     
@@ -125,6 +131,8 @@ enum SwapState {
             return .awaitingClosing
         } else if string == "closeSwapTransactionBroadcast" {
             return .closeSwapTransactionBroadcast
+        } else if string == "closed" {
+            return .closed
         } else {
             return nil
         }

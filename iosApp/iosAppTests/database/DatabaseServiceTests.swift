@@ -356,6 +356,42 @@ class DatabaseServiceTests: XCTestCase {
     }
     
     /**
+     Ensures that code to update a persistently stored swap's `hasBuyerClosed` property works properly.
+     */
+    func testUpdateSwapHasBuyerClosed() throws {
+        let swapToStore = DatabaseSwap(
+            id: "a_uuid",
+            isCreated: true,
+            requiresFill: false,
+            maker: "maker_address",
+            makerInterfaceID: "maker_interface_id",
+            taker: "taker_address",
+            takerInterfaceID: "taker_interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            takenSwapAmount: "taken_swap_amount",
+            serviceFeeAmount: "service_fee_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            onChainSettlementMethod: "settlement_method",
+            protocolVersion: "some_version",
+            isPaymentSent: true,
+            isPaymentReceived: true,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "dispute_raiser",
+            chainID: "chain_id",
+            state: "a_state_here",
+            role: "a_role_here"
+        )
+        try dbService.storeSwap(swap: swapToStore)
+        try dbService.updateSwapHasBuyerClosed(swapID: "a_uuid", chainID: "chain_id", hasBuyerClosed: true)
+        XCTAssertTrue(try dbService.getSwap(id: "a_uuid")!.hasBuyerClosed)
+    }
+    
+    /**
      Ensures that code to update a persistently stored swap's `state` property works properly.
      */
     func testUpdateSwapState() throws {

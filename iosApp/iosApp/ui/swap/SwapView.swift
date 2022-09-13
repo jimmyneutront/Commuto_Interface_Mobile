@@ -377,6 +377,8 @@ struct SwapStateView: View {
             return "Waiting for you to close swap"
         case .closeSwapTransactionBroadcast:
             return "Awaiting confirmation that swap is closed"
+        case .closed:
+            return "Swap Closed"
         }
     }
     
