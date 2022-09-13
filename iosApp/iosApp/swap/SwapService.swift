@@ -699,6 +699,39 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
-    func handleSellerClosedEvent(_ event: SellerClosedEvent) throws {}
+    /**
+     The function called by  `BlockchainService` to notify `SwapService` of a `SellerClosedEvent`.
+     
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the chain ID of the swap and the chain ID of `event` match. Then it persistently sets the swap's `hasSellerClosed` field to `true` and does the same to the `Swap` object. If the user of this interface is the seller for the swap specified by `id`, this persistently sets the swaps state to `closed`, and does the same to the `Swap` object on the main `DispatchQueue`.
+     
+     - Parameter event: The `SellerClosedEvent` of which `SwapService` is being notified.
+     
+     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or `SwapServiceError.nonmatchingChainIDError` if if the chain ID of `event` and the chain ID of the `Swap` with the ID specified in `event` do not match.
+     */
+    func handleSellerClosedEvent(_ event: SellerClosedEvent) throws {
+        logger.notice("handleSellerClosedEvent: handling for \(event.id.uuidString)")
+        guard let swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleSellerClosedEvent call")
+        }
+        if let swap = swapTruthSource.swaps[event.id] {
+            if swap.chainID != event.chainID {
+                throw SwapServiceError.nonmatchingChainIDError(desc: "Chain ID of SellerClosedEvent did not match chain ID of Swap in SellerClosedEvent call. SellerClosedEvent.chainID: \(String(event.chainID)), Swap.chainID: \(String(swap.chainID)), SellerClosedEvent.id: \(event.id.uuidString)")
+            }
+            // At this point, we have ensured that the chain ID of the event and the swap match, so we can proceed safely
+            let swapIDB64String = event.id.asData().base64EncodedString()
+            try databaseService.updateSwapHasSellerClosed(swapID: swapIDB64String, chainID: String(event.chainID), hasSellerClosed: true)
+            swap.hasSellerClosed = true
+            // If the user of this interface is the seller, than this is their SellerClosed event. Therefore we should update the state of the swap to show that the user has closed it.
+            if swap.role == .makerAndSeller || swap.role == .takerAndSeller {
+                logger.notice("handleSellerClosedEvent: setting state of \(event.id.uuidString) to closed")
+                try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.closed.asString)
+                DispatchQueue.main.async {
+                    swap.state = .closed
+                }
+            }
+        } else {
+            logger.notice("handleSellerClosedEvent: got event for \(event.id.uuidString) which was not found in swapTruthSource")
+        }
+    }
     
 }

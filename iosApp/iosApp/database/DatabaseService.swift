@@ -654,6 +654,20 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseSwap`'s `hasSellerClosed` field.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - hasSellerClosed: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `hasSellerClosed` field.
+     */
+    func updateSwapHasSellerClosed(swapID: String, chainID _chainID: String, hasSellerClosed _hasSellerClosed: Bool) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(hasSellerClosed <- _hasSellerClosed))
+        }
+    }
+    
+    /**
      Updates a persistently stored `DatabaseSwap`'s `state` field.
      
      - Parameters:
