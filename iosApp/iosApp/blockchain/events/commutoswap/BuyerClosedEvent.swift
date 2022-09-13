@@ -10,7 +10,7 @@ import BigInt
 import web3swift
 
 /**
- Represents a [BuyerClosed](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#buyerclosed) event, emitted by the CommutoSwap smart contract when the buyer closes of a swap closes the swap.
+ Represents a [BuyerClosed](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#buyerclosed) event, emitted by the CommutoSwap smart contract when the buyer in a swap closes the swap.
  */
 class BuyerClosedEvent {
     /**

@@ -50,4 +50,9 @@ protocol SwapNotifiable {
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `BuyerClosedEvent`.
      */
     func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws
+    
+    /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `SellerClosedEvent`.
+     */
+    func handleSellerClosedEvent(_ event: SellerClosedEvent) throws
 }
