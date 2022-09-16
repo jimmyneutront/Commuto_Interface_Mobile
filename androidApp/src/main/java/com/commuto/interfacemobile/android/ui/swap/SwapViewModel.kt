@@ -3,10 +3,7 @@ package com.commuto.interfacemobile.android.ui.swap
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.commuto.interfacemobile.android.swap.FillingSwapState
-import com.commuto.interfacemobile.android.swap.ReportingPaymentSentState
-import com.commuto.interfacemobile.android.swap.Swap
-import com.commuto.interfacemobile.android.swap.SwapService
+import com.commuto.interfacemobile.android.swap.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,6 +60,18 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
     private suspend fun setReportingPaymentSentState(swap: Swap, state: ReportingPaymentSentState) {
         withContext(Dispatchers.Main) {
             swap.reportingPaymentSentState.value = state
+        }
+    }
+
+    /**
+     * Sets the value of [Swap.reportingPaymentReceivedState] of [swap] to [state] on the main coroutine dispatcher.
+     *
+     * @param swap The [Swap] of which to set the [Swap.reportingPaymentReceivedState] value.
+     * @param state The value to which [swap]'s [Swap.reportingPaymentReceivedState] value will be set.
+     */
+    private suspend fun setReportingPaymentReceivedState(swap: Swap, state: ReportingPaymentReceivedState) {
+        withContext(Dispatchers.Main) {
+            swap.reportingPaymentReceivedState.value = state
         }
     }
 
@@ -145,6 +154,47 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
                 setReportingPaymentSentState(
                     swap = swap,
                     state = ReportingPaymentSentState.EXCEPTION
+                )
+            }
+        }
+    }
+
+    /**
+     * Attempts to report that a seller has received fiat payment for a
+     * [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap). This may only be used by the seller
+     * in [swap].
+     *
+     * @param swap The [Swap] for which to report receiving payment.
+     */
+    override fun reportPaymentReceived(swap: Swap) {
+        viewModelScope.launch {
+            setReportingPaymentReceivedState(
+                swap = swap,
+                state = ReportingPaymentReceivedState.CHECKING
+            )
+            try {
+                logger.info("reportPaymentReceived: reporting for ${swap.id}")
+                swapService.reportPaymentReceived(
+                    swap = swap,
+                    afterPossibilityCheck = {
+                        setReportingPaymentReceivedState(
+                            swap = swap,
+                            state = ReportingPaymentReceivedState.REPORTING,
+                        )
+                    },
+                )
+                logger.info("reportPaymentReceived: successfully reported for ${swap.id}")
+                setReportingPaymentReceivedState(
+                    swap = swap,
+                    state = ReportingPaymentReceivedState.COMPLETED
+                )
+            } catch (exception: Exception) {
+                logger.error("reportPaymentReceived: got exception during reportPaymentReceived call for ${swap.id}",
+                    exception)
+                swap.reportingPaymentReceivedException = exception
+                setReportingPaymentReceivedState(
+                    swap = swap,
+                    state = ReportingPaymentReceivedState.EXCEPTION
                 )
             }
         }
