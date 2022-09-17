@@ -1,10 +1,7 @@
 package com.commuto.interfacemobile.android.swap
 
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.OfferCanceledEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.PaymentReceivedEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.PaymentSentEvent
-import com.commuto.interfacemobile.android.blockchain.events.commutoswap.SwapFilledEvent
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.offer.OfferService
 import java.math.BigInteger
 import java.util.*
@@ -60,4 +57,13 @@ interface SwapNotifiable {
      * should handle in the implementation of this method.
      */
     suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent)
+
+    /**
+     * The function called by [BlockchainService] in order to notify the class implementing this interface of a
+     * [BuyerClosedEvent].
+     *
+     * @param event The [BuyerClosedEvent] of which the class implementing this interface is being notified and
+     * should handle in the implementation of this method.
+     */
+    suspend fun handleBuyerClosedEvent(event: BuyerClosedEvent)
 }

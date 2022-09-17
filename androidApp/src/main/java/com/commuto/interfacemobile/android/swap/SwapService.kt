@@ -3,6 +3,7 @@ package com.commuto.interfacemobile.android.swap
 import android.util.Log
 import com.commuto.interfacedesktop.db.Swap as DatabaseSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.events.commutoswap.BuyerClosedEvent
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.PaymentReceivedEvent
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.PaymentSentEvent
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.SwapFilledEvent
@@ -787,5 +788,7 @@ class SwapService @Inject constructor(
                     "swapTruthSource")
         }
     }
+
+    override suspend fun handleBuyerClosedEvent(event: BuyerClosedEvent) {}
 
 }
