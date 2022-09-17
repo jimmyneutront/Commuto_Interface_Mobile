@@ -248,6 +248,34 @@ internal class Database(databaseDriverFactory: DatabaseDriverFactory) {
     }
 
     /**
+     * Updates the [Swap.hasBuyerClosed] property of the [Swap] with the specified [swapID] and [chainID].
+     * @param swapID The ID of the [Swap] to be updated.
+     * @param chainID The ID of the blockchain on which the [Swap] to be updated exists.
+     * @param hasBuyerClosed The new value of the [Swap.hasBuyerClosed] property.
+     */
+    internal fun updateSwapHasBuyerClosed(swapID: String, chainID: String, hasBuyerClosed: Long) {
+        dbQuery.updateSwapHasBuyerClosedBySwapIDAndChainID(
+            hasBuyerClosed = hasBuyerClosed,
+            id = swapID,
+            chainID = chainID,
+        )
+    }
+
+    /**
+     * Updates the [Swap.hasSellerClosed] property of the [Swap] with the specified [swapID] and [chainID].
+     * @param swapID The ID of the [Swap] to be updated.
+     * @param chainID The ID of the blockchain on which the [Swap] to be updated exists.
+     * @param hasSellerClosed The new value of the [Swap.hasSellerClosed] property.
+     */
+    internal fun updateSwapHasSellerClosed(swapID: String, chainID: String, hasSellerClosed: Long) {
+        dbQuery.updateSwapHasSellerClosedBySwapIDAndChainID(
+            hasSellerClosed = hasSellerClosed,
+            id = swapID,
+            chainID = chainID,
+        )
+    }
+
+    /**
      * Updates the [Swap.state] property of the [Swap] with the specified [swapID] and [chainID].
      * @param swapID The ID of the [Swap] to be updated.
      * @param chainID The ID of the blockchain on which the [Swap] to be updated exists.
