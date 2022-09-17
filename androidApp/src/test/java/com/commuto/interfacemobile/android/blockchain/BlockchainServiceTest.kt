@@ -411,6 +411,7 @@ class BlockchainServiceTest {
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
             override suspend fun handleBuyerClosedEvent(event: BuyerClosedEvent) {}
+            override suspend fun handleSellerClosedEvent(event: SellerClosedEvent) {}
         }
         val swapService = TestSwapService()
 
@@ -473,6 +474,7 @@ class BlockchainServiceTest {
             }
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
             override suspend fun handleBuyerClosedEvent(event: BuyerClosedEvent) {}
+            override suspend fun handleSellerClosedEvent(event: SellerClosedEvent) {}
         }
         val swapService = TestSwapService()
 
@@ -535,6 +537,7 @@ class BlockchainServiceTest {
                 paymentReceivedEventChannel.send(event)
             }
             override suspend fun handleBuyerClosedEvent(event: BuyerClosedEvent) {}
+            override suspend fun handleSellerClosedEvent(event: SellerClosedEvent) {}
         }
         val swapService = TestSwapService()
 
@@ -600,6 +603,7 @@ class BlockchainServiceTest {
             override suspend fun handleBuyerClosedEvent(event: BuyerClosedEvent) {
                 buyerClosedEventChannel.send(event)
             }
+            override suspend fun handleSellerClosedEvent(event: SellerClosedEvent) {}
         }
         val swapService = TestSwapService()
 
@@ -614,6 +618,72 @@ class BlockchainServiceTest {
         runBlocking {
             withTimeout(60_000) {
                 val event = swapService.buyerClosedEventChannel.receive()
+                assertEquals(expectedSwapID, event.swapID)
+            }
+        }
+    }
+
+    /**
+     * Tests [BlockchainService] to ensure it detects and handles
+     * [SellerClosed](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#sellerclosed) events properly.
+     */
+    @Test
+    fun testListenSellerClosed() {
+        @Serializable
+        data class TestingServerResponse(val commutoSwapAddress: String, val swapID: String)
+
+        val testingServiceUrl = "http://localhost:8546/test_blockchainservice_listen"
+        val testingServerClient = HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json()
+            }
+            install(HttpTimeout) {
+                socketTimeoutMillis = 90_000
+                requestTimeoutMillis = 90_000
+            }
+        }
+        val testingServerResponse: TestingServerResponse = runBlocking {
+            testingServerClient.get(testingServiceUrl) {
+                url {
+                    parameters.append(
+                        "events",
+                        "offer-opened-taken-SwapFilled-PaymentSent-Received-SellerClosed"
+                    )
+                }
+            }.body()
+        }
+        val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
+
+        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+
+        val exceptionHandler = TestBlockchainExceptionHandler()
+
+        // We need this TestSwapService to track handling of BuyerClosed events
+        class TestSwapService: SwapNotifiable {
+            val sellerClosedEventChannel = Channel<SellerClosedEvent>()
+            override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
+            override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
+            override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
+            override suspend fun handleBuyerClosedEvent(event: BuyerClosedEvent) {}
+            override suspend fun handleSellerClosedEvent(event: SellerClosedEvent) {
+                sellerClosedEventChannel.send(event)
+            }
+        }
+        val swapService = TestSwapService()
+
+        val blockchainService = BlockchainService(
+            exceptionHandler,
+            TestOfferService(),
+            swapService,
+            w3,
+            testingServerResponse.commutoSwapAddress
+        )
+        blockchainService.listen()
+        runBlocking {
+            withTimeout(60_000) {
+                val event = swapService.sellerClosedEventChannel.receive()
                 assertEquals(expectedSwapID, event.swapID)
             }
         }
