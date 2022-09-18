@@ -15,12 +15,16 @@ import Foundation
 struct DatabaseKeyDeriver {
     
     /**
-     The 32 byte `SymmetricKey` derived grom the given password `String` and salt `Data`.
+     The 32 byte `SymmetricKey` derived from the given password `String` and salt `Data`.
      */
     let key: SymmetricKey
     
     /**
      Derives a 32 byte `SymmetricKey` from `password` and `salt`, and assigns the result to `key`.
+     
+     - Parameters:
+        - password: The password `String` from which the `SymmetricKey` will be derived.
+        - salt: The salt to use during `SymmetricKey` derivation.
      */
     init(password: String, salt: Data) throws {
         key = SymmetricKey(key: try HKDF(password: Array(password.utf8), salt: salt.bytes, keyLength: 32, variant: .sha2(.sha256)).calculate())

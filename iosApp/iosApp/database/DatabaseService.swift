@@ -19,9 +19,14 @@ class DatabaseService {
     
     /**
      Creates a new `DatabaseService`, and creates an in-memory database with its reference stored in `DatabaseService`'s `connection` property.
+     
+     - Parameter databaseKey: The `SymmetricKey` with which this will encrypt and decrypt encrypted database fields. If no value is provided, this uses the key created by `DatabaseKeyDeriver` given the password "test\_password" and salt string "test\_salt". Note that the default value should ONLY be used for testing.
      */
-    init() throws {
+    init(
+        databaseKey: SymmetricKey = try! DatabaseKeyDeriver(password: "test_password", salt: "test_salt".data(using: .utf8)!).key
+    ) throws {
         connection = try Connection(.inMemory)
+        self.databaseKey = databaseKey
     }
     
     /**
@@ -33,6 +38,11 @@ class DatabaseService {
      The connection to the SQLite database.
      */
     var connection: Connection
+    
+    /**
+     The `SymmetricKey` with which this encrypts and decrypts encrypted database fields.
+     */
+    let databaseKey: SymmetricKey
     
     /**
      The serial DispatchQueue used to synchronize database access. All database queries should be run on this queue to prevent data races.
