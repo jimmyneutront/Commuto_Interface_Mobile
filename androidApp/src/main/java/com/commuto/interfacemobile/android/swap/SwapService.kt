@@ -835,10 +835,63 @@ class SwapService @Inject constructor(
             }
         } ?: run {
             // Executed if we do not have a Swap with the ID specified in event
-            Log.i(logTag, "handleBuyerClosedEvent: got event for ${event.swapID} which was not found in swapTruthSource")
+            Log.i(logTag, "handleBuyerClosedEvent: got event for ${event.swapID} which was not found in " +
+                    "swapTruthSource")
         }
     }
 
-    override suspend fun handleSellerClosedEvent(event: SellerClosedEvent) {}
+    /**
+     * The function called by [BlockchainService] to notify [SwapService] of a [SellerClosedEvent].
+     *
+     * Once notified, [SwapService] checks in [swapTruthSource] for a [Swap] with the ID specified in [event]. If it
+     * finds such a swap, it ensures that the chain ID of the swap and the chain ID of [event] match. Then it
+     * persistently sets the swap's [Swap.hasSellerClosed] field to `true` and does the same to the [Swap] object. If
+     * the user of this interface is the seller for the swap specified by [SellerClosedEvent.swapID], this persistently
+     * sets the swaps state to [SwapState.CLOSED], and does the same to the [Swap] object on the main coroutine
+     * dispatcher.
+     *
+     * @param event The [SellerClosedEvent] of which [SwapService] is being notified.
+     *
+     * @throws [SwapServiceException] if the chain ID of [event] and the chain ID of the [Swap] with the ID specified in
+     * [event] do not match.
+     */
+    override suspend fun handleSellerClosedEvent(event: SellerClosedEvent) {
+        Log.i(logTag, "handleSellerClosedEvent: handling for ${event.swapID}")
+        swapTruthSource.swaps[event.swapID]?.let { swap ->
+            if (swap.chainID != event.chainID) {
+                throw SwapServiceException("Chain ID of SellerClosedEvent did not match chain ID of Swap in " +
+                        "handleSellerClosedEvent call. SellerClosedEvent.chainID: ${event.chainID}, Swap.chainID: " +
+                        "${swap.chainID}, SellerClosedEvent.id: ${event.swapID}")
+            }
+            /*
+            At this point, we have ensured that the chain ID of the event and the swap match, so we can proceed safely
+             */
+            val swapIDB64String = Base64.getEncoder().encodeToString(event.swapID.asByteArray())
+            databaseService.updateSwapHasSellerClosed(
+                swapID = swapIDB64String,
+                chainID = event.chainID.toString(),
+                hasSellerClosed = true
+            )
+            swap.hasSellerClosed = true
+            /*
+            If the user of this interface is the seller, then this is their SellerClosed event. Therefore, we should
+            update the state of the swap to show that the user has closed it.
+             */
+            if (swap.role == SwapRole.MAKER_AND_SELLER || swap.role == SwapRole.TAKER_AND_SELLER) {
+                Log.i(logTag, "handleSellerClosedEvent: setting state of ${event.swapID} to CLOSED")
+                databaseService.updateSwapState(
+                    swapID = swapIDB64String,
+                    chainID = event.chainID.toString(),
+                    state = SwapState.CLOSED.asString,
+                )
+                withContext(Dispatchers.Main) {
+                    swap.state.value = SwapState.CLOSED
+                }
+            }
+        } ?: run {
+            // Executed if we do not have a Swap with the ID specified in event
+            Log.i(logTag, "handleSellerClosedEvent: got event for ${event.swapID} which was not found in swapTruthSource")
+        }
+    }
 
 }
