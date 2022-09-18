@@ -84,6 +84,8 @@
 		6D9291CD284BC690002B9E43 /* P2PServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9291CC284BC690002B9E43 /* P2PServiceTest.swift */; };
 		6D948424289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */; };
 		6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */; };
+		6D9789D128D68ED7004ECF8A /* DatabaseKeyDeriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9789D028D68ED7004ECF8A /* DatabaseKeyDeriver.swift */; };
+		6D9789D328D6A0C7004ECF8A /* DatabaseKeyDeriverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9789D228D6A0C7004ECF8A /* DatabaseKeyDeriverTests.swift */; };
 		6D9A7282286FD63100458353 /* OfferEditedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9A7281286FD63100458353 /* OfferEditedEvent.swift */; };
 		6D9AAC7628B2F716000E7640 /* SwapNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC7528B2F716000E7640 /* SwapNotifiable.swift */; };
 		6D9AAC7828B2F7C1000E7640 /* SwapService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AAC7728B2F7C1000E7640 /* SwapService.swift */; };
@@ -224,6 +226,8 @@
 		6D9291CC284BC690002B9E43 /* P2PServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PServiceTest.swift; sourceTree = "<group>"; };
 		6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLite.swiftExtensions.swift; sourceTree = "<group>"; };
 		6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTakenEvent.swift; sourceTree = "<group>"; };
+		6D9789D028D68ED7004ECF8A /* DatabaseKeyDeriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseKeyDeriver.swift; sourceTree = "<group>"; };
+		6D9789D228D6A0C7004ECF8A /* DatabaseKeyDeriverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseKeyDeriverTests.swift; sourceTree = "<group>"; };
 		6D9A7281286FD63100458353 /* OfferEditedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferEditedEvent.swift; sourceTree = "<group>"; };
 		6D9AAC7528B2F716000E7640 /* SwapNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapNotifiable.swift; sourceTree = "<group>"; };
 		6D9AAC7728B2F7C1000E7640 /* SwapService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapService.swift; sourceTree = "<group>"; };
@@ -316,6 +320,7 @@
 			children = (
 				6D02FA86287F6A1700C89732 /* keys */,
 				6DC323D3273A2F1300936686 /* KMServiceTest.swift */,
+				6D9789D228D6A0C7004ECF8A /* DatabaseKeyDeriverTests.swift */,
 			);
 			path = key;
 			sourceTree = "<group>";
@@ -528,6 +533,7 @@
 			children = (
 				6D91C9842754327900D85654 /* keys */,
 				6D9ABCBC2736399F0034AE01 /* KeyManagerService.swift */,
+				6D9789D028D68ED7004ECF8A /* DatabaseKeyDeriver.swift */,
 			);
 			path = key;
 			sourceTree = "<group>";
@@ -920,6 +926,7 @@
 				6D9AAC7C28B30CF0000E7640 /* TestSwapService.swift in Sources */,
 				6D174E2D27AD7DB800E208F7 /* CINMessageParsers.swift in Sources */,
 				6DB0908028A6AF980005A702 /* NewSwapDataValidatorTests.swift in Sources */,
+				6D9789D328D6A0C7004ECF8A /* DatabaseKeyDeriverTests.swift in Sources */,
 				6D1D5D1228B6F33500A48282 /* TestOfferMessageNotifiable.swift in Sources */,
 				6D02FA88287F6A3100C89732 /* KeyPairTests.swift in Sources */,
 				6DD3042A28C38187006BB466 /* TestBlockchainErrorHandler.swift in Sources */,
@@ -1026,6 +1033,7 @@
 				6D70A5CE2866A64E003FEDF3 /* DatabaseServiceError.swift in Sources */,
 				6DA4633828CFF86C002ABA70 /* BuyerClosedEvent.swift in Sources */,
 				6D51876A28A48C1E0061315A /* StablecoinAmountField.swift in Sources */,
+				6D9789D128D68ED7004ECF8A /* DatabaseKeyDeriver.swift in Sources */,
 				6D80072628A9E88000510D01 /* SwapState.swift in Sources */,
 				6DE0896D284FD49300948166 /* OfferNotifiable.swift in Sources */,
 				6DF04AB6288DAA800021C84A /* OpeningOfferState.swift in Sources */,

@@ -301,9 +301,9 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
-     Attempts a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
+     Attempts to close a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
      
-     On the global `DispatchQueue`, this ensures that `swap` can be closed.. Then this calls the CommutoSwap contract's [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) function (via `blockchainService`), and persistently updates the state of the swap to `closed` and sets the swap's `hasBuyerClosed` or `hasSellerClosed` property to `true`, depending on whether the user is the buyer or seller in the swap. Finally, this does the same to `swap`, updating `state` on the main `DispatchQueue`.
+     On the global `DispatchQueue`, this ensures that `swap` can be closed.. Then this calls the CommutoSwap contract's [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) function (via `blockchainService`), and persistently updates the state of the swap to `closeSwapTransactionBroadcast`. Finally, this does the same to `swap`, updating `state` on the main `DispatchQueue`.
      
      - Parameters:
         - swap: The `Swap` this function will close.
@@ -341,7 +341,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 }
                 return blockchainService.closeSwap(id: swap.id).map { ($0, swap) }
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, swap in
-                logger.notice("closeSwap: reported for \(swap.id)")
+                logger.notice("closeSwap: closed \(swap.id)")
                 try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.closeSwapTransactionBroadcast.asString)
             }.done(on: DispatchQueue.main) { _, swap in
                 swap.state = .closeSwapTransactionBroadcast
@@ -671,7 +671,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      
      - Parameter event: The `BuyerClosedEvent` of which `SwapService` is being notified.
      
-     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or `SwapServiceError.nonmatchingChainIDError` if if the chain ID of `event` and the chain ID of the `Swap` with the ID specified in `event` do not match.
+     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or `SwapServiceError.nonmatchingChainIDError` if the chain ID of `event` and the chain ID of the `Swap` with the ID specified in `event` do not match.
      */
     func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {
         logger.notice("handleBuyerClosedEvent: handling for \(event.id.uuidString)")

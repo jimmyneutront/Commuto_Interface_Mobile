@@ -21,7 +21,7 @@ enum ClosingSwapState {
     /**
      Indicates that we are currently calling CommutoSwap's [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) function for the swap.
      */
-    case reporting
+    case closing
     /**
      Indicates that we have closed the corresponding swap.
      */
@@ -40,7 +40,7 @@ enum ClosingSwapState {
             return "Press Close Swap to close the swap"
         case .checking:
             return "Checking that swap can be closed..."
-        case .reporting:
+        case .closing:
             return "Closing swap..."
         case .completed:
             return "Successfully closed swap."

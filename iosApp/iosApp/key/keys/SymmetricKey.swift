@@ -9,6 +9,7 @@
 import CryptoSwift
 import Foundation
 
+#warning("TODO: Don't use CBC encryption")
 /**
  This is an AES-256 key, with functions for encryption and decryption.
  

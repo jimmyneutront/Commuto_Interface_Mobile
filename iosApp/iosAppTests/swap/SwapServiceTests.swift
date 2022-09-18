@@ -1215,7 +1215,7 @@ class SwapServiceTests: XCTestCase {
     }
     
     /**
-     Ensure that `SwapService` handles `PaymentReceivedEvent`s properly.
+     Ensures that `SwapService.closeSwap` and `BlockchainService.closeSwap` function properly.
      */
     func testCloseSwap() {
         
@@ -1362,7 +1362,7 @@ class SwapServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        // The ID of the swap being closed
+        // The ID of the swap that the buyer has closed
         let swapID = UUID()
         
         // The BuyerClosedEvent to be handled
@@ -1476,7 +1476,7 @@ class SwapServiceTests: XCTestCase {
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        // The ID of the swap being closed
+        // The ID of the swap that the seller has closed
         let swapID = UUID()
         
         // The SellerClosedEvent to be handled
