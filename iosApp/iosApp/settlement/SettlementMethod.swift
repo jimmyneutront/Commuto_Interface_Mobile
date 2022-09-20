@@ -28,6 +28,16 @@ struct SettlementMethod: Codable, Equatable, Identifiable {
      An ID that uniquely identifies this settlement method, so it can be consumed by SwiftUI's `ForEach`.
      */
     var id: String = UUID().uuidString
+    /**
+     This `SettlementMethod` as encoded to UTF-8 bytes, or `nil` if this settlement method cannot be encoded.
+     */
+    var onChainData: Data? {
+        try? JSONEncoder().encode(self)
+    }
+    /**
+     The private data associated with this settlement method, such as an address or bank account number of the settlement method's owner.
+     */
+    var privateData: String? = nil
     
     /**
      Specifies the JSON keys for `SettlementMethod` properties as specified in the [whitepaper](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-whitepaper.txt)
@@ -43,15 +53,15 @@ struct SettlementMethod: Codable, Equatable, Identifiable {
 extension SettlementMethod {
     
     static let sampleSettlementMethods: [SettlementMethod] = [
-        SettlementMethod(currency: "EUR", price: "0.94", method: "SEPA"),
-        SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT"),
-        SettlementMethod(currency: "BUSD", price: "1.00", method: "SANDDOLLAR"),
+        SettlementMethod(currency: "EUR", price: "0.94", method: "SEPA", privateData: "Some SEPA data"),
+        SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT", privateData: "Some SWIFT data"),
+        SettlementMethod(currency: "BUSD", price: "1.00", method: "SANDDOLLAR", privateData: "Some SANDDOLLAR data"),
     ]
     
     static let sampleSettlementMethodsEmptyPrices: [SettlementMethod] = [
-        SettlementMethod(currency: "EUR", price: "", method: "SEPA"),
-        SettlementMethod(currency: "USD", price: "", method: "SWIFT"),
-        SettlementMethod(currency: "BUSD", price: "", method: "SANDDOLLAR"),
+        SettlementMethod(currency: "EUR", price: "", method: "SEPA", privateData: "Some SEPA data"),
+        SettlementMethod(currency: "USD", price: "", method: "SWIFT", privateData: "Some SWIFT data"),
+        SettlementMethod(currency: "BUSD", price: "", method: "SANDDOLLAR", privateData: "Some SANDDOLLAR data"),
     ]
     
 }

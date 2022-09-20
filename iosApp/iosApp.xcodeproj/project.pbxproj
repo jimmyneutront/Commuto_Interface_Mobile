@@ -410,7 +410,6 @@
 				6D56891D28656D1000BDE490 /* OfferServiceError.swift */,
 				6D70A5C928665E50003FEDF3 /* OfferTruthSource.swift */,
 				6DC2BF41287762CF00E5C3D7 /* OfferDirection.swift */,
-				6D6F190C287E02DC00B9BCA1 /* SettlementMethod.swift */,
 				6D7CC6A728934BF200917505 /* OfferState.swift */,
 				6DF04AB5288DAA800021C84A /* OpeningOfferState.swift */,
 				6D774231289CCCEA0068C862 /* CancelingOfferState.swift */,
@@ -595,6 +594,14 @@
 			path = blockchain;
 			sourceTree = "<group>";
 		};
+		6DED693C28D7DB0B00EA42C0 /* settlement */ = {
+			isa = PBXGroup;
+			children = (
+				6D6F190C287E02DC00B9BCA1 /* SettlementMethod.swift */,
+			);
+			path = settlement;
+			sourceTree = "<group>";
+		};
 		6DEE9ADE288AE1F300EF07D8 /* validation */ = {
 			isa = PBXGroup;
 			children = (
@@ -675,6 +682,7 @@
 		7555FF7D242A565900829871 /* iosApp */ = {
 			isa = PBXGroup;
 			children = (
+				6DED693C28D7DB0B00EA42C0 /* settlement */,
 				6D0940ED28A34082009168BE /* swap */,
 				6D948420289BF6BF00E2AEC8 /* extension */,
 				6D9291C8284B9FB9002B9E43 /* p2p */,

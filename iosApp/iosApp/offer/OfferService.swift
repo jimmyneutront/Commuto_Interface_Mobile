@@ -209,9 +209,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 if let afterPersistentStorage = afterPersistentStorage {
                     afterPersistentStorage()
                 }
-                var settlementMethodStrings: [String] = []
-                for settlementMethod in newOffer.onChainSettlementMethods {
-                    settlementMethodStrings.append(settlementMethod.base64EncodedString())
+                var settlementMethodStrings: [(String, String?)] = []
+                for settlementMethod in newOffer.settlementMethods {
+                    settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), settlementMethod.privateData))
                 }
                 logger.notice("openOffer: persistently storing \(settlementMethodStrings.count) settlement methods for offer \(newOffer.id.uuidString)")
                 try databaseService.storeSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
@@ -715,9 +715,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             )
             try databaseService.storeOffer(offer: offerForDatabase)
             logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
-            var settlementMethodStrings: [String] = []
-            for settlementMethod in offer.onChainSettlementMethods {
-                settlementMethodStrings.append(settlementMethod.base64EncodedString())
+            var settlementMethodStrings: [(String, String?)] = []
+            for settlementMethod in offer.settlementMethods {
+                settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), settlementMethod.privateData))
             }
             try databaseService.storeSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
             logger.notice("handleOfferOpenedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
@@ -765,9 +765,10 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         }
         let offerIdString = event.id.asData().base64EncodedString()
         let chainIDString = String(event.chainID)
-        var settlementMethodStrings: [String] = []
+        #warning("TODO: Deal with the fact that this will delete private settlement method data for offers made by the user")
+        var settlementMethodStrings: [(String, String?)] = []
         for settlementMethod in offerStruct.settlementMethods {
-            settlementMethodStrings.append(settlementMethod.base64EncodedString())
+            settlementMethodStrings.append((settlementMethod.base64EncodedString(), nil))
         }
         try databaseService.storeSettlementMethods(offerID: offerIdString, _chainID: chainIDString, settlementMethods: settlementMethodStrings)
         logger.notice("handleOfferEditedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(event.id.uuidString)")

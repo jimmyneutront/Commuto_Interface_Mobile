@@ -20,7 +20,7 @@ class DatabaseService {
     /**
      Creates a new `DatabaseService`, and creates an in-memory database with its reference stored in `DatabaseService`'s `connection` property.
      
-     - Parameter databaseKey: The `SymmetricKey` with which this will encrypt and decrypt encrypted database fields. If no value is provided, this uses the key created by `DatabaseKeyDeriver` given the password "test\_password" and salt string "test\_salt". Note that the default value should ONLY be used for testing.
+     - Parameter databaseKey: The `SymmetricKey` with which this will encrypt and decrypt encrypted database fields. If no value is provided, this uses the key created by `DatabaseKeyDeriver` given the password "test\_password" and salt string "test\_salt". Note that the default value should ONLY be used for testing/development.
      */
     init(
         databaseKey: SymmetricKey = try! DatabaseKeyDeriver(password: "test_password", salt: "test_salt".data(using: .utf8)!).key
@@ -151,6 +151,14 @@ class DatabaseService {
      */
     let settlementMethod = Expression<String>("settlementMethod")
     /**
+     A database structure representing encrypted private data for a particular settlement method. This field is optional because this interface may not have private data for settlement methods not owned by the user.
+     */
+    let privateSettlementMethodData = Expression<String?>("privateData")
+    /**
+     A database structure representing an initialization vector used to encrypt a piece of private settlement method data. This field is optional because this interface may not have private data (and thus no initialization vector) for settlement methods not owned by the user.
+     */
+    let privateSettlementMethodDataInitializationVector = Expression<String?>("privateDataInitializationVector")
+    /**
      A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)  or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `protocolVersion` property.
      */
     let protocolVersion = Expression<String>("protocolVersion")
@@ -225,6 +233,8 @@ class DatabaseService {
             t.column(id)
             t.column(chainID)
             t.column(settlementMethod)
+            t.column(privateSettlementMethodData)
+            t.column(privateSettlementMethodDataInitializationVector)
         })
         try connection.run(keyPairs.create { t in
             t.column(interfaceId, unique: true)
@@ -392,21 +402,32 @@ class DatabaseService {
     }
     
     /**
-     Deletes all persistently stored settlement methods associated with the specified offer ID and chain ID, and then persistently stores each settlement method in the supplied `Array`, associating each one with the supplied offer ID and chain ID.
+     Deletes all persistently stored settlement methods, their private data and corresponding initialization vectors (if any) associated with the specified offer ID and chain ID, and then persistently stores each settlement method and private data string tuples in the supplied `Array`, associating each one with the supplied offer ID and chain ID. Private settlement method data is encrypted with `databaseKey` and a new initialization vector.
      
      - Parameters:
         - offerID: The ID of the offer or swap to be associated with the settlement methods.
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
-        - settlementMethods: The settlement methods to be persistently stored.
+        - settlementMethods: The settlement methods to be persistently stored, as a tuple containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
      */
-    func storeSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [String]) throws {
+    func storeSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [(String, String?)]) throws {
         _ = try databaseQueue.sync {
             try connection.run(settlementMethods.filter(id == offerID && chainID == _chainID).delete())
             for _settlementMethod in _settlementMethods {
+                var privateDataString: String? = nil
+                var initializationVectorString: String? = nil
+                let privateBytes = _settlementMethod.1?.bytes
+                if let privateBytes = privateBytes {
+                    let privateData = Data(privateBytes)
+                    let encryptedData = try databaseKey.encrypt(data: privateData)
+                    privateDataString = encryptedData.encryptedData.base64EncodedString()
+                    initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
+                }
                 try connection.run(settlementMethods.insert(
                     id <- offerID,
                     chainID <- _chainID,
-                    settlementMethod <- _settlementMethod
+                    settlementMethod <- _settlementMethod.0,
+                    privateSettlementMethodData <- privateDataString,
+                    privateSettlementMethodDataInitializationVector <- initializationVectorString
                 ))
             }
         }
@@ -427,8 +448,9 @@ class DatabaseService {
         logger.notice("deleteSettlementMethods: deleted for offer with B64 ID \(offerID)")
     }
 
+    #warning("TODO: Update this")
     /**
-     Retrieves the persistently stored settlement methods associated with the specified offer ID and chain ID, or returns `nil` if no such settlement methods are present.
+     Retrieves the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID, or returns `nil` if no such settlement methods are present.
      
      - Parameters:
         - offerID: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
@@ -436,9 +458,9 @@ class DatabaseService {
      
      - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`.
      
-     - Returns: An `Array` of `Strings` which are settlement methods associated with `id`, or `nil` if no such settlement methods are found.
+     - Returns: `nil` if no such settlement methods are found, or an `Array` of tuples containing a string and an optional string, the first of which is a settlement method associated with `id`, the second of which is the private data associated with that settlement method, or `nil` if no such data is found or if it cannot be decrypted.
      */
-    func getSettlementMethods(offerID: String, _chainID: String) throws -> [String]? {
+    func getSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
         var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
             rowIterator = try connection.prepareRowIterator(settlementMethods.filter(id == offerID && chainID == _chainID))
@@ -448,9 +470,28 @@ class DatabaseService {
         }
         let result = try Array(rowIterator!)
         if result.count > 0 {
-            var settlementMethodsArray: [String] = []
+            var settlementMethodsArray: [(String, String?)] = []
             for (index, _) in result.enumerated() {
-                settlementMethodsArray.append(result[index][settlementMethod])
+                var decryptedPrivateDataString: String? = nil
+                let privateDataCipherString = result[index][privateSettlementMethodData]
+                let privateDataInitializationVectorString = result[index][privateSettlementMethodDataInitializationVector]
+                if let privateDataCipherString = privateDataCipherString, let privateDataInitializationVectorString = privateDataInitializationVectorString {
+                    let privateCipherData = Data(base64Encoded: privateDataCipherString)
+                    let privateDataInitializationVector = Data(base64Encoded: privateDataInitializationVectorString)
+                    if let privateCipherData = privateCipherData, let privateDataInitializationVector = privateDataInitializationVector {
+                        let privateDataObject = SymmetricallyEncryptedData(data: privateCipherData, iv: privateDataInitializationVector)
+                        if let decryptedPrivateData = try? databaseKey.decrypt(data: privateDataObject) {
+                            decryptedPrivateDataString = String(bytes: decryptedPrivateData, encoding: .utf8)
+                        } else {
+                            logger.error("getSettlementMethods: unable to get string from decoded private data using utf8 encoding for offer with B64 ID \(offerID)")
+                        }
+                    } else {
+                        logger.error("getSettlementMethods: found private data for offer with B64 ID \(offerID) but could not decode bytes from strings")
+                    }
+                } else {
+                    logger.notice("getSettlementMethods: did not find private settlement method data for settlement method for offer with B64 ID \(offerID)")
+                }
+                settlementMethodsArray.append((result[index][settlementMethod], decryptedPrivateDataString))
             }
             logger.notice("getSettlementMethods: returning \(settlementMethodsArray.count) for offer with B64 ID \(offerID)")
             return settlementMethodsArray

@@ -140,7 +140,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.state, OfferState.awaitingPublicKeyAnnouncement.asString)
         let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
-        XCTAssertEqual(settlementMethodsInDatabase![0], Data("USD-SWIFT|a price here".utf8).base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase![0].0, Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
     
     /**
@@ -957,7 +957,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.state, OfferState.awaitingPublicKeyAnnouncement.asString)
         let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
-        XCTAssertEqual(settlementMethodsInDatabase![0], Data("{\"f\":\"EUR\",\"p\":\"SEPA\",\"m\":\"0.98\"}".utf8).base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase![0].0, Data("{\"f\":\"EUR\",\"p\":\"SEPA\",\"m\":\"0.98\"}".utf8).base64EncodedString())
     }
     
     /**
@@ -1281,7 +1281,10 @@ class OfferServiceTests: XCTestCase {
         for settlementMethod in offerInTruthSource.onChainSettlementMethods {
             expectedSettlementMethodsInDatabase.append(settlementMethod.base64EncodedString())
         }
-        XCTAssertEqual(expectedSettlementMethodsInDatabase, settlementMethodsInDatabase)
+        
+        for (index, element) in expectedSettlementMethodsInDatabase.enumerated() {
+            XCTAssertEqual(element, settlementMethodsInDatabase![index].0)
+        }
         
         let offerStructOnChain = try! blockchainService.getOffer(id: offerInTruthSource.id)!
         XCTAssertTrue(offerStructOnChain.isCreated)
