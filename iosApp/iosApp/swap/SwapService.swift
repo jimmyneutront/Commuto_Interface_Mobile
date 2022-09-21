@@ -419,6 +419,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         #warning("TODO: check for taker information once SettlementMethodService is implemented")
         // Persistently store new swap object
         logger.notice("handleNewSwap: persistently storing \(swapID.uuidString)")
+        #warning("get actual maker private data here")
         let newSwapForDatabase = DatabaseSwap(
             id: newSwap.id.asData().base64EncodedString(),
             isCreated: newSwap.isCreated,
@@ -436,6 +437,8 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             serviceFeeRate: String(newSwap.serviceFeeRate),
             onChainDirection: String(newSwap.onChainDirection),
             onChainSettlementMethod: newSwap.onChainSettlementMethod.base64EncodedString(),
+            makerPrivateSettlementMethodData: nil,
+            takerPrivateSettlementMethodData: nil,
             protocolVersion: String(newSwap.protocolVersion),
             isPaymentSent: newSwap.isPaymentSent,
             isPaymentReceived: newSwap.isPaymentReceived,

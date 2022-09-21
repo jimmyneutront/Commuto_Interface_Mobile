@@ -518,6 +518,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] newSwap in
                 logger.notice("takeOffer: persistently storing \(newSwap.id.uuidString)")
                 // Persistently store the new swap
+                #warning("TODO: get actual taker private data here")
                 let newSwapForDatabase = DatabaseSwap(
                     id: newSwap.id.asData().base64EncodedString(),
                     isCreated: newSwap.isCreated,
@@ -535,6 +536,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     serviceFeeRate: String(newSwap.serviceFeeRate),
                     onChainDirection: String(newSwap.onChainDirection),
                     onChainSettlementMethod: newSwap.onChainSettlementMethod.base64EncodedString(),
+                    makerPrivateSettlementMethodData: nil,
+                    takerPrivateSettlementMethodData: nil,
                     protocolVersion: String(newSwap.protocolVersion),
                     isPaymentSent: newSwap.isPaymentSent,
                     isPaymentReceived: newSwap.isPaymentReceived,

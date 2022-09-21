@@ -159,6 +159,22 @@ class DatabaseService {
      */
     let privateSettlementMethodDataInitializationVector = Expression<String?>("privateDataInitializationVector")
     /**
+     A database structure representing a maker's encrypted private data for their swap's settlement method. This field is optional because this interface may not yet have obtained the swap maker's private data.
+     */
+    let makerPrivateSettlementMethodData = Expression<String?>("makerPrivateData")
+    /**
+     A database structure representing an initialization vector used to encrypt a `makerPrivateSettlementMethodData`. This field is optional because this interface may not have   `makerPrivateSettlementMethodData`.
+     */
+    let makerPrivateSettlementMethodDataInitializationVector = Expression<String?>("privateDataInitializationVector")
+    /**
+     A database structure representing a taker's encrypted private data for their swap's settlement method. This field is optional because this interface may not yet have obtained the swap taker's private data.
+     */
+    let takerPrivateSettlementMethodData = Expression<String?>("takerPrivateData")
+    /**
+     A database structure representing an initialization vector used to encrypt a `takerPrivateSettlementMethodData`. This field is optional because this interface may not have   `takerPrivateSettlementMethodData`.
+     */
+    let takerPrivateSettlementMethodDataInitializationVector = Expression<String?>("takerPrivateDataInitializationVector")
+    /**
      A database structure representing an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)  or [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap)'s `protocolVersion` property.
      */
     let protocolVersion = Expression<String>("protocolVersion")
@@ -262,6 +278,10 @@ class DatabaseService {
             t.column(serviceFeeRate)
             t.column(onChainDirection)
             t.column(settlementMethod)
+            t.column(makerPrivateSettlementMethodData)
+            t.column(makerPrivateSettlementMethodDataInitializationVector)
+            t.column(takerPrivateSettlementMethodData)
+            t.column(takerPrivateSettlementMethodDataInitializationVector)
             t.column(protocolVersion)
             t.column(isPaymentSent)
             t.column(isPaymentReceived)
@@ -448,7 +468,6 @@ class DatabaseService {
         logger.notice("deleteSettlementMethods: deleted for offer with B64 ID \(offerID)")
     }
 
-    #warning("TODO: Update this")
     /**
      Retrieves the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID, or returns `nil` if no such settlement methods are present.
      
@@ -583,7 +602,8 @@ class DatabaseService {
      
      - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is nil, and a `DatabaseServiceError.unexpectedQueryResult` if multiple public keys are found with the same interface ID or if the interface ID of the public key returned from the database does not match `interfaceId`.
      */
-    func getPublicKey(interfaceId interfId: String) throws -> DatabasePublicKey? {        var rowIterator: RowIterator? = nil
+    func getPublicKey(interfaceId interfId: String) throws -> DatabasePublicKey? {
+        var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
             rowIterator = try connection.prepareRowIterator(publicKeys.filter(interfaceId == interfId))
         }
@@ -605,12 +625,15 @@ class DatabaseService {
         }
     }
     
+    #warning("TODO: update this")
     /**
      Persistently stores a `DatabaseSwap`. If a `DatabaseSwap` with an offer ID equal to that of `swap` already exists in the database, this does nothing.
     
      - Parameter swap: The `swap` to be persistently stored.
      */
     func storeSwap(swap: DatabaseSwap) throws {
+        let encryptedMakerData = try encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: swap.makerPrivateSettlementMethodData)
+        let encryptedTakerData = try encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: swap.takerPrivateSettlementMethodData)
         try databaseQueue.sync {
             do {
                 try connection.run(swaps.insert(
@@ -630,6 +653,10 @@ class DatabaseService {
                     serviceFeeRate <- swap.serviceFeeRate,
                     onChainDirection <- swap.onChainDirection,
                     settlementMethod <- swap.onChainSettlementMethod,
+                    makerPrivateSettlementMethodData <- encryptedMakerData.0,
+                    makerPrivateSettlementMethodDataInitializationVector <- encryptedMakerData.1,
+                    takerPrivateSettlementMethodData <- encryptedTakerData.0,
+                    takerPrivateSettlementMethodDataInitializationVector <- encryptedTakerData.1,
                     protocolVersion <- swap.protocolVersion,
                     isPaymentSent <- swap.isPaymentSent,
                     isPaymentReceived <- swap.isPaymentReceived,
@@ -645,6 +672,25 @@ class DatabaseService {
                 logger.notice("storeSwap: swap with B64 ID \(swap.id) already exists in database")
             }
         }
+    }
+    
+    /**
+     Encrypts `privateSettlementMethod` data with `databaseKey` along with the initialization vector used for encryption, and returns both as Base64 encoded strings of bytes within a tuple, or returns `nil` if `privateSettlementMethodData` is `nil`.
+     
+     - Parameter privateSettlementMethodData: The string of private data to be symmetrically encrypted with `databaseKey`.
+     - Returns: A tuple containing to optional strings. If `privateSettlementMethodData` is not `nil`, the first will be `privateSettlementMethodData` encrypted with `databaseKey` and a new initialization vector as a Base64 encoded string of bytes, and the second will be the initialization vector used to encrypt `privateSettlementMethodData`, also as a Base64 encoded string of bytes. If `privateSettlementMethodData` is `nil`, both strings will be `nil`
+     */
+    private func encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?) throws -> (String?, String?) {
+        var privateCipherDataString: String? = nil
+        var initializationVectorString: String? = nil
+        let privateBytes = privateSettlementMethodData?.bytes
+        if let privateBytes = privateBytes {
+            let privateData = Data(privateBytes)
+            let encryptedData = try databaseKey.encrypt(data: privateData)
+            privateCipherDataString = encryptedData.encryptedData.base64EncodedString()
+            initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
+        }
+        return (privateCipherDataString, initializationVectorString)
     }
     
     /**
@@ -747,6 +793,7 @@ class DatabaseService {
         logger.notice("deleteSwaps: deleted swaps with B64 ID \(swapID) and chain ID \(_chainID), if present")
     }
     
+    #warning("TODO: Update this")
     /**
      Retrieves the persistently stored `DatabaseSwap` with the specified offer ID, or returns `nil` if no such event is present.
      
@@ -767,6 +814,14 @@ class DatabaseService {
             guard result[0][id] == _id else {
                 throw DatabaseServiceError.unexpectedQueryResult(message: "Swap ID of returned ")
             }
+            let decryptedMakerPrivateData = try decryptPrivateSwapSettlementMethodData(
+                privateSettlementMethodData: result[0][makerPrivateSettlementMethodData],
+                privateSettlementMethodDataInitializationVector: result[0][makerPrivateSettlementMethodDataInitializationVector]
+            )
+            let decryptedTakerPrivateData = try decryptPrivateSwapSettlementMethodData(
+                privateSettlementMethodData: result[0][takerPrivateSettlementMethodData],
+                privateSettlementMethodDataInitializationVector: result[0][takerPrivateSettlementMethodDataInitializationVector]
+            )
             logger.notice("getSwap: returning swap with B64 ID \(_id)")
             return DatabaseSwap(
                 id: result[0][id],
@@ -785,6 +840,8 @@ class DatabaseService {
                 serviceFeeRate: result[0][serviceFeeRate],
                 onChainDirection: result[0][onChainDirection],
                 onChainSettlementMethod: result[0][settlementMethod],
+                makerPrivateSettlementMethodData: decryptedMakerPrivateData,
+                takerPrivateSettlementMethodData: decryptedTakerPrivateData,
                 protocolVersion: result[0][protocolVersion],
                 isPaymentSent: result[0][isPaymentSent],
                 isPaymentReceived: result[0][isPaymentReceived],
@@ -799,6 +856,23 @@ class DatabaseService {
             logger.notice("getSwap: no swap found with B64 ID \(_id)")
             return nil
         }
+    }
+    
+    private func decryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?, privateSettlementMethodDataInitializationVector: String?) throws -> String? {
+        var decryptedPrivateDataString: String? = nil
+        let privateDataCipherString = privateSettlementMethodData
+        let privateDataInitializationVectorString = privateSettlementMethodDataInitializationVector
+        if let privateDataCipherString = privateDataCipherString, let privateDataInitializationVectorString = privateDataInitializationVectorString {
+            let privateCipherData = Data(base64Encoded: privateDataCipherString)
+            let privateDataInitializationVector = Data(base64Encoded: privateDataInitializationVectorString)
+            if let privateCipherData = privateCipherData, let privateDataInitializationVector = privateDataInitializationVector {
+                let privateDataObject = SymmetricallyEncryptedData(data: privateCipherData, iv: privateDataInitializationVector)
+                if let decryptedPrivateData = try? databaseKey.decrypt(data: privateDataObject) {
+                    decryptedPrivateDataString = String(bytes: decryptedPrivateData, encoding: .utf8)
+                }
+            }
+        }
+        return decryptedPrivateDataString
     }
     
 }
