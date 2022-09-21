@@ -625,7 +625,6 @@ class DatabaseService {
         }
     }
     
-    #warning("TODO: update this")
     /**
      Persistently stores a `DatabaseSwap`. If a `DatabaseSwap` with an offer ID equal to that of `swap` already exists in the database, this does nothing.
     
@@ -675,7 +674,7 @@ class DatabaseService {
     }
     
     /**
-     Encrypts `privateSettlementMethod` data with `databaseKey` along with the initialization vector used for encryption, and returns both as Base64 encoded strings of bytes within a tuple, or returns `nil` if `privateSettlementMethodData` is `nil`.
+     Encrypts `privateSettlementMethodData` with `databaseKey` along with the initialization vector used for encryption, and returns both as Base64 encoded strings of bytes within a tuple, or returns `nil` if `privateSettlementMethodData` is `nil`.
      
      - Parameter privateSettlementMethodData: The string of private data to be symmetrically encrypted with `databaseKey`.
      - Returns: A tuple containing to optional strings. If `privateSettlementMethodData` is not `nil`, the first will be `privateSettlementMethodData` encrypted with `databaseKey` and a new initialization vector as a Base64 encoded string of bytes, and the second will be the initialization vector used to encrypt `privateSettlementMethodData`, also as a Base64 encoded string of bytes. If `privateSettlementMethodData` is `nil`, both strings will be `nil`
@@ -793,7 +792,6 @@ class DatabaseService {
         logger.notice("deleteSwaps: deleted swaps with B64 ID \(swapID) and chain ID \(_chainID), if present")
     }
     
-    #warning("TODO: Update this")
     /**
      Retrieves the persistently stored `DatabaseSwap` with the specified offer ID, or returns `nil` if no such event is present.
      
@@ -858,6 +856,15 @@ class DatabaseService {
         }
     }
     
+    /**
+     Decrypts `privateSettlementMethodData` with `databaseKey` and `privateSettlementMethodDataInitializationVector` and then returns the result as a UTF-8 string, or returns `nil` if `privateSettlementMethodData` or `privateSettlementMethodDataInitializationVector` is `nil`.
+     
+     - Parameters:
+        - privateSettlementMethodData: The private data to be decrypted, as a Base64 encoded string of bytes.
+        - privateSettlementMethodDataInitializationVector: The initialization vector that will be used to decrypt `privateSettlementMethodData`, as a Base64 encoded string of bytes.
+     
+     - Returns: An optional string that will either be a UTF-8 string made from the results of decryption, or `nil` if either of the parameters are `nil`.
+     */
     private func decryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?, privateSettlementMethodDataInitializationVector: String?) throws -> String? {
         var decryptedPrivateDataString: String? = nil
         let privateDataCipherString = privateSettlementMethodData

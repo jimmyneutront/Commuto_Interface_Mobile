@@ -72,11 +72,11 @@ struct DatabaseSwap: Equatable {
      */
     let onChainSettlementMethod: String
     /**
-     The maker's private settlement method data (such as an address or bank account number) associated with this swap's settlement method, or `nil` if no such data exists.
+     The maker's private settlement method data (such as an address or bank account number) associated with this swap's settlement method as a UTF-8 string. or `nil` if no such data exists.
      */
     let makerPrivateSettlementMethodData: String?
     /**
-     The taker's private settlement method data (such as an address or bank account number) associated with this swap's settlement method, or `nil` if no such data exists.
+     The taker's private settlement method data (such as an address or bank account number) associated with this swap's settlement method as a UTF-8 string, or `nil` if no such data exists.
      */
     let takerPrivateSettlementMethodData: String?
     /**
