@@ -27,7 +27,10 @@ func validateEditedSettlementMethods(
     }
     try settlementMethods.forEach { settlementMethod in
         guard settlementMethod.price != "" else {
-            throw EditedSettlementMethodValidationError(desc: "You must specify a price for each selected settlement method.")
+            throw EditedSettlementMethodValidationError(desc: "You must specify a price for each settlement method you select.")
+        }
+        guard settlementMethod.privateData != nil else {
+            throw NewOfferDataValidationError(desc: "You must supply your information for each settlement method you select.")
         }
     }
     return settlementMethods
