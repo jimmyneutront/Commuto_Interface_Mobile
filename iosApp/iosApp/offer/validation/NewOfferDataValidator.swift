@@ -21,6 +21,7 @@ import web3swift
  - the user has specified a valid direction
  - the user has selected at least one settlement method
  - the user has specified a price for each selected settlement method.
+ - the user has supplied their information for each selected settlement method.
  
 - Parameters:
     - chainID: The ID of the blockchain on which the offer should be created.
@@ -74,6 +75,9 @@ func validateNewOfferData(
     try settlementMethods.forEach { settlementMethod in
         guard settlementMethod.price != "" else {
             throw NewOfferDataValidationError(desc: "You must specify a price for each selected settlement method.")
+        }
+        guard settlementMethod.privateData != nil else {
+            throw NewOfferDataValidationError(desc: "You must supply your information for each settlement method you select.")
         }
     }
     return ValidatedNewOfferData(
