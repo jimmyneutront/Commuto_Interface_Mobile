@@ -17,6 +17,7 @@ import BigInt
     - (if the offer's lower and upper bound amounts are not equal) the takenSwapAmount is within the bounds specified by the offer maker
     - the user has selected a settlement method
     - the settlement method selected by the user is accepted by the offer maker
+    - the user has supplied their information for the selected settlement method.
  
  - Parameters:
     - offer: The `Offer` that is being taken.
@@ -57,7 +58,10 @@ func validateNewSwapData(
         throw NewSwapDataValidationError(desc: "You must specify a stablecoin amount that is not greater than the maximum amount.")
     }
     guard let selectedSettlementMethod = selectedSettlementMethod else {
-        throw NewSwapDataValidationError(desc: ".")
+        throw NewSwapDataValidationError(desc: "You must select a settlement method.")
+    }
+    guard selectedSettlementMethod.privateData != nil else {
+        throw NewSwapDataValidationError(desc: "You must supply your information for the settlement method you select.")
     }
     guard let selectedSettlementMethodInArray = offer.settlementMethods.first(where: { settlementMethod in
         settlementMethod.currency == selectedSettlementMethod.currency && settlementMethod.price == selectedSettlementMethod.price && settlementMethod.method == selectedSettlementMethod.method

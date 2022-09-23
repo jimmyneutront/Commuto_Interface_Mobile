@@ -12,6 +12,7 @@
  This function ensures that:
     - the user has selected at least one settlement method
     - the user has specified a price for each selected settlement method
+    - the user has supplied their information for each selected settlement method.
  
  - Parameter settlementMethods: The `Array` of `SettlementMethod`s to be validated.
  
