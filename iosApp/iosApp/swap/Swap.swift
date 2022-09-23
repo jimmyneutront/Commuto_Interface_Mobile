@@ -155,6 +155,10 @@ class Swap: ObservableObject {
      The `Error` that we encountered during the swap closing process, or `nil` if no such error has occured.
      */
     var closingSwapError: Error? = nil
+    /**
+     The private settlement method data belonging to the maker of this swap for this swap's settlement method, or `nil` if such data does not exist.
+     */
+    var makerPrivateSettlementMethodData: String? = nil
     
     
     /**

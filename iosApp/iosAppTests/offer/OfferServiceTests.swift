@@ -634,7 +634,7 @@ class OfferServiceTests: XCTestCase {
                 chainIDForMessage = chainID
                 expectation.fulfill()
             }
-            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            func handleNewSwap(takenOffer: Offer) throws {}
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
             func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
@@ -750,16 +750,16 @@ class OfferServiceTests: XCTestCase {
         
         let offerTruthSource = TestOfferTruthSource()
         
-        // OfferService should call the handleNewSwap method of this class, passing a UUID equal to offerID. We need this new TestSwapService declaration to track when handleNewSwap is called
+        // OfferService should call the handleNewSwap method of this class, passing an offer with an ID equal to offerID. We need this new TestSwapService declaration to track when handleNewSwap is called
         class TestSwapService: SwapNotifiable {
-            let expectation = XCTestExpectation(description: "Fulfilled when handleNewSwap is called")
+            let handleNewSwapExpectation = XCTestExpectation(description: "Fulfilled when handleNewSwap is called")
             var swapID: UUID? = nil
             var chainID: BigUInt? = nil
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
-            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {
-                self.swapID = swapID
-                self.chainID = chainID
-                expectation.fulfill()
+            func handleNewSwap(takenOffer: Offer) throws {
+                self.swapID = takenOffer.id
+                self.chainID = takenOffer.chainID
+                handleNewSwapExpectation.fulfill()
             }
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
@@ -845,7 +845,7 @@ class OfferServiceTests: XCTestCase {
         offerService.blockchainService = blockchainService
         blockchainService.listen()
         
-        wait(for: [swapService.expectation], timeout: 60.0)
+        wait(for: [swapService.handleNewSwapExpectation], timeout: 60.0)
         XCTAssertEqual(offerID, swapService.swapID)
         XCTAssertEqual(BigUInt(31337), swapService.chainID)
         XCTAssertFalse(errorHandler.gotError)

@@ -25,11 +25,9 @@ protocol SwapNotifiable {
     /**
      The function called by `OfferService` when an offer made by the user of this interface has been taken.
      
-     - Parameters:
-        - swapID: The ID of the offer that has been taken.
-        - chainID: The ID of the blockchain on which the taken offer exists.
+     - Parameter takenOffer: The `Offer` made by the user of this interface that has been taken and now corresponds to a swap.
      */
-    func handleNewSwap(swapID: UUID, chainID: BigUInt) throws
+    func handleNewSwap(takenOffer: Offer) throws
     
     /**
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `SwapFilledEvent`.

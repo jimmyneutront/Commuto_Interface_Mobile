@@ -822,7 +822,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository` and checks if the user of this interface is  the taker of the offer. If so, then this calls `swapService.sendTakerInformationMessage`. If not, this checks if the user of this interface is the maker of the offer. If so, this calls `swapService.handleNewSwap`. If the user of this interface is NOT the taker of the offer, (regardless of whether the user is or is not the maker) this removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerTakenEventsRepository`, and then checks that the chain ID of the event matches the chain ID of the `Offer` mapped to the offer ID specified in `event` in `offerTruthSource`'s `offers` dictionary on the main thread. If they do not match, this returns. If they do match, then this synchronously removes the `Offer` from said `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository` and checks if a swap with the ID specified in `event` exists in persistent storage. If such a swap exists, this assumes that the user of this interface is the taker of the offer, and then calls `swapService.sendTakerInformationMessage`. If such a swap does not exist, this searches for an `Offer` in `offerTruthSource` with an ID equal to that specified in `event`. If this finds such an `Offer`, this ensures that the chain ID of the offer and the chain ID specified in `event` match, and then checks if the user of this interface is the maker of the offer. If so, this calls `swapService.handleNewSwap`. Then, regardless of whether the user of this interface is the maker of the offer, this removes the corresponding offer and its settlement methods from persistent storage, and then synchronously removes the `Offer` from `offersTruthSource` on the main thread. Finally, regardless of whether a swap with the ID specified in `event` exists in persistent storage, this removes `event` from `offerTakenEventRepository`.
      
      - Parameter event: The `OfferTakenEvent` of which `OfferService` is being notified.
      
@@ -837,30 +837,34 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             logger.notice("handleOfferTakenEvent: \(event.id) was taken by the user of this interface, sending taker info")
             try swapService.sendTakerInformationMessage(swapID: event.id, chainID: event.chainID)
         } else {
-            let offerInDatabase = try databaseService.getOffer(id: event.id.asData().base64EncodedString())
-            // If we have the offer in persistent storage and we are the maker, then we update handle the new swap
-            if offerInDatabase != nil && (offerInDatabase?.isUserMaker ?? false) {
-                logger.notice("handleOfferTakenEvent: \(event.id) was made by the user of this interface, handling new swap")
-                try swapService.handleNewSwap(swapID: event.id, chainID: event.chainID)
-            }
-            // Regardless of whether we are or are not the maker of this offer, we are not the taker, so we remove the offer and its settlement methods.
-            try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
-            logger.notice("handleOfferTakenEvent: deleted offer \(event.id.uuidString) from persistent storage")
-            try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
-            logger.notice("handleOfferTakenEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
-            offerTakenEventRepository.remove(event)
             guard var offerTruthSource = offerTruthSource else {
                 throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferTakenEvent call")
             }
-            // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
-            DispatchQueue.main.sync {
-                if offerTruthSource.offers[event.id]?.chainID == event.chainID {
-                    offerTruthSource.offers[event.id]?.isTaken = true
+            guard let offer = offerTruthSource.offers[event.id] else {
+                logger.notice("handleOfferTakenEvent: got event for offer \(event.id.uuidString) not found in offerTruthSource")
+                return
+            }
+            if (offer.chainID == event.chainID) {
+                // If we have the offer and we are the maker, then we handle the new swap
+                if offer.isUserMaker {
+                    logger.notice("handleOfferTakenEvent: \(event.id) was made by the user of this interface, handling new swap")
+                    try swapService.handleNewSwap(takenOffer: offer)
+                }
+                // Regardless of whether we are or are not the maker of this offer, we are not the taker, so we remove the offer and its settlement methods.
+                try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
+                logger.notice("handleOfferTakenEvent: deleted offer \(event.id.uuidString) from persistent storage")
+                try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
+                logger.notice("handleOfferTakenEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
+                DispatchQueue.main.sync {
+                    offer.isTaken = true
                     offerTruthSource.offers.removeValue(forKey: event.id)
                 }
+                logger.notice("handleOfferTakenEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
+            } else {
+                logger.notice("handleOfferTakenEvent: chain ID \(String(event.chainID)) did not match chain ID of offer \(event.id.uuidString)")
             }
-            logger.notice("handleOfferTakenEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
         }
+        offerTakenEventRepository.remove(event)
     }
     
     /**

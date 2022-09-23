@@ -354,22 +354,20 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
-     Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified swap ID, creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation` using the on chain swap, and maps `swapID` lto the new `Swap` on the main `DispatchQueue`. This should only be called for swaps made by the user of this interface.
+     Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) corresponding to `takenOffer`, determines which one of `takenOffer`'s settlement methods the offer taker has selected, gets the user's (maker's) private settlement method data for this settlement method, and creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation` using the on-chain swap and the user's (maker's) private settlement method data, and maps `takenOffer`'s ID to the new `Swap` on the main `DispatchQueue`. This should only be called for swaps made by the user of this interface.
      
-     - Parameters:
-        - swapID: The ID of the swap for which to update state.
-        - chainID The ID of the blockchain on which the swap exists.
+     - Parameter takenOffer: The `Offer` made by the user of this interface that has been taken and now corresponds to a swap.
      
-     - Throws `SwapServiceError.unexpectedNilError` of `swapTruthSource` is `nil`.
+     - Throws `SwapServiceError.unexpectedNilError` if `blockchainService` or `swapTruthSource` are `nil` or if this is unable to find the corresponding swap on chain, and `SwapServiceError.invalidValueError` if the on-chain swap has an invalid direction.
      */
-    func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {
-        logger.notice("handleNewSwap: getting on-chain struct for \(swapID)")
+    func handleNewSwap(takenOffer: Offer) throws {
+        logger.notice("handleNewSwap: getting on-chain struct for \(takenOffer.id.uuidString)")
         guard let blockchainService = blockchainService else {
-            throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during handleNewSwap call for \(swapID.uuidString)")
+            throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during handleNewSwap call for \(takenOffer.id.uuidString)")
         }
-        guard let swapOnChain = try blockchainService.getSwap(id: swapID) else {
-            logger.error("handleNewSwap: could not find \(swapID.uuidString) on chain, throwing error")
-            throw SwapServiceError.unexpectedNilError(desc: "Could not find \(swapID.uuidString) on chain")
+        guard let swapOnChain = try blockchainService.getSwap(id: takenOffer.id) else {
+            logger.error("handleNewSwap: could not find \(takenOffer.id.uuidString) on chain, throwing error")
+            throw SwapServiceError.unexpectedNilError(desc: "Could not find \(takenOffer.id.uuidString) on chain")
         }
         let direction: OfferDirection = try {
             switch(swapOnChain.direction) {
@@ -378,7 +376,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             case BigUInt(1):
                 return OfferDirection.sell
             default:
-                throw SwapServiceError.invalidValueError(desc: "Swap \(swapID.uuidString) has invalid direction: \(String(swapOnChain.direction))")
+                throw SwapServiceError.invalidValueError(desc: "Swap \(takenOffer.id.uuidString) has invalid direction: \(String(swapOnChain.direction))")
             }
         }()
         var swapRole: SwapRole {
@@ -389,10 +387,24 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 return SwapRole.makerAndSeller
             }
         }
+        let deserializedSelectedSettlementMethod = try? JSONDecoder().decode(SettlementMethod.self, from: swapOnChain.settlementMethod)
+        if deserializedSelectedSettlementMethod == nil {
+            logger.warning("handleNewSwap: unable to deserialize selected settlement method \(swapOnChain.settlementMethod.base64EncodedString()) for \(takenOffer.id)")
+        }
+        let selectedSettlementMethod = takenOffer.settlementMethods.first { settlementMethod in
+            if deserializedSelectedSettlementMethod?.currency == settlementMethod.currency && deserializedSelectedSettlementMethod?.price == settlementMethod.price && deserializedSelectedSettlementMethod?.method == settlementMethod.method {
+                return true
+            } else {
+                return false
+            }
+        }
+        if selectedSettlementMethod == nil {
+            logger.warning("handleNewSwap: unable to find settlement for offer \(takenOffer.id) matching that selected by taker: \(swapOnChain.settlementMethod.base64EncodedString())")
+        }
         let newSwap = try Swap(
             isCreated: swapOnChain.isCreated,
             requiresFill: swapOnChain.requiresFill,
-            id: swapID,
+            id: takenOffer.id,
             maker: swapOnChain.maker,
             makerInterfaceID: swapOnChain.makerInterfaceID,
             taker: swapOnChain.taker,
@@ -412,14 +424,13 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             hasBuyerClosed: swapOnChain.hasBuyerClosed,
             hasSellerClosed: swapOnChain.hasSellerClosed,
             onChainDisputeRaiser: swapOnChain.disputeRaiser,
-            chainID: chainID,
+            chainID: takenOffer.chainID,
             state: .awaitingTakerInformation,
             role: swapRole
         )
-        #warning("TODO: check for taker information once SettlementMethodService is implemented")
+        newSwap.makerPrivateSettlementMethodData = selectedSettlementMethod?.privateData
         // Persistently store new swap object
-        logger.notice("handleNewSwap: persistently storing \(swapID.uuidString)")
-        #warning("get actual maker private data here")
+        logger.notice("handleNewSwap: persistently storing \(takenOffer.id.uuidString)")
         let newSwapForDatabase = DatabaseSwap(
             id: newSwap.id.asData().base64EncodedString(),
             isCreated: newSwap.isCreated,
@@ -437,7 +448,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             serviceFeeRate: String(newSwap.serviceFeeRate),
             onChainDirection: String(newSwap.onChainDirection),
             onChainSettlementMethod: newSwap.onChainSettlementMethod.base64EncodedString(),
-            makerPrivateSettlementMethodData: nil,
+            makerPrivateSettlementMethodData: newSwap.makerPrivateSettlementMethodData,
             takerPrivateSettlementMethodData: nil,
             protocolVersion: String(newSwap.protocolVersion),
             isPaymentSent: newSwap.isPaymentSent,
@@ -452,12 +463,12 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         try databaseService.storeSwap(swap: newSwapForDatabase)
         // Add new Swap to swapTruthSource
         guard var swapTruthSource = swapTruthSource else {
-            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleNewSwap call for \(swapID.uuidString)")
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleNewSwap call for \(takenOffer.id.uuidString)")
         }
         DispatchQueue.main.async {
-            swapTruthSource.swaps[swapID] = newSwap
+            swapTruthSource.swaps[takenOffer.id] = newSwap
         }
-        logger.notice("handleNewSwap: successfully handled \(swapID.uuidString)")
+        logger.notice("handleNewSwap: successfully handled \(takenOffer.id.uuidString)")
     }
     
     /**

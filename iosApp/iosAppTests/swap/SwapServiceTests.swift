@@ -184,10 +184,33 @@ class SwapServiceTests: XCTestCase {
         )
         swapService.blockchainService = blockchainService
         
-        try! swapService.handleNewSwap(swapID: newOfferID, chainID: BigUInt(31337))
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: newOfferID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt(10000),
+            amountUpperBound: BigUInt(10000),
+            securityDepositAmount: BigUInt(1000),
+            serviceFeeRate: BigUInt(100),
+            direction: .buy,
+            settlementMethods: [
+                SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT", privateData: "SWIFT_private_data")
+            ],
+            protocolVersion: BigUInt(1),
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: true,
+            state: .offerOpened
+        )
+        
+        try! swapService.handleNewSwap(takenOffer: offer)
         
         wait(for: [swapTruthSource.swapAddedExpectation], timeout: 60.0)
         XCTAssertEqual(newOfferID, swapTruthSource.swaps.keys.first!)
+        XCTAssertEqual("SWIFT_private_data", swapTruthSource.swaps[newOfferID]?.makerPrivateSettlementMethodData)
         
     }
     

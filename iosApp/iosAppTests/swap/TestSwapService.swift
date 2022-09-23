@@ -21,7 +21,7 @@ class TestSwapService: SwapNotifiable {
     /**
      Does nothing, required to adopt `SwapNotifiable`. Should not be used.
      */
-    func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+    func handleNewSwap(takenOffer: Offer) throws {}
     /**
      Does nothing, required to adopt `SwapNotifiable`. Should not be used.
      */

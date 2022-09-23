@@ -511,7 +511,7 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
             
-            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {
                 swapFilledEvent = event
@@ -592,7 +592,7 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
             
-            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
@@ -673,7 +673,7 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
             
-            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
@@ -754,7 +754,7 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
             
-            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
@@ -835,7 +835,7 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
             
-            func handleNewSwap(swapID: UUID, chainID: BigUInt) throws {}
+            func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
