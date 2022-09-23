@@ -507,6 +507,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                             state: .taking,
                             role: swapRole
                         )
+                        newSwap.settlementMethod.privateData = swapData.settlementMethod.privateData
                         if let afterObjectCreation = afterObjectCreation {
                             afterObjectCreation()
                         }
@@ -537,7 +538,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     onChainDirection: String(newSwap.onChainDirection),
                     onChainSettlementMethod: newSwap.onChainSettlementMethod.base64EncodedString(),
                     makerPrivateSettlementMethodData: nil,
-                    takerPrivateSettlementMethodData: nil,
+                    takerPrivateSettlementMethodData: newSwap.settlementMethod.privateData,
                     protocolVersion: String(newSwap.protocolVersion),
                     isPaymentSent: newSwap.isPaymentSent,
                     isPaymentReceived: newSwap.isPaymentReceived,
@@ -596,8 +597,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 offerTruthSource.offers[offerToTake.id]?.isTaken = true
                 offerTruthSource.offers.removeValue(forKey: offerToTake.id)
             }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newSwap in
-                logger.notice("takeOffer: removing offer \(offerToTake.id.uuidString) from persistent storage")
+                logger.notice("takeOffer: removing offer \(offerToTake.id.uuidString) and its settlement methods from persistent storage")
                 try databaseService.deleteOffers(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID))
+                try databaseService.deleteSettlementMethods(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID))
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("takeOffer: encountered error during call for \(offerToTake.id.uuidString): \(error.localizedDescription)")

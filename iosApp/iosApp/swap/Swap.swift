@@ -86,7 +86,7 @@ class Swap: ObservableObject {
     /**
      A `SettlementMethod` derived by deserializing `onChainSettlementMethod`, selected by the taker from the list of settlement method specified by the maker, by which the maker and taker will send/receive traditional currency payment.
      */
-    let settlementMethod: SettlementMethod
+    var settlementMethod: SettlementMethod
     /**
      Corresponds to an on-chain Swap's `protocolVersion` property.
      */
