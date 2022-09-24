@@ -1668,7 +1668,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual("EUR", swapInTruthSource.settlementMethod.currency)
         XCTAssertEqual("0.98", swapInTruthSource.settlementMethod.price)
         XCTAssertEqual("SEPA", swapInTruthSource.settlementMethod.method)
-        XCTAssertEqual("EUR_SEPA_Private_Data", swapInTruthSource.settlementMethod.privateData)
+        XCTAssertEqual("EUR_SEPA_Private_Data", swapInTruthSource.takerPrivateSettlementMethodData)
         XCTAssertEqual(BigUInt(1), swapInTruthSource.protocolVersion)
         XCTAssertFalse(swapInTruthSource.isPaymentSent)
         XCTAssertFalse(swapInTruthSource.isPaymentReceived)

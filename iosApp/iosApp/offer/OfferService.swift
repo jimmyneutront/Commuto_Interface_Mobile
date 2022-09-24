@@ -507,7 +507,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                             state: .taking,
                             role: swapRole
                         )
-                        newSwap.settlementMethod.privateData = swapData.settlementMethod.privateData
+                        newSwap.takerPrivateSettlementMethodData = swapData.settlementMethod.privateData
                         if let afterObjectCreation = afterObjectCreation {
                             afterObjectCreation()
                         }
@@ -538,7 +538,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     onChainDirection: String(newSwap.onChainDirection),
                     onChainSettlementMethod: newSwap.onChainSettlementMethod.base64EncodedString(),
                     makerPrivateSettlementMethodData: nil,
-                    takerPrivateSettlementMethodData: newSwap.settlementMethod.privateData,
+                    takerPrivateSettlementMethodData: newSwap.takerPrivateSettlementMethodData,
                     protocolVersion: String(newSwap.protocolVersion),
                     isPaymentSent: newSwap.isPaymentSent,
                     isPaymentReceived: newSwap.isPaymentReceived,

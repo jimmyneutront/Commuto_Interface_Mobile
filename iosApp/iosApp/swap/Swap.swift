@@ -159,6 +159,10 @@ class Swap: ObservableObject {
      The private settlement method data belonging to the maker of this swap for this swap's settlement method, or `nil` if such data does not exist.
      */
     var makerPrivateSettlementMethodData: String? = nil
+    /**
+     The private settlement method data belonging to the taker of this swap for this swap's settlement method, or `nil` if such data does not exist.
+     */
+    var takerPrivateSettlementMethodData: String? = nil
     
     
     /**
