@@ -118,7 +118,7 @@ class SwapServiceTests: XCTestCase {
             var takerKeyPair: KeyPair? = nil
             var swapID: UUID? = nil
             var paymentDetails: String? = nil
-            override func sendTakerInformation(makerPublicKey: iosApp.PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
+            override func sendTakerInformation(makerPublicKey: iosApp.PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String?) throws {
                 self.makerPublicKey = makerPublicKey
                 self.takerKeyPair = takerKeyPair
                 self.swapID = swapID

@@ -21,7 +21,7 @@ struct TakerInformationMessage {
      */
     let publicKey: PublicKey
     /**
-     The taker's settlement method details.
+     The taker's settlement method details, or `nil` if no such data exists.
      */
-    let settlementMethodDetails: String
+    let settlementMethodDetails: String?
 }

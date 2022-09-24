@@ -322,15 +322,15 @@ class P2PService {
     }
     
     /**
-     Creates a [Taker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) using the supplied maker's public key, taker's/user's key pair, swap ID and taker's payment details, and sends it using the `sendMessage` function.
+     Creates a [Taker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) using the supplied maker's public key, taker's/user's key pair, swap ID and taker's payment details as an optional string, and sends it using the `sendMessage` function.
      
      - Parameters:
         - makerPublicKey: The public key of the swap maker, to whom information is being sent.
         - takerKeyPair: The taker's/user's key pair, which will be used to sign this message.
         - swapID: The ID of the swap for which information is being sent.
-        - paymentDetails: The settlement method details being sent.
+        - paymentDetails: The settlement method details being sent, as an optional string.
      */
-    func sendTakerInformation(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String) throws {
+    func sendTakerInformation(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, paymentDetails: String?) throws {
         logger.notice("sendTakerInformation: creating for \(swapID.uuidString)")
         let messageString = try createTakerInformationMessage(makerPublicKey: makerPublicKey, takerKeyPair: takerKeyPair, swapID: swapID, settlementMethodDetails: paymentDetails)
         logger.notice("sendTakerInformation: sending for \(swapID.uuidString)")

@@ -101,13 +101,14 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         guard let takerKeyPair = try keyManagerService.getKeyPair(interfaceId: swap.takerInterfaceID) else {
             throw SwapServiceError.unexpectedNilError(desc: "Could not find taker's (user's) key pair for \(swapID.uuidString)")
         }
-        #warning("TODO: get actual payment details once settlementMethodService is implemented")
-        let paymentDetailsString = "TEMPORARY"
         guard let p2pService = p2pService else {
             throw SwapServiceError.unexpectedNilError(desc: "p2pService was nil during sendTakerInformationMessage call for \(swapID.uuidString)")
         }
         logger.notice("sendTakerInformationMessage: sending for \(swapID.uuidString)")
-        try p2pService.sendTakerInformation(makerPublicKey: makerPublicKey, takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: paymentDetailsString)
+        if swap.takerPrivateSettlementMethodData == nil {
+            logger.warning("sendTakerInformationMessage: taker info is nil for \(swapID.uuidString)")
+        }
+        try p2pService.sendTakerInformation(makerPublicKey: makerPublicKey, takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: swap.takerPrivateSettlementMethodData)
         logger.notice("sendTakerInformationMessage: sent for \(swapID.uuidString)")
         try databaseService.updateSwapState(swapID: swapID.asData().base64EncodedString(), chainID: String(chainID), state: SwapState.awaitingMakerInformation.asString)
         DispatchQueue.main.async {

@@ -16,11 +16,11 @@ import Foundation
     - makerPublicKey: The `PublicKey` of the swap maker, to which the message will be sent.
     - takerKeyPair: The `KeyPair` of the taker, with which the message will be signed.
     - swapID: The ID of the swap for which the taker is sending information.
-    - settlementMethodDetails: The taker's settlement method details to be used for the swap.
+    - settlementMethodDetails: The taker's settlement method details to be used for the swap, as an optional string. If this is `nil`, the `paymentDetails` field of the payload of the resulting message will be the empty string.
  
  - Returns: A JSON `String` that is the Taker Information Message.
  */
-func createTakerInformationMessage(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, settlementMethodDetails: String) throws -> String {
+func createTakerInformationMessage(makerPublicKey: PublicKey, takerKeyPair: KeyPair, swapID: UUID, settlementMethodDetails: String?) throws -> String {
     // Create Base64-encoded string of the taker's (user's) public key in PKCS#1 bytes
     let makerPublicKeyString = try takerKeyPair.pubKeyToPkcs1Bytes().base64EncodedString()
     
@@ -30,7 +30,7 @@ func createTakerInformationMessage(makerPublicKey: PublicKey, takerKeyPair: KeyP
         "msgType": "takerInfo",
         "pubKey": makerPublicKeyString,
         "swapId": swapID.uuidString,
-        "paymentDetails": settlementMethodDetails
+        "paymentDetails": settlementMethodDetails ?? ""
     ]
     
     // Create payload UTF8-bytes

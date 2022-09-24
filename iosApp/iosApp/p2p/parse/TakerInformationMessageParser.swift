@@ -16,7 +16,7 @@ import Foundation
     - message: An optional `NSDictionary` from which to try to restore a `TakerInformationMessage`.
     - keyPair: The `KeyPair` with which this will attempt to decrypt the message's symmetric key and initialization vector.
  
- - Returns: An optional `TakerInformationMessage` that will be `nil` if `message` does not contain a valid Taker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
+ - Returns: An optional `TakerInformationMessage` that will be `nil` if `message` does not contain a valid Taker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does. If it does, the `TakerInformationMessage.settlementMethodDetails` field will be `nil` if the `paymentDetails` field of `message`'s payload contains an empty string, and will be non-`nil` otherwise.
  */
 func parseTakerInformationMessage(message: NSDictionary, keyPair: KeyPair) throws -> TakerInformationMessage? {
     // Ensure that the recipient interface ID matches that of our key pair
@@ -84,9 +84,13 @@ func parseTakerInformationMessage(message: NSDictionary, keyPair: KeyPair) throw
     guard let settlementMethodDetails = payload["paymentDetails"] as? String else {
         return nil
     }
+    var optionalSettlementMethodDetails: String? = settlementMethodDetails
+    if optionalSettlementMethodDetails == "" {
+        optionalSettlementMethodDetails = nil
+    }
     // Get swap ID
     guard let swapIDString = payload["swapId"] as? String, let swapID = UUID(uuidString: swapIDString) else {
         return nil
     }
-    return TakerInformationMessage(swapID: swapID, publicKey: publicKey, settlementMethodDetails: settlementMethodDetails)
+    return TakerInformationMessage(swapID: swapID, publicKey: publicKey, settlementMethodDetails: optionalSettlementMethodDetails)
 }
