@@ -627,12 +627,19 @@ class OfferServiceTests: XCTestCase {
         // OfferService should call the sendTakerInformationMessage method of this class, passing a UUID equal to newOfferID to begin the process of sending taker information
         class TestSwapService: SwapNotifiable {
             let expectation = XCTestExpectation(description: "Fulfilled when sendTakerInformationMessage is called")
-            var swapIDForMessage: UUID? = nil
+            let expectedSwapIDForMessage: UUID
             var chainIDForMessage: BigUInt? = nil
-            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {
-                swapIDForMessage = swapID
-                chainIDForMessage = chainID
-                expectation.fulfill()
+            init(expectedSwapIDForMessage: UUID) {
+                self.expectedSwapIDForMessage = expectedSwapIDForMessage
+            }
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool {
+                if swapID == expectedSwapIDForMessage {
+                    chainIDForMessage = chainID
+                    expectation.fulfill()
+                    return true
+                } else {
+                    return false
+                }
             }
             func handleNewSwap(takenOffer: Offer) throws {}
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
@@ -641,7 +648,7 @@ class OfferServiceTests: XCTestCase {
             func handleBuyerClosedEvent(_ event: BuyerClosedEvent) throws {}
             func handleSellerClosedEvent(_ event: SellerClosedEvent) throws {}
         }
-        let swapService = TestSwapService()
+        let swapService = TestSwapService(expectedSwapIDForMessage: newOfferID)
         
         let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
             databaseService: databaseService,
@@ -650,44 +657,12 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.offerTruthSource = TestOfferTruthSource()
         
-        // We have to persistently store a swap with an ID equal to newOfferID and with the maker and taker interface IDs created above, otherwise OfferService won't be able to tell that the offer corresponding to the emitted OfferTaken event was taken by the user of this interface, and SwapService won't be able to get the keys necessary to make the taker info message
-        let swapForDatabase = DatabaseSwap(
-            id: newOfferID.asData().base64EncodedString(),
-            isCreated: true,
-            requiresFill: false,
-            maker: "",
-            makerInterfaceID: makerInterfaceIDString,
-            taker: "",
-            takerInterfaceID: takerInterfaceIDString,
-            stablecoin: "",
-            amountLowerBound: "",
-            amountUpperBound: "",
-            securityDepositAmount: "",
-            takenSwapAmount: "",
-            serviceFeeAmount: "",
-            serviceFeeRate: "",
-            onChainDirection: "",
-            onChainSettlementMethod: "",
-            makerPrivateSettlementMethodData: nil,
-            takerPrivateSettlementMethodData: nil,
-            protocolVersion: "",
-            isPaymentSent: false,
-            isPaymentReceived: false,
-            hasBuyerClosed: false,
-            hasSellerClosed: false,
-            onChainDisputeRaiser: "",
-            chainID: "31337",
-            state: "",
-            role: ""
-        )
-        try! databaseService.storeSwap(swap: swapForDatabase)
-        
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
             errorHandler: errorHandler,
             offerService: offerService,
-            swapService: TestSwapService(),
+            swapService: swapService,
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
@@ -695,7 +670,6 @@ class OfferServiceTests: XCTestCase {
         blockchainService.listen()
         
         wait(for: [swapService.expectation], timeout: 60.0)
-        XCTAssertEqual(newOfferID, swapService.swapIDForMessage)
         XCTAssertEqual(BigUInt(31337), swapService.chainIDForMessage)
         XCTAssertFalse(errorHandler.gotError)
         
@@ -755,7 +729,7 @@ class OfferServiceTests: XCTestCase {
             let handleNewSwapExpectation = XCTestExpectation(description: "Fulfilled when handleNewSwap is called")
             var swapID: UUID? = nil
             var chainID: BigUInt? = nil
-            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             func handleNewSwap(takenOffer: Offer) throws {
                 self.swapID = takenOffer.id
                 self.chainID = takenOffer.chainID

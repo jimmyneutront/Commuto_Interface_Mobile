@@ -62,41 +62,43 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     private let keyManagerService: KeyManagerService
     
     /**
-     Sends a [Taker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) for an offer taken by the user of this interface, with an ID equal to `swapID` and a blockchain ID equal to `chainID`.
-     
-     This updates the state of the swap with the specified ID (both persistently and in `swapTruthSource`) to `SwapState.awaitingTakerInformation`, creates and sends a Taker Information Message, and then updates the state of the swap with the specified ID (both persistently and in `swapTruthSource`) to `SwapState.awaitingMakerInformation`.
+    If `swapID` and `chainID` correspond to an offer taken by the user of this interface, this sends a [Taker Information Message](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt): this updates the state of the swap with the specified ID (both persistently and in `swapTruthSource`) to `SwapState.awaitingTakerInformation`, creates and sends a Taker Information Message, and then updates the state of the swap with the specified ID (both persistently and in `swapTruthSource`) to `SwapState.awaitingMakerInformation`, and then returns `true` to indicate that the swap was taken by the user of this interface and thus the message has been sent. If `swapID` and `chainID` do not correspond to an offer taken by the user of this interface, this returns `false`.
      
      - Parameters:
-        - swapID: The ID of the swap for which taker information will be sent.
+        - swapID: The ID of the swap for which taker information should be sent.
         - chainID: The ID of the blockchain on which the swap exists.
      
-     - Throws `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, if the swap is not found in persistent storage, if this is unable to create maker and taker interface IDs from the values in persistent storage, if the maker's public key is not found, if the taker's key pair is not found, or if `p2pService` is `nil`.
+     - Throws `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, if the maker's public key is not found, if the taker's key pair is not found, or if `p2pService` is `nil`, or a `SwapServiceError.nonmatchingChainIDError` if `chainID` does not match that of the swap corresponding to `swapID` in `swapTruthSource`.
+     
+     if the swap is not found in persistent storage, if this is unable to create maker and taker interface IDs from the values in persistent storage, if the maker's public key is not found, if the taker's key pair is not found, or if `p2pService` is `nil`.
      */
-    func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {
-        logger.notice("sendTakerInformationMessage: preparing to send for \(swapID.uuidString)")
+    func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool {
+        logger.notice("sendTakerInformationMessage: checking if message should be sent for \(swapID.uuidString)")
         guard let swapTruthSource = swapTruthSource else {
             throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during sendTakerInformationMessage call for \(swapID.uuidString)")
         }
+        guard let swap = swapTruthSource.swaps[swapID] else {
+            logger.notice("sendTakerInformationMessage: could not find \(swapID.uuidString) in swapTruthSource")
+            return false
+        }
+        guard swap.chainID == chainID else {
+            throw SwapServiceError.nonmatchingChainIDError(desc: "Passed chain ID \(String(chainID)) does not match that of swap \(swapID.uuidString): \(String(swap.chainID))")
+        }
+        guard swap.role == .takerAndBuyer || swap.role == .takerAndSeller else {
+            logger.notice("sendTakerInformationMessage: user is not taker in \(swapID.uuidString)")
+            return false
+        }
+        logger.notice("sendTakerInformationMessage: user is taker in \(swapID.uuidString), sending message")
         try databaseService.updateSwapState(swapID: swapID.asData().base64EncodedString(), chainID: String(chainID), state: SwapState.awaitingTakerInformation.asString)
         DispatchQueue.main.async {
-            swapTruthSource.swaps[swapID]?.state = .awaitingTakerInformation
-        }
-        // Since we are the taker of this swap, we should have it in persistent storage
-        guard let swapInDatabase = try databaseService.getSwap(id: swapID.asData().base64EncodedString()) else {
-            throw SwapServiceError.unexpectedNilError(desc: "Could not find swap \(swapID.uuidString) in persistent storage")
-        }
-        guard let makerInterfaceID = Data(base64Encoded: swapInDatabase.makerInterfaceID) else {
-            throw SwapServiceError.unexpectedNilError(desc: "Unable to get maker interface ID for \(swapID.uuidString). makerInterfaceID string: \(swapInDatabase.makerInterfaceID)")
+            swap.state = .awaitingTakerInformation
         }
         // The user of this interface has taken the swap. Since taking a swap is not allowed unless we have a copy of the maker's public key, we should have said public key in storage.
-        guard let makerPublicKey = try keyManagerService.getPublicKey(interfaceId: makerInterfaceID) else {
+        guard let makerPublicKey = try keyManagerService.getPublicKey(interfaceId: swap.makerInterfaceID) else {
             throw SwapServiceError.unexpectedNilError(desc: "Could not find maker's public key for \(swapID.uuidString)")
         }
-        guard let takerInterfaceID = Data(base64Encoded: swapInDatabase.takerInterfaceID) else {
-            throw SwapServiceError.unexpectedNilError(desc: "Unable to get taker interface ID for \(swapID.uuidString). takerInterfaceID string: \(swapInDatabase.takerInterfaceID)")
-        }
         // Since the user of this interface has taken the swap, we should have a key pair for the swap in persistent storage.
-        guard let takerKeyPair = try keyManagerService.getKeyPair(interfaceId: takerInterfaceID) else {
+        guard let takerKeyPair = try keyManagerService.getKeyPair(interfaceId: swap.takerInterfaceID) else {
             throw SwapServiceError.unexpectedNilError(desc: "Could not find taker's (user's) key pair for \(swapID.uuidString)")
         }
         #warning("TODO: get actual payment details once settlementMethodService is implemented")
@@ -109,8 +111,10 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         logger.notice("sendTakerInformationMessage: sent for \(swapID.uuidString)")
         try databaseService.updateSwapState(swapID: swapID.asData().base64EncodedString(), chainID: String(chainID), state: SwapState.awaitingMakerInformation.asString)
         DispatchQueue.main.async {
-            swapTruthSource.swaps[swapID]?.state = .awaitingMakerInformation
+            swap.state = .awaitingMakerInformation
         }
+        // We have sent a taker info message for this swap, so we return true
+        return true
     }
     
     /**

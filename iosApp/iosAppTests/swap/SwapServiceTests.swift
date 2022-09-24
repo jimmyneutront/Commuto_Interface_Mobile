@@ -32,6 +32,8 @@ class SwapServiceTests: XCTestCase {
             databaseService: databaseService,
             keyManagerService: keyManagerService
         )
+        let swapTruthSource = TestSwapTruthSource()
+        swapService.swapTruthSource = swapTruthSource
         
         // The ID of the swap for which taker information will be sent
         let swapID = UUID()
@@ -43,35 +45,69 @@ class SwapServiceTests: XCTestCase {
         // This is the taker's (user's) key pair, so we do want to store it persistently
         let takerKeyPair = try! keyManagerService.generateKeyPair(storeResult: true)
         
-        // We must persistently store a swap with an ID equal to swapID and the maker and taker interface IDs from the keys created above, otherwise SwapService won't be able to get the keys necessary to make the taker info message
-        let swapForDatabase = DatabaseSwap(
-            id: swapID.asData().base64EncodedString(),
+        let swap = try! Swap(
             isCreated: true,
             requiresFill: false,
-            maker: "",
-            makerInterfaceID: makerKeyPair.interfaceId.base64EncodedString(),
-            taker: "",
-            takerInterfaceID: takerKeyPair.interfaceId.base64EncodedString(),
-            stablecoin: "",
-            amountLowerBound: "",
-            amountUpperBound: "",
-            securityDepositAmount: "",
-            takenSwapAmount: "",
-            serviceFeeAmount: "",
-            serviceFeeRate: "",
-            onChainDirection: "",
-            onChainSettlementMethod: "",
-            makerPrivateSettlementMethodData: nil,
-            takerPrivateSettlementMethodData: nil,
-            protocolVersion: "",
+            id: swapID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            makerInterfaceID: makerKeyPair.interfaceId,
+            taker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            takerInterfaceID: takerKeyPair.interfaceId,
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            takenSwapAmount: BigUInt.zero,
+            serviceFeeAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            direction: .sell,
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
+            protocolVersion: BigUInt.zero,
             isPaymentSent: false,
             isPaymentReceived: false,
             hasBuyerClosed: false,
             hasSellerClosed: false,
-            onChainDisputeRaiser: "",
-            chainID: "31337",
-            state: "",
-            role: ""
+            onChainDisputeRaiser: BigUInt.zero,
+            chainID: BigUInt(31337),
+            state: SwapState.awaitingTakerInformation,
+            role: SwapRole.takerAndSeller
+        )
+        swapTruthSource.swaps[swapID] = swap
+        let swapForDatabase = DatabaseSwap(
+            id: swap.id.asData().base64EncodedString(),
+            isCreated: swap.isCreated,
+            requiresFill: swap.requiresFill,
+            maker: swap.maker.addressData.toHexString(),
+            makerInterfaceID: swap.makerInterfaceID.base64EncodedString(),
+            taker: swap.taker.addressData.toHexString(),
+            takerInterfaceID: swap.takerInterfaceID.base64EncodedString(),
+            stablecoin: swap.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(swap.amountLowerBound),
+            amountUpperBound: String(swap.amountUpperBound),
+            securityDepositAmount: String(swap.securityDepositAmount),
+            takenSwapAmount: String(swap.takenSwapAmount),
+            serviceFeeAmount: String(swap.serviceFeeAmount),
+            serviceFeeRate: String(swap.serviceFeeRate),
+            onChainDirection: String(swap.onChainDirection),
+            onChainSettlementMethod: swap.onChainSettlementMethod.base64EncodedString(),
+            makerPrivateSettlementMethodData: nil,
+            takerPrivateSettlementMethodData: nil,
+            protocolVersion: String(swap.protocolVersion),
+            isPaymentSent: swap.isPaymentSent,
+            isPaymentReceived: swap.isPaymentReceived,
+            hasBuyerClosed: swap.hasBuyerClosed,
+            hasSellerClosed: swap.hasSellerClosed,
+            onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
+            chainID: String(swap.chainID),
+            state: swap.state.asString,
+            role: swap.role.asString
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
@@ -97,16 +133,24 @@ class SwapServiceTests: XCTestCase {
             keyManagerService: keyManagerService
         )
         swapService.p2pService = p2pService
-        swapService.swapTruthSource = TestSwapTruthSource()
         
-        try! swapService.sendTakerInformationMessage(swapID: swapID, chainID: BigUInt(31337))
+        let expectation = XCTestExpectation(description: "Fulfilled after sendTakerInformationMessage is executed")
         
+        // Call sendTakerInformationMessage on background DispatchQueue so that the closures it runs on the main DispatchQueue are executed in time for us to test their results
+        DispatchQueue.global().async {
+            let didSendTakerInfoMessage = try! swapService.sendTakerInformationMessage(swapID: swapID, chainID: BigUInt(31337))
+            XCTAssert(didSendTakerInfoMessage)
+            expectation.fulfill()
+        }
+        
+        wait(for: [expectation], timeout: 20.0)
         XCTAssertEqual(p2pService.makerPublicKey!.interfaceId, makerKeyPair.interfaceId)
         XCTAssertEqual(p2pService.takerKeyPair!.interfaceId, takerKeyPair.interfaceId)
         XCTAssertEqual(p2pService.swapID, swapID)
         #warning("TODO: update this once SettlementMethodService is added")
         XCTAssertEqual(p2pService.paymentDetails, "TEMPORARY")
         
+        XCTAssertEqual(swap.state, SwapState.awaitingMakerInformation)
         let swapInDatabase = try! databaseService.getSwap(id: swapID.asData().base64EncodedString())
         XCTAssertEqual(swapInDatabase!.state, "awaitingMakerInfo")
         

@@ -509,7 +509,7 @@ class BlockchainServiceTest: XCTestCase {
             let swapFilledExpectation = XCTestExpectation(description: "Fulfilled when handleSwapFilledEvent is called")
             var swapFilledEvent: SwapFilledEvent? = nil
             
-            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
@@ -590,7 +590,7 @@ class BlockchainServiceTest: XCTestCase {
             let paymentSentExpectation = XCTestExpectation(description: "Fulfilled when handlePaymentSentEvent is called")
             var paymentSentEvent: PaymentSentEvent? = nil
             
-            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
@@ -671,7 +671,7 @@ class BlockchainServiceTest: XCTestCase {
             let paymentReceivedExpectation = XCTestExpectation(description: "Fulfilled when handlePaymentReceivedEvent is called")
             var paymentReceivedEvent: PaymentReceivedEvent? = nil
             
-            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
@@ -752,7 +752,7 @@ class BlockchainServiceTest: XCTestCase {
             let buyerClosedExpectation = XCTestExpectation(description: "Fulfilled when handleBuyerClosedEvent is called")
             var buyerClosedEvent: BuyerClosedEvent? = nil
             
-            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
@@ -833,7 +833,7 @@ class BlockchainServiceTest: XCTestCase {
             let sellerClosedExpectation = XCTestExpectation(description: "Fulfilled when handleSellerClosedEvent is called")
             var sellerClosedEvent: SellerClosedEvent? = nil
             
-            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws {}
+            func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
