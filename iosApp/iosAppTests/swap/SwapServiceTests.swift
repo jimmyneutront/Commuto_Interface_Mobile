@@ -395,12 +395,14 @@ class SwapServiceTests: XCTestCase {
         #warning("TODO: update this once SettlementMethodService is implemented")
         XCTAssertEqual("TEMPORARY", p2pService.settlementMethodDetails)
         
-        // Ensure that SwapService updates swap state in swapTruthSource
+        // Ensure that SwapService updates swap state and taker private data in swapTruthSource
         XCTAssertEqual(SwapState.awaitingFilling, swap.state)
+        XCTAssertEqual("taker_settlement_method_details", swap.takerPrivateSettlementMethodData)
         
-        // Ensure that SwapService persistently updates swap state
+        // Ensure that SwapService persistently updates swap state and taker private data
         let swapInDatabase = try! databaseService.getSwap(id: swapForDatabase.id)
         XCTAssertEqual(SwapState.awaitingFilling.asString, swapInDatabase!.state)
+        XCTAssertEqual("taker_settlement_method_details", swapInDatabase!.takerPrivateSettlementMethodData)
         
     }
     

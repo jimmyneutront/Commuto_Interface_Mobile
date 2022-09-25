@@ -299,6 +299,44 @@ class DatabaseServiceTests: XCTestCase {
     }
     
     /**
+     Ensures that code to update a persistently stored swap's taker private settlement method data related properties works properly.
+     */
+    func testUpdateSwapTakerPrivateSettlementMethodData() throws {
+        let swapToStore = DatabaseSwap(
+            id: "a_uuid",
+            isCreated: true,
+            requiresFill: true,
+            maker: "maker_address",
+            makerInterfaceID: "maker_interface_id",
+            taker: "taker_address",
+            takerInterfaceID: "taker_interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            takenSwapAmount: "taken_swap_amount",
+            serviceFeeAmount: "service_fee_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            onChainSettlementMethod: "settlement_method",
+            makerPrivateSettlementMethodData: "maker_private_data",
+            takerPrivateSettlementMethodData: "taker_private_data",
+            protocolVersion: "some_version",
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "dispute_raiser",
+            chainID: "chain_id",
+            state: "a_state_here",
+            role: "a_role_here"
+        )
+        try dbService.storeSwap(swap: swapToStore)
+        try dbService.updateSwapTakerPrivateSettlementMethodData(swapID: "a_uuid", chainID: "chain_id", data: "new_taker_private_data")
+        XCTAssertEqual("new_taker_private_data", try dbService.getSwap(id: "a_uuid")!.takerPrivateSettlementMethodData)
+    }
+    
+    /**
      Ensures that code to update a persistently stored swap's `isPaymentSent` property works properly.
      */
     func testUpdateSwapIsPaymentSent() throws {
