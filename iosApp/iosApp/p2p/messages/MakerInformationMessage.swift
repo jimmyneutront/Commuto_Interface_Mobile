@@ -17,7 +17,7 @@ struct MakerInformationMessage {
      */
     let swapID: UUID
     /**
-     The maker's settlement method details.
+     The maker's settlement method details, or `nil` if no such data exists.
      */
-    let settlementMethodDetails: String
+    let settlementMethodDetails: String?
 }

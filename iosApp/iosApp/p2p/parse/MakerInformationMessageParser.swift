@@ -17,7 +17,7 @@ import Foundation
     - keyPair: The `KeyPair` with which this will attempt to decrypt the message's symmetric key and initialization vector. The interface ID of this key pair should be that specified in the message's "recipient" field.
     - publicKey: The `PublicKey` with which this will attempt to verify  the message's signature. The interface ID of this public key should be that specified in the message's "sender" field.
  
- - Returns: An optional `MakerInformationMessage` that will be `nil` if `message` does not contain a valid Maker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does.
+ - Returns: An optional `MakerInformationMessage` that will be `nil` if `message` does not contain a valid Maker Information Message encrypted with the public key of `keyPair`, and will be non-`nil` if it does. If it does, the `MakerInformationMessage.settlementMethodDetails` field will be `nil` if the `paymentDetails` field of `message`'s payload contains an empty string, and will be non-`nil` otherwise.
  */
 func parseMakerInformationMessage(message: NSDictionary, keyPair: KeyPair, publicKey: PublicKey) throws -> MakerInformationMessage? {
     // Ensure that the recipient interface ID matches that of our key pair
@@ -78,9 +78,13 @@ func parseMakerInformationMessage(message: NSDictionary, keyPair: KeyPair, publi
     guard let settlementMethodDetails = payload["paymentDetails"] as? String else {
         return nil
     }
+    var optionalSettlementMethodDetails: String? = settlementMethodDetails
+    if optionalSettlementMethodDetails == "" {
+        optionalSettlementMethodDetails = nil
+    }
     // Get swap ID
     guard let swapIDString = payload["swapId"] as? String, let swapID = UUID(uuidString: swapIDString) else {
         return nil
     }
-    return MakerInformationMessage(swapID: swapID, settlementMethodDetails: settlementMethodDetails)
+    return MakerInformationMessage(swapID: swapID, settlementMethodDetails: optionalSettlementMethodDetails)
 }

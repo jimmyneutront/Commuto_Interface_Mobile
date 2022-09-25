@@ -290,7 +290,7 @@ class SwapServiceTests: XCTestCase {
             var makerKeyPair: KeyPair? = nil
             var swapID: UUID? = nil
             var settlementMethodDetails: String? = nil
-            override func sendMakerInformation(takerPublicKey: iosApp.PublicKey, makerKeyPair: KeyPair, swapID: UUID, settlementMethodDetails: String) throws {
+            override func sendMakerInformation(takerPublicKey: iosApp.PublicKey, makerKeyPair: KeyPair, swapID: UUID, settlementMethodDetails: String?) throws {
                 self.takerPublicKey = takerPublicKey
                 self.makerKeyPair = makerKeyPair
                 self.swapID = swapID
@@ -345,6 +345,7 @@ class SwapServiceTests: XCTestCase {
             state: SwapState.awaitingTakerInformation,
             role: SwapRole.makerAndSeller
         )
+        swap.makerPrivateSettlementMethodData = "maker_settlement_method_details"
         swapTruthSource.swaps[swapID] = swap
         let swapForDatabase = DatabaseSwap(
             id: swap.id.asData().base64EncodedString(),
@@ -363,7 +364,7 @@ class SwapServiceTests: XCTestCase {
             serviceFeeRate: String(swap.serviceFeeRate),
             onChainDirection: String(swap.onChainDirection),
             onChainSettlementMethod: swap.onChainSettlementMethod.base64EncodedString(),
-            makerPrivateSettlementMethodData: nil,
+            makerPrivateSettlementMethodData: swap.makerPrivateSettlementMethodData,
             takerPrivateSettlementMethodData: nil,
             protocolVersion: String(swap.protocolVersion),
             isPaymentSent: swap.isPaymentSent,
@@ -392,8 +393,7 @@ class SwapServiceTests: XCTestCase {
         XCTAssertEqual(takerKeyPair.interfaceId, p2pService.takerPublicKey!.interfaceId)
         XCTAssertEqual(makerKeyPair.interfaceId, p2pService.makerKeyPair!.interfaceId)
         XCTAssertEqual(swapID, p2pService.swapID)
-        #warning("TODO: update this once SettlementMethodService is implemented")
-        XCTAssertEqual("TEMPORARY", p2pService.settlementMethodDetails)
+        XCTAssertEqual("maker_settlement_method_details", p2pService.settlementMethodDetails)
         
         // Ensure that SwapService updates swap state and taker private data in swapTruthSource
         XCTAssertEqual(SwapState.awaitingFilling, swap.state)

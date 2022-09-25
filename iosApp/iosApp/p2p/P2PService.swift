@@ -344,9 +344,9 @@ class P2PService {
         - takerPublicKey: The public key of the swap taker, to whom information is being sent.
         - makerKeyPair: The maker's/user's key pair, which will be used to sign this message.
         - swapID: The ID of the swap for which information is being sent.
-        - settlementMethodDetails: The settlement method details being sent.
+        - settlementMethodDetails: The settlement method details being sent, as an optional string.
      */
-    func sendMakerInformation(takerPublicKey: PublicKey, makerKeyPair: KeyPair, swapID: UUID, settlementMethodDetails: String) throws {
+    func sendMakerInformation(takerPublicKey: PublicKey, makerKeyPair: KeyPair, swapID: UUID, settlementMethodDetails: String?) throws {
         logger.notice("sendMakerInformation: creating for \(swapID.uuidString)")
         let messageString = try createMakerInformationMessage(takerPublicKey: takerPublicKey, makerKeyPair: makerKeyPair, swapID: swapID, settlementMethodDetails: settlementMethodDetails)
         logger.notice("sendMakerInformation: sending for \(swapID.uuidString)")

@@ -512,16 +512,17 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                     DispatchQueue.main.async {
                         swap.state = SwapState.awaitingMakerInformation
                     }
-                    #warning("TODO: get actual settlement method details once SettlementMethodService is implemented")
                     guard let makerKeyPair = try keyManagerService.getKeyPair(interfaceId: swap.makerInterfaceID) else {
                         throw SwapServiceError.unexpectedNilError(desc: "Could not find key pair for \(message.swapID.uuidString) while handling Taker Information Message")
                     }
-                    let settlementMethodDetailsString = "TEMPORARY"
                     guard let p2pService = p2pService else {
                         throw SwapServiceError.unexpectedNilError(desc: "p2pService was nil during handleTakerInformationMessage call for \(message.swapID.uuidString)")
                     }
                     logger.notice("handleTakerInformationMessage: sending for \(message.swapID.uuidString)")
-                    try p2pService.sendMakerInformation(takerPublicKey: message.publicKey, makerKeyPair: makerKeyPair, swapID: swap.id, settlementMethodDetails: settlementMethodDetailsString)
+                    if swap.makerPrivateSettlementMethodData == nil {
+                        logger.warning("handleTakerInformationMessage: maker info is nil for \(swap.id.uuidString)")
+                    }
+                    try p2pService.sendMakerInformation(takerPublicKey: message.publicKey, makerKeyPair: makerKeyPair, swapID: swap.id, settlementMethodDetails: swap.makerPrivateSettlementMethodData)
                     logger.notice("handleTakerInformationMessage: sent for \(message.swapID.uuidString)")
                     switch swap.direction {
                     case .buy:
