@@ -568,28 +568,43 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
         let swap = swapTruthSource.swaps[message.swapID]
         if let swap = swap {
-            if senderInterfaceID != swap.makerInterfaceID {
-                logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) that was not sent by swap maker")
-                return
-            }
-            if recipientInterfaceID != swap.takerInterfaceID {
-                logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) with recipient interface ID \(recipientInterfaceID.base64EncodedString()) that doesn't match taker interface ID \(swap.takerInterfaceID.base64EncodedString())")
-                return
-            }
-            #warning("TODO: securely store maker settlement method information once SettlementMethodService is implemented")
-            switch swap.direction {
-            case .buy:
-                logger.notice("handleMakerInformationMessage: updating state of BUY swap \(message.swapID.uuidString) to \(SwapState.awaitingPaymentSent.asString)")
-                try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingPaymentSent.asString)
-                DispatchQueue.main.async {
-                    swap.state = SwapState.awaitingPaymentSent
+            // We should only handle this message if we are the taker of the swap; otherwise, we are the maker and we would be handling our own message
+            if swap.role == SwapRole.takerAndBuyer || swap.role == SwapRole.takerAndSeller {
+                if senderInterfaceID != swap.makerInterfaceID {
+                    logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) that was not sent by swap maker")
+                    return
                 }
-            case .sell:
-                logger.notice("handleMakerInformationMessage: updating state of SELL swap \(message.swapID.uuidString) to \(SwapState.awaitingFilling.asString)")
-                try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingFilling.asString)
-                DispatchQueue.main.async {
-                    swap.state = SwapState.awaitingFilling
+                if recipientInterfaceID != swap.takerInterfaceID {
+                    logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) with recipient interface ID \(recipientInterfaceID.base64EncodedString()) that doesn't match taker interface ID \(swap.takerInterfaceID.base64EncodedString())")
+                    return
                 }
+                let swapIDB64String = message.swapID.asData().base64EncodedString()
+                if message.settlementMethodDetails == nil {
+                    logger.warning("handleMakerInformationMessage: private data in message was nil for \(message.swapID.uuidString)")
+                } else {
+                    logger.notice("handleMakerInformationMessage: persistently storing private data in message for \(message.swapID.uuidString)")
+                    try databaseService.updateSwapMakerPrivateSettlementMethodData(swapID: swapIDB64String, chainID: String(swap.chainID), data: message.settlementMethodDetails)
+                    logger.notice("handleMakerInformationMessage: updating \(message.swapID.uuidString) with private data")
+                    DispatchQueue.main.async {
+                        swap.makerPrivateSettlementMethodData = message.settlementMethodDetails
+                    }
+                }
+                switch swap.direction {
+                case .buy:
+                    logger.notice("handleMakerInformationMessage: updating state of BUY swap \(message.swapID.uuidString) to \(SwapState.awaitingPaymentSent.asString)")
+                    try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingPaymentSent.asString)
+                    DispatchQueue.main.async {
+                        swap.state = SwapState.awaitingPaymentSent
+                    }
+                case .sell:
+                    logger.notice("handleMakerInformationMessage: updating state of SELL swap \(message.swapID.uuidString) to \(SwapState.awaitingFilling.asString)")
+                    try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingFilling.asString)
+                    DispatchQueue.main.async {
+                        swap.state = SwapState.awaitingFilling
+                    }
+                }
+            } else {
+                logger.notice("handleMakerInformationMessage: detected own message for \(message.swapID.uuidString)")
             }
         } else {
             logger.warning("handleMakerInformationMessage: got message for \(message.swapID.uuidString) which was not found in swapTruthSource")

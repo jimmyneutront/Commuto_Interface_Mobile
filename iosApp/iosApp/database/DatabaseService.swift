@@ -708,6 +708,22 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseSwap`'s `makerPrivateSettlementMethodData` and `makerPrivateSettlementMethodDataInitializationVector` fields with the results of encrypting `data`.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - data: New private settlement method data belonging to the maker of the swap with the specified ID and chain ID, to be encrypted and stored.
+     */
+    func updateSwapMakerPrivateSettlementMethodData(swapID: String, chainID _chainID: String, data: String?) throws {
+        let encryptedData = try encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: data)
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(makerPrivateSettlementMethodData <- encryptedData.0, makerPrivateSettlementMethodDataInitializationVector <- encryptedData.1))
+        }
+        logger.notice("updateSwapMakerPrivateSettlementMethodData: updated for \(swapID), if present")
+    }
+    
+    /**
      Updates a persistently stored `DatabaseSwap`'s `takerPrivateSettlementMethodData` and `takerPrivateSettlementMethodDataInitializationVector` fields with the results of encrypting `data`.
      
      - Parameters:

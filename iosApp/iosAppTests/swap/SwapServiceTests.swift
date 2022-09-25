@@ -513,10 +513,12 @@ class SwapServiceTests: XCTestCase {
             DispatchQueue.main.async {
                 // Ensure that SwapService updates swap state in swapTruthSource
                 XCTAssertEqual(SwapState.awaitingFilling, swap.state)
+                XCTAssertEqual("maker_settlement_method_details", swap.makerPrivateSettlementMethodData)
                 
                 // Ensure that SwapService persistently updates swap state
                 let swapInDatabase = try! databaseService.getSwap(id: swapForDatabase.id)
                 XCTAssertEqual(SwapState.awaitingFilling.asString, swapInDatabase!.state)
+                XCTAssertEqual("maker_settlement_method_details", swapInDatabase!.makerPrivateSettlementMethodData)
                 
                 expectation.fulfill()
             }
