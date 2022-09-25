@@ -500,12 +500,13 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                     let swapIDB64String = message.swapID.asData().base64EncodedString()
                     if message.settlementMethodDetails == nil {
                         logger.warning("handleTakerInformationMessage: private data in message was nil for \(message.swapID.uuidString)")
-                    }
-                    logger.notice("handleTakerInformationMessage: persistently storing private data in message for \(message.swapID.uuidString)")
-                    try databaseService.updateSwapTakerPrivateSettlementMethodData(swapID: swapIDB64String, chainID: String(swap.chainID), data: message.settlementMethodDetails)
-                    logger.notice("handleTakerInformationMessage: updating \(message.swapID.uuidString) with private data")
-                    DispatchQueue.main.async {
-                        swap.takerPrivateSettlementMethodData = message.settlementMethodDetails
+                    } else {
+                        logger.notice("handleTakerInformationMessage: persistently storing private data in message for \(message.swapID.uuidString)")
+                        try databaseService.updateSwapTakerPrivateSettlementMethodData(swapID: swapIDB64String, chainID: String(swap.chainID), data: message.settlementMethodDetails)
+                        logger.notice("handleTakerInformationMessage: updating \(message.swapID.uuidString) with private data")
+                        DispatchQueue.main.async {
+                            swap.takerPrivateSettlementMethodData = message.settlementMethodDetails
+                        }
                     }
                     logger.notice("handleTakerInformationMessage: updating \(message.swapID.uuidString) to \(SwapState.awaitingMakerInformation.asString)")
                     try databaseService.updateSwapState(swapID: message.swapID.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingMakerInformation.asString)
