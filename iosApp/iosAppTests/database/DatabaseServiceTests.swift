@@ -124,6 +124,9 @@ class DatabaseServiceTests: XCTestCase {
         XCTAssertEqual(returnedOffer!.state, "a_new_state_here")
     }
     
+    /**
+     Ensures code to store, get and delete settlement methods works properly.
+     */
     func testStoreAndGetAndDeleteSettlementMethods() throws {
         let offerId = "an_offer_id"
         let chainID = "a_chain_id"
@@ -161,6 +164,55 @@ class DatabaseServiceTests: XCTestCase {
         let returnedSettlementMethodsAfterDeletion = try dbService.getSettlementMethods(offerID: offerId, _chainID: chainID)
         XCTAssertNil(returnedSettlementMethodsAfterDeletion)
         let differentReturnedSettlementMethods = try dbService.getSettlementMethods(offerID: offerId, _chainID: differentChainID)
+        XCTAssertEqual(differentReturnedSettlementMethods!.count, 3)
+        XCTAssertEqual(differentReturnedSettlementMethods![0].0, "settlement_method_zero")
+        XCTAssertEqual(differentReturnedSettlementMethods![0].1, "private_data_zero")
+        XCTAssertEqual(differentReturnedSettlementMethods![1].0, "settlement_method_one")
+        XCTAssertEqual(differentReturnedSettlementMethods![1].1, "private_data_one")
+        XCTAssertEqual(differentReturnedSettlementMethods![2].0, "settlement_method_two")
+        XCTAssertEqual(differentReturnedSettlementMethods![2].1, "private_data_two")
+    }
+    
+    /**
+     Ensures code to store, get and delete pending settlement methods works properly.
+     */
+    func testStoreAndGetAndDeletePendingSettlementMethods() throws {
+        let offerId = "an_offer_id"
+        let chainID = "a_chain_id"
+        let differentChainID = "different_chain_id"
+        let settlementMethods = [
+            ("settlement_method_zero", "private_data_zero"),
+            ("settlement_method_one", "private_data_one"),
+            ("settlement_method_two", "private_data_two")
+        ]
+        try dbService.storePendingSettlementMethods(offerID: offerId, _chainID: chainID, pendingSettlementMethods: settlementMethods)
+        try dbService.storePendingSettlementMethods(offerID: offerId, _chainID: differentChainID, pendingSettlementMethods: settlementMethods)
+        let returnedSettlementMethods = try dbService.getPendingSettlementMethods(offerID: offerId, _chainID: chainID)
+        XCTAssertEqual(returnedSettlementMethods!.count, 3)
+        XCTAssertEqual(returnedSettlementMethods![0].0, "settlement_method_zero")
+        XCTAssertEqual(returnedSettlementMethods![0].1, "private_data_zero")
+        XCTAssertEqual(returnedSettlementMethods![1].0, "settlement_method_one")
+        XCTAssertEqual(returnedSettlementMethods![1].1, "private_data_one")
+        XCTAssertEqual(returnedSettlementMethods![2].0, "settlement_method_two")
+        XCTAssertEqual(returnedSettlementMethods![2].1, "private_data_two")
+        let newSettlementMethods = [
+            ("settlement_method_three", "private_data_three"),
+            ("settlement_method_four", "private_data_four"),
+            ("settlement_method_five", "private_data_five")
+        ]
+        try dbService.storePendingSettlementMethods(offerID: offerId, _chainID: chainID, pendingSettlementMethods: newSettlementMethods)
+        let newReturnedSettlementMethods = try dbService.getPendingSettlementMethods(offerID: offerId, _chainID: chainID)
+        XCTAssertEqual(newReturnedSettlementMethods!.count, 3)
+        XCTAssertEqual(newReturnedSettlementMethods![0].0, "settlement_method_three")
+        XCTAssertEqual(newReturnedSettlementMethods![0].1, "private_data_three")
+        XCTAssertEqual(newReturnedSettlementMethods![1].0, "settlement_method_four")
+        XCTAssertEqual(newReturnedSettlementMethods![1].1, "private_data_four")
+        XCTAssertEqual(newReturnedSettlementMethods![2].0, "settlement_method_five")
+        XCTAssertEqual(newReturnedSettlementMethods![2].1, "private_data_five")
+        try dbService.deletePendingSettlementMethods(offerID: offerId, _chainID: chainID)
+        let returnedSettlementMethodsAfterDeletion = try dbService.getPendingSettlementMethods(offerID: offerId, _chainID: chainID)
+        XCTAssertNil(returnedSettlementMethodsAfterDeletion)
+        let differentReturnedSettlementMethods = try dbService.getPendingSettlementMethods(offerID: offerId, _chainID: differentChainID)
         XCTAssertEqual(differentReturnedSettlementMethods!.count, 3)
         XCTAssertEqual(differentReturnedSettlementMethods![0].0, "settlement_method_zero")
         XCTAssertEqual(differentReturnedSettlementMethods![0].1, "private_data_zero")

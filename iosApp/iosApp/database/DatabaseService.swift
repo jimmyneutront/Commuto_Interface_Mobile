@@ -54,9 +54,13 @@ class DatabaseService {
      */
     let offers = Table("Offer")
     /**
-     A database table of settlement methods, as Base-64 `String` encoded  bytes.
+     A database table of settlement methods and their encrypted private data and corresponding initialization vectors, as Base-64 `String` encoded  bytes.
      */
     let settlementMethods = Table("SettlementMethod")
+    /**
+     A database table of settlement methods (in exactly the same format as those in `settlementMethods`) that will become the actual settlement methods of an offer once an [EditOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) transaction is confirmed.
+     */
+    let pendingSettlementMethods = Table("PendingSettlementMethod")
     /**
      A database table of `KeyPair`s.
      */
@@ -252,6 +256,13 @@ class DatabaseService {
             t.column(privateSettlementMethodData)
             t.column(privateSettlementMethodDataInitializationVector)
         })
+        try connection.run(pendingSettlementMethods.create { t in
+            t.column(id)
+            t.column(chainID)
+            t.column(settlementMethod)
+            t.column(privateSettlementMethodData)
+            t.column(privateSettlementMethodDataInitializationVector)
+        })
         try connection.run(keyPairs.create { t in
             t.column(interfaceId, unique: true)
             t.column(publicKey)
@@ -422,16 +433,17 @@ class DatabaseService {
     }
     
     /**
-     Deletes all persistently stored settlement methods, their private data and corresponding initialization vectors (if any) associated with the specified offer ID and chain ID, and then persistently stores each settlement method and private data string tuples in the supplied `Array`, associating each one with the supplied offer ID and chain ID. Private settlement method data is encrypted with `databaseKey` and a new initialization vector.
+     Deletes all persistently stored settlement methods, their private data and corresponding initialization vectors (if any) associated with the specified offer ID and chain ID in `table`, and then persistently stores each settlement method and private data string tuples in the supplied `Array` into `table`, associating each one with the supplied offer ID and chain ID. Private settlement method data is encrypted with `databaseKey` and a new initialization vector.
      
      - Parameters:
         - offerID: The ID of the offer or swap to be associated with the settlement methods.
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
         - settlementMethods: The settlement methods to be persistently stored, as a tuple containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
+        - table: The database table into which the settlement methods will be inserted.
      */
-    func storeSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [(String, String?)]) throws {
+    private func insertSettlementMethodsIntoTable(offerID: String, _chainID: String, settlementMethods _settlementMethods: [(String, String?)], table: Table) throws {
         _ = try databaseQueue.sync {
-            try connection.run(settlementMethods.filter(id == offerID && chainID == _chainID).delete())
+            try connection.run(table.filter(id == offerID && chainID == _chainID).delete())
             for _settlementMethod in _settlementMethods {
                 var privateDataString: String? = nil
                 var initializationVectorString: String? = nil
@@ -442,7 +454,7 @@ class DatabaseService {
                     privateDataString = encryptedData.encryptedData.base64EncodedString()
                     initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
                 }
-                try connection.run(settlementMethods.insert(
+                try connection.run(table.insert(
                     id <- offerID,
                     chainID <- _chainID,
                     settlementMethod <- _settlementMethod.0,
@@ -451,41 +463,41 @@ class DatabaseService {
                 ))
             }
         }
-        logger.notice("storeSettlementMethods: stored \(_settlementMethods.count) for offer with B64 ID \(offerID)")
     }
     
     /**
-     Removes every persistently stored settlement method associated with an offer ID equal to `offerID` and a chain ID equal to `chainID`.
+     Removes every persistently stored settlement method associated with an offer ID equal to `offerID` and a chain ID equal to `chainID` from `table`.
      
      - Parameters:
         - offerID: The ID of the offer for which associated settlement methods should be removed.
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
+        - table: A database table from which settlement methods will be deleted.
      */
-    func deleteSettlementMethods(offerID: String, _chainID: String) throws {
+    private func deleteSettlementMethodsFromTable(offerID: String, _chainID: String, table: Table) throws {
         _ = try databaseQueue.sync {
-            try connection.run(settlementMethods.filter(id == offerID && chainID == _chainID).delete())
+            try connection.run(table.filter(id == offerID && chainID == _chainID).delete())
         }
-        logger.notice("deleteSettlementMethods: deleted for offer with B64 ID \(offerID)")
     }
-
+    
     /**
-     Retrieves the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID, or returns `nil` if no such settlement methods are present.
+     Retrieves the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID from `table`, or returns `nil` if no such settlement methods are present.
      
      - Parameters:
         - offerID: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
+        - table: The database table from which the settlement methods will be retrieved.
      
      - Throws: A `DatabaseServiceError.unexpectedNilError` if `rowIterator` is `nil`.
      
      - Returns: `nil` if no such settlement methods are found, or an `Array` of tuples containing a string and an optional string, the first of which is a settlement method associated with `id`, the second of which is the private data associated with that settlement method, or `nil` if no such data is found or if it cannot be decrypted.
      */
-    func getSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
+    private func getAndDecryptSettlementMethodsFromTable(offerID: String, _chainID: String, table: Table) throws -> [(String, String?)]? {
         var rowIterator: RowIterator? = nil
         _ = try databaseQueue.sync {
-            rowIterator = try connection.prepareRowIterator(settlementMethods.filter(id == offerID && chainID == _chainID))
+            rowIterator = try connection.prepareRowIterator(table.filter(id == offerID && chainID == _chainID))
         }
         guard rowIterator != nil else {
-            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getSettlementMethods call")
+            throw DatabaseServiceError.unexpectedNilError(desc: "rowIterator was nil after query during getAndDecryptSettlementMethodsFromTable call")
         }
         let result = try Array(rowIterator!)
         if result.count > 0 {
@@ -502,22 +514,104 @@ class DatabaseService {
                         if let decryptedPrivateData = try? databaseKey.decrypt(data: privateDataObject) {
                             decryptedPrivateDataString = String(bytes: decryptedPrivateData, encoding: .utf8)
                         } else {
-                            logger.error("getSettlementMethods: unable to get string from decoded private data using utf8 encoding for offer with B64 ID \(offerID)")
+                            logger.error("getAndDecryptSettlementMethodsFromTable: unable to get string from decoded private data using utf8 encoding for offer with B64 ID \(offerID)")
                         }
                     } else {
-                        logger.error("getSettlementMethods: found private data for offer with B64 ID \(offerID) but could not decode bytes from strings")
+                        logger.error("getAndDecryptSettlementMethodsFromTable: found private data for offer with B64 ID \(offerID) but could not decode bytes from strings")
                     }
                 } else {
-                    logger.notice("getSettlementMethods: did not find private settlement method data for settlement method for offer with B64 ID \(offerID)")
+                    logger.notice("getAndDecryptSettlementMethodsFromTable: did not find private settlement method data for settlement method for offer with B64 ID \(offerID)")
                 }
                 settlementMethodsArray.append((result[index][settlementMethod], decryptedPrivateDataString))
             }
-            logger.notice("getSettlementMethods: returning \(settlementMethodsArray.count) for offer with B64 ID \(offerID)")
+            logger.notice("getAndDecryptSettlementMethodsFromTable: returning \(settlementMethodsArray.count) for offer with B64 ID \(offerID)")
             return settlementMethodsArray
         } else {
-            logger.notice("getSettlementMethods: none found for offer with B64 ID \(offerID)")
+            logger.notice("getAndDecryptSettlementMethodsFromTable: none found for offer with B64 ID \(offerID)")
             return nil
         }
+    }
+    
+    /**
+     Calls `DatabaseService.insertSettlementMethodsIntoTable`, passing all parameters passed to this function and the table of offers' current settlement methods.
+     
+     - Parameters:
+        - offerID: The ID of the offer or swap to be associated with the settlement methods.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
+        - settlementMethods: The settlement methods to be persistently stored, as a tuple containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
+     */
+    func storeSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [(String, String?)]) throws {
+        try insertSettlementMethodsIntoTable(offerID: offerID, _chainID: _chainID, settlementMethods: _settlementMethods, table: settlementMethods)
+        logger.notice("storeSettlementMethods: stored \(_settlementMethods.count) for offer with B64 ID \(offerID)")
+    }
+    
+    /**
+     Calls `DatabaseService.deleteSettlementMethodsFromTable`, passing all parameters passed to this function and the table of the offer's current settlement methods.
+     
+     - Parameters:
+        - offerID: The ID of the offer for which associated settlement methods should be removed.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
+     */
+    func deleteSettlementMethods(offerID: String, _chainID: String) throws {
+        try deleteSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: settlementMethods)
+        logger.notice("deleteSettlementMethods: deleted for offer with B64 ID \(offerID)")
+    }
+
+    /**
+     Calls `DatabaseService.getAndDecryptSettlementMethodsFromTable`, passing all parameters passed to this function and the table of the offer's current settlement methods.
+     
+     Retrieves the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID, or returns `nil` if no such settlement methods are present.
+     
+     - Parameters:
+        - offerID: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
+     
+     - Returns: The value returned by `DatabaseService.getAndDecryptSettlementMethodsFromTable`.
+     */
+    func getSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
+        logger.notice("getSettlementMethods: getting for offer with B64 ID \(offerID)")
+        return try getAndDecryptSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: settlementMethods)
+    }
+    
+    /**
+     Calls `DatabaseService.insertSettlementMethodsIntoTable`, passing all parameters passed to this function and the table of offers' pending settlement methods.
+     
+     - Parameters:
+        - offerID: The ID of the offer or swap to be associated with the pending settlement methods.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
+        - settlementMethods: The pending settlement methods to be persistently stored, as a tuple containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
+     */
+    func storePendingSettlementMethods(offerID: String, _chainID: String, pendingSettlementMethods _pendingSettlementMethods: [(String, String?)]) throws {
+        try insertSettlementMethodsIntoTable(offerID: offerID, _chainID: _chainID, settlementMethods: _pendingSettlementMethods, table: pendingSettlementMethods)
+        logger.notice("storePendingSettlementMethods: stored \(_pendingSettlementMethods.count) for offer with B64 ID \(offerID)")
+    }
+    
+    /**
+     Calls `DatabaseService.deleteSettlementMethodsFromTable`, passing all parameters passed to this function and the table of the offer's pending settlement methods.
+     
+     - Parameters:
+        - offerID: The ID of the offer for which associated pending settlement methods should be removed.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these pending settlement methods exists, as a `String`.
+     */
+    func deletePendingSettlementMethods(offerID: String, _chainID: String) throws {
+        try deleteSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: pendingSettlementMethods)
+        logger.notice("deletePendingSettlementMethods: deleted for offer with B64 ID \(offerID)")
+    }
+
+    /**
+     Calls `DatabaseService.getAndDecryptSettlementMethodsFromTable`, passing all parameters passed to this function and the table of the offer's pending settlement methods.
+     
+     Retrieves the persistently stored pending settlement methods their private data (if any) associated with the specified offer ID and chain ID, or returns `nil` if no such pending settlement methods are present.
+     
+     - Parameters:
+        - offerID: The ID of the offer for which pending settlement methods should be returned, as a Base64-`String` of bytes.
+        - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these pending settlement methods exists, as a `String`.
+     
+     - Returns: The value returned by `DatabaseService.getAndDecryptSettlementMethodsFromTable`.
+     */
+    func getPendingSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
+        logger.notice("getPendingSettlementMethods: getting for offer with B64 ID \(offerID)")
+        return try getAndDecryptSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: pendingSettlementMethods)
     }
     
     /**

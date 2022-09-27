@@ -318,7 +318,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     On the global `DispatchQueue`, this serializes the new settlement methods and calls the CommutoSwap contract's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, passing the offer ID and an `OfferStruct` containing the new serialized settlement methods.
+     On the global `DispatchQueue`, this serializes the new settlement methods, saves them and their private data persistently as pending settlement methods, and calls the CommutoSwap contract's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, passing the offer ID and an `OfferStruct` containing the new serialized settlement methods.
      
      - Parameters:
         - offerID: The ID of the offer to edit.
@@ -347,8 +347,13 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     }
                     do {
                         logger.notice("editOffer: serializing settlement methods for \(offerID.uuidString)")
-                        let onChainSettlementMethods = try newSettlementMethods.compactMap { settlementMethod in
-                            return try JSONEncoder().encode(settlementMethod)
+                        let serializedSettlementMethodsAndPrivateDetails = try newSettlementMethods.compactMap { settlementMethod in
+                            return (try JSONEncoder().encode(settlementMethod).base64EncodedString(), settlementMethod.privateData)
+                        }
+                        logger.notice("editOffer: persistently storing pending settlement methods for \(offerID.uuidString)")
+                        try databaseService.storePendingSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(offer.chainID), pendingSettlementMethods: serializedSettlementMethodsAndPrivateDetails)
+                        let onChainSettlementMethods = serializedSettlementMethodsAndPrivateDetails.compactMap { serializedSettlementMethodWithDetails in
+                            return Data(base64Encoded: serializedSettlementMethodWithDetails.0)
                         }
                         seal.fulfill(onChainSettlementMethods)
                     } catch {
@@ -387,7 +392,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 self.logger.notice("editOffer: successfully edited \(offerID.uuidString)")
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-                self.logger.error("editOffer: encountered error while canceling \(offerID.uuidString): \(error.localizedDescription)")
+                self.logger.error("editOffer: encountered error while editing \(offerID.uuidString): \(error.localizedDescription)")
                 seal.reject(error)
             }
         }

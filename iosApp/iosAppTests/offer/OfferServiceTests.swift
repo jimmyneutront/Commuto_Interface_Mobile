@@ -1459,6 +1459,27 @@ class OfferServiceTests: XCTestCase {
         offerTruthSource.serviceFeeRate = BigUInt(1)
         offerService.offerTruthSource = offerTruthSource
         
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: offerID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: 10_000 * BigUInt(10).power(18),
+            amountUpperBound: 20_000 * BigUInt(10).power(18),
+            securityDepositAmount: 2_000 * BigUInt(10).power(18),
+            serviceFeeRate: BigUInt(100),
+            direction: .buy,
+            settlementMethods: [SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA")],
+            protocolVersion: BigUInt(1),
+            chainID: BigUInt(31337), // Hardhat blockchain ID,
+            havePublicKey: true,
+            isUserMaker: false,
+            state: .offerOpened
+        )
+        offerTruthSource.offers[offerID] = offer
+        
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -1473,7 +1494,7 @@ class OfferServiceTests: XCTestCase {
         let editingExpectation = XCTestExpectation(description: "Fulfilled when offerService.editOffer returns")
         
         offerService.editOffer(offerID: offerID, newSettlementMethods: [
-            SettlementMethod(currency: "USD", price: "1.23", method: "a_method")
+            SettlementMethod(currency: "USD", price: "1.23", method: "a_method", privateData: "some_private_data")
         ]).done {
             editingExpectation.fulfill()
         }.cauterize()
@@ -1486,6 +1507,10 @@ class OfferServiceTests: XCTestCase {
         
         let offerStruct = try! blockchainService.getOffer(id: offerID)
         XCTAssertEqual(expectedSettlementMethods, offerStruct?.settlementMethods)
+        
+        let pendingSettlementMethodsInDatabase = try! databaseService.getPendingSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(BigUInt(31337)))
+        XCTAssertEqual(1, pendingSettlementMethodsInDatabase!.count)
+        XCTAssertEqual("some_private_data", pendingSettlementMethodsInDatabase?[0].1)
         
     }
     
