@@ -38,6 +38,14 @@ class OfferEditedEvent: Equatable {
     }
     
     /**
+     Creates a new `OfferEditedEvent` with the given `id` and `chainID`.
+     */
+    init(id: UUID, chainID: BigUInt) {
+        self.id = id
+        self.chainID = chainID
+    }
+    
+    /**
     Compares two `OfferEditedEvent`s for equality. Two `OfferEditedEvent`s are defined as equal if their `id` and `chainID` properties are equal.
      
      - Parameters:

@@ -747,7 +747,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`.
      
-     Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, verifies that the chain ID of the event and the offer data match, checks for the existence of an offer corresponding to the ID specified in `event` in persistent storage, updates the settlement methods of the corresponding persistently stored offer, removes `event` from `offerEditedEventsRepository`, and then synchronously updates the settlement methods of the offer with the ID specified in `event` (if present) in `offerTruthSource`'s `offers` dictionary on the main thread.
+     Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, and verifies that the chain ID of the event and the offer data match. Then this checks if the user of the interface is the maker of the offer being edited. If so, then the new settlement methods for the offer and their associated private data should be stored in the pending settlement methods database table. So this gets that data from `databaseService`, and then deserialzes the data to `SettlementMethod` objects which are added to a list, logging warnings when such a `SettlementMethod` has no associated private data. Then this creates another list of `SettlementMethod` objects by deserializing the settlement method data in the new on-chain offer data. Then this iterates through the latter list of `SettlementMethod` objects, searching for maching `SettlementMethod` objects in the former list (matching meaning that price, currency, and fiat currency values are equal; obviously on-chain settlement methods will have no private data). If, for a given `SettlementMethod` in the latter list, a matching `SettlementMethod` (which definitely has associated private data) is found in the former list, it is added to a third list of `SettlementMethods`. Once this iteration task is complete, this persistently stores the third list of new `SettlementMethod`s, and associates the third list with the corresponding `Offer` on the main `DispatchQueue`. If the user of this interface is not the maker of the offer being edited, this simply deserializes the new settlement methods from on-chain offer data and associates them with the corresponding `Offer` on the main `DispatchQueue`. Finally, this removes `event` from `offerEditedEventsRepository`.
      
      - Parameter event: The `OfferEditedEvent` of which `OfferService` is being notified.
      
@@ -768,30 +768,98 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         guard event.chainID == offerStruct.chainID else {
             throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferEditedEvent did not match chain ID of OfferStruct in handleOfferEditedEvent call. OfferEditedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID))
         }
-        logger.notice("handleOfferEditedEvent: checking for offer \(event.id.uuidString) in databaseService")
-        let offerInDatabase = try databaseService.getOffer(id: event.id.asData().base64EncodedString())
-        if offerInDatabase == nil {
-            logger.warning("handleOfferEditedEvent: could not find persistently stored offer \(event.id.uuidString) during handleOfferEditedEvent call")
-        }
-        let offerIdString = event.id.asData().base64EncodedString()
+        let offerIDB64String = event.id.asData().base64EncodedString()
         let chainIDString = String(event.chainID)
-        #warning("TODO: Deal with the fact that this will delete private settlement method data for offers made by the user")
-        var settlementMethodStrings: [(String, String?)] = []
-        for settlementMethod in offerStruct.settlementMethods {
-            settlementMethodStrings.append((settlementMethod.base64EncodedString(), nil))
-        }
-        try databaseService.storeSettlementMethods(offerID: offerIdString, _chainID: chainIDString, settlementMethods: settlementMethodStrings)
-        logger.notice("handleOfferEditedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(event.id.uuidString)")
+        var newSettlementMethods: [SettlementMethod] = []
         guard let offerTruthSource = offerTruthSource else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferEditedEvent call")
         }
-        if let offer = offerTruthSource.offers[event.id] {
-            DispatchQueue.main.async {
-                offer.updateSettlementMethodsFromChain(onChainSettlementMethods: offerStruct.settlementMethods)
+        /*
+         If we are the maker of the offer being edited, then we should have the new settlement methods and their associated private data in the pending settlement methods database table. So we get these
+         */
+        let offer = offerTruthSource.offers[event.id]
+        if offer?.isUserMaker ?? false {
+            logger.notice("handleOfferEditedEvent: \(event.id.uuidString) was made by interface user")
+            /*
+             The user of this interface is the maker of this offer, and therefore we should have pending settlement methods for this offer in persistent storage.
+             */
+            let pendingSettlementMethods = try databaseService.getPendingSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
+            var deserializedPendingSettlementMethods: [SettlementMethod] = []
+            if let pendingSettlementMethods = pendingSettlementMethods {
+                if pendingSettlementMethods.count != offerStruct.settlementMethods.count {
+                    logger.warning("handleOfferEditedEvent: mismatching pending settlement methods counts for \(event.id.uuidString): \(pendingSettlementMethods.count) pending settlement methods in persistent storage, \(offerStruct.settlementMethods.count) settlement methods on-chain")
+                }
+                for pendingSettlementMethod in pendingSettlementMethods {
+                    do {
+                        var deserializedPendingSettlementMethod = try JSONDecoder().decode(SettlementMethod.self, from: Data(base64Encoded: pendingSettlementMethod.0) ?? Data())
+                        deserializedPendingSettlementMethod.privateData = pendingSettlementMethod.1
+                        if deserializedPendingSettlementMethod.privateData == nil {
+                            logger.warning("handleOfferEditedEvent: did not find private data for pending settlement method \(pendingSettlementMethod.0) for \(event.id.uuidString)")
+                        }
+                        deserializedPendingSettlementMethods.append(deserializedPendingSettlementMethod)
+                    } catch {
+                        logger.warning("handleOfferEditedEvent: encountered error while deserializing pending settlement method \(pendingSettlementMethod.0) for \(event.id.uuidString)")
+                    }
+                }
+            } else {
+                logger.warning("handleOfferEditedEvent: found no pending settlement methods for \(event.id.uuidString)")
             }
-            logger.notice("handleOfferEditedEvent: updated offer \(event.id.uuidString) in offerTruthSource")
+            
+            for onChainSettlementMethod in offerStruct.settlementMethods {
+                do {
+                    let deserializedOnChainSettlementMethod = try JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
+                    let correspondingDeserializedPendingSettlementMethod = deserializedPendingSettlementMethods.first { deserializedPendingSettlementMethod in
+                        if deserializedOnChainSettlementMethod.currency == deserializedPendingSettlementMethod.currency && deserializedOnChainSettlementMethod.price == deserializedPendingSettlementMethod.price && deserializedOnChainSettlementMethod.method == deserializedPendingSettlementMethod.method {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    if let correspondingDeserializedPendingSettlementMethod = correspondingDeserializedPendingSettlementMethod {
+                        newSettlementMethods.append(correspondingDeserializedPendingSettlementMethod)
+                    } else {
+                        logger.warning("handleOfferEditedEvent: unable to find pending settlement method for on-chain settlement method \(onChainSettlementMethod) for \(event.id.uuidString)")
+                    }
+                }
+            }
+            
+            if newSettlementMethods.count != offerStruct.settlementMethods.count {
+                logger.warning("handleOfferEditedEvent: mismatching new settlement methods counts for \(event.id.uuidString): \(newSettlementMethods.count) new settlement methods, \(offerStruct.settlementMethods.count) settlement methods on-chain")
+            }
+            
+            let newSerializedSettlementMethods = try newSettlementMethods.map { newSettlementMethod in
+                // Since we just deserialized these settlement methods, we should never get an error while reserializing them again
+                return (try JSONEncoder().encode(newSettlementMethod).base64EncodedString(), newSettlementMethod.privateData)
+            }
+            try databaseService.storeSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString, settlementMethods: newSerializedSettlementMethods)
+            logger.notice("handleOfferEditedEvent: persistently stored \(newSerializedSettlementMethods.count) settlement methods for \(event.id.uuidString)")
+            try databaseService.deletePendingSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
+            logger.notice("handleOfferEditedEvent: removed pending settlement methods from persistent storage for \(event.id.uuidString)")
+            if let offer = offer {
+                try DispatchQueue.main.sync {
+                    try offer.updateSettlementMethods(settlementMethods: newSettlementMethods)
+                }
+                logger.notice("handleOfferEditedEvent: updated offer \(event.id.uuidString) in offerTruthSource")
+            } else {
+                logger.warning("handleOfferEditedEvent: could not find offer \(event.id.uuidString) in offerTruthSource")
+            }
+            
         } else {
-            logger.warning("handleOfferEditedEvent: could not find offer \(event.id.uuidString) in offerTruthSource")
+            logger.notice("handleOfferEditedEvent: \(event.id.uuidString) was not made by interface user")
+            var settlementMethodStrings: [(String, String?)] = []
+            for settlementMethod in offerStruct.settlementMethods {
+                settlementMethodStrings.append((settlementMethod.base64EncodedString(), nil))
+            }
+            try databaseService.storeSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString, settlementMethods: settlementMethodStrings)
+            logger.notice("handleOfferEditedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for \(event.id.uuidString)")
+            if let offer = offer {
+                DispatchQueue.main.sync {
+                    offer.updateSettlementMethodsFromChain(onChainSettlementMethods: offerStruct.settlementMethods)
+                }
+                logger.notice("handleOfferEditedEvent: updated offer \(event.id.uuidString) in offerTruthSource")
+            } else {
+                logger.warning("handleOfferEditedEvent: could not find offer \(event.id.uuidString) in offerTruthSource")
+            }
         }
         offerEditedEventRepository.remove(event)
     }

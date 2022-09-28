@@ -901,6 +901,62 @@ class OfferServiceTests: XCTestCase {
         let offerTruthSource = TestOfferTruthSource()
         offerService.offerTruthSource = offerTruthSource
         
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: expectedOfferID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.zero,
+            onChainSettlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: true,
+            state: .awaitingPublicKeyAnnouncement
+        )!
+        try! offer.updateSettlementMethods(settlementMethods: [
+            SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT", privateData: "some_swift_data")
+        ])
+        offerTruthSource.offers[expectedOfferID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        let serializedSettlementMethodsAndPrivateDetails = offer.settlementMethods.compactMap { settlementMethod in
+            return (try! JSONEncoder().encode(settlementMethod).base64EncodedString(), settlementMethod.privateData)
+        }
+        try! databaseService.storeSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID, settlementMethods: serializedSettlementMethodsAndPrivateDetails)
+        
+        let pendingSettlementMethods = [
+            SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA", privateData: "some_sepa_data"),
+            SettlementMethod(currency: "BSD", price: "1.00", method: "SANDDOLLAR", privateData: "some_sanddollar_data")
+        ]
+        let serializedPendingSettlementMethodsAndPrivateDetails = pendingSettlementMethods.compactMap { pendingSettlementMethod in
+            return (try! JSONEncoder().encode(pendingSettlementMethod).base64EncodedString(), pendingSettlementMethod.privateData)
+        }
+        try! databaseService.storePendingSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID, pendingSettlementMethods: serializedPendingSettlementMethodsAndPrivateDetails)
+        
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -911,29 +967,30 @@ class OfferServiceTests: XCTestCase {
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         offerService.blockchainService = blockchainService
-        blockchainService.listen()
+        
+        let offerEditedEvent = OfferEditedEvent(id: expectedOfferID, chainID: BigUInt(31337))
+        
+        // handleOfferEditedEvent runs code synchronously on the main DispatchQueue, so we must call it like this to avoid deadlock
+        DispatchQueue.global().async {
+            try! offerService.handleOfferEditedEvent(offerEditedEvent)
+        }
+        
         wait(for: [offerEditedEventRepository.eventRemovedExpectation], timeout: 60.0)
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 1)
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID]!.id == expectedOfferID)
         XCTAssertEqual(offerEditedEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerEditedEventRepository.removedEvent!.id, expectedOfferID)
-        let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
-        XCTAssertTrue(offerInDatabase!.isCreated)
-        XCTAssertFalse(offerInDatabase!.isTaken)
-        XCTAssertEqual(offerInDatabase!.interfaceId, Data("maker interface Id here".utf8).base64EncodedString())
-        XCTAssertEqual(offerInDatabase!.amountLowerBound, "10000")
-        XCTAssertEqual(offerInDatabase!.amountUpperBound, "10000")
-        XCTAssertEqual(offerInDatabase!.securityDepositAmount, "1000")
-        XCTAssertEqual(offerInDatabase!.serviceFeeRate, "100")
-        XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
-        XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
-        XCTAssertFalse(offerInDatabase!.havePublicKey)
-        XCTAssertFalse(offerInDatabase!.isUserMaker)
-        XCTAssertEqual(offerInDatabase!.state, OfferState.awaitingPublicKeyAnnouncement.asString)
-        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
-        XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
-        XCTAssertEqual(settlementMethodsInDatabase![0].0, Data("{\"f\":\"EUR\",\"p\":\"SEPA\",\"m\":\"0.98\"}".utf8).base64EncodedString())
+        
+        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
+        XCTAssertEqual(settlementMethodsInDatabase!.count, 2)
+        XCTAssertEqual(settlementMethodsInDatabase![0].0, Data("{\"f\":\"EUR\",\"p\":\"0.98\",\"m\":\"SEPA\"}".utf8).base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase![0].1, "some_sepa_data")
+        XCTAssertEqual(settlementMethodsInDatabase![1].0, Data("{\"f\":\"BSD\",\"p\":\"1.00\",\"m\":\"SANDDOLLAR\"}".utf8).base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase![1].1, "some_sanddollar_data")
+        
+        let pendingSettlementMethodsInDatabase = try! databaseService.getPendingSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
+        XCTAssertNil(pendingSettlementMethodsInDatabase)
     }
     
     /**
