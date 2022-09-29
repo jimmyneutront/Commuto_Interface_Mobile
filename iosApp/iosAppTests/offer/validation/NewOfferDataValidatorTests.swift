@@ -20,7 +20,7 @@ class NewOfferDataValidatorTests: XCTestCase {
      Ensures that `validateNewOfferData` validates offer data properly.
      */
     func testValidateNewOfferData() throws {
-        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method")
+        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method", privateData: "some_private_data")
         let validatedData = try! validateNewOfferData(
             chainID: BigUInt.zero,
             stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!,
@@ -55,7 +55,7 @@ class NewOfferDataValidatorTests: XCTestCase {
      Ensures that `validateNewOfferData` validates offer data properly when the service fee rate is zero.
      */
     func testValidateNewOfferDataZeroServiceFee() throws {
-        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method")
+        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method", privateData: "some_private_data")
         let validatedData = try! validateNewOfferData(
             chainID: BigUInt.zero,
             stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!,

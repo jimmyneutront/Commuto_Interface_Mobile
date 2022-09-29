@@ -17,7 +17,7 @@ class NewSwapDataValidatorTests: XCTestCase {
      Ensures that `validateNewSwapData` validates swap data properly.
      */
     func testValidateNewSwapData() throws {
-        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method")
+        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method", privateData: "some_private_data")
         let offer = Offer(
             isCreated: true,
             isTaken: false,

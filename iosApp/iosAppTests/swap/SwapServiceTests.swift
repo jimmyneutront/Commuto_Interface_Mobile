@@ -79,6 +79,7 @@ class SwapServiceTests: XCTestCase {
             state: SwapState.awaitingTakerInformation,
             role: SwapRole.takerAndSeller
         )
+        swap.takerPrivateSettlementMethodData = "some_SWIFT_data"
         swapTruthSource.swaps[swapID] = swap
         let swapForDatabase = DatabaseSwap(
             id: swap.id.asData().base64EncodedString(),
@@ -147,8 +148,7 @@ class SwapServiceTests: XCTestCase {
         XCTAssertEqual(p2pService.makerPublicKey!.interfaceId, makerKeyPair.interfaceId)
         XCTAssertEqual(p2pService.takerKeyPair!.interfaceId, takerKeyPair.interfaceId)
         XCTAssertEqual(p2pService.swapID, swapID)
-        #warning("TODO: update this once SettlementMethodService is added")
-        XCTAssertEqual(p2pService.paymentDetails, "TEMPORARY")
+        XCTAssertEqual(p2pService.paymentDetails, "some_SWIFT_data")
         
         XCTAssertEqual(swap.state, SwapState.awaitingMakerInformation)
         let swapInDatabase = try! databaseService.getSwap(id: swapID.asData().base64EncodedString())

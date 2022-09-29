@@ -198,7 +198,8 @@ class OfferServiceTests: XCTestCase {
             
             let eventRemovedExpectation = XCTestExpectation(description: "Fulfilled when remove is called")
             
-            override func append(_ element: OfferOpenedEvent) {                super.append(element)
+            override func append(_ element: OfferOpenedEvent) {
+                super.append(element)
             }
             
             override func remove(_ elementToRemove: OfferOpenedEvent) {
