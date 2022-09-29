@@ -206,15 +206,15 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     state: newOffer.state.asString
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
-                if let afterPersistentStorage = afterPersistentStorage {
-                    afterPersistentStorage()
-                }
                 var settlementMethodStrings: [(String, String?)] = []
                 for settlementMethod in newOffer.settlementMethods {
                     settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), settlementMethod.privateData))
                 }
                 logger.notice("openOffer: persistently storing \(settlementMethodStrings.count) settlement methods for offer \(newOffer.id.uuidString)")
                 try databaseService.storeSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
+                if let afterPersistentStorage = afterPersistentStorage {
+                    afterPersistentStorage()
+                }
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] newOffer -> Promise<(Void, Offer)> in
                 // Authorize token transfer to CommutoSwap contract
                 let tokenAmountForOpeningOffer = newOffer.securityDepositAmount + newOffer.serviceFeeAmountUpperBound
