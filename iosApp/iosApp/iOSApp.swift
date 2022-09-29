@@ -112,11 +112,14 @@ struct iOSApp: App {
                 case .swaps:
                     SwapsView(swapTruthSource: container.resolve(SwapViewModel.self)!)
                         .frame(maxHeight: .infinity)
+                case .settlementMethods:
+                    SettlementMethodsView()
                 }
                 Divider()
                 HStack {
                     TabButton(label: "Offers", tab: .offers)
                     TabButton(label: "Swaps", tab: .swaps)
+                    TabButton(label: "SM", tab: .settlementMethods)
                 }
                 .padding([.top, .bottom], 15)
             }

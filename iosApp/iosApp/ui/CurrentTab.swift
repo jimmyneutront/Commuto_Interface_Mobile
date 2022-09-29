@@ -18,4 +18,8 @@ enum CurrentTab {
      Indicates that `SwapsView` should be displayed to the user.
      */
     case swaps
+    /**
+     Indicates that `SettlementMethodsView` should be displayed to the user.
+     */
+    case settlementMethods
 }
