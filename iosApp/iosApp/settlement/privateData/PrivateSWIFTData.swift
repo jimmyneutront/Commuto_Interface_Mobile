@@ -9,7 +9,7 @@
 /**
  Private data for a SWIFT settlement method, corresponding to a bank account that can receive SWIFT transfers.
  */
-struct PrivateSWIFTData: Codable {
+struct PrivateSWIFTData: PrivateData {
     /**
      The legal name of the holder of the bank account.
      */

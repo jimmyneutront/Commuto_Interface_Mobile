@@ -9,7 +9,7 @@
 /**
  Private data for a SEPA settlement method, corresponding to a bank account that can receive SEPA transfers.
  */
-struct PrivateSEPAData: Codable {
+struct PrivateSEPAData: PrivateData {
     /**
      The legal name of the holder of the bank account.
      */

@@ -60,7 +60,7 @@ extension SettlementMethod {
     
     static let sampleSettlementMethodsEmptyPrices: [SettlementMethod] = [
         SettlementMethod(currency: "EUR", price: "", method: "SEPA", privateData: String(decoding: try! JSONEncoder().encode(PrivateSEPAData(accountHolder: "Proper Name", bic: "A BIC", iban: "An IBAN", address: "An Address")), as: UTF8.self)),
-        SettlementMethod(currency: "USD", price: "", method: "SWIFT", privateData: "Some SWIFT data"),
+        SettlementMethod(currency: "USD", price: "", method: "SWIFT", privateData: String(decoding: try! JSONEncoder().encode(PrivateSWIFTData(accountHolder: "Proper Name", bic: "A BIC", accountNumber: "An Account Number")), as: UTF8.self)),
         SettlementMethod(currency: "BUSD", price: "", method: "SANDDOLLAR", privateData: "Some SANDDOLLAR data"),
     ]
     
