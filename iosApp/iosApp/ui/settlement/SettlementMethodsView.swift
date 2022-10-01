@@ -35,8 +35,17 @@ struct SettlementMethodsView: View {
  A card displaying basic information about a settlement method belonging to the user, to be shown in the list of the user's settlement methods.
  */
 struct SettlementMethodCardView: View {
+    /**
+     The `SettlementMethod` about which this card displays information.
+     */
     let settlementMethod: SettlementMethod
+    /**
+     A struct adopting `PrivateData` containing private data for `settlementMethod`.
+     */
     @State var privateData: PrivateData? = nil
+    /**
+     Indicates whether we have finished attempting to parse the private data associated with `settlementMethod`.
+     */
     @State var finishedParsingData = false
     var body: some View {
         VStack(alignment: .leading) {
@@ -68,9 +77,22 @@ struct SettlementMethodCardView: View {
  Displays all information, including private information, about a given `SettlementMethod`.
  */
 struct SettlementMethodDetailView: View {
+    /**
+     The `SettlementMethod` about which this displays information.
+     */
     let settlementMethod: SettlementMethod
-    @State var privateData: PrivateData? = nil
-    @State var finishedParsingData = false
+    /**
+     A struct adopting `PrivateData` containing private data for `settlementMethod`..
+     */
+    @State private var privateData: PrivateData? = nil
+    /**
+     Indicates whether we have finished attempting to parse the private data associated with `settlementMethod`.
+     */
+    @State private var finishedParsingData = false
+    /**
+     Indicates whether we are showing the sheet for editing settlement method data.
+     */
+    @State private var isShowingEditSheet = false
     var navigationTitle: String {
         if settlementMethod.method == "SEPA" {
             return "SEPA Transfer"
@@ -101,6 +123,26 @@ struct SettlementMethodDetailView: View {
                         .font(.title)
                         .bold()
                 }
+                Button(
+                    action: {
+                        isShowingEditSheet = true
+                    },
+                    label: {
+                        Text("Edit")
+                            .font(.largeTitle)
+                            .bold()
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.primary, lineWidth: 3)
+                            )
+                    }
+                )
+                .accentColor(Color.primary)
+                .sheet(isPresented: $isShowingEditSheet) {
+                    EditSettlementMethodView(settlementMethod: settlementMethod, privateData: $privateData,isShowingEditSheet: $isShowingEditSheet)
+                }
             }
             .frame(
                 maxWidth: .infinity,
@@ -112,6 +154,191 @@ struct SettlementMethodDetailView: View {
         .onAppear {
             createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingData)
         }
+    }
+}
+
+/**
+ Displays a view allowing the user to edit the private data of `settlementMethod`, or displays an error message if the details cannot be edited. This should only be presented in a sheet.
+ */
+struct EditSettlementMethodView: View {
+    /**
+     The `SettlementMethod`, the private data of which this helps to edit.
+     */
+    let settlementMethod: SettlementMethod
+    /**
+     A binding to an optional `PrivateData` struct for `settlementMethod`.
+     */
+    @Binding var privateData: PrivateData?
+    /**
+     Indicates whether we are showing the sheet containing this `View`.
+     */
+    @Binding var isShowingEditSheet: Bool
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Edit \(settlementMethod.method) Details")
+                        .font(.title)
+                        .bold()
+                    Spacer()
+                    Button(action: { isShowingEditSheet = false }, label: { Text("Cancel") })
+                }
+                if settlementMethod.method == "SEPA" {
+                    EditableSEPADetailView(privateData: $privateData, isShowingEditSheet: $isShowingEditSheet)
+                } else if settlementMethod.method == "SWIFT" {
+                    EditableSWIFTDetailView(privateData: $privateData, isShowingEditSheet: $isShowingEditSheet)
+                } else {
+                    Text("Unable to edit details")
+                }
+            }
+            .textFieldStyle(.roundedBorder)
+            .padding()
+        }
+    }
+}
+
+/**
+ Allows the user to supply private SEPA data. When the user presses the "Done" button, a new `PrivateSEPAData` struct is created from the data they have supplied, and is set equal to `privateData`. This should only be presented in a sheet.
+ */
+struct EditableSEPADetailView: View {
+    /**
+     A binding to an optional `PrivateData` struct, which this will set with the `PrivateSEPAData` struct it creates when the user presses "Done".
+     */
+    @Binding var privateData: PrivateData?
+    /**
+     Indicates whether we are showing the sheet containing this `View`.
+     */
+    @Binding var isShowingEditSheet: Bool
+    /**
+     The value the user has supplied for the "Account Holder" field.
+     */
+    @State private var accountHolder: String = ""
+    /**
+     The value the user has supplied for the Bank Identification Code field.
+     */
+    @State private var bic: String = ""
+    /**
+     The value the user has supplied for the International Bank Account Number field.
+     */
+    @State private var iban: String = ""
+    /**
+     The value the user has supplied for the Address field.
+     */
+    @State private var address: String = ""
+    var body: some View {
+        Text("Account Holder:")
+            .font(.title2)
+        TextField(
+            "",
+            text: $accountHolder
+        )
+        .disableAutocorrection(true)
+        Text("BIC:")
+            .font(.title2)
+        TextField(
+            "",
+            text: $bic
+        )
+        .disableAutocorrection(true)
+        Text("IBAN:")
+            .font(.title2)
+        TextField(
+            "",
+            text: $iban
+        )
+        .disableAutocorrection(true)
+        Text("Address:")
+            .font(.title2)
+        TextField(
+            "",
+            text: $address
+        )
+        .disableAutocorrection(true)
+        Button(
+            action: {
+                privateData = PrivateSEPAData(accountHolder: accountHolder, bic: bic, iban: iban, address: address)
+                isShowingEditSheet = false
+            },
+            label: {
+                Text("Done")
+                    .font(.largeTitle)
+                    .bold()
+                    .padding(10)
+                    .frame(maxWidth: .infinity)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.primary, lineWidth: 3)
+                    )
+            }
+        )
+        .accentColor(Color.primary)
+    }
+}
+
+/**
+ Allows the user to supply private SWIFT data. When the user presses the "Done" button, a new `PrivateSWIFTData` struct is created from the data they have supplied, and is set equal to `privateData`. This should only be presented in a sheet.
+ */
+struct EditableSWIFTDetailView: View {
+    /**
+     A binding to an optional `PrivateData` struct, which this will set with the `PrivateSEPAData` struct it creates when the user presses "Done".
+     */
+    @Binding var privateData: PrivateData?
+    /**
+     Indicates whether we are showing the sheet containing this `View`.
+     */
+    @Binding var isShowingEditSheet: Bool
+    /**
+     The value the user has supplied for the "Account Holder" field.
+     */
+    @State private var accountHolder: String = ""
+    /**
+     The value the user has supplied for the Bank Identification Code field.
+     */
+    @State private var bic: String = ""
+    /**
+     The value the user has supplied for the Account Number field.
+     */
+    @State private var accountNumber: String = ""
+    var body: some View {
+        Text("Account Holder:")
+            .font(.title2)
+        TextField(
+            "",
+            text: $accountHolder
+        )
+        .disableAutocorrection(true)
+        Text("BIC:")
+            .font(.title2)
+        TextField(
+            "",
+            text: $bic
+        )
+        .disableAutocorrection(true)
+        Text("Account Number:")
+            .font(.title2)
+        TextField(
+            "",
+            text: $accountNumber
+        )
+        .disableAutocorrection(true)
+        Button(
+            action: {
+                privateData = PrivateSWIFTData(accountHolder: accountHolder, bic: bic, accountNumber: accountNumber)
+                isShowingEditSheet = false
+            },
+            label: {
+                Text("Done")
+                    .font(.largeTitle)
+                    .bold()
+                    .padding(10)
+                    .frame(maxWidth: .infinity)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.primary, lineWidth: 3)
+                    )
+            }
+        )
+        .accentColor(Color.primary)
     }
 }
 
