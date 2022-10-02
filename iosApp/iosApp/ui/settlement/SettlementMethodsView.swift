@@ -25,7 +25,7 @@ struct SettlementMethodsView: View {
         NavigationView {
             List {
                 ForEach(settlementMethods) { settlementMethod in
-                    NavigationLink(destination: SettlementMethodDetailView(settlementMethod: settlementMethod)) {
+                    NavigationLink(destination: SettlementMethodDetailView(settlementMethod: settlementMethod, settlementMethods: $settlementMethods)) {
                         SettlementMethodCardView(settlementMethod: settlementMethod)
                     }
                 }
@@ -162,6 +162,7 @@ struct SettlementMethodCardView: View {
      Indicates whether we have finished attempting to parse the private data associated with `settlementMethod`.
      */
     @State var finishedParsingData = false
+    
     var body: some View {
         VStack(alignment: .leading) {
             Text(settlementMethod.method)
@@ -196,6 +197,10 @@ struct SettlementMethodDetailView: View {
      The `SettlementMethod` about which this displays information.
      */
     let settlementMethod: SettlementMethod
+    /**
+     The list of the user's current settlement methods.
+     */
+    @Binding var settlementMethods: [SettlementMethod]
     /**
      A struct adopting `PrivateData` containing private data for `settlementMethod`..
      */
@@ -261,6 +266,25 @@ struct SettlementMethodDetailView: View {
                 .sheet(isPresented: $isShowingEditSheet) {
                     EditSettlementMethodView(settlementMethod: settlementMethod, privateData: $privateData,isShowingEditSheet: $isShowingEditSheet)
                 }
+                Button(
+                    action: {
+                        settlementMethods.removeAll(where: { possibleSettlementMethod in
+                            return possibleSettlementMethod.id == settlementMethod.id
+                        })
+                    },
+                    label: {
+                        Text("Delete")
+                            .font(.largeTitle)
+                            .bold()
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.red, lineWidth: 3)
+                            )
+                    }
+                )
+                .accentColor(Color.red)
             }
             .frame(
                 maxWidth: .infinity,
@@ -348,6 +372,7 @@ struct EditableSEPADetailView: View {
      The value the user has supplied for the Address field.
      */
     @State private var address: String = ""
+    
     var body: some View {
         VStack(alignment: .leading) {
             Text("Account Holder:")
@@ -424,6 +449,7 @@ struct EditableSWIFTDetailView: View {
      The value the user has supplied for the Account Number field.
      */
     @State private var accountNumber: String = ""
+    
     var body: some View {
         VStack(alignment: .leading) {
             Text("Account Holder:")
