@@ -12,10 +12,19 @@ import SwiftUI
  Displays the list of the user's settlement methods as `SettlementMethodCardView`s in a `List`.
  */
 struct SettlementMethodsView: View {
+    /**
+     Indicates whether we are showing the sheet for adding a settlement method.
+     */
+    @State private var isShowingAddSheet = false
+    /**
+     The list of the user's current settlement methods.
+     */
+    @State private var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethodsEmptyPrices
+    
     var body: some View {
         NavigationView {
             List {
-                ForEach(SettlementMethod.sampleSettlementMethodsEmptyPrices) { settlementMethod in
+                ForEach(settlementMethods) { settlementMethod in
                     NavigationLink(destination: SettlementMethodDetailView(settlementMethod: settlementMethod)) {
                         SettlementMethodCardView(settlementMethod: settlementMethod)
                     }
@@ -23,12 +32,118 @@ struct SettlementMethodsView: View {
             }
             .navigationTitle(Text("Settlement Methods", comment: "Appears as a title above the list of the user's settlement methods"))
             .toolbar {
-                Button(action: {}) {
+                Button(action: {
+                    isShowingAddSheet = true
+                }) {
                     Text("Add", comment: "The label of the button to add a new settlement method")
+                }
+                .sheet(isPresented: $isShowingAddSheet) {
+                    AddSettlementMethodView(settlementMethods: $settlementMethods, isShowingAddSheet: $isShowingAddSheet)
                 }
             }
         }
     }
+}
+
+struct AddSettlementMethodView: View {
+    /**
+     The list of the user's current settlement methods.
+     */
+    @Binding var settlementMethods: [SettlementMethod]
+    /**
+     An enum representing the type of settlement method that the user has decided to create.
+     */
+    enum SettlementMethodType: CustomStringConvertible, CaseIterable, Identifiable {
+        case SEPA, SWIFT
+        var id: Self { self }
+        var description: String {
+            switch self {
+            case .SEPA:
+                return "SEPA"
+            case .SWIFT:
+                return "SWIFT"
+            }
+        }
+    }
+    /**
+     Indicates whether we are showing the sheet for editing settlement method data.
+     */
+    @Binding var isShowingAddSheet: Bool
+    /**
+     The type of settlement method that the user has decided to create, or `nil` if the user has not yet decided.
+     */
+    @State private var selectedSettlementMethod: SettlementMethodType? = nil
+    
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Add Settlement Method")
+                        .font(.title)
+                        .bold()
+                    Spacer()
+                    Button(action: { isShowingAddSheet = false }, label: { Text("Cancel") })
+                }
+                Text("Select type:")
+                    .font(.title2)
+                ForEach(SettlementMethodType.allCases) { settlementMethodType in
+                    Button(
+                        action: {
+                            selectedSettlementMethod = settlementMethodType
+                        },
+                        label: {
+                            VStack(alignment: .center) {
+                                Text(settlementMethodType.description)
+                                    .bold()
+                            }
+                            .frame(
+                                minWidth: 0,
+                                maxWidth: .infinity
+                            )
+                            .padding(15)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(getColorForSettlementMethod(settlementMethodType: settlementMethodType), lineWidth: 3)
+                            )
+                        }
+                    )
+                    .accentColor(Color.primary)
+                }
+                if selectedSettlementMethod == .SEPA {
+                    EditableSEPADetailView(buttonText: "Add", buttonAction: { newPrivateData in
+                        var newSettlementMethod = SettlementMethod(currency: "EUR", price: "", method: "SEPA")
+                        do {
+                            newSettlementMethod.privateData = String(decoding: try JSONEncoder().encode(newPrivateData as? PrivateSEPAData), as: UTF8.self)
+                            settlementMethods.append(newSettlementMethod)
+                        } catch {}
+                        isShowingAddSheet = false
+                    })
+                } else if selectedSettlementMethod == .SWIFT {
+                    EditableSWIFTDetailView(buttonText: "Add", buttonAction: { newPrivateData in
+                        var newSettlementMethod = SettlementMethod(currency: "USD", price: "", method: "SWIFT")
+                        do {
+                            newSettlementMethod.privateData = String(decoding: try JSONEncoder().encode(newPrivateData as? PrivateSWIFTData), as: UTF8.self)
+                            settlementMethods.append(newSettlementMethod)
+                        } catch {}
+                        isShowingAddSheet = false
+                    })
+                }
+            }
+            .padding()
+        }
+    }
+    
+    /**
+     Returns `Color.green` if `settlementMethodType` equals `selectedSettlementMethod`, and returns `Color.primary` otherwise.
+     */
+    private func getColorForSettlementMethod(settlementMethodType: AddSettlementMethodView.SettlementMethodType) -> Color {
+        if selectedSettlementMethod == settlementMethodType {
+            return Color.green
+        } else {
+            return Color.primary
+        }
+    }
+    
 }
 
 /**
@@ -93,6 +208,9 @@ struct SettlementMethodDetailView: View {
      Indicates whether we are showing the sheet for editing settlement method data.
      */
     @State private var isShowingEditSheet = false
+    /**
+     The title to be displayed in the upper leading corner of the view.
+     */
     var navigationTitle: String {
         if settlementMethod.method == "SEPA" {
             return "SEPA Transfer"
@@ -184,31 +302,36 @@ struct EditSettlementMethodView: View {
                     Button(action: { isShowingEditSheet = false }, label: { Text("Cancel") })
                 }
                 if settlementMethod.method == "SEPA" {
-                    EditableSEPADetailView(privateData: $privateData, isShowingEditSheet: $isShowingEditSheet)
+                    EditableSEPADetailView(buttonText: "Done", buttonAction: { newPrivateData in
+                        privateData = newPrivateData
+                        isShowingEditSheet = false
+                    })
                 } else if settlementMethod.method == "SWIFT" {
-                    EditableSWIFTDetailView(privateData: $privateData, isShowingEditSheet: $isShowingEditSheet)
+                    EditableSWIFTDetailView(buttonText: "Done", buttonAction: { newPrivateData in
+                        privateData = newPrivateData
+                        isShowingEditSheet = false
+                    })
                 } else {
                     Text("Unable to edit details")
                 }
             }
-            .textFieldStyle(.roundedBorder)
             .padding()
         }
     }
 }
 
 /**
- Allows the user to supply private SEPA data. When the user presses the "Done" button, a new `PrivateSEPAData` struct is created from the data they have supplied, and is set equal to `privateData`. This should only be presented in a sheet.
+ Allows the user to supply private SEPA data. When the user presses the "Done" button, a new `PrivateSEPAData` struct is created from the data they have supplied, and is passed to `buttonAction`.
  */
 struct EditableSEPADetailView: View {
     /**
-     A binding to an optional `PrivateData` struct, which this will set with the `PrivateSEPAData` struct it creates when the user presses "Done".
+     The label of the button that lies below the input text fields.
      */
-    @Binding var privateData: PrivateData?
+    let buttonText: String
     /**
-     Indicates whether we are showing the sheet containing this `View`.
+     The action that the button should perform when clicked, which receives a new struct adopting `PrivateData` made from the data supplied by the user.
      */
-    @Binding var isShowingEditSheet: Bool
+    let buttonAction: (PrivateData) -> Void
     /**
      The value the user has supplied for the "Account Holder" field.
      */
@@ -226,67 +349,69 @@ struct EditableSEPADetailView: View {
      */
     @State private var address: String = ""
     var body: some View {
-        Text("Account Holder:")
-            .font(.title2)
-        TextField(
-            "",
-            text: $accountHolder
-        )
-        .disableAutocorrection(true)
-        Text("BIC:")
-            .font(.title2)
-        TextField(
-            "",
-            text: $bic
-        )
-        .disableAutocorrection(true)
-        Text("IBAN:")
-            .font(.title2)
-        TextField(
-            "",
-            text: $iban
-        )
-        .disableAutocorrection(true)
-        Text("Address:")
-            .font(.title2)
-        TextField(
-            "",
-            text: $address
-        )
-        .disableAutocorrection(true)
-        Button(
-            action: {
-                privateData = PrivateSEPAData(accountHolder: accountHolder, bic: bic, iban: iban, address: address)
-                isShowingEditSheet = false
-            },
-            label: {
-                Text("Done")
-                    .font(.largeTitle)
-                    .bold()
-                    .padding(10)
-                    .frame(maxWidth: .infinity)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.primary, lineWidth: 3)
-                    )
-            }
-        )
-        .accentColor(Color.primary)
+        VStack(alignment: .leading) {
+            Text("Account Holder:")
+                .font(.title2)
+            TextField(
+                "",
+                text: $accountHolder
+            )
+            .disableAutocorrection(true)
+            Text("BIC:")
+                .font(.title2)
+            TextField(
+                "",
+                text: $bic
+            )
+            .disableAutocorrection(true)
+            Text("IBAN:")
+                .font(.title2)
+            TextField(
+                "",
+                text: $iban
+            )
+            .disableAutocorrection(true)
+            Text("Address:")
+                .font(.title2)
+            TextField(
+                "",
+                text: $address
+            )
+            .disableAutocorrection(true)
+            Button(
+                action: {
+                    buttonAction(PrivateSEPAData(accountHolder: accountHolder, bic: bic, iban: iban, address: address))
+                },
+                label: {
+                    Text(buttonText)
+                        .font(.largeTitle)
+                        .bold()
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.primary, lineWidth: 3)
+                        )
+                }
+            )
+            .accentColor(Color.primary)
+        }
+        .textFieldStyle(.roundedBorder)
     }
 }
 
 /**
- Allows the user to supply private SWIFT data. When the user presses the "Done" button, a new `PrivateSWIFTData` struct is created from the data they have supplied, and is set equal to `privateData`. This should only be presented in a sheet.
+ Allows the user to supply private SWIFT data. When the user presses the "Done" button, a new `PrivateSWIFTData` struct is created from the data they have supplied, and is passed to `buttonAction`.
  */
 struct EditableSWIFTDetailView: View {
     /**
-     A binding to an optional `PrivateData` struct, which this will set with the `PrivateSEPAData` struct it creates when the user presses "Done".
+     The label of the button that lies below the input text fields.
      */
-    @Binding var privateData: PrivateData?
+    let buttonText: String
     /**
-     Indicates whether we are showing the sheet containing this `View`.
+     The action that the button should perform when clicked, which receives a new struct adopting `PrivateData` made from the data supplied by the user.
      */
-    @Binding var isShowingEditSheet: Bool
+    let buttonAction: (PrivateData) -> Void
     /**
      The value the user has supplied for the "Account Holder" field.
      */
@@ -300,45 +425,47 @@ struct EditableSWIFTDetailView: View {
      */
     @State private var accountNumber: String = ""
     var body: some View {
-        Text("Account Holder:")
-            .font(.title2)
-        TextField(
-            "",
-            text: $accountHolder
-        )
-        .disableAutocorrection(true)
-        Text("BIC:")
-            .font(.title2)
-        TextField(
-            "",
-            text: $bic
-        )
-        .disableAutocorrection(true)
-        Text("Account Number:")
-            .font(.title2)
-        TextField(
-            "",
-            text: $accountNumber
-        )
-        .disableAutocorrection(true)
-        Button(
-            action: {
-                privateData = PrivateSWIFTData(accountHolder: accountHolder, bic: bic, accountNumber: accountNumber)
-                isShowingEditSheet = false
-            },
-            label: {
-                Text("Done")
-                    .font(.largeTitle)
-                    .bold()
-                    .padding(10)
-                    .frame(maxWidth: .infinity)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.primary, lineWidth: 3)
-                    )
-            }
-        )
-        .accentColor(Color.primary)
+        VStack(alignment: .leading) {
+            Text("Account Holder:")
+                .font(.title2)
+            TextField(
+                "",
+                text: $accountHolder
+            )
+            .disableAutocorrection(true)
+            Text("BIC:")
+                .font(.title2)
+            TextField(
+                "",
+                text: $bic
+            )
+            .disableAutocorrection(true)
+            Text("Account Number:")
+                .font(.title2)
+            TextField(
+                "",
+                text: $accountNumber
+            )
+            .disableAutocorrection(true)
+            Button(
+                action: {
+                    buttonAction(PrivateSWIFTData(accountHolder: accountHolder, bic: bic, accountNumber: accountNumber))
+                },
+                label: {
+                    Text(buttonText)
+                        .font(.largeTitle)
+                        .bold()
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.primary, lineWidth: 3)
+                        )
+                }
+            )
+            .accentColor(Color.primary)
+        }
+        .textFieldStyle(.roundedBorder)
     }
 }
 
