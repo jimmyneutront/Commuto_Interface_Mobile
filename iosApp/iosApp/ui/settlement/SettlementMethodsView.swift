@@ -11,21 +11,28 @@ import SwiftUI
 /**
  Displays the list of the user's settlement methods as `SettlementMethodCardView`s in a `List`.
  */
-struct SettlementMethodsView: View {
+struct SettlementMethodsView<TruthSource>: View where TruthSource: UISettlementMethodTruthSource {
+    
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodViewModel: TruthSource
+    
     /**
      Indicates whether we are showing the sheet for adding a settlement method.
      */
     @State private var isShowingAddSheet = false
-    /**
-     The list of the user's current settlement methods.
-     */
-    @State private var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethodsEmptyPrices
     
     var body: some View {
         NavigationView {
             List {
-                ForEach(settlementMethods) { settlementMethod in
-                    NavigationLink(destination: SettlementMethodDetailView(settlementMethod: settlementMethod, settlementMethods: $settlementMethods)) {
+                ForEach(settlementMethodViewModel.settlementMethods) { settlementMethod in
+                    NavigationLink(destination:
+                                    SettlementMethodDetailView(
+                                        settlementMethod: settlementMethod,
+                                        settlementMethodViewModel: settlementMethodViewModel
+                                    )
+                    ) {
                         SettlementMethodCardView(settlementMethod: settlementMethod)
                     }
                 }
@@ -38,18 +45,24 @@ struct SettlementMethodsView: View {
                     Text("Add", comment: "The label of the button to add a new settlement method")
                 }
                 .sheet(isPresented: $isShowingAddSheet) {
-                    AddSettlementMethodView(settlementMethods: $settlementMethods, isShowingAddSheet: $isShowingAddSheet)
+                    AddSettlementMethodView(
+                        settlementMethodViewModel: settlementMethodViewModel,
+                        isShowingAddSheet: $isShowingAddSheet
+                    )
                 }
             }
         }
     }
 }
 
-struct AddSettlementMethodView: View {
+/**
+ Displays a list of settlement method types that can be added, text fields for submitting private data corresponding to the settlement method that the user selects, and a button that adds the settlement method via `settlementMethodViewModel`. This should only be displayed in a sheet.
+ */
+struct AddSettlementMethodView<TruthSource>: View where TruthSource: UISettlementMethodTruthSource {
     /**
-     The list of the user's current settlement methods.
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
      */
-    @Binding var settlementMethods: [SettlementMethod]
+    @ObservedObject var settlementMethodViewModel: TruthSource
     /**
      An enum representing the type of settlement method that the user has decided to create.
      */
@@ -73,6 +86,36 @@ struct AddSettlementMethodView: View {
      The type of settlement method that the user has decided to create, or `nil` if the user has not yet decided.
      */
     @State private var selectedSettlementMethod: SettlementMethodType? = nil
+    /**
+     Indicates whether we are currently adding a  settlement method to the collection of the user's settlement methods, and if so, what part of the settlement-method-adding process we are in.
+     */
+    @State private var addingSettlementMethodState: AddingSettlementMethodState = .none
+    /**
+     The `Error` that occured during the settlement method adding process, or `nil` if no such error has occured.
+     */
+    @State private var addSettlementMethodError: Error? = nil
+    /**
+     The text to be displayed on the button that begins the settlement method adding process.
+     */
+    private var buttonText: String {
+        if addingSettlementMethodState == .none || addingSettlementMethodState == .error {
+            return "Add"
+        } else if addingSettlementMethodState == .completed {
+            return "Done"
+        } else {
+            return "Adding..."
+        }
+    }
+    /**
+     The text to be displayed on the button in the upper trailing corner of this view, which closes the enclosing sheet without adding a settlement method when pressed.
+     */
+    private var cancelButtonText: String {
+        if addingSettlementMethodState == .completed {
+            return "Close"
+        } else {
+            return "Cancel"
+        }
+    }
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -82,7 +125,7 @@ struct AddSettlementMethodView: View {
                         .font(.title)
                         .bold()
                     Spacer()
-                    Button(action: { isShowingAddSheet = false }, label: { Text("Cancel") })
+                    Button(action: { isShowingAddSheet = false }, label: { Text(cancelButtonText) })
                 }
                 Text("Select type:")
                     .font(.title2)
@@ -109,23 +152,45 @@ struct AddSettlementMethodView: View {
                     )
                     .accentColor(Color.primary)
                 }
+                if addingSettlementMethodState != .none && addingSettlementMethodState != .error {
+                    Text(addingSettlementMethodState.description)
+                        .font(.title2)
+                } else if addingSettlementMethodState == .error {
+                    Text(addSettlementMethodError?.localizedDescription ?? "An unknown error occured")
+                        .foregroundColor(Color.red)
+                }
+                // If we have finished adding the settlement method, then the button will be labeled "Done" and should close the closing sheet when pressed.
                 if selectedSettlementMethod == .SEPA {
-                    EditableSEPADetailView(buttonText: "Add", buttonAction: { newPrivateData in
-                        var newSettlementMethod = SettlementMethod(currency: "EUR", price: "", method: "SEPA")
-                        do {
-                            newSettlementMethod.privateData = String(decoding: try JSONEncoder().encode(newPrivateData as? PrivateSEPAData), as: UTF8.self)
-                            settlementMethods.append(newSettlementMethod)
-                        } catch {}
-                        isShowingAddSheet = false
+                    EditableSEPADetailView(
+                        buttonText: buttonText,
+                        buttonAction: { newPrivateData in
+                        if addingSettlementMethodState == .none || addingSettlementMethodState == .error {
+                            let newSettlementMethod = SettlementMethod(currency: "EUR", price: "", method: "SEPA")
+                            settlementMethodViewModel.addSettlementMethod(
+                                settlementMethod: newSettlementMethod,
+                                newPrivateData: newPrivateData,
+                                stateOfAdding: $addingSettlementMethodState,
+                                addSettlementMethodError: $addSettlementMethodError
+                            )
+                        } else if addingSettlementMethodState == .completed {
+                            isShowingAddSheet = false
+                        }
                     })
                 } else if selectedSettlementMethod == .SWIFT {
-                    EditableSWIFTDetailView(buttonText: "Add", buttonAction: { newPrivateData in
-                        var newSettlementMethod = SettlementMethod(currency: "USD", price: "", method: "SWIFT")
-                        do {
-                            newSettlementMethod.privateData = String(decoding: try JSONEncoder().encode(newPrivateData as? PrivateSWIFTData), as: UTF8.self)
-                            settlementMethods.append(newSettlementMethod)
-                        } catch {}
-                        isShowingAddSheet = false
+                    EditableSWIFTDetailView(
+                        buttonText: buttonText,
+                        buttonAction: { newPrivateData in
+                        if addingSettlementMethodState == .none || addingSettlementMethodState == .error {
+                            let newSettlementMethod = SettlementMethod(currency: "USD", price: "", method: "SWIFT")
+                            settlementMethodViewModel.addSettlementMethod(
+                                settlementMethod: newSettlementMethod,
+                                newPrivateData: newPrivateData,
+                                stateOfAdding: $addingSettlementMethodState,
+                                addSettlementMethodError: $addSettlementMethodError
+                            )
+                        } else if addingSettlementMethodState == .completed {
+                            isShowingAddSheet = false
+                        }
                     })
                 }
             }
@@ -192,15 +257,15 @@ struct SettlementMethodCardView: View {
 /**
  Displays all information, including private information, about a given `SettlementMethod`.
  */
-struct SettlementMethodDetailView: View {
+struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettlementMethodTruthSource {
     /**
      The `SettlementMethod` about which this displays information.
      */
     let settlementMethod: SettlementMethod
     /**
-     The list of the user's current settlement methods.
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
      */
-    @Binding var settlementMethods: [SettlementMethod]
+    @ObservedObject var settlementMethodViewModel: TruthSource
     /**
      A struct adopting `PrivateData` containing private data for `settlementMethod`..
      */
@@ -264,11 +329,11 @@ struct SettlementMethodDetailView: View {
                 )
                 .accentColor(Color.primary)
                 .sheet(isPresented: $isShowingEditSheet) {
-                    EditSettlementMethodView(settlementMethod: settlementMethod, privateData: $privateData,isShowingEditSheet: $isShowingEditSheet)
+                    EditSettlementMethodView(settlementMethod: settlementMethod, privateData: $privateData, isShowingEditSheet: $isShowingEditSheet)
                 }
                 Button(
                     action: {
-                        settlementMethods.removeAll(where: { possibleSettlementMethod in
+                        settlementMethodViewModel.settlementMethods.removeAll(where: { possibleSettlementMethod in
                             return possibleSettlementMethod.id == settlementMethod.id
                         })
                     },
@@ -568,6 +633,6 @@ func createPrivateDataStruct(privateData: Data, resultBinding: Binding<PrivateDa
 
 struct SettlementMethodsView_Previews: PreviewProvider {
     static var previews: some View {
-        SettlementMethodsView()
+        SettlementMethodsView(settlementMethodViewModel: PreviewableSettlementMethodTruthSource())
     }
 }

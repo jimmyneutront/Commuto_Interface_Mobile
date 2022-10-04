@@ -28,7 +28,7 @@ class OffersViewModel: UIOfferTruthSource {
     }
     
     /**
-     OffersViewModel's `Logger`.
+     `OffersViewModel`'s `Logger`.
      */
     private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "OffersViewModel")
     

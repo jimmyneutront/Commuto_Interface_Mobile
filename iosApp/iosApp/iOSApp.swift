@@ -25,6 +25,9 @@ struct iOSApp: App {
             .inObjectScope(.container)
         // Create necessary database tables
         try! container.resolve(DatabaseService.self)!.createTables()
+        // Register the SettlementMethodService singleton
+        container.register(SettlementMethodService<SettlementMethodViewModel>.self) { r in SettlementMethodService(databaseService: r.resolve(DatabaseService.self)!) }
+            .inObjectScope(.container)
         // Register the KeyManagerService singleton
         container.register(KeyManagerService.self) { r in
             KeyManagerService(databaseService: r.resolve(DatabaseService.self)!)
@@ -92,6 +95,11 @@ struct iOSApp: App {
                 r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.swapTruthSource = r.resolve(SwapViewModel.self)!
                 #warning("TODO: Provide SwapViewModel to SwapService as its swapTruthSource")
             }
+        // Register the SettlementMethodViewModel singleton
+        container.register(SettlementMethodViewModel.self) { r in SettlementMethodViewModel(settlementMethodService: r.resolve(SettlementMethodService<SettlementMethodViewModel>.self)!) }
+            .inObjectScope(.container)
+        // Provide SettlementMethodService to SettlementMethodViewModel
+        container.resolve(SettlementMethodService<SettlementMethodViewModel>.self)!.settlementMethodTruthSource = container.resolve(SettlementMethodViewModel.self)
         // Begin listening to the blockchain
         //container.resolve(BlockchainService.self)!.listen()
         // Begin listening to the peer-to-peer network
@@ -113,7 +121,7 @@ struct iOSApp: App {
                     SwapsView(swapTruthSource: container.resolve(SwapViewModel.self)!)
                         .frame(maxHeight: .infinity)
                 case .settlementMethods:
-                    SettlementMethodsView()
+                    SettlementMethodsView(settlementMethodViewModel: container.resolve(SettlementMethodViewModel.self)!)
                 }
                 Divider()
                 HStack {

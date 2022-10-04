@@ -17,7 +17,7 @@ import BigInt
 class SwapService: SwapNotifiable, SwapMessageNotifiable {
 
     /**
-     Initializes a new SwapService object.
+     Initializes a new `SwapService` object.
      
      - Parameters:
         - databaseService: The `DatabaseService` that this `SwapService` uses for persistent storage.
@@ -37,7 +37,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "SwapService")
     
     /**
-     An object adopting `SwapTruthSource` that acts as a single  source of truth for all swap-related data.
+     An object adopting `SwapTruthSource` that acts as a single source of truth for all swap-related data.
      */
     var swapTruthSource: SwapTruthSource? = nil
     
