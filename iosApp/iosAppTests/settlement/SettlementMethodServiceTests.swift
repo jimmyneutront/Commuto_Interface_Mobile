@@ -43,6 +43,18 @@ class SettlementMethodServiceTests: XCTestCase {
         XCTAssertEqual("SEPA", addedSettlementMethod.method)
         XCTAssertEqual(String(decoding: try! JSONEncoder().encode(privateData), as: UTF8.self), addedSettlementMethod.privateData)
         
+        let encodedSettlementMethodsInDatabase = try! databaseService.getUserSettlementMethod(id: settlementMethodToAdd.id)
+        let settlementMethodInDatabase = try! JSONDecoder().decode(SettlementMethod.self, from: encodedSettlementMethodsInDatabase!.0.data(using: .utf8)!)
+        let privateDataInDatabase = try! JSONDecoder().decode(PrivateSEPAData.self, from: encodedSettlementMethodsInDatabase!.1!.data(using: .utf8)!)
+        
+        XCTAssertEqual("EUR", settlementMethodInDatabase.currency)
+        XCTAssertEqual("SEPA", settlementMethodInDatabase.method)
+        
+        XCTAssertEqual("account_holder", privateDataInDatabase.accountHolder)
+        XCTAssertEqual("bic", privateDataInDatabase.bic)
+        XCTAssertEqual("iban", privateDataInDatabase.iban)
+        XCTAssertEqual("address", privateDataInDatabase.address)
+        
     }
     
 }

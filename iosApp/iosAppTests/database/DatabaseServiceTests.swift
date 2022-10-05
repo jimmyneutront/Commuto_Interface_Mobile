@@ -616,5 +616,21 @@ class DatabaseServiceTests: XCTestCase {
         let returnedSwap = try dbService.getSwap(id: "a_uuid")
         XCTAssertEqual("a_new_state_here", returnedSwap!.state)
     }
+    
+    /**
+     Ensures code to store and get settlement methods works properly.
+     */
+    func  testStoreAndGetUserSettlementMethods() throws {
+        let settlementMethodID = UUID()
+        let settlementMethod = "a_settlement_method"
+        let privateData = "some_private_data"
+        
+        try dbService.storeUserSettlementMethod(id: settlementMethodID.uuidString, settlementMethod: settlementMethod, privateData: privateData)
+        
+        let returnedSettlementMethod = try dbService.getUserSettlementMethod(id: settlementMethodID.uuidString)
+        
+        XCTAssertEqual(settlementMethod, returnedSettlementMethod?.0)
+        XCTAssertEqual("some_private_data", returnedSettlementMethod?.1)
+    }
 
 }

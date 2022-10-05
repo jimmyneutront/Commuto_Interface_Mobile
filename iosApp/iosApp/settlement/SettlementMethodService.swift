@@ -91,7 +91,7 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
                 }
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] newSettlementMethod in
                 logger.notice("addSettlementMethod: persistently storing settlement method \(settlementMethod.id)")
-                #warning("TODO: persistently store settlement method here")
+                try databaseService.storeUserSettlementMethod(id: newSettlementMethod.id, settlementMethod: String(decoding: JSONEncoder().encode(newSettlementMethod), as: UTF8.self), privateData: newSettlementMethod.privateData)
                 if let afterPersistentStorage = afterPersistentStorage {
                     afterPersistentStorage()
                 }

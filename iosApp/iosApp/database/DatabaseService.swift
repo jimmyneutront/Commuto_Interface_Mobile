@@ -73,6 +73,10 @@ class DatabaseService {
      A database table of `Swap`s.
      */
     let swaps = Table("Swap")
+    /**
+     A database table containing the user's settlement methods and their encrypted private data and corresponding initialization vectors, as Base-64 `String` encoded bytes.
+     */
+    let userSettlementMethods = Table("UserSettlementMethod")
     
     /**
      A database structure representing an offer or swap ID.
@@ -226,6 +230,10 @@ class DatabaseService {
      A database structure representing a `Swap`'s `role` property.
      */
     let swapRole = Expression<String>("role")
+    /**
+     A database structure representing the ID of a settlement method, as a Type 4 UUID string.
+     */
+    let settlementMethodID = Expression<String>("settlementMethodID")
     
     /**
      Creates all necessary database tables.
@@ -302,6 +310,12 @@ class DatabaseService {
             t.column(chainID)
             t.column(swapState)
             t.column(swapRole)
+        })
+        try connection.run(userSettlementMethods.create { t in
+            t.column(settlementMethodID, unique: true)
+            t.column(settlementMethod)
+            t.column(privateSettlementMethodData)
+            t.column(privateSettlementMethodDataInitializationVector)
         })
     }
     
@@ -480,7 +494,66 @@ class DatabaseService {
     }
     
     /**
-     Retrieves the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID from `table`, or returns `nil` if no such settlement methods are present.
+     Decrypts `privateSettlementMethodData` with `databaseKey` and `privateSettlementMethodDataInitializationVector` and then returns the result as a UTF-8 string, or returns `nil` if `privateSettlementMethodData` or `privateSettlementMethodDataInitializationVector` is `nil`.
+     
+     - Parameters:
+        - privateSettlementMethodData: The private data to be decrypted, as a Base64 encoded string of bytes.
+        - privateSettlementMethodDataInitializationVector: The initialization vector that will be used to decrypt `privateSettlementMethodData`, as a Base64 encoded string of bytes.
+     
+     - Returns: An optional string that will either be a UTF-8 string made from the results of decryption, or `nil` if either of the parameters are `nil`.
+     */
+    private func decryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?, privateSettlementMethodDataInitializationVector: String?) throws -> String? {
+        var decryptedPrivateDataString: String? = nil
+        let privateDataCipherString = privateSettlementMethodData
+        let privateDataInitializationVectorString = privateSettlementMethodDataInitializationVector
+        if let privateDataCipherString = privateDataCipherString, let privateDataInitializationVectorString = privateDataInitializationVectorString {
+            let privateCipherData = Data(base64Encoded: privateDataCipherString)
+            let privateDataInitializationVector = Data(base64Encoded: privateDataInitializationVectorString)
+            if let privateCipherData = privateCipherData, let privateDataInitializationVector = privateDataInitializationVector {
+                let privateDataObject = SymmetricallyEncryptedData(data: privateCipherData, iv: privateDataInitializationVector)
+                if let decryptedPrivateData = try? databaseKey.decrypt(data: privateDataObject) {
+                    decryptedPrivateDataString = String(bytes: decryptedPrivateData, encoding: .utf8)
+                }
+            }
+        }
+        return decryptedPrivateDataString
+    }
+    
+    /**
+     Attempts to decrypt the supplied cipher data using `databaseKey` and the supplied initialization vector string.
+     
+     - Parameters:
+        - privateDataCipherString: The cipher data to be decrypted, as a Base64-encoded string/
+        - privateDataInitializationVector: The initialization vector with which to decrypt `privateDataCipherString`.
+        - decryptionFailureHandler: A closure that will be executed if decryption fails.
+        - decodingFailureHandler: A closure that will be executed if decoding the cipher string or initialization vector fails.
+     
+     - Returns: `privateDataCipherString` as a decrypted string, or `nil` if the decoding and decryption process fails.
+     */
+    private func decryptSettlementMethodFromTable(
+        privateDataCipherString: String,
+        privateDataInitializationVectorString: String,
+        decryptionFailureHandler: () -> Void,
+        decodingFailureHandler: () -> Void
+    ) -> String? {
+        let privateCipherData = Data(base64Encoded: privateDataCipherString)
+        let privateDataInitializationVector = Data(base64Encoded: privateDataInitializationVectorString)
+        if let privateCipherData = privateCipherData, let privateDataInitializationVector = privateDataInitializationVector {
+            let privateDataObject = SymmetricallyEncryptedData(data: privateCipherData, iv: privateDataInitializationVector)
+            if let decryptedPrivateData = try? databaseKey.decrypt(data: privateDataObject) {
+                return String(bytes: decryptedPrivateData, encoding: .utf8)
+            } else {
+                decryptionFailureHandler()
+                return nil
+            }
+        } else {
+            decodingFailureHandler()
+            return nil
+        }
+    }
+    
+    /**
+     Retrieves and decrypts the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID from `table`, or returns `nil` if no such settlement methods are present.
      
      - Parameters:
         - offerID: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
@@ -507,18 +580,16 @@ class DatabaseService {
                 let privateDataCipherString = result[index][privateSettlementMethodData]
                 let privateDataInitializationVectorString = result[index][privateSettlementMethodDataInitializationVector]
                 if let privateDataCipherString = privateDataCipherString, let privateDataInitializationVectorString = privateDataInitializationVectorString {
-                    let privateCipherData = Data(base64Encoded: privateDataCipherString)
-                    let privateDataInitializationVector = Data(base64Encoded: privateDataInitializationVectorString)
-                    if let privateCipherData = privateCipherData, let privateDataInitializationVector = privateDataInitializationVector {
-                        let privateDataObject = SymmetricallyEncryptedData(data: privateCipherData, iv: privateDataInitializationVector)
-                        if let decryptedPrivateData = try? databaseKey.decrypt(data: privateDataObject) {
-                            decryptedPrivateDataString = String(bytes: decryptedPrivateData, encoding: .utf8)
-                        } else {
+                    decryptedPrivateDataString = decryptSettlementMethodFromTable(
+                        privateDataCipherString: privateDataCipherString,
+                        privateDataInitializationVectorString: privateDataInitializationVectorString,
+                        decryptionFailureHandler: {
                             logger.error("getAndDecryptSettlementMethodsFromTable: unable to get string from decoded private data using utf8 encoding for offer with B64 ID \(offerID)")
+                        },
+                        decodingFailureHandler: {
+                            logger.error("getAndDecryptSettlementMethodsFromTable: found private data for offer with B64 ID \(offerID) but could not decode bytes from strings")
                         }
-                    } else {
-                        logger.error("getAndDecryptSettlementMethodsFromTable: found private data for offer with B64 ID \(offerID) but could not decode bytes from strings")
-                    }
+                    )
                 } else {
                     logger.notice("getAndDecryptSettlementMethodsFromTable: did not find private settlement method data for settlement method for offer with B64 ID \(offerID)")
                 }
@@ -983,29 +1054,74 @@ class DatabaseService {
     }
     
     /**
-     Decrypts `privateSettlementMethodData` with `databaseKey` and `privateSettlementMethodDataInitializationVector` and then returns the result as a UTF-8 string, or returns `nil` if `privateSettlementMethodData` or `privateSettlementMethodDataInitializationVector` is `nil`.
+     Persistently stores the settlement method string and private data string, associating them with the given UUID string. The private settlement method data is encrypted with `databaseKey` and a new initialization vector.
      
      - Parameters:
-        - privateSettlementMethodData: The private data to be decrypted, as a Base64 encoded string of bytes.
-        - privateSettlementMethodDataInitializationVector: The initialization vector that will be used to decrypt `privateSettlementMethodData`, as a Base64 encoded string of bytes.
-     
-     - Returns: An optional string that will either be a UTF-8 string made from the results of decryption, or `nil` if either of the parameters are `nil`.
+        - id: The ID of the settlement method to be stored, as a Type  4 UUID string.
+        - settlementMethod: The public data of the settlement method to be  persistently stored, including currency and  type.
+        - privateData: The private data of the settlement method, such as an address or bank account number for the settlement method, if any.
      */
-    private func decryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?, privateSettlementMethodDataInitializationVector: String?) throws -> String? {
-        var decryptedPrivateDataString: String? = nil
-        let privateDataCipherString = privateSettlementMethodData
-        let privateDataInitializationVectorString = privateSettlementMethodDataInitializationVector
-        if let privateDataCipherString = privateDataCipherString, let privateDataInitializationVectorString = privateDataInitializationVectorString {
-            let privateCipherData = Data(base64Encoded: privateDataCipherString)
-            let privateDataInitializationVector = Data(base64Encoded: privateDataInitializationVectorString)
-            if let privateCipherData = privateCipherData, let privateDataInitializationVector = privateDataInitializationVector {
-                let privateDataObject = SymmetricallyEncryptedData(data: privateCipherData, iv: privateDataInitializationVector)
-                if let decryptedPrivateData = try? databaseKey.decrypt(data: privateDataObject) {
-                    decryptedPrivateDataString = String(bytes: decryptedPrivateData, encoding: .utf8)
-                }
+    func storeUserSettlementMethod(id: String, settlementMethod settlementMethodString: String, privateData: String?) throws {
+        _ = try databaseQueue.sync {
+            var privateDataString: String? = nil
+            var initializationVectorString: String? = nil
+            let privateBytes = privateData?.bytes
+            if let privateBytes = privateBytes {
+                let privateData = Data(privateBytes)
+                let encryptedData = try databaseKey.encrypt(data: privateData)
+                privateDataString = encryptedData.encryptedData.base64EncodedString()
+                initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
             }
+            try connection.run(userSettlementMethods.insert(
+                settlementMethodID <- id,
+                settlementMethod <- settlementMethodString,
+                privateSettlementMethodData <- privateDataString,
+                privateSettlementMethodDataInitializationVector <- initializationVectorString
+            ))
         }
-        return decryptedPrivateDataString
+        logger.notice("storeUserSettlementMethod: stored \(id)")
+    }
+    
+    /**
+     Retrieves and decrypts the persistently stored settlement method and its private data (if any) associated with the specified settlement method ID from the table of the user's settlement methods, or returns `nil` if no such settlement method is found.
+     
+     - Parameter id: The ID of the settlement method to be retrieved, as a Type 4 UUID string.
+     
+     - Throws `DatabaseServiceError.unexpectedNilError` If the database query returns a non-empty result that somehow doesn't have a first element.
+     
+     - Returns: `nil` if no such settlement method si found, or a tuple containing a string and an optional string, the first of which is a settlement method associated with `id`, the second of which is the private data associated with that settlement method, or `nil` if no such data is found or if it cannot be decrypted.
+     */
+    func getUserSettlementMethod(id: String) throws -> (String, String?)? {
+        let rowIterator = try databaseQueue.sync {
+            try connection.prepareRowIterator(userSettlementMethods.filter(settlementMethodID == id))
+        }
+        let result = try Array(rowIterator)
+        if result.count == 1 {
+            guard let element = result.first else {
+                throw DatabaseServiceError.unexpectedNilError(desc: "Database result size was 1 but no first element was found during getUserSettlementMethod call")
+            }
+            var decryptedPrivateDataString: String? = nil
+            let privateDataCipherString = element[privateSettlementMethodData]
+            let privateDataInitializationVectorString = element[privateSettlementMethodDataInitializationVector]
+            if let privateDataCipherString = privateDataCipherString, let privateDataInitializationVectorString = privateDataInitializationVectorString {
+                decryptedPrivateDataString = decryptSettlementMethodFromTable(
+                    privateDataCipherString: privateDataCipherString,
+                    privateDataInitializationVectorString: privateDataInitializationVectorString,
+                    decryptionFailureHandler: {
+                        logger.error("getUserSettlementMethod: unable to get string from decoded private data using utf8 encoding for \(id)")
+                    },
+                    decodingFailureHandler: {
+                        logger.error("getUserSettlementMethod: unable to get string from decoded private data using utf8 encoding for \(id)")
+                    }
+                )
+            } else {
+                logger.notice("getUserSettlementMethod: did not find private settlement method data for \(id)")
+            }
+            return (element[settlementMethod], decryptedPrivateDataString)
+        } else {
+            logger.notice("getUserSettlementMethod: \(id) not found")
+            return nil
+        }
     }
     
 }
