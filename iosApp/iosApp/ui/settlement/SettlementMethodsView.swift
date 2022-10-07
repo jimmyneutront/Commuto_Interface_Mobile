@@ -87,7 +87,7 @@ struct AddSettlementMethodView<TruthSource>: View where TruthSource: UISettlemen
      */
     @State private var selectedSettlementMethod: SettlementMethodType? = nil
     /**
-     Indicates whether we are currently adding a  settlement method to the collection of the user's settlement methods, and if so, what part of the settlement-method-adding process we are in.
+     Indicates whether we are currently adding a settlement method to the collection of the user's settlement methods, and if so, what part of the settlement-method-adding process we are in.
      */
     @State private var addingSettlementMethodState: AddingSettlementMethodState = .none
     /**
@@ -329,7 +329,12 @@ struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettle
                 )
                 .accentColor(Color.primary)
                 .sheet(isPresented: $isShowingEditSheet) {
-                    EditSettlementMethodView(settlementMethod: settlementMethod, privateData: $privateData, isShowingEditSheet: $isShowingEditSheet)
+                    EditSettlementMethodView(
+                        settlementMethodViewModel: settlementMethodViewModel,
+                        settlementMethod: settlementMethod,
+                        privateData: $privateData,
+                        isShowingEditSheet: $isShowingEditSheet
+                    )
                 }
                 Button(
                     action: {
@@ -367,7 +372,11 @@ struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettle
 /**
  Displays a view allowing the user to edit the private data of `settlementMethod`, or displays an error message if the details cannot be edited. This should only be presented in a sheet.
  */
-struct EditSettlementMethodView: View {
+struct EditSettlementMethodView<TruthSource>: View where TruthSource: UISettlementMethodTruthSource {
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodViewModel: TruthSource
     /**
      The `SettlementMethod`, the private data of which this helps to edit.
      */
@@ -380,6 +389,37 @@ struct EditSettlementMethodView: View {
      Indicates whether we are showing the sheet containing this `View`.
      */
     @Binding var isShowingEditSheet: Bool
+    /**
+     Indicates whether we are currently editing the settlement method, and if so, what part of the settlement-method-editing process we are in.
+     */
+    @State private var editingSettlementMethodState: EditingSettlementMethodState = .none
+    /**
+     The `Error` that occured during the settlement method adding process, or `nil` if no such error has occured.
+     */
+    @State private var editSettlementMethodError: Error? = nil
+    /**
+     The text to be displayed on the button that begins the settlement method editing process.
+     */
+    private var buttonText: String {
+        if editingSettlementMethodState == .none || editingSettlementMethodState == .error {
+            return "Edit"
+        } else if editingSettlementMethodState == .completed {
+            return "Done"
+        } else {
+            return "Editing..."
+        }
+    }
+    /**
+     The text to be displayed on the button in the upper trailing corner of this view, which closes the enclosing sheet without editing the settlement method when pressed.
+     */
+    private var cancelButtonText: String {
+        if editingSettlementMethodState == .completed {
+            return "Close"
+        } else {
+            return "Cancel"
+        }
+    }
+    
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading) {
@@ -388,17 +428,45 @@ struct EditSettlementMethodView: View {
                         .font(.title)
                         .bold()
                     Spacer()
-                    Button(action: { isShowingEditSheet = false }, label: { Text("Cancel") })
+                    Button(action: { isShowingEditSheet = false }, label: { Text(cancelButtonText) })
                 }
+                
+                if editingSettlementMethodState != .none && editingSettlementMethodState != .error {
+                    Text(editingSettlementMethodState.description)
+                        .font(.title2)
+                } else if editingSettlementMethodState == .error {
+                    Text(editSettlementMethodError?.localizedDescription ?? "An unknown error occured")
+                        .foregroundColor(Color.red)
+                }
+                
                 if settlementMethod.method == "SEPA" {
-                    EditableSEPADetailView(buttonText: "Done", buttonAction: { newPrivateData in
-                        privateData = newPrivateData
-                        isShowingEditSheet = false
+                    EditableSEPADetailView(buttonText: buttonText, buttonAction: { newPrivateData in
+                        if editingSettlementMethodState == .none || editingSettlementMethodState == .error {
+                            settlementMethodViewModel.editSettlementMethod(
+                                settlementMethod: settlementMethod,
+                                newPrivateData: newPrivateData,
+                                stateOfEditing: $editingSettlementMethodState,
+                                editSettlementMethodError: $editSettlementMethodError,
+                                privateDataBinding: $privateData
+                            )
+                        } else if editingSettlementMethodState == .completed {
+                            isShowingEditSheet = false
+                        }
                     })
                 } else if settlementMethod.method == "SWIFT" {
-                    EditableSWIFTDetailView(buttonText: "Done", buttonAction: { newPrivateData in
-                        privateData = newPrivateData
-                        isShowingEditSheet = false
+                    EditableSWIFTDetailView(buttonText: buttonText, buttonAction: { newPrivateData in
+                        
+                        if editingSettlementMethodState == .none || editingSettlementMethodState == .error {
+                            settlementMethodViewModel.editSettlementMethod(
+                                settlementMethod: settlementMethod,
+                                newPrivateData: newPrivateData,
+                                stateOfEditing: $editingSettlementMethodState,
+                                editSettlementMethodError: $editSettlementMethodError,
+                                privateDataBinding: $privateData
+                            )
+                        } else if editingSettlementMethodState == .completed {
+                            isShowingEditSheet = false
+                        }
                     })
                 } else {
                     Text("Unable to edit details")

@@ -28,4 +28,15 @@ class PreviewableSettlementMethodTruthSource: UISettlementMethodTruthSource {
         addSettlementMethodError: Binding<Error?>
     ) {}
     
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UISettlementMethodTruthSource`.
+     */
+    func editSettlementMethod(
+        settlementMethod: SettlementMethod,
+        newPrivateData: PrivateData,
+        stateOfEditing: Binding<EditingSettlementMethodState>,
+        editSettlementMethodError: Binding<Error?>,
+        privateDataBinding: Binding<PrivateData?>
+    ) {}
+    
 }
