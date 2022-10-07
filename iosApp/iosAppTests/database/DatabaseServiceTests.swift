@@ -620,7 +620,7 @@ class DatabaseServiceTests: XCTestCase {
     /**
      Ensures code to store and get settlement methods works properly.
      */
-    func  testStoreAndGetUserSettlementMethods() throws {
+    func  testStoreAndGetAndUpdateUserSettlementMethods() throws {
         let settlementMethodID = UUID()
         let settlementMethod = "a_settlement_method"
         let privateData = "some_private_data"
@@ -631,6 +631,13 @@ class DatabaseServiceTests: XCTestCase {
         
         XCTAssertEqual(settlementMethod, returnedSettlementMethod?.0)
         XCTAssertEqual("some_private_data", returnedSettlementMethod?.1)
+        
+        try dbService.updateUserSettlementMethod(id: settlementMethodID.uuidString, privateData: "updated_private_data")
+        
+        let updatedReturnedSettlementMethod = try dbService.getUserSettlementMethod(id: settlementMethodID.uuidString)
+        
+        XCTAssertEqual(settlementMethod, updatedReturnedSettlementMethod?.0)
+        XCTAssertEqual("updated_private_data", updatedReturnedSettlementMethod?.1)
     }
 
 }

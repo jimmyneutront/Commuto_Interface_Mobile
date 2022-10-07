@@ -43,9 +43,9 @@ class SettlementMethodServiceTests: XCTestCase {
         XCTAssertEqual("SEPA", addedSettlementMethod.method)
         XCTAssertEqual(String(decoding: try! JSONEncoder().encode(privateData), as: UTF8.self), addedSettlementMethod.privateData)
         
-        let encodedSettlementMethodsInDatabase = try! databaseService.getUserSettlementMethod(id: settlementMethodToAdd.id)
-        let settlementMethodInDatabase = try! JSONDecoder().decode(SettlementMethod.self, from: encodedSettlementMethodsInDatabase!.0.data(using: .utf8)!)
-        let privateDataInDatabase = try! JSONDecoder().decode(PrivateSEPAData.self, from: encodedSettlementMethodsInDatabase!.1!.data(using: .utf8)!)
+        let encodedSettlementMethodInDatabase = try! databaseService.getUserSettlementMethod(id: settlementMethodToAdd.id)
+        let settlementMethodInDatabase = try! JSONDecoder().decode(SettlementMethod.self, from: encodedSettlementMethodInDatabase!.0.data(using: .utf8)!)
+        let privateDataInDatabase = try! JSONDecoder().decode(PrivateSEPAData.self, from: encodedSettlementMethodInDatabase!.1!.data(using: .utf8)!)
         
         XCTAssertEqual("EUR", settlementMethodInDatabase.currency)
         XCTAssertEqual("SEPA", settlementMethodInDatabase.method)
@@ -94,6 +94,15 @@ class SettlementMethodServiceTests: XCTestCase {
         
         let editedSettlementMethod = settlementMethodTruthSource.settlementMethods.first!
         XCTAssertEqual(String(decoding: try! JSONEncoder().encode(editedPrivateData), as: UTF8.self), editedSettlementMethod.privateData)
+        
+        let editedSettlementMethodInDatabase = try! databaseService.getUserSettlementMethod(id: settlementMethodToAdd.id)
+        
+        let editedPrivateDataInDatabase = try! JSONDecoder().decode(PrivateSEPAData.self, from: editedSettlementMethodInDatabase!.1!.data(using: .utf8)!)
+        
+        XCTAssertEqual("different_account_holder", editedPrivateDataInDatabase.accountHolder)
+        XCTAssertEqual("different_bic", editedPrivateDataInDatabase.bic)
+        XCTAssertEqual("different_iban", editedPrivateDataInDatabase.iban)
+        XCTAssertEqual("different_address", editedPrivateDataInDatabase.address)
         
     }
     

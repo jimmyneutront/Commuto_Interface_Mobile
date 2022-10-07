@@ -139,7 +139,7 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
                 }
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] editedSettlementMethod in
                 logger.notice("editSettlementMethod: persistently storing edited private data for \(settlementMethod.id)")
-                #warning("TODO: update state in database here")
+                try databaseService.updateUserSettlementMethod(id: settlementMethod.id, privateData: editedSettlementMethod.privateData)
                 if let afterPersistentStorage = afterPersistentStorage {
                     afterPersistentStorage()
                 }

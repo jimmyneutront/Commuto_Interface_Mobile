@@ -1082,6 +1082,29 @@ class DatabaseService {
         logger.notice("storeUserSettlementMethod: stored \(id)")
     }
     
+    func updateUserSettlementMethod(id: String, privateData: String?) throws {
+        _ = try databaseQueue.sync {
+            #warning("TODO: this is exactly the same as what is in storeUserSettlementMethod, don't duplicate code")
+            var privateDataString: String? = nil
+            var initializationVectorString: String? = nil
+            let privateBytes = privateData?.bytes
+            if let privateBytes = privateBytes {
+                let privateData = Data(privateBytes)
+                let encryptedData = try databaseKey.encrypt(data: privateData)
+                privateDataString = encryptedData.encryptedData.base64EncodedString()
+                initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
+            }
+            try connection.run(
+                userSettlementMethods.filter(
+                    settlementMethodID == id
+                ).update(
+                    privateSettlementMethodData <- privateDataString,
+                    privateSettlementMethodDataInitializationVector <- initializationVectorString
+                )
+            )
+        }
+    }
+    
     /**
      Retrieves and decrypts the persistently stored settlement method and its private data (if any) associated with the specified settlement method ID from the table of the user's settlement methods, or returns `nil` if no such settlement method is found.
      
