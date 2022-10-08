@@ -119,7 +119,6 @@ struct iOSApp: App {
                     OffersView(offerTruthSource: container.resolve(OffersViewModel.self)!)
                 case .swaps:
                     SwapsView(swapTruthSource: container.resolve(SwapViewModel.self)!)
-                        .frame(maxHeight: .infinity)
                 case .settlementMethods:
                     SettlementMethodsView(settlementMethodViewModel: container.resolve(SettlementMethodViewModel.self)!)
                 }

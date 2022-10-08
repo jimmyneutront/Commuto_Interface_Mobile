@@ -25,16 +25,25 @@ struct SettlementMethodsView<TruthSource>: View where TruthSource: UISettlementM
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(settlementMethodViewModel.settlementMethods) { settlementMethod in
-                    NavigationLink(destination:
-                                    SettlementMethodDetailView(
-                                        settlementMethod: settlementMethod,
-                                        settlementMethodViewModel: settlementMethodViewModel
-                                    )
-                    ) {
-                        SettlementMethodCardView(settlementMethod: settlementMethod)
+            Group {
+                if settlementMethodViewModel.settlementMethods.count > 0 {
+                    List {
+                        ForEach(settlementMethodViewModel.settlementMethods) { settlementMethod in
+                            NavigationLink(destination:
+                                            SettlementMethodDetailView(
+                                                settlementMethod: settlementMethod,
+                                                settlementMethodViewModel: settlementMethodViewModel
+                                            )
+                            ) {
+                                SettlementMethodCardView(settlementMethod: settlementMethod)
+                            }
+                        }
                     }
+                } else {
+                    VStack(alignment: .center) {
+                        Text("You have not added any settlement methods.")
+                    }
+                    .frame(maxHeight: .infinity)
                 }
             }
             .navigationTitle(Text("Settlement Methods", comment: "Appears as a title above the list of the user's settlement methods"))

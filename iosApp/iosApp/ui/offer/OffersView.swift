@@ -25,14 +25,23 @@ struct OffersView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(offerTruthSource.offers.map { $0.1 }, id: \.id) { offer in
-                    NavigationLink(destination: OfferView(offer: offer, offerTruthSource: offerTruthSource)) {
-                        OfferCardView(
-                            offerDirection: offer.direction.string,
-                            stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
-                        )
+            Group {
+                if offerTruthSource.offers.count > 0 {
+                    List {
+                        ForEach(offerTruthSource.offers.map { $0.1 }, id: \.id) { offer in
+                            NavigationLink(destination: OfferView(offer: offer, offerTruthSource: offerTruthSource)) {
+                                OfferCardView(
+                                    offerDirection: offer.direction.string,
+                                    stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
+                                )
+                            }
+                        }
                     }
+                } else {
+                    VStack(alignment: .center) {
+                        Text("There are no offers to display.")
+                    }
+                    .frame(maxHeight: .infinity)
                 }
             }
             .navigationTitle(Text("Offers", comment: "Appears as a title above the list of open offers"))

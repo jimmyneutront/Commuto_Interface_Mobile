@@ -25,14 +25,23 @@ struct SwapsView<TruthSource>: View where TruthSource: UISwapTruthSource {
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(swapTruthSource.swaps.map { $0.1 }, id: \.id) { swap in
-                    NavigationLink(destination: SwapView(swap: swap, swapTruthSource: swapTruthSource)) {
-                        SwapCardView(
-                            swapDirection: swap.direction.string,
-                            stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: swap.chainID, contractAddress: swap.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
-                        )
+            Group {
+                if swapTruthSource.swaps.count > 0 {
+                    List {
+                        ForEach(swapTruthSource.swaps.map { $0.1 }, id: \.id) { swap in
+                            NavigationLink(destination: SwapView(swap: swap, swapTruthSource: swapTruthSource)) {
+                                SwapCardView(
+                                    swapDirection: swap.direction.string,
+                                    stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: swap.chainID, contractAddress: swap.stablecoin)?.currencyCode ?? "Unknown Stablecoin"
+                                )
+                            }
+                        }
                     }
+                } else {
+                    VStack(alignment: .center) {
+                        Text("There are no swaps to display")
+                    }
+                    .frame(maxHeight: .infinity)
                 }
             }
             .navigationTitle(Text("Swaps", comment: "Appears as a title above the list of swaps"))
