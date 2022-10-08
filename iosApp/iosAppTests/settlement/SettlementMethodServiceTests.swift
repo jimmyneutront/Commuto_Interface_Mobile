@@ -13,9 +13,9 @@ import XCTest
 class SettlementMethodServiceTests: XCTestCase {
     
     /**
-     Ensures `SettlementMethodService.addSettlementMethod` functions properly.
+     Ensures `SettlementMethodService.addSettlementMethod` and `SettlementMethodService.deleteSettlementMethod` function properly.
      */
-    func testAddSettlementMethod() {
+    func testAddSettlementMethodAndDeleteSettlementMethod() {
         
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
@@ -54,6 +54,16 @@ class SettlementMethodServiceTests: XCTestCase {
         XCTAssertEqual("bic", privateDataInDatabase.bic)
         XCTAssertEqual("iban", privateDataInDatabase.iban)
         XCTAssertEqual("address", privateDataInDatabase.address)
+        
+        let settlementMethodDeletedExpectation = XCTestExpectation(description: "Fulfilled immediately after deleteSettlementMethod call is completed")
+        
+        settlementMethodService.deleteSettlementMethod(settlementMethod: settlementMethodToAdd).done {
+            settlementMethodDeletedExpectation.fulfill()
+        }.cauterize()
+        
+        wait(for: [settlementMethodDeletedExpectation], timeout: 20.0)
+        
+        XCTAssertEqual(0, settlementMethodTruthSource.settlementMethods.count)
         
     }
     

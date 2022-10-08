@@ -279,6 +279,27 @@ struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettle
      */
     @State private var isShowingEditSheet = false
     /**
+     Indicates whether we are currently deleting a settlement method from the collection of the user's settlement methods, and if so, what part of the settlement-method-deleting process we are in.
+     */
+    @State private var deletingSettlementMethodState: DeletingSettlementMethodState = .none
+    /**
+     The `Error` that occured during the settlement method deleting process, or `nil` if no such error has occured.
+     */
+    @State private var deleteSettlementMethodError: Error? = nil
+    /**
+     The text to be displayed on the button that begins the settlement method deleting process.
+     */
+    private var buttonText: String {
+        if deletingSettlementMethodState == .none || deletingSettlementMethodState == .error {
+            return "Delete"
+        } else if deletingSettlementMethodState == .completed {
+            return "Done"
+        } else {
+            return "Deleting..."
+        }
+    }
+    
+    /**
      The title to be displayed in the upper leading corner of the view.
      */
     var navigationTitle: String {
@@ -338,12 +359,14 @@ struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettle
                 }
                 Button(
                     action: {
-                        settlementMethodViewModel.settlementMethods.removeAll(where: { possibleSettlementMethod in
-                            return possibleSettlementMethod.id == settlementMethod.id
-                        })
+                        settlementMethodViewModel.deleteSettlementMethod(
+                            settlementMethod: settlementMethod,
+                            stateOfDeleting: $deletingSettlementMethodState,
+                            deleteSettlementMethodError: $deleteSettlementMethodError
+                        )
                     },
                     label: {
-                        Text("Delete")
+                        Text(buttonText)
                             .font(.largeTitle)
                             .bold()
                             .padding(10)

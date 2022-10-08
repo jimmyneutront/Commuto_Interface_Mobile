@@ -39,4 +39,13 @@ class PreviewableSettlementMethodTruthSource: UISettlementMethodTruthSource {
         privateDataBinding: Binding<PrivateData?>
     ) {}
     
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UISettlementMethodTruthSource`.
+     */
+    func deleteSettlementMethod(
+        settlementMethod: SettlementMethod,
+        stateOfDeleting: Binding<DeletingSettlementMethodState>,
+        deleteSettlementMethodError: Binding<Error?>
+    ) {}
+    
 }

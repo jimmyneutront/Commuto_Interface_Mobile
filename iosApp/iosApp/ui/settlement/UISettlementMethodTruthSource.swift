@@ -50,4 +50,18 @@ protocol UISettlementMethodTruthSource: ObservableObject {
         privateDataBinding: Binding<PrivateData?>
     )
     
+    /**
+     Deletes a given `SettlementMethod`.
+     
+     - Parameters:
+        - settlementMethod: The user's `SettlementMethod` that they want to delete.
+        - stateOfDeleting: A binding wrapped around a `DeletingSettlementMethodState` value, describing the current state of the settlement-method-deleting process.
+        - deleteSettlementMethodError: A binding around an optional `Error`, the wrapped value of which this will set equal to the error that occurs in the settlement-method-deleting process, if any.
+     */
+    func deleteSettlementMethod(
+        settlementMethod: SettlementMethod,
+        stateOfDeleting: Binding<DeletingSettlementMethodState>,
+        deleteSettlementMethodError: Binding<Error?>
+    )
+    
 }

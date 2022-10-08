@@ -55,6 +55,15 @@ class SettlementMethodViewModel: UISettlementMethodTruthSource {
     }
     
     /**
+     Sets the wrapped value of `stateToSet` equal to `state` on the main `DispatchQueue`.
+     */
+    private func setDeletingSettlementMethodState(state: DeletingSettlementMethodState, stateToSet: Binding<DeletingSettlementMethodState>) {
+        DispatchQueue.main.async {
+            stateToSet.wrappedValue = state
+        }
+    }
+    
+    /**
      Adds a given `SettlementMethod` with corresponding `PrivateData` to the collection of the user's settlement methods, by passing them to `SettlementMethodService.addSettlementMethod`. This also passes several closures to `SettlementMethodService.addSettlementMethod` which will call `setAddingSettlementMethodState` with the current state of the settlement-method-adding process.
      
      - Parameters:
@@ -80,7 +89,7 @@ class SettlementMethodViewModel: UISettlementMethodTruthSource {
                 self.setAddingSettlementMethodState(state: .adding, stateToSet: stateOfAdding)
             }
         ).done(on: DispatchQueue.global(qos: .userInitiated)) { [self] in
-            logger.notice("addSettlementMethod: added settlement method \(settlementMethod.id)")
+            logger.notice("addSettlementMethod: added \(settlementMethod.id)")
             setAddingSettlementMethodState(state: .completed, stateToSet: stateOfAdding)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
             logger.error("addSettlementMethod: got error during addSettlementMethod call for \(settlementMethod.id). Error: \(error.localizedDescription)")
@@ -119,12 +128,38 @@ class SettlementMethodViewModel: UISettlementMethodTruthSource {
         ).get(on: DispatchQueue.main) { _ in
             privateDataBinding.wrappedValue = newPrivateData
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] in
-            logger.notice("editSettlementMethod: edited settlement method \(settlementMethod.id)")
+            logger.notice("editSettlementMethod: edited (settlementMethod.id)")
             setEditingSettlementMethodState(state: .completed, stateToSet: stateOfEditing)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
             logger.error("editSettlementMethod: got error during editSettlementMethod call for \(settlementMethod.id). Error: \(error.localizedDescription)")
             editSettlementMethodError.wrappedValue = error
             setEditingSettlementMethodState(state: .error, stateToSet: stateOfEditing)
+        }
+    }
+    
+    /**
+     Deletes a given `SettlementMethod` via a call to `SettlementMethodService.deleteSettlementmethod`.
+     
+     - Parameters:
+        - settlementMethod: The user's `SettlementMethod` that they want to delete.
+        - stateOfDeleting: A binding wrapped around a `DeletingSettlementMethodState` value, describing the current state of the settlement-method-deleting process.
+        - deleteSettlementMethodError: A binding around an optional `Error`, the wrapped value of which this will set equal to the error that occurs in the settlement-method-deleting process, if any.
+     */
+    func deleteSettlementMethod(
+        settlementMethod: SettlementMethod,
+        stateOfDeleting: Binding<DeletingSettlementMethodState>,
+        deleteSettlementMethodError: Binding<Error?>
+    ) {
+        setDeletingSettlementMethodState(state: .deleting, stateToSet: stateOfDeleting)
+        settlementMethodService.deleteSettlementMethod(
+            settlementMethod: settlementMethod
+        ).done(on:DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+            logger.notice("deleteSettlementMethod: deleted \(settlementMethod.id)")
+            setDeletingSettlementMethodState(state: .completed, stateToSet: stateOfDeleting)
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+            logger.error("deleteSettlementMethod: got error during deleteSettlementMethod call for \(settlementMethod.id). Error: \(error.localizedDescription)")
+            deleteSettlementMethodError.wrappedValue = error
+            setDeletingSettlementMethodState(state: .error, stateToSet: stateOfDeleting)
         }
     }
     

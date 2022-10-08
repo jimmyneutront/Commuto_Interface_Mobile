@@ -99,7 +99,7 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
     }
     
     /**
-     Attempts to edit edit the private data of the given `SettlementMethod` in the list of the user's settlement methods, both in `settlementMethodTruthSource` and in persistent storage.
+     Attempts to edit the private data of the given `SettlementMethod` in the list of the user's settlement methods, both in `settlementMethodTruthSource` and in persistent storage.
      
      On the global `DispatchQueue`, this validates and serializes the supplied private data via `serializePrivateSettlementMethodData`. Then this updates the private data of the settlement method in persistent storage with this newly serialized private data. Finally, on the main `DispatchQueue`, this finds the `SettlementMethod` in `settlementMethodTruthSource` with an id equal to that of `settlementMethod`, and sets its `SettlementMethod.privateData` property equal to the newly serialized data.
      
@@ -148,7 +148,6 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
                 guard let settlementMethodTruthSource = settlementMethodTruthSource else {
                     throw SettlementMethodServiceError.unexpectedNilError(desc: "settlementMethodTruthSource was nil during editSettlementMethod call")
                 }
-                
                 let indexOfEditedSettlementMethod = settlementMethodTruthSource.settlementMethods.firstIndex(where: { someSettlementMethod in
                     someSettlementMethod.id == newSettlementMethod.id
                 })
@@ -190,6 +189,43 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
             throw SettlementMethodServiceError.privateDataSerializationError(desc: "Did not recognize settlement method")
         }
         return settlementMethod
+    }
+    
+    /**
+     Attempts to delete the given `SettlementMethod` from the list of the user's settlement methods, both in `settlementMethodTruthSource` and in persistent storage.
+     
+     On the global `DispatchQueue`, this removes all settlement methods with IDs equal to that of `settlementMethod` (and their private data) from persistent storage. Then, on the main `DispatchQueue`, this removes all `SettlementMethod`s with IDs equal to that of `settlementMethod` from `settlementMethodTruthSource`.
+     
+     - Parameter settlementMethod: The existing `SettlementMethod` that this will delete.
+     
+     - Returns: An empty promise that will be fulfilled when the settlement-method-deleting process is complete.
+     
+     - Throws: A `SettlementMethodServiceError.unexpectedNilError` if `settlementMethodTruthSource` is `nil`.
+     */
+    func deleteSettlementMethod(
+        settlementMethod: SettlementMethod
+    ) -> Promise<Void> {
+        return Promise { seal in
+            Promise<SettlementMethod> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("deleteSettlementMethod: removing \(settlementMethod.id) from persistent storage")
+                    #warning("TODO: remove settlement methods from persistent storage here")
+                    logger.notice("deleteSettlementmethod: deleting \(settlementMethod.id) from settlementMethodTruthSource")
+                    seal.fulfill(settlementMethod)
+                }
+            }.done(on: DispatchQueue.main) { deletedSettlementMethod in
+                guard let settlementMethodTruthSource = self.settlementMethodTruthSource else {
+                    throw SettlementMethodServiceError.unexpectedNilError(desc: "settlementMethodTruthSource was nil during deleteSettlementMethod call")
+                }
+                settlementMethodTruthSource.settlementMethods.removeAll { someSettlementMethod in
+                    someSettlementMethod.id == deletedSettlementMethod.id
+                }
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.notice("deleteSettlementMethod: encountered error while deleting \(settlementMethod.id): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
     }
     
 }
