@@ -618,9 +618,9 @@ class DatabaseServiceTests: XCTestCase {
     }
     
     /**
-     Ensures code to store and get settlement methods works properly.
+     Ensures code to store, get, update and delete user settlement methods in persistent storage works properly.
      */
-    func  testStoreAndGetAndUpdateUserSettlementMethods() throws {
+    func  testStoreAndGetAndUpdateAndDeleteUserSettlementMethods() throws {
         let settlementMethodID = UUID()
         let settlementMethod = "a_settlement_method"
         let privateData = "some_private_data"
@@ -638,6 +638,12 @@ class DatabaseServiceTests: XCTestCase {
         
         XCTAssertEqual(settlementMethod, updatedReturnedSettlementMethod?.0)
         XCTAssertEqual("updated_private_data", updatedReturnedSettlementMethod?.1)
+        
+        try dbService.deleteUserSettlementMethod(id: settlementMethodID.uuidString)
+        
+        let returnedSettlementMethodAfterDeletion = try dbService.getUserSettlementMethod(id: settlementMethodID.uuidString)
+        
+        XCTAssertNil(returnedSettlementMethodAfterDeletion)
     }
 
 }

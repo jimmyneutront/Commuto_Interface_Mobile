@@ -209,9 +209,14 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
             Promise<SettlementMethod> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("deleteSettlementMethod: removing \(settlementMethod.id) from persistent storage")
-                    #warning("TODO: remove settlement methods from persistent storage here")
-                    logger.notice("deleteSettlementmethod: deleting \(settlementMethod.id) from settlementMethodTruthSource")
-                    seal.fulfill(settlementMethod)
+                    do {
+                        try databaseService.deleteUserSettlementMethod(id: settlementMethod.id)
+                        logger.notice("deleteSettlementmethod: deleting \(settlementMethod.id) from settlementMethodTruthSource")
+                        seal.fulfill(settlementMethod)
+                    } catch {
+                        logger.notice("deleteSettlementMethod: got error while deleting \(settlementMethod.id) from persistent storage")
+                        seal.reject(error)
+                    }
                 }
             }.done(on: DispatchQueue.main) { deletedSettlementMethod in
                 guard let settlementMethodTruthSource = self.settlementMethodTruthSource else {

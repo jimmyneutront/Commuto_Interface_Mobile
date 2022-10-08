@@ -64,6 +64,8 @@ class SettlementMethodServiceTests: XCTestCase {
         wait(for: [settlementMethodDeletedExpectation], timeout: 20.0)
         
         XCTAssertEqual(0, settlementMethodTruthSource.settlementMethods.count)
+        let encodedSettlementMethodInDatabaseAfterDeletion = try! databaseService.getUserSettlementMethod(id: settlementMethodToAdd.id)
+        XCTAssertNil(encodedSettlementMethodInDatabaseAfterDeletion)
         
     }
     

@@ -1082,7 +1082,15 @@ class DatabaseService {
         logger.notice("storeUserSettlementMethod: stored \(id)")
     }
     
+    /**
+     Updates the private settlement method data of a persistently stored settlement method with the given ID. The new private settlement method data is encrypted with `databaseKey` and a new initialization vector.
+     
+     - Parameters:
+        - id: The ID of the settlement method, the private data of which this will update.
+        - privateData: The new private settlement method data with which this will replace the current private settlement method data of the settlement method with the ID `id`.
+     */
     func updateUserSettlementMethod(id: String, privateData: String?) throws {
+        logger.notice("updateUserSettlementMethod: updating \(id)")
         _ = try databaseQueue.sync {
             #warning("TODO: this is exactly the same as what is in storeUserSettlementMethod, don't duplicate code")
             var privateDataString: String? = nil
@@ -1106,6 +1114,18 @@ class DatabaseService {
     }
     
     /**
+     Removes every persistently stored settlement method with an ID equal to `id` from `userSettlementMethods`.
+     
+     - Parameter id: The ID of the settlement method(s) to be deleted.
+     */
+    func deleteUserSettlementMethod(id: String) throws {
+        logger.notice("deleteUserSettlementMethod: deleting \(id)")
+        _ = try databaseQueue.sync {
+            try connection.run(userSettlementMethods.filter(settlementMethodID == id).delete())
+        }
+    }
+    
+    /**
      Retrieves and decrypts the persistently stored settlement method and its private data (if any) associated with the specified settlement method ID from the table of the user's settlement methods, or returns `nil` if no such settlement method is found.
      
      - Parameter id: The ID of the settlement method to be retrieved, as a Type 4 UUID string.
@@ -1115,6 +1135,7 @@ class DatabaseService {
      - Returns: `nil` if no such settlement method si found, or a tuple containing a string and an optional string, the first of which is a settlement method associated with `id`, the second of which is the private data associated with that settlement method, or `nil` if no such data is found or if it cannot be decrypted.
      */
     func getUserSettlementMethod(id: String) throws -> (String, String?)? {
+        logger.notice("getUserSettlementMethod: getting \(id)")
         let rowIterator = try databaseQueue.sync {
             try connection.prepareRowIterator(userSettlementMethods.filter(settlementMethodID == id))
         }
