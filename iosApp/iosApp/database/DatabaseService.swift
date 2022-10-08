@@ -459,15 +459,7 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             try connection.run(table.filter(id == offerID && chainID == _chainID).delete())
             for _settlementMethod in _settlementMethods {
-                var privateDataString: String? = nil
-                var initializationVectorString: String? = nil
-                let privateBytes = _settlementMethod.1?.bytes
-                if let privateBytes = privateBytes {
-                    let privateData = Data(privateBytes)
-                    let encryptedData = try databaseKey.encrypt(data: privateData)
-                    privateDataString = encryptedData.encryptedData.base64EncodedString()
-                    initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
-                }
+                let (privateDataString, initializationVectorString) = try encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: _settlementMethod.1)
                 try connection.run(table.insert(
                     id <- offerID,
                     chainID <- _chainID,
@@ -491,6 +483,25 @@ class DatabaseService {
         _ = try databaseQueue.sync {
             try connection.run(table.filter(id == offerID && chainID == _chainID).delete())
         }
+    }
+    
+    /**
+     Encrypts `privateSettlementMethodData` with `databaseKey` along with the initialization vector used for encryption, and returns both as Base64 encoded strings of bytes within a tuple, or returns `nil` if `privateSettlementMethodData` is `nil`.
+     
+     - Parameter privateSettlementMethodData: The string of private data to be symmetrically encrypted with `databaseKey`.
+     - Returns: A tuple containing to optional strings. If `privateSettlementMethodData` is not `nil`, the first will be `privateSettlementMethodData` encrypted with `databaseKey` and a new initialization vector as a Base64 encoded string of bytes, and the second will be the initialization vector used to encrypt `privateSettlementMethodData`, also as a Base64 encoded string of bytes. If `privateSettlementMethodData` is `nil`, both strings will be `nil`
+     */
+    private func encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?) throws -> (String?, String?) {
+        var privateCipherDataString: String? = nil
+        var initializationVectorString: String? = nil
+        let privateBytes = privateSettlementMethodData?.bytes
+        if let privateBytes = privateBytes {
+            let privateData = Data(privateBytes)
+            let encryptedData = try databaseKey.encrypt(data: privateData)
+            privateCipherDataString = encryptedData.encryptedData.base64EncodedString()
+            initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
+        }
+        return (privateCipherDataString, initializationVectorString)
     }
     
     /**
@@ -839,25 +850,6 @@ class DatabaseService {
     }
     
     /**
-     Encrypts `privateSettlementMethodData` with `databaseKey` along with the initialization vector used for encryption, and returns both as Base64 encoded strings of bytes within a tuple, or returns `nil` if `privateSettlementMethodData` is `nil`.
-     
-     - Parameter privateSettlementMethodData: The string of private data to be symmetrically encrypted with `databaseKey`.
-     - Returns: A tuple containing to optional strings. If `privateSettlementMethodData` is not `nil`, the first will be `privateSettlementMethodData` encrypted with `databaseKey` and a new initialization vector as a Base64 encoded string of bytes, and the second will be the initialization vector used to encrypt `privateSettlementMethodData`, also as a Base64 encoded string of bytes. If `privateSettlementMethodData` is `nil`, both strings will be `nil`
-     */
-    private func encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?) throws -> (String?, String?) {
-        var privateCipherDataString: String? = nil
-        var initializationVectorString: String? = nil
-        let privateBytes = privateSettlementMethodData?.bytes
-        if let privateBytes = privateBytes {
-            let privateData = Data(privateBytes)
-            let encryptedData = try databaseKey.encrypt(data: privateData)
-            privateCipherDataString = encryptedData.encryptedData.base64EncodedString()
-            initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
-        }
-        return (privateCipherDataString, initializationVectorString)
-    }
-    
-    /**
      Updates a persistently stored `DatabaseSwap`'s `requiresFill` field.
      
      - Parameters:
@@ -1063,15 +1055,7 @@ class DatabaseService {
      */
     func storeUserSettlementMethod(id: String, settlementMethod settlementMethodString: String, privateData: String?) throws {
         _ = try databaseQueue.sync {
-            var privateDataString: String? = nil
-            var initializationVectorString: String? = nil
-            let privateBytes = privateData?.bytes
-            if let privateBytes = privateBytes {
-                let privateData = Data(privateBytes)
-                let encryptedData = try databaseKey.encrypt(data: privateData)
-                privateDataString = encryptedData.encryptedData.base64EncodedString()
-                initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
-            }
+            let (privateDataString, initializationVectorString) = try encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: privateData)
             try connection.run(userSettlementMethods.insert(
                 settlementMethodID <- id,
                 settlementMethod <- settlementMethodString,
@@ -1092,16 +1076,7 @@ class DatabaseService {
     func updateUserSettlementMethod(id: String, privateData: String?) throws {
         logger.notice("updateUserSettlementMethod: updating \(id)")
         _ = try databaseQueue.sync {
-            #warning("TODO: this is exactly the same as what is in storeUserSettlementMethod, don't duplicate code")
-            var privateDataString: String? = nil
-            var initializationVectorString: String? = nil
-            let privateBytes = privateData?.bytes
-            if let privateBytes = privateBytes {
-                let privateData = Data(privateBytes)
-                let encryptedData = try databaseKey.encrypt(data: privateData)
-                privateDataString = encryptedData.encryptedData.base64EncodedString()
-                initializationVectorString = encryptedData.initializationVectorData.base64EncodedString()
-            }
+            let (privateDataString, initializationVectorString) = try encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: privateData)
             try connection.run(
                 userSettlementMethods.filter(
                     settlementMethodID == id
