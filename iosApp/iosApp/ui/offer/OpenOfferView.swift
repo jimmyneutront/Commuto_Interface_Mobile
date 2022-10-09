@@ -13,10 +13,11 @@ import web3swift
 /**
  The screen for opening a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
+struct OpenOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Offer_TruthSource: UIOfferTruthSource, SettlementMethod_TruthSource: UISettlementMethodTruthSource {
     
-    init(offerTruthSource: TruthSource) {
+    init(offerTruthSource: Offer_TruthSource, settlementMethodViewModel: SettlementMethod_TruthSource) {
         self.offerTruthSource = offerTruthSource
+        self.settlementMethodViewModel = settlementMethodViewModel
         stablecoinFormatter = NumberFormatter()
         stablecoinFormatter.numberStyle = .currency
         stablecoinFormatter.maximumFractionDigits = 3
@@ -25,7 +26,12 @@ struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     /**
      An object adopting the `OfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
      */
-    @ObservedObject var offerTruthSource: TruthSource
+    @ObservedObject var offerTruthSource: Offer_TruthSource
+    
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodViewModel: SettlementMethod_TruthSource
     
     /**
      The ID of the blockchain on which the new offer will be opened.
@@ -76,11 +82,6 @@ struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
      Indicates whether the service fee rate description disclosure group is expanded.
      */
     @State private var isServiceFeeRateDescriptionExpanded = false
-    
-    /**
-     An `Array` of `SettlementMethod`s from which the user can choose.
-     */
-    private var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethodsEmptyPrices
     
     /**
      The `SettlementMethod`s that the user has selected.
@@ -257,7 +258,7 @@ struct OpenOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                     Spacer()
                 }
                 SettlementMethodSelector(
-                    settlementMethods: settlementMethods,
+                    settlementMethodViewModel: settlementMethodViewModel,
                     stablecoinCurrencyCode: currencyCode ?? "Stablecoin",
                     selectedSettlementMethods: $selectedSettlementMethods
                 )
@@ -405,8 +406,9 @@ struct StablecoinCard: View {
 struct OpenOfferView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            OpenOfferView<PreviewableOfferTruthSource>(
-                offerTruthSource: PreviewableOfferTruthSource()
+            OpenOfferView<PreviewableOfferTruthSource, PreviewableSettlementMethodTruthSource>(
+                offerTruthSource: PreviewableOfferTruthSource(),
+                settlementMethodViewModel: PreviewableSettlementMethodTruthSource()
             )
         }
     }

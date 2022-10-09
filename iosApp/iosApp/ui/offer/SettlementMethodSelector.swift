@@ -11,12 +11,12 @@ import SwiftUI
 /**
  Displays a vertical list of settlement method cards, one for each of the offers settlement methods. These cards can be tapped to indicate that the user is willing to use them to send/receive payment for the offer being opened.
  */
-struct SettlementMethodSelector: View {
+struct SettlementMethodSelector<SettlementMethod_TruthSource>: View where SettlementMethod_TruthSource: UISettlementMethodTruthSource {
     
     /**
-     An `Array` of `SettlementMethod`s to be displayed.
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
      */
-    let settlementMethods: [SettlementMethod]
+    @ObservedObject var settlementMethodViewModel: SettlementMethod_TruthSource
     
     /**
      The currency code of the currently selected stablecoin.
@@ -29,12 +29,16 @@ struct SettlementMethodSelector: View {
     @Binding var selectedSettlementMethods: [SettlementMethod]
     
     var body: some View {
-        ForEach(settlementMethods) { settlementMethod in
-            SettlementMethodCard(
-                settlementMethod: settlementMethod,
-                stablecoinCurrencyCode: stablecoinCurrencyCode,
-                selectedSettlementMethods: $selectedSettlementMethods
-            )
+        if (settlementMethodViewModel.settlementMethods.count > 0) {
+            ForEach(settlementMethodViewModel.settlementMethods) { settlementMethod in
+                SettlementMethodCard(
+                    settlementMethod: settlementMethod,
+                    stablecoinCurrencyCode: stablecoinCurrencyCode,
+                    selectedSettlementMethods: $selectedSettlementMethods
+                )
+            }
+        } else {
+            Text("You haven't added any settlement methods.")
         }
     }
     
@@ -49,6 +53,16 @@ struct SettlementMethodCard: View {
      The `SettlementMethod`  that this card represents.
      */
     @State var settlementMethod: SettlementMethod
+    
+    /**
+     A struct adopting `PrivateData` containing private data for `settlementMethod`.
+     */
+    @State var privateData: PrivateData? = nil
+    
+    /**
+     Indicates whether we have finished attempting to parse the private data associated with `settlementMethod`.
+     */
+    @State var finishedParsingPrivateData = false
     
     /**
      The currency code of the currently selected stablecoin.
@@ -114,8 +128,22 @@ struct SettlementMethodCard: View {
                             }) {
                                 selectedSettlementMethods[index] = settlementMethod
                             }
-                            
                         }
+                }
+                if let privateData = privateData {
+                    if settlementMethod.method == "SEPA", let sepaData = privateData as? PrivateSEPAData {
+                        VStack(alignment: .leading) {
+                            SEPADetailView(sepaData: sepaData)
+                        }
+                    } else if settlementMethod.method == "SWIFT", let swiftData = privateData as? PrivateSWIFTData {
+                        VStack(alignment: .leading) {
+                            SWIFTDetailView(swiftData: swiftData)
+                        }
+                    } else {
+                        Text("Unable to deserialize settlement method details.")
+                    }
+                } else {
+                    Text("No details found.")
                 }
             }
             Spacer()
@@ -154,6 +182,8 @@ struct SettlementMethodCard: View {
                     settlementMethod.price = selectedSettlementMethods[index].price
                 }
             }
+            // Attempt to deserialize the private data of the settlement method
+            createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingPrivateData)
         }
     }
     
@@ -222,7 +252,7 @@ struct SettlementMethodSelector_Previews: PreviewProvider {
     
     static var previews: some View {
         SettlementMethodSelector(
-            settlementMethods: settlementMethods,
+            settlementMethodViewModel: PreviewableSettlementMethodTruthSource(),
             stablecoinCurrencyCode: "Stablecoin",
             selectedSettlementMethods: $selectedSettlementMethods
         )

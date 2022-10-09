@@ -68,11 +68,14 @@ struct EditOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         .font(.title2)
                     Spacer()
                 }
+                #warning("TODO: re-enable this once EditOfferView can get a settlement method truth source")
+                /*
                 SettlementMethodSelector(
                     settlementMethods: settlementMethods,
                     stablecoinCurrencyCode: stablecoinCurrencyCode,
                     selectedSettlementMethods: $offer.selectedSettlementMethods
                 )
+                 */
                 if offer.editingOfferState == .error {
                     HStack {
                         Text(offer.editingOfferError?.localizedDescription ?? "An unknown error occured")

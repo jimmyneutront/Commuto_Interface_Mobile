@@ -11,12 +11,17 @@ import SwiftUI
 /**
  Displays the main list of offers as `OfferCardView`s in a `List` within a `NavigationView`.
  */
-struct OffersView<TruthSource>: View where TruthSource: UIOfferTruthSource {
+struct OffersView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Offer_TruthSource: UIOfferTruthSource, SettlementMethod_TruthSource: UISettlementMethodTruthSource {
     
     /**
      An object adopting the `UIOfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
      */
-    @ObservedObject var offerTruthSource: TruthSource
+    @ObservedObject var offerTruthSource: Offer_TruthSource
+    
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodTruthSource: SettlementMethod_TruthSource
     
     /**
      The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.hardhatStablecoinInfoRepo` if no other value is provided.
@@ -48,7 +53,7 @@ struct OffersView<TruthSource>: View where TruthSource: UIOfferTruthSource {
             .toolbar {
                 HStack {
                     Button(action: {}) {
-                        NavigationLink(destination: OpenOfferView(offerTruthSource: offerTruthSource)) {
+                        NavigationLink(destination: OpenOfferView(offerTruthSource: offerTruthSource, settlementMethodViewModel: settlementMethodTruthSource)) {
                             Text("Open", comment: "The label of the button to open a new offer")
 
                         }
@@ -69,7 +74,8 @@ struct OffersView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             OffersView(
-                offerTruthSource: PreviewableOfferTruthSource()
+                offerTruthSource: PreviewableOfferTruthSource(),
+                settlementMethodTruthSource: PreviewableSettlementMethodTruthSource()
             )
         }
         .environment(\.locale, .init(identifier: "de"))

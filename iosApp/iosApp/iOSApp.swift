@@ -116,7 +116,10 @@ struct iOSApp: App {
             VStack(spacing: 0) {
                 switch currentTab {
                 case .offers:
-                    OffersView(offerTruthSource: container.resolve(OffersViewModel.self)!)
+                    OffersView(
+                        offerTruthSource: container.resolve(OffersViewModel.self)!,
+                        settlementMethodTruthSource: container.resolve(SettlementMethodViewModel.self)!
+                    )
                 case .swaps:
                     SwapsView(swapTruthSource: container.resolve(SwapViewModel.self)!)
                 case .settlementMethods:
