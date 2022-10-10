@@ -130,21 +130,7 @@ struct SettlementMethodCard: View {
                             }
                         }
                 }
-                if let privateData = privateData {
-                    if settlementMethod.method == "SEPA", let sepaData = privateData as? PrivateSEPAData {
-                        VStack(alignment: .leading) {
-                            SEPADetailView(sepaData: sepaData)
-                        }
-                    } else if settlementMethod.method == "SWIFT", let swiftData = privateData as? PrivateSWIFTData {
-                        VStack(alignment: .leading) {
-                            SWIFTDetailView(swiftData: swiftData)
-                        }
-                    } else {
-                        Text("Unable to deserialize settlement method details.")
-                    }
-                } else {
-                    Text("No details found.")
-                }
+                SettlementMethodPrivateDetailView(settlementMethod: settlementMethod)
             }
             Spacer()
             Toggle("Use Settlement Method", isOn: $isSelected)

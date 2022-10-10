@@ -141,7 +141,11 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         .padding(.top, 2)
                     }
                     .padding([.leading, .trailing, .top])
-                    SettlementMethodListView(stablecoinInformation: stablecoinInformation, settlementMethods: offer.settlementMethods)
+                    SettlementMethodListView(
+                        stablecoinInformation: stablecoinInformation,
+                        settlementMethods: offer.settlementMethods,
+                        isUserMaker: offer.isUserMaker
+                    )
                         .padding(.leading)
                     VStack(alignment: .leading) {
                         DisclosureGroup(
@@ -344,6 +348,10 @@ struct SettlementMethodListView: View {
      The settlement methods to be displayed.
      */
     let settlementMethods: [SettlementMethod]
+    /**
+     Indicates whether the user is the maker of the offer for which this is displaying settlement methods.
+     */
+    let isUserMaker: Bool
     
     var body: some View {
         let stablecoinCode = stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
@@ -352,7 +360,7 @@ struct SettlementMethodListView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack {
                     ForEach(settlementMethods) { settlementMethod in
-                        SettlementMethodView(stablecoin: stablecoinCode, settlementMethod: settlementMethod)
+                        SettlementMethodView(stablecoin: stablecoinCode, settlementMethod: settlementMethod, isUserMaker: isUserMaker)
                     }
                     .padding(5)
                 }
@@ -378,6 +386,10 @@ struct SettlementMethodView: View {
      The `SettlementMethod` that this card displays.
      */
     let settlementMethod: SettlementMethod
+    /**
+     Indicates whether the user of this interface is the maker of the offer for which this is displaying settlement method information.
+     */
+    let isUserMaker: Bool
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -385,6 +397,9 @@ struct SettlementMethodView: View {
                 .padding(1)
             Text(buildPriceDescription())
                 .padding(1)
+            if isUserMaker {
+                SettlementMethodPrivateDetailView(settlementMethod: settlementMethod)
+            }
         }
         .padding(20)
         .overlay(

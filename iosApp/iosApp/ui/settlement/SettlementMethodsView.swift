@@ -30,7 +30,7 @@ struct SettlementMethodsView<TruthSource>: View where TruthSource: UISettlementM
                     List {
                         ForEach(settlementMethodViewModel.settlementMethods) { settlementMethod in
                             NavigationLink(destination:
-                                            SettlementMethodDetailView(
+                                            UserSettlementMethodDetailView(
                                                 settlementMethod: settlementMethod,
                                                 settlementMethodViewModel: settlementMethodViewModel
                                             )
@@ -264,9 +264,9 @@ struct SettlementMethodCardView: View {
 }
 
 /**
- Displays all information, including private information, about a given `SettlementMethod`.
+ Displays all information, including private information, about a given `SettlementMethod` that belongs to the user of this interface.
  */
-struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettlementMethodTruthSource {
+struct UserSettlementMethodDetailView<TruthSource>: View where TruthSource: UISettlementMethodTruthSource {
     /**
      The `SettlementMethod` about which this displays information.
      */
@@ -328,19 +328,7 @@ struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettle
                 Text(settlementMethod.currency)
                     .font(.title)
                     .bold()
-                if let privateData = privateData {
-                    if let sepaData = privateData as? PrivateSEPAData {
-                        SEPADetailView(sepaData: sepaData)
-                    } else if let swiftData = privateData as? PrivateSWIFTData {
-                        SWIFTDetailView(swiftData: swiftData)
-                    } else {
-                        Text("Unknown Settlement Method Type")
-                    }
-                } else if finishedParsingData {
-                    Text("Unable to parse data")
-                        .font(.title)
-                        .bold()
-                }
+                SettlementMethodPrivateDetailView(settlementMethod: settlementMethod)
                 Button(
                     action: {
                         isShowingEditSheet = true
@@ -397,6 +385,44 @@ struct SettlementMethodDetailView<TruthSource>: View where TruthSource: UISettle
         .navigationTitle(Text(navigationTitle))
         .onAppear {
             createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingData)
+        }
+    }
+}
+
+/**
+ Displays private information of a `SettlementMethod` that does not necessarily belong to the user of this interface.
+ */
+struct SettlementMethodPrivateDetailView: View {
+    
+    /**
+     The `SettlementMethod` for which this displays private details.
+     */
+    let settlementMethod: SettlementMethod
+    /**
+     A struct adopting `PrivateData` containing private data for `settlementMethod`.
+     */
+    @State var privateData: PrivateData? = nil
+    /**
+     Indicates whether we have finished attempting to parse the private data associated with `settlementMethod`.
+     */
+    @State var finishedParsingPrivateData = false
+    
+    var body: some View {
+        Group {
+            if let privateData = privateData {
+                if settlementMethod.method == "SEPA", let sepaData = privateData as? PrivateSEPAData {
+                    SEPADetailView(sepaData: sepaData)
+                } else if settlementMethod.method == "SWIFT", let swiftData = privateData as? PrivateSWIFTData {
+                    SWIFTDetailView(swiftData: swiftData)
+                } else {
+                    Text("Unable to deserialize settlement method details.")
+                }
+            } else {
+                Text("No details found.")
+            }
+        }
+        .onAppear {
+            createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingPrivateData)
         }
     }
 }

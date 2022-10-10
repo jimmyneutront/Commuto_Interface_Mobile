@@ -366,55 +366,43 @@ extension Offer {
             isTaken: false,
             id: sampleOfferIds[0],
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
-            interfaceId: Data(),
+            interfaceID: Data(),
             stablecoin: EthereumAddress("0x663F3ad617193148711d28f5334eE4Ed07016602")!, // DAI on Hardhat
             amountLowerBound: 10_000 * BigUInt(10).power(18),
             amountUpperBound: 20_000 * BigUInt(10).power(18),
             securityDepositAmount: 2_000 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
-            onChainDirection: BigUInt.zero,
-            onChainSettlementMethods: [
-                """
-                {
-                    "f": "EUR",
-                    "p": "0.94",
-                    "m": "SEPA"
-                }
-                """.data(using: .utf8)!,
+            direction: .buy,
+            settlementMethods: [
+                SettlementMethod(currency: "EUR", price: "0.94", method: "SEPA", id: UUID().uuidString, privateData: String(decoding: try! JSONEncoder().encode(PrivateSEPAData(accountHolder: "account_holder", bic: "bic", iban: "iban", address: "address")), as: UTF8.self))
             ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
             isUserMaker: true,
             state: .offerOpened
-        )!,
+        ),
         sampleOfferIds[1]: Offer(
             isCreated: true,
             isTaken: false,
             id: sampleOfferIds[1],
             maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
-            interfaceId: Data(),
+            interfaceID: Data(),
             stablecoin: EthereumAddress("0x2E983A1Ba5e8b38AAAeC4B440B9dDcFBf72E15d1")!, // USDC on Hardhat
             amountLowerBound: 10_000 * BigUInt(10).power(6),
             amountUpperBound: 20_000 * BigUInt(10).power(6),
             securityDepositAmount: 2_000 * BigUInt(10).power(6),
             serviceFeeRate: BigUInt(10),
-            onChainDirection: BigUInt.init(UInt64(1)),
-            onChainSettlementMethods: [
-                """
-                {
-                    "f": "USD",
-                    "p": "1.00",
-                    "m": "SWIFT"
-                }
-                """.data(using: .utf8)!,
+            direction: .sell,
+            settlementMethods: [
+                SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT", id: UUID().uuidString, privateData: String(decoding: try! JSONEncoder().encode(PrivateSWIFTData(accountHolder: "account_holder", bic: "bic", accountNumber: "account_number")), as: UTF8.self))
             ],
             protocolVersion: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: false,
             isUserMaker: true,
             state: .offerOpened
-        )!,
+        ),
         sampleOfferIds[2]: Offer(
             isCreated: true,
             isTaken: false,
