@@ -12,7 +12,7 @@ import BigInt
 /**
  Displays information about a specific [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
+struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Offer_TruthSource: UIOfferTruthSource, SettlementMethod_TruthSource: UISettlementMethodTruthSource {
     
     /**
      The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information. Defaults to `StablecoinInformationRepository.hardhatStablecoinInfoRepo` if no other value is provided.
@@ -37,8 +37,15 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
      */
     @ObservedObject var offer: Offer
     
-    /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
-    @ObservedObject var offerTruthSource: TruthSource
+    /**
+     An object adopting the `OfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
+     */
+    @ObservedObject var offerTruthSource: Offer_TruthSource
+    
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodTruthSource: SettlementMethod_TruthSource
     
     /**
      The string that will be displayed in the label of the button that cancels the offer.
@@ -200,6 +207,7 @@ struct OfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                                             EditOfferView(
                                                 offer: offer,
                                                 offerTruthSource: offerTruthSource,
+                                                settlementMethodTruthSource: settlementMethodTruthSource,
                                                 stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
                                             )
                             ) {
@@ -432,11 +440,13 @@ struct OfferView_Previews: PreviewProvider {
         Group {
             OfferView(
                 offer: Offer.sampleOffers[Offer.sampleOfferIds[2]]!,
-                offerTruthSource: PreviewableOfferTruthSource()
+                offerTruthSource: PreviewableOfferTruthSource(),
+                settlementMethodTruthSource: PreviewableSettlementMethodTruthSource()
             )
             OfferView(
                 offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
-                offerTruthSource: PreviewableOfferTruthSource()
+                offerTruthSource: PreviewableOfferTruthSource(),
+                settlementMethodTruthSource: PreviewableSettlementMethodTruthSource()
             ).preferredColorScheme(.dark)
         }
         .environment(\.locale, .init(identifier: "de"))

@@ -34,7 +34,7 @@ struct OffersView<Offer_TruthSource, SettlementMethod_TruthSource>: View where O
                 if offerTruthSource.offers.count > 0 {
                     List {
                         ForEach(offerTruthSource.offers.map { $0.1 }, id: \.id) { offer in
-                            NavigationLink(destination: OfferView(offer: offer, offerTruthSource: offerTruthSource)) {
+                            NavigationLink(destination: OfferView(offer: offer, offerTruthSource: offerTruthSource, settlementMethodTruthSource: settlementMethodTruthSource)) {
                                 OfferCardView(
                                     offerDirection: offer.direction.string,
                                     stablecoinCode: stablecoinInformationRepository.getStablecoinInformation(chainID: offer.chainID, contractAddress: offer.stablecoin)?.currencyCode ?? "Unknown Stablecoin"

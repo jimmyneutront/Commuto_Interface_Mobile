@@ -12,12 +12,18 @@ import web3swift
 /**
  Allows the user to edit one of their [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)s.
  */
-struct EditOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
+struct EditOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Offer_TruthSource: UIOfferTruthSource, SettlementMethod_TruthSource: UISettlementMethodTruthSource {
     
-    init(offer: Offer, offerTruthSource: TruthSource, stablecoinCurrencyCode: String) {
+    init(
+        offer: Offer,
+        offerTruthSource: Offer_TruthSource,
+        settlementMethodTruthSource: SettlementMethod_TruthSource,
+        stablecoinCurrencyCode: String
+    ) {
         self.stablecoinCurrencyCode = stablecoinCurrencyCode
         self.offer = offer
         self.offerTruthSource = offerTruthSource
+        self.settlementMethodTruthSource = settlementMethodTruthSource
     }
     
     /**
@@ -35,8 +41,15 @@ struct EditOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
      */
     @ObservedObject var offer: Offer
     
-    /// The `OffersViewModel` that acts as a single source of truth for all offer-related data.
-    @ObservedObject var offerTruthSource: TruthSource
+    /**
+     An object adopting the `OfferTruthSource` protocol that acts as a single source of truth for all offer-related data.
+     */
+    @ObservedObject var offerTruthSource: Offer_TruthSource
+    
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodTruthSource: SettlementMethod_TruthSource
     
     /**
      The string that will be displayed in the label of the button that edits the offer.
@@ -68,14 +81,11 @@ struct EditOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                         .font(.title2)
                     Spacer()
                 }
-                #warning("TODO: re-enable this once EditOfferView can get a settlement method truth source")
-                /*
                 SettlementMethodSelector(
-                    settlementMethods: settlementMethods,
+                    settlementMethodViewModel: settlementMethodTruthSource,
                     stablecoinCurrencyCode: stablecoinCurrencyCode,
                     selectedSettlementMethods: $offer.selectedSettlementMethods
                 )
-                 */
                 if offer.editingOfferState == .error {
                     HStack {
                         Text(offer.editingOfferError?.localizedDescription ?? "An unknown error occured")
@@ -132,6 +142,7 @@ struct EditOfferView_Previews: PreviewProvider {
         EditOfferView(
             offer: Offer.sampleOffers[Offer.sampleOfferIds[0]]!,
             offerTruthSource: PreviewableOfferTruthSource(),
+            settlementMethodTruthSource: PreviewableSettlementMethodTruthSource(),
             stablecoinCurrencyCode: "STBL"
         )
     }
