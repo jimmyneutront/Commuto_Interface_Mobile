@@ -275,7 +275,8 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                             .sheet(isPresented: $isShowingTakeOfferSheet) {
                                 TakeOfferView(
                                     offerID: offer.id,
-                                    offerTruthSource: offerTruthSource
+                                    offerTruthSource: offerTruthSource,
+                                    settlementMethodTruthSource: settlementMethodTruthSource
                                 )
                             }
                         }

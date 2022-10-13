@@ -88,18 +88,17 @@ struct iOSApp: App {
         // Register the SwapViewModel singleton
         container.register(SwapViewModel.self) { r in SwapViewModel(swapService: r.resolve(SwapService.self)!) }
             .inObjectScope(.container)
-            .initCompleted { r, viewModel in
-                // Provide OffersViewModel to OfferService as its offerTruthSource
-                r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = r.resolve(OffersViewModel.self)!
-                // Provide SwapViewModel to OfferService as its swapTruthSource
-                r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.swapTruthSource = r.resolve(SwapViewModel.self)!
-                #warning("TODO: Provide SwapViewModel to SwapService as its swapTruthSource")
-            }
+        // Provide OffersViewModel to OfferService as its offerTruthSource
+        container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = container.resolve(OffersViewModel.self)!
+        // Provide SwapViewModel to OfferService as its swapTruthSource
+        container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.swapTruthSource = container.resolve(SwapViewModel.self)!
+        #warning("TODO: Provide SwapViewModel to SwapService as its swapTruthSource")
         // Register the SettlementMethodViewModel singleton
         container.register(SettlementMethodViewModel.self) { r in SettlementMethodViewModel(settlementMethodService: r.resolve(SettlementMethodService<SettlementMethodViewModel>.self)!) }
             .inObjectScope(.container)
         // Provide SettlementMethodService to SettlementMethodViewModel
         container.resolve(SettlementMethodService<SettlementMethodViewModel>.self)!.settlementMethodTruthSource = container.resolve(SettlementMethodViewModel.self)
+        
         // Begin listening to the blockchain
         //container.resolve(BlockchainService.self)!.listen()
         // Begin listening to the peer-to-peer network

@@ -12,7 +12,7 @@ import SwiftUI
 /**
  Allows the user to specify a stablecoin amount, select a settlement method and take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  */
-struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
+struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Offer_TruthSource: UIOfferTruthSource, SettlementMethod_TruthSource: UISettlementMethodTruthSource {
     
     /**
      The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information.
@@ -27,7 +27,11 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     /**
      The `OffersViewModel` that acts as a single source of truth for all offer-related data.
      */
-    @ObservedObject var offerTruthSource: TruthSource
+    @ObservedObject var offerTruthSource: Offer_TruthSource
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodTruthSource: SettlementMethod_TruthSource
     
     /**
      A `NumberFormatter` for formatting stablecoin amounts.
@@ -40,9 +44,13 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
     @State var specifiedStablecoinAmount = 0
     
     /**
-     The settlement method by which the user has chosen to send/receive traditional currency payment, or `nil` if the user has not made such a selection.
+     The settlement method (created by the offer maker) )by which the user has chosen to send/receive traditional currency payment, or `nil` if the user has not made such a selection.
      */
-    @State var selectedSettlementMethod: SettlementMethod? = nil
+    @State var selectedMakerSettlementMethod: SettlementMethod? = nil
+    /**
+     The user's/taker's settlement method corresponding to `selectedMakerSettlementMethod`, containing the user's/taker's private data which will be sent to the maker. Must have the same currency and method value as `selectedMakerSettlementMethod`
+     */
+    @State var selectedTakerSettlementMethod: SettlementMethod? = nil
     
     /**
      Creates the string that will be displayed in the label  of the button that edits the offer.
@@ -88,7 +96,7 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                             .bold()
                         Text("You are:")
                             .font(.title2)
-                        Text(createRoleDescription(offerDirection: offer.direction, stablecoinInformation: stablecoinInformation, selectedSettlementMethod: selectedSettlementMethod))
+                        Text(createRoleDescription(offerDirection: offer.direction, stablecoinInformation: stablecoinInformation, selectedSettlementMethod: selectedMakerSettlementMethod))
                             .font(.title)
                             .bold()
                         OfferAmountView(
@@ -112,44 +120,55 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
                                 maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
                             )
                         }
-                        Text(createSettlementMethodHeader(numberOfSettlementMethods: offer.settlementMethods.count))
+                        Text("Select Settlement Method:")
                             .font(.title2)
                         ImmutableSettlementMethodSelector(
                             settlementMethods: offer.settlementMethods,
-                            selectedSettlementMethod: $selectedSettlementMethod,
+                            selectedSettlementMethod: $selectedMakerSettlementMethod,
                             stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
                         )
-                        if (offer.takingOfferState != .none && offer.takingOfferState != .error) {
-                            Text(offer.takingOfferState.description)
+                        if selectedMakerSettlementMethod != nil {
+                            Text("Select Your Settlement Method:")
                                 .font(.title2)
+                            FilterableSettlementMethodSelector(
+                                settlementMethodTruthSource: settlementMethodTruthSource,
+                                selectedMakerSettlementMethod: $selectedMakerSettlementMethod,
+                                selectedTakerSettlementMethod: $selectedTakerSettlementMethod
+                            )
                         }
-                        if offer.takingOfferState == .error {
-                            Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
-                                .foregroundColor(Color.red)
-                        }
-                        Button(
-                            action: {
-                                if offer.takingOfferState == .none || offer.takingOfferState == .error {
-                                    offerTruthSource.takeOffer(
-                                        offer: offer,
-                                        takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
-                                        settlementMethod: selectedSettlementMethod
-                                    )
-                                }
-                            },
-                            label: {
-                                Text(createTakeOfferButtonLabel(offer: offer))
-                                    .font(.largeTitle)
-                                    .bold()
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(getTakeOfferButtonOutlineColor(offer: offer), lineWidth: 3)
-                                    )
+                        VStack {
+                            if (offer.takingOfferState != .none && offer.takingOfferState != .error) {
+                                Text(offer.takingOfferState.description)
+                                    .font(.title2)
                             }
-                        )
-                        .accentColor(Color.primary)
+                            if offer.takingOfferState == .error {
+                                Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
+                                    .foregroundColor(Color.red)
+                            }
+                            Button(
+                                action: {
+                                    if offer.takingOfferState == .none || offer.takingOfferState == .error {
+                                        offerTruthSource.takeOffer(
+                                            offer: offer,
+                                            takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                            settlementMethod: selectedMakerSettlementMethod
+                                        )
+                                    }
+                                },
+                                label: {
+                                    Text(createTakeOfferButtonLabel(offer: offer))
+                                        .font(.largeTitle)
+                                        .bold()
+                                        .padding(10)
+                                        .frame(maxWidth: .infinity)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(getTakeOfferButtonOutlineColor(offer: offer), lineWidth: 3)
+                                        )
+                                }
+                            )
+                            .accentColor(Color.primary)
+                        }
                     }
                     .padding()
                 }
@@ -161,21 +180,6 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
             }
         } else {
             Text("This Offer is not available.")
-        }
-    }
-    
-    /**
-     Creates a header for the settlement method selector.
-     
-     - Parameter numberOfSettlementMethods: The size of this offer's settlement method list.
-     
-     - Returns A `String` to be used as the header for the settlement method selector
-     */
-    func createSettlementMethodHeader(numberOfSettlementMethods: Int) -> String {
-        if numberOfSettlementMethods == 1 {
-            return "Settlement Method:"
-        } else {
-            return "Settlement Methods:"
         }
     }
     
@@ -220,6 +224,75 @@ struct TakeOfferView<TruthSource>: View where TruthSource: UIOfferTruthSource {
             }
         }
         return "\(direction) \(stablecoinCurrencyCode)\(currencyPhrase)"
+    }
+    
+}
+
+/**
+ Displays all of the user's settlement methods in the given truth source that have the same currency and method properties as the given maker settlement method.
+ */
+struct FilterableSettlementMethodSelector<TruthSource>: View where TruthSource: UISettlementMethodTruthSource {
+    /**
+     An object adopting `UISettlementMethodTruthSource` that acts as a single source of truth for all settlement-method-related data.
+     */
+    @ObservedObject var settlementMethodTruthSource: TruthSource
+    
+    /**
+     All settlement methods belonging to the user with method and currency properties equal to that of `selectedMakerSettlementMethod`, or none if `selectedMakerSettlementMethod` is nil.
+     */
+    var matchingSettlementMethods: [SettlementMethod] {
+        settlementMethodTruthSource.settlementMethods.filter { settlementMethod in
+            if let selectedMakerSettlementMethod = selectedMakerSettlementMethod {
+                return settlementMethod.method == selectedMakerSettlementMethod.method && settlementMethod.currency == selectedMakerSettlementMethod.currency
+            } else {
+                return false
+            }
+        }
+    }
+    
+    /**
+     The currently selected `SettlementMethod` belonging to the maker, or `nil` if no `SettlementMethod` is currently selected.
+     */
+    @Binding var selectedMakerSettlementMethod: SettlementMethod?
+    /**
+     The currently selected `SettlementMethod` belonging to the taker, which must have method and currency values equal to those of `selectedMakerSettlementMethod`.
+     */
+    @Binding var selectedTakerSettlementMethod: SettlementMethod?
+    
+    var body: some View {
+        if !matchingSettlementMethods.isEmpty {
+            ForEach(matchingSettlementMethods) { settlementMethod in
+                
+                let color: Color = {
+                    if selectedTakerSettlementMethod?.id == settlementMethod.id {
+                        return Color.green
+                    } else {
+                        return Color.primary
+                    }
+                }()
+                
+                Button(action: { selectedTakerSettlementMethod = settlementMethod }) {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(buildCurrencyDescription(settlementMethod: settlementMethod))
+                                .bold()
+                                .padding(1)
+                            SettlementMethodPrivateDetailView(settlementMethod: settlementMethod)
+                        }
+                        Spacer()
+                    }
+                    .padding(15)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(color, lineWidth: 1)
+                    )
+                }
+                .accentColor(color)
+            }
+        } else {
+            Text("You have no settlement methods compatible with this offer.")
+                .font(.title2)
+        }
     }
     
 }
@@ -295,7 +368,7 @@ struct ImmutableSettlementMethodCard: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(buildCurrencyDescription())
+                Text(buildCurrencyDescription(settlementMethod: settlementMethod))
                     .foregroundColor(color)
                     .bold()
                     .padding(1)
@@ -314,13 +387,6 @@ struct ImmutableSettlementMethodCard: View {
     }
     
     /**
-     Builds a human readable string describing the currency and transfer method, such as "EUR via SEPA" or "USD via SWIFT".
-     */
-    func buildCurrencyDescription() -> String {
-        return settlementMethod.currency + " via " + settlementMethod.method
-    }
-    
-    /**
      Builds a human readable string describing the price specified for this settlement method, such as "Price: 0.94 EUR/DAI" or "Price: 1.00 USD/USDC", or "Price: Tap to specify" of this settlement method's price is empty.
      */
     func buildPriceDescription() -> String {
@@ -334,13 +400,21 @@ struct ImmutableSettlementMethodCard: View {
 }
 
 /**
+ Builds a human readable string describing the currency and transfer method of a settlement method, such as "EUR via SEPA" or "USD via SWIFT".
+ */
+func buildCurrencyDescription(settlementMethod: SettlementMethod) -> String {
+    return settlementMethod.currency + " via " + settlementMethod.method
+}
+
+/**
  Displays a preview of `TakeOfferView`
  */
 struct TakeOfferView_Previews: PreviewProvider {
     static var previews: some View {
         TakeOfferView(
             offerID: Offer.sampleOfferIds[2],
-            offerTruthSource: PreviewableOfferTruthSource()
+            offerTruthSource: PreviewableOfferTruthSource(),
+            settlementMethodTruthSource: PreviewableSettlementMethodTruthSource()
         )
     }
 }
