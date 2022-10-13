@@ -43,6 +43,36 @@ struct SwapView<TruthSource>: View where TruthSource: UISwapTruthSource {
         }
     }
     
+    /**
+     The settlement method of `swap`, but with the private data belonging to the user of this interface.
+     */
+    var settlementMethodOfUser: SettlementMethod {
+        var settlementMethod = swap.settlementMethod
+        switch swap.role {
+        case .makerAndBuyer, .makerAndSeller:
+            settlementMethod.privateData = swap.makerPrivateSettlementMethodData
+        case .takerAndBuyer, .takerAndSeller:
+            settlementMethod.privateData = swap.takerPrivateSettlementMethodData
+        }
+        return settlementMethod
+    }
+    
+    /**
+     The settlement method of `swap`, but with the private data of the counterparty, if any.
+     */
+    var settlementMethodOfCounterparty: SettlementMethod {
+        var settlementMethod = swap.settlementMethod
+        switch swap.role {
+        case .makerAndBuyer, .makerAndSeller:
+            // We are the maker, so the counterparty is the taker
+            settlementMethod.privateData = swap.takerPrivateSettlementMethodData
+        case .takerAndBuyer, .takerAndSeller:
+            // We are the taker, so the counterparty is the maker
+            settlementMethod.privateData = swap.makerPrivateSettlementMethodData
+        }
+        return settlementMethod
+    }
+    
     var body: some View {
         let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(chainID: swap.chainID, contractAddress: swap.stablecoin)
         ScrollView(.vertical, showsIndicators: false) {
@@ -67,14 +97,25 @@ struct SwapView<TruthSource>: View where TruthSource: UISwapTruthSource {
                 )
                 Text("\(counterPartyDirection)'s Details:")
                     .font(.title2)
-                Text("TEMPORARY")
-                    .font(.title)
-                    .bold()
+                if settlementMethodOfCounterparty.privateData != nil {
+                    SettlementMethodPrivateDetailView(settlementMethod: settlementMethodOfCounterparty)
+                        .padding(15)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(lineWidth: 3)
+                        )
+                } else {
+                    Text("Not yet received.")
+                        .padding([.top, .bottom], 3)
+                }
                 Text("Your Details:")
                     .font(.title2)
-                Text("TEMPORARY")
-                    .font(.title)
-                    .bold()
+                SettlementMethodPrivateDetailView(settlementMethod: settlementMethodOfUser)
+                    .padding(15)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(lineWidth: 3)
+                    )
             }
             .frame(
                 maxWidth: .infinity,
