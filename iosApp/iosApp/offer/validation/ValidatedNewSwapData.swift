@@ -17,7 +17,11 @@ struct ValidatedNewSwapData {
      */
     let takenSwapAmount: BigUInt
     /**
-     The settlement method by which the user will send/receive payment to/from the maker.
+     The settlement method, specified and accepted by the maker, by which the user will send/receive payment to/from the maker.
      */
-    let settlementMethod: SettlementMethod
+    let makerSettlementMethod: SettlementMethod
+    /**
+     One of the user's settlement methods which has the same method and currency properties as `makerSettlementMethod`,  and contains the user's private settlement method details, which will be sent to the maker.
+     */
+    let takerSettlementMethod: SettlementMethod
 }

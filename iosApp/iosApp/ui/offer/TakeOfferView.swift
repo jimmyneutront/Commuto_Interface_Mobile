@@ -151,7 +151,8 @@ struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                                         offerTruthSource.takeOffer(
                                             offer: offer,
                                             takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
-                                            settlementMethod: selectedMakerSettlementMethod
+                                            makerSettlementMethod: selectedMakerSettlementMethod,
+                                            takerSettlementMethod: selectedTakerSettlementMethod
                                         )
                                     }
                                 },

@@ -463,7 +463,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         guard let selectedOnChainSettlementMethod = (offerToTake.onChainSettlementMethods.first { onChainSettlementMethod in
                             do {
                                 let settlementMethod = try JSONDecoder().decode(SettlementMethod.self, from: onChainSettlementMethod)
-                                if settlementMethod.currency == swapData.settlementMethod.currency && settlementMethod.price == swapData.settlementMethod.price && settlementMethod.method == swapData.settlementMethod.method {
+                                if settlementMethod.currency == swapData.makerSettlementMethod.currency && settlementMethod.price == swapData.makerSettlementMethod.price && settlementMethod.method == swapData.makerSettlementMethod.method {
                                     return true
                                 } else {
                                     return false
@@ -512,7 +512,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                             state: .taking,
                             role: swapRole
                         )
-                        newSwap.takerPrivateSettlementMethodData = swapData.settlementMethod.privateData
+                        newSwap.takerPrivateSettlementMethodData = swapData.takerSettlementMethod.privateData
                         if let afterObjectCreation = afterObjectCreation {
                             afterObjectCreation()
                         }

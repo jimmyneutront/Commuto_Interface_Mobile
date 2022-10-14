@@ -17,7 +17,8 @@ class NewSwapDataValidatorTests: XCTestCase {
      Ensures that `validateNewSwapData` validates swap data properly.
      */
     func testValidateNewSwapData() throws {
-        let settlementMethod = SettlementMethod(currency: "a_currency", price: "a_price", method: "a_settlement_method", privateData: "some_private_data")
+        let makerSettlementMethod = SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT", id: UUID().uuidString, privateData: String(decoding: try! JSONEncoder().encode(PrivateSWIFTData(accountHolder: "account_holder", bic: "bic", accountNumber: "account_number")), as: UTF8.self))
+        let takerSettlementMethod = SettlementMethod(currency: "USD", price: "", method: "SWIFT", id: UUID().uuidString, privateData: String(decoding: try! JSONEncoder().encode(PrivateSWIFTData(accountHolder: "account_holder", bic: "bic", accountNumber: "account_number")), as: UTF8.self))
         let offer = Offer(
             isCreated: true,
             isTaken: false,
@@ -30,7 +31,7 @@ class NewSwapDataValidatorTests: XCTestCase {
             securityDepositAmount: 2 * BigUInt(10).power(18),
             serviceFeeRate: BigUInt(100),
             direction: .buy,
-            settlementMethods: [settlementMethod],
+            settlementMethods: [makerSettlementMethod],
             protocolVersion: BigUInt(1),
             chainID: BigUInt(31337),
             havePublicKey: true,
@@ -40,16 +41,22 @@ class NewSwapDataValidatorTests: XCTestCase {
         let validatedData = try validateNewSwapData(
             offer: offer,
             takenSwapAmount: NSNumber(floatLiteral: 15).decimalValue,
-            selectedSettlementMethod: settlementMethod,
+            selectedMakerSettlementMethod: makerSettlementMethod,
+            selectedTakerSettlementMethod: takerSettlementMethod,
             stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo
         )
         let expectedValidatedData = ValidatedNewSwapData(
             takenSwapAmount: 15 * BigUInt(10).power(18),
-            settlementMethod: settlementMethod
+            makerSettlementMethod: makerSettlementMethod,
+            takerSettlementMethod: takerSettlementMethod
         )
         XCTAssertEqual(expectedValidatedData.takenSwapAmount, validatedData.takenSwapAmount)
-        XCTAssertEqual(expectedValidatedData.settlementMethod.currency, validatedData.settlementMethod.currency)
-        XCTAssertEqual(expectedValidatedData.settlementMethod.price, validatedData.settlementMethod.price)
-        XCTAssertEqual(expectedValidatedData.settlementMethod.method, validatedData.settlementMethod.method)
+        
+        XCTAssertEqual(expectedValidatedData.makerSettlementMethod.currency, validatedData.makerSettlementMethod.currency)
+        XCTAssertEqual(expectedValidatedData.makerSettlementMethod.price, validatedData.makerSettlementMethod.price)
+        XCTAssertEqual(expectedValidatedData.makerSettlementMethod.method, validatedData.makerSettlementMethod.method)
+        
+        XCTAssertEqual(expectedValidatedData.takerSettlementMethod.currency, validatedData.takerSettlementMethod.currency)
+        XCTAssertEqual(expectedValidatedData.takerSettlementMethod.method, validatedData.takerSettlementMethod.method)
     }
 }

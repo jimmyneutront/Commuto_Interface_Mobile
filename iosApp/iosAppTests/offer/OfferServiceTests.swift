@@ -1689,7 +1689,7 @@ class OfferServiceTests: XCTestCase {
         
         let takingExpectation = XCTestExpectation(description: "Fulfilled when offerService.takeOffer returns")
         
-        let swapData = ValidatedNewSwapData(takenSwapAmount: 15_000 * BigUInt(10).power(18), settlementMethod: SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA", privateData: "EUR_SEPA_Private_Data"))
+        let swapData = ValidatedNewSwapData(takenSwapAmount: 15_000 * BigUInt(10).power(18), makerSettlementMethod: SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA", privateData: ""), takerSettlementMethod: SettlementMethod(currency: "EUR", price: "", method: "SEPA", privateData: "Taker_EUR_SEPA_Private_Data"))
         
         offerService.takeOffer(offerToTake: offer, swapData: swapData).done {
             takingExpectation.fulfill()
@@ -1725,7 +1725,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual("EUR", swapInTruthSource.settlementMethod.currency)
         XCTAssertEqual("0.98", swapInTruthSource.settlementMethod.price)
         XCTAssertEqual("SEPA", swapInTruthSource.settlementMethod.method)
-        XCTAssertEqual("EUR_SEPA_Private_Data", swapInTruthSource.takerPrivateSettlementMethodData)
+        XCTAssertEqual("Taker_EUR_SEPA_Private_Data", swapInTruthSource.takerPrivateSettlementMethodData)
         XCTAssertEqual(BigUInt(1), swapInTruthSource.protocolVersion)
         XCTAssertFalse(swapInTruthSource.isPaymentSent)
         XCTAssertFalse(swapInTruthSource.isPaymentReceived)
@@ -1756,7 +1756,7 @@ class OfferServiceTests: XCTestCase {
             onChainDirection: String(swapInTruthSource.onChainDirection),
             onChainSettlementMethod: swapInTruthSource.onChainSettlementMethod.base64EncodedString(),
             makerPrivateSettlementMethodData: nil,
-            takerPrivateSettlementMethodData: "EUR_SEPA_Private_Data",
+            takerPrivateSettlementMethodData: "Taker_EUR_SEPA_Private_Data",
             protocolVersion: String(swapInTruthSource.protocolVersion),
             isPaymentSent: swapInTruthSource.isPaymentSent,
             isPaymentReceived: swapInTruthSource.isPaymentReceived,

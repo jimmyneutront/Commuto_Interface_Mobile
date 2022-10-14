@@ -169,7 +169,7 @@ struct SettlementMethodCard: View {
                 }
             }
             // Attempt to deserialize the private data of the settlement method
-            createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingPrivateData)
+            createPrivateDataStructForUI(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingPrivateData)
         }
     }
     

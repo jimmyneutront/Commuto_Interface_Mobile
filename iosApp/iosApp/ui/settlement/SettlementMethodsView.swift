@@ -258,7 +258,7 @@ struct SettlementMethodCardView: View {
             }
         }
         .onAppear {
-            createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingData)
+            createPrivateDataStructForUI(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingData)
         }
     }
 }
@@ -384,7 +384,7 @@ struct UserSettlementMethodDetailView<TruthSource>: View where TruthSource: UISe
         }
         .navigationTitle(Text(navigationTitle))
         .onAppear {
-            createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingData)
+            createPrivateDataStructForUI(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingData)
         }
     }
 }
@@ -422,7 +422,7 @@ struct SettlementMethodPrivateDetailView: View {
             }
         }
         .onAppear {
-            createPrivateDataStruct(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingPrivateData)
+            createPrivateDataStructForUI(privateData: settlementMethod.privateData?.data(using: .utf8) ?? Data(), resultBinding: $privateData, finished: $finishedParsingPrivateData)
         }
     }
 }
@@ -740,16 +740,11 @@ struct SWIFTDetailView: View {
 }
 
 /**
- Attempts to create a private data structure by deserializing `privateData` as JSON, then on the main DispatchQueue, this sets the value of `resultBinding` to the result and sets the value of `finished` to `true`.
+ Attempts to create a private data structure via `createPrivateDataStruct`. Then, on the main DispatchQueue, this sets the value of `resultBinding` to the result and sets the value of `finished` to `true`.
  */
-func createPrivateDataStruct(privateData: Data, resultBinding: Binding<PrivateData?>, finished: Binding<Bool>) {
-    var createdPrivateData: PrivateData? = nil
+func createPrivateDataStructForUI(privateData: Data, resultBinding: Binding<PrivateData?>, finished: Binding<Bool>) {
     DispatchQueue.global(qos: .userInteractive).async {
-        if let privateData = try? JSONDecoder().decode(PrivateSEPAData.self, from: privateData) {
-            createdPrivateData = privateData
-        } else if let privateData = try? JSONDecoder().decode(PrivateSWIFTData.self, from: privateData) {
-            createdPrivateData = privateData
-        }
+        let createdPrivateData: PrivateData? = createPrivateDataStruct(privateData: privateData)
         DispatchQueue.main.async {
             resultBinding.wrappedValue = createdPrivateData
             finished.wrappedValue = true

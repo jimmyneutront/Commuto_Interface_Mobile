@@ -15,14 +15,15 @@ import BigInt
     - the isUserMaker field is false (meaning the user is not the maker of the offer)
     - the havePublicKey field is true (meaning this interface has a copy of the maker's public key)
     - (if the offer's lower and upper bound amounts are not equal) the takenSwapAmount is within the bounds specified by the offer maker
-    - the user has selected a settlement method
-    - the settlement method selected by the user is accepted by the offer maker
-    - the user has supplied their information for the selected settlement method.
+    - the user has selected a settlement method accepted by the maker
+    - the user has selected one of their own settlement methods that is compatible with the maker's settlement method that the user has selected
+    - the user has supplied their information for the selected settlement method, and the information is valid.
  
  - Parameters:
     - offer: The `Offer` that is being taken.
     - takenSwapAmount: (If the lower and upper bound amounts of `offer` are equal, this will not be used.) The stablecoin amount that the user wants to buy/sell as a `Decimal`
-    - selectedSettlementMethod: The settlement method by which the user wants to send/receive payment to/from the maker.
+    - selectedMakerSettlementMethod: One of the settlement methods specified by the maker, by which the user wants to send/receive payment to/from the maker.
+    - selectedTakerSettlementMethod: One of the user's settlement methods, that has the same method and currency properties as `selectedMakerSettlementMethod`, and contains the user's private information that will be sent to the maker.
     - stablecoinInformationRepository: The `StablecoinInformationRepository` that this will use to convert `takenSwapAmount` to ERC20 base units.
  
  - Returns: A `ValidatedNewSwapData` derived from the inputs to this function.
@@ -32,7 +33,8 @@ import BigInt
 func validateNewSwapData(
     offer: Offer,
     takenSwapAmount: Decimal,
-    selectedSettlementMethod: SettlementMethod?,
+    selectedMakerSettlementMethod: SettlementMethod?,
+    selectedTakerSettlementMethod: SettlementMethod?,
     stablecoinInformationRepository: StablecoinInformationRepository
 ) throws -> ValidatedNewSwapData {
     guard !offer.isUserMaker else {
@@ -57,16 +59,40 @@ func validateNewSwapData(
     guard offer.amountUpperBound >= takenSwapAmountBaseUnits else {
         throw NewSwapDataValidationError(desc: "You must specify a stablecoin amount that is not greater than the maximum amount.")
     }
-    guard let selectedSettlementMethod = selectedSettlementMethod else {
-        throw NewSwapDataValidationError(desc: "You must select a settlement method.")
+    guard let selectedMakerSettlementMethod = selectedMakerSettlementMethod else {
+        throw NewSwapDataValidationError(desc: "You must select a settlement method accepted by the offer maker.")
     }
-    guard selectedSettlementMethod.privateData != nil else {
-        throw NewSwapDataValidationError(desc: "You must supply your information for the settlement method you select.")
+    guard let selectedTakerSettlementMethod = selectedTakerSettlementMethod else {
+        throw NewSwapDataValidationError(desc: "You must select one of your settlement methods.")
     }
-    guard let selectedSettlementMethodInArray = offer.settlementMethods.first(where: { settlementMethod in
-        settlementMethod.currency == selectedSettlementMethod.currency && settlementMethod.price == selectedSettlementMethod.price && settlementMethod.method == selectedSettlementMethod.method
+    guard selectedMakerSettlementMethod.method == selectedTakerSettlementMethod.method && selectedMakerSettlementMethod.currency == selectedTakerSettlementMethod.currency else {
+        throw NewSwapDataValidationError(desc: "You must select a settlement method accepted by the offer maker.")
+    }
+    guard let privateData = selectedTakerSettlementMethod.privateData else {
+        throw NewSwapDataValidationError(desc: "You must supply your information for your settlement method.")
+    }
+    guard let privateDataStruct = createPrivateDataStruct(privateData: privateData.data(using: .utf8) ?? Data()) else {
+        throw NewSwapDataValidationError(desc: "Your settlement method has invalid details")
+    }
+    if privateDataStruct is PrivateSEPAData {
+        if selectedMakerSettlementMethod.method != "SEPA" {
+            throw NewSwapDataValidationError(desc: "You must select a settlement method accepted by the offer maker.")
+        }
+    } else if privateDataStruct is PrivateSWIFTData {
+        if selectedMakerSettlementMethod.method != "SWIFT" {
+            throw NewSwapDataValidationError(desc: "You must select a settlement method accepted by the offer maker.")
+        }
+    } else {
+        throw NewSwapDataValidationError(desc: "You must select a supported settlement method")
+    }
+    guard let selectedMakerSettlementMethodInArray = offer.settlementMethods.first(where: { settlementMethod in
+        settlementMethod.currency == selectedMakerSettlementMethod.currency && settlementMethod.price == selectedMakerSettlementMethod.price && settlementMethod.method == selectedMakerSettlementMethod.method
     }) else {
         throw NewSwapDataValidationError(desc: "The user does not use the settlement method you selected.")
     }
-    return ValidatedNewSwapData(takenSwapAmount: takenSwapAmountBaseUnits, settlementMethod: selectedSettlementMethodInArray)
+    return ValidatedNewSwapData(
+        takenSwapAmount: takenSwapAmountBaseUnits,
+        makerSettlementMethod: selectedMakerSettlementMethodInArray,
+        takerSettlementMethod: selectedTakerSettlementMethod
+    )
 }

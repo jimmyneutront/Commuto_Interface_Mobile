@@ -274,13 +274,15 @@ class OffersViewModel: UIOfferTruthSource {
      
      - Parameters:
         - offer: The `Offer` to be taken.
-        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell.
-        - settlementMethod: The `SettlementMethod` that the user has selected to send/receive traditional currency payment.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
      */
     func takeOffer(
         offer: Offer,
         takenSwapAmount: Decimal,
-        settlementMethod: SettlementMethod?
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?
     ) {
         setTakingOfferState(offerID: offer.id, state: .validating)
         Promise<ValidatedNewSwapData> { seal in
@@ -291,7 +293,8 @@ class OffersViewModel: UIOfferTruthSource {
                     let validatedSwapData = try validateNewSwapData(
                         offer: offer,
                         takenSwapAmount: takenSwapAmount,
-                        selectedSettlementMethod: settlementMethod,
+                        selectedMakerSettlementMethod: makerSettlementMethod,
+                        selectedTakerSettlementMethod: takerSettlementMethod,
                         stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo)
                     seal.fulfill(validatedSwapData)
                 } catch {

@@ -20,6 +20,7 @@
 		6D0FD5C82888A9B700B2DE4B /* ServiceFeeRateChangedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0FD5C72888A9B700B2DE4B /* ServiceFeeRateChangedEvent.swift */; };
 		6D1272D128942B7C00393128 /* PublicKeyAnnouncementCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1272D028942B7C00393128 /* PublicKeyAnnouncementCreator.swift */; };
 		6D1272D328945BF700393128 /* PublicKeyAnnouncementParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1272D228945BF700393128 /* PublicKeyAnnouncementParser.swift */; };
+		6D127B7628F8C65A00ED9AE8 /* PrivateDataStructCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D127B7528F8C65A00ED9AE8 /* PrivateDataStructCreator.swift */; };
 		6D16AF22289AFD570016EDDB /* ServiceFeeAmountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D16AF21289AFD570016EDDB /* ServiceFeeAmountView.swift */; };
 		6D174E2D27AD7DB800E208F7 /* CINMessageParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */; };
 		6D18F1B5289ECCFB002B667C /* EditOfferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1B4289ECCFB002B667C /* EditOfferView.swift */; };
@@ -174,6 +175,7 @@
 		6D0FD5C72888A9B700B2DE4B /* ServiceFeeRateChangedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceFeeRateChangedEvent.swift; sourceTree = "<group>"; };
 		6D1272D028942B7C00393128 /* PublicKeyAnnouncementCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyAnnouncementCreator.swift; sourceTree = "<group>"; };
 		6D1272D228945BF700393128 /* PublicKeyAnnouncementParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PublicKeyAnnouncementParser.swift; path = "../New Group/PublicKeyAnnouncementParser.swift"; sourceTree = "<group>"; };
+		6D127B7528F8C65A00ED9AE8 /* PrivateDataStructCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateDataStructCreator.swift; sourceTree = "<group>"; };
 		6D16AF21289AFD570016EDDB /* ServiceFeeAmountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceFeeAmountView.swift; sourceTree = "<group>"; };
 		6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CINMessageParsers.swift; sourceTree = "<group>"; };
 		6D18F1B4289ECCFB002B667C /* EditOfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditOfferView.swift; sourceTree = "<group>"; };
@@ -610,6 +612,7 @@
 				6DCBB34128E5493B00155A56 /* PrivateSEPAData.swift */,
 				6DCBB34328E5530000155A56 /* PrivateSWIFTData.swift */,
 				6D4877AD28E718D300212504 /* PrivateData.swift */,
+				6D127B7528F8C65A00ED9AE8 /* PrivateDataStructCreator.swift */,
 			);
 			path = privateData;
 			sourceTree = "<group>";
@@ -1062,6 +1065,7 @@
 				6D9AAC8528B3FF76000E7640 /* TakerInformationMessage.swift in Sources */,
 				6D80072E28AB26E700510D01 /* UISwapTruthSource.swift in Sources */,
 				6D9ABCBD2736399F0034AE01 /* KeyManagerService.swift in Sources */,
+				6D127B7628F8C65A00ED9AE8 /* PrivateDataStructCreator.swift in Sources */,
 				6D0F4D9F2853C5A10089EE9E /* PublicKeyAnnouncement.swift in Sources */,
 				6DB0907E28A5FCE70005A702 /* TakingOfferState.swift in Sources */,
 				6D6B0FC028504603003A24B3 /* BlockchainErrorNotifiable.swift in Sources */,
