@@ -22,6 +22,8 @@ import web3swift
  - the user has selected at least one settlement method
  - the user has specified a price for each selected settlement method.
  - the user has supplied their information for each selected settlement method.
+ - the information that the user has supplied for each settlement method is valid.
+ - the type of information that the user has supplied for each settlement method corresponds to that type of settlement method.
  
 - Parameters:
     - chainID: The ID of the blockchain on which the offer should be created.
@@ -76,8 +78,22 @@ func validateNewOfferData(
         guard settlementMethod.price != "" else {
             throw NewOfferDataValidationError(desc: "You must specify a price for each settlement method you select.")
         }
-        guard settlementMethod.privateData != nil else {
+        guard let privateData = settlementMethod.privateData else {
             throw NewOfferDataValidationError(desc: "You must supply your information for each settlement method you select.")
+        }
+        guard let privateDataStruct = createPrivateDataStruct(privateData: privateData.data(using: .utf8) ?? Data()) else {
+            throw NewOfferDataValidationError(desc: "Your \(settlementMethod.currency) \(settlementMethod.method) has invalid details")
+        }
+        if privateDataStruct is PrivateSEPAData {
+            if settlementMethod.method != "SEPA" {
+                throw NewOfferDataValidationError(desc: "You cannot not supply SEPA details for a \(settlementMethod.method) settlement method.")
+            }
+        } else if privateDataStruct is PrivateSWIFTData {
+            if settlementMethod.method != "SWIFT" {
+                throw NewOfferDataValidationError(desc: "You cannot not supply SWIFT details for a \(settlementMethod.method) settlement method.")
+            }
+        } else {
+            throw NewOfferDataValidationError(desc: "You must select a supported settlement method")
         }
     }
     return ValidatedNewOfferData(
