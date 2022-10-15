@@ -54,13 +54,13 @@ class DatabaseService {
      */
     let offers = Table("Offer")
     /**
-     A database table of settlement methods and their encrypted private data and corresponding initialization vectors, as Base-64 `String` encoded  bytes.
+     A database table of settlement methods (each of which corresponds to a specific offer) and their encrypted private data and corresponding initialization vectors, as Base-64 `String` encoded  bytes.
      */
-    let settlementMethods = Table("SettlementMethod")
+    let offerSettlementMethods = Table("OfferSettlementMethod")
     /**
-     A database table of settlement methods (in exactly the same format as those in `settlementMethods`) that will become the actual settlement methods of an offer once an [EditOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) transaction is confirmed.
+     A database table of settlement methods (in exactly the same format as those in `offerSettlementMethods`) that will become the actual settlement methods of an offer once an [EditOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) transaction is confirmed.
      */
-    let pendingSettlementMethods = Table("PendingSettlementMethod")
+    let pendingOfferSettlementMethods = Table("PendingOfferSettlementMethod")
     /**
      A database table of `KeyPair`s.
      */
@@ -159,11 +159,11 @@ class DatabaseService {
      */
     let settlementMethod = Expression<String>("settlementMethod")
     /**
-     A database structure representing encrypted private data for a particular settlement method. This field is optional because this interface may not have private data for settlement methods not owned by the user.
+     A database structure representing encrypted private data for a particular settlement method of an offer. This field is optional because this interface may not have private data for settlement methods not owned by the user.
      */
     let privateSettlementMethodData = Expression<String?>("privateData")
     /**
-     A database structure representing an initialization vector used to encrypt a piece of private settlement method data. This field is optional because this interface may not have private data (and thus no initialization vector) for settlement methods not owned by the user.
+     A database structure representing an initialization vector used to encrypt a piece of private settlement method data corresponding to a settlement method of an offer. This field is optional because this interface may not have private data (and thus no initialization vector) for settlement methods not owned by the user.
      */
     let privateSettlementMethodDataInitializationVector = Expression<String?>("privateDataInitializationVector")
     /**
@@ -257,14 +257,14 @@ class DatabaseService {
             t.column(isUserMaker)
             t.column(offerState)
         })
-        try connection.run(settlementMethods.create { t in
+        try connection.run(offerSettlementMethods.create { t in
             t.column(id)
             t.column(chainID)
             t.column(settlementMethod)
             t.column(privateSettlementMethodData)
             t.column(privateSettlementMethodDataInitializationVector)
         })
-        try connection.run(pendingSettlementMethods.create { t in
+        try connection.run(pendingOfferSettlementMethods.create { t in
             t.column(id)
             t.column(chainID)
             t.column(settlementMethod)
@@ -622,9 +622,9 @@ class DatabaseService {
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
         - settlementMethods: The settlement methods to be persistently stored, as a tuple containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
      */
-    func storeSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [(String, String?)]) throws {
-        try insertSettlementMethodsIntoTable(offerID: offerID, _chainID: _chainID, settlementMethods: _settlementMethods, table: settlementMethods)
-        logger.notice("storeSettlementMethods: stored \(_settlementMethods.count) for offer with B64 ID \(offerID)")
+    func storeOfferSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [(String, String?)]) throws {
+        try insertSettlementMethodsIntoTable(offerID: offerID, _chainID: _chainID, settlementMethods: _settlementMethods, table: offerSettlementMethods)
+        logger.notice("storeOfferSettlementMethods: stored \(_settlementMethods.count) for offer with B64 ID \(offerID)")
     }
     
     /**
@@ -634,9 +634,9 @@ class DatabaseService {
         - offerID: The ID of the offer for which associated settlement methods should be removed.
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
      */
-    func deleteSettlementMethods(offerID: String, _chainID: String) throws {
-        try deleteSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: settlementMethods)
-        logger.notice("deleteSettlementMethods: deleted for offer with B64 ID \(offerID)")
+    func deleteOfferSettlementMethods(offerID: String, _chainID: String) throws {
+        try deleteSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: offerSettlementMethods)
+        logger.notice("deleteOfferSettlementMethods: deleted for offer with B64 ID \(offerID)")
     }
 
     /**
@@ -650,9 +650,9 @@ class DatabaseService {
      
      - Returns: The value returned by `DatabaseService.getAndDecryptSettlementMethodsFromTable`.
      */
-    func getSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
-        logger.notice("getSettlementMethods: getting for offer with B64 ID \(offerID)")
-        return try getAndDecryptSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: settlementMethods)
+    func getOfferSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
+        logger.notice("getOfferSettlementMethods: getting for offer with B64 ID \(offerID)")
+        return try getAndDecryptSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: offerSettlementMethods)
     }
     
     /**
@@ -663,9 +663,9 @@ class DatabaseService {
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
         - settlementMethods: The pending settlement methods to be persistently stored, as a tuple containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
      */
-    func storePendingSettlementMethods(offerID: String, _chainID: String, pendingSettlementMethods _pendingSettlementMethods: [(String, String?)]) throws {
-        try insertSettlementMethodsIntoTable(offerID: offerID, _chainID: _chainID, settlementMethods: _pendingSettlementMethods, table: pendingSettlementMethods)
-        logger.notice("storePendingSettlementMethods: stored \(_pendingSettlementMethods.count) for offer with B64 ID \(offerID)")
+    func storePendingOfferSettlementMethods(offerID: String, _chainID: String, pendingSettlementMethods _pendingSettlementMethods: [(String, String?)]) throws {
+        try insertSettlementMethodsIntoTable(offerID: offerID, _chainID: _chainID, settlementMethods: _pendingSettlementMethods, table: pendingOfferSettlementMethods)
+        logger.notice("storePendingOfferSettlementMethods: stored \(_pendingSettlementMethods.count) for offer with B64 ID \(offerID)")
     }
     
     /**
@@ -675,9 +675,9 @@ class DatabaseService {
         - offerID: The ID of the offer for which associated pending settlement methods should be removed.
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these pending settlement methods exists, as a `String`.
      */
-    func deletePendingSettlementMethods(offerID: String, _chainID: String) throws {
-        try deleteSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: pendingSettlementMethods)
-        logger.notice("deletePendingSettlementMethods: deleted for offer with B64 ID \(offerID)")
+    func deletePendingOfferSettlementMethods(offerID: String, _chainID: String) throws {
+        try deleteSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: pendingOfferSettlementMethods)
+        logger.notice("deletePendingOfferSettlementMethods: deleted for offer with B64 ID \(offerID)")
     }
 
     /**
@@ -691,9 +691,9 @@ class DatabaseService {
      
      - Returns: The value returned by `DatabaseService.getAndDecryptSettlementMethodsFromTable`.
      */
-    func getPendingSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
-        logger.notice("getPendingSettlementMethods: getting for offer with B64 ID \(offerID)")
-        return try getAndDecryptSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: pendingSettlementMethods)
+    func getPendingOfferSettlementMethods(offerID: String, _chainID: String) throws -> [(String, String?)]? {
+        logger.notice("getPendingOfferSettlementMethods: getting for offer with B64 ID \(offerID)")
+        return try getAndDecryptSettlementMethodsFromTable(offerID: offerID, _chainID: _chainID, table: pendingOfferSettlementMethods)
     }
     
     /**

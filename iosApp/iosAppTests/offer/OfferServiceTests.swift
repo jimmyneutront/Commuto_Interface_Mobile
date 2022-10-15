@@ -138,7 +138,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerInDatabase!.onChainDirection, "1")
         XCTAssertEqual(offerInDatabase!.protocolVersion, "1")
         XCTAssertEqual(offerInDatabase!.state, OfferState.awaitingPublicKeyAnnouncement.asString)
-        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
+        let settlementMethodsInDatabase = try! databaseService.getOfferSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerInDatabase!.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 1)
         XCTAssertEqual(settlementMethodsInDatabase![0].0, Data("USD-SWIFT|a price here".utf8).base64EncodedString())
     }
@@ -947,7 +947,7 @@ class OfferServiceTests: XCTestCase {
         let serializedSettlementMethodsAndPrivateDetails = offer.settlementMethods.compactMap { settlementMethod in
             return (try! JSONEncoder().encode(settlementMethod).base64EncodedString(), settlementMethod.privateData)
         }
-        try! databaseService.storeSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID, settlementMethods: serializedSettlementMethodsAndPrivateDetails)
+        try! databaseService.storeOfferSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID, settlementMethods: serializedSettlementMethodsAndPrivateDetails)
         
         let pendingSettlementMethods = [
             SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA", privateData: "some_sepa_data"),
@@ -956,7 +956,7 @@ class OfferServiceTests: XCTestCase {
         let serializedPendingSettlementMethodsAndPrivateDetails = pendingSettlementMethods.compactMap { pendingSettlementMethod in
             return (try! JSONEncoder().encode(pendingSettlementMethod).base64EncodedString(), pendingSettlementMethod.privateData)
         }
-        try! databaseService.storePendingSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID, pendingSettlementMethods: serializedPendingSettlementMethodsAndPrivateDetails)
+        try! databaseService.storePendingOfferSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID, pendingSettlementMethods: serializedPendingSettlementMethodsAndPrivateDetails)
         
         let errorHandler = TestBlockchainErrorHandler()
         
@@ -983,14 +983,14 @@ class OfferServiceTests: XCTestCase {
         XCTAssertEqual(offerEditedEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerEditedEventRepository.removedEvent!.id, expectedOfferID)
         
-        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
+        let settlementMethodsInDatabase = try! databaseService.getOfferSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 2)
         XCTAssertEqual(settlementMethodsInDatabase![0].0, Data("{\"f\":\"EUR\",\"p\":\"0.98\",\"m\":\"SEPA\"}".utf8).base64EncodedString())
         XCTAssertEqual(settlementMethodsInDatabase![0].1, "some_sepa_data")
         XCTAssertEqual(settlementMethodsInDatabase![1].0, Data("{\"f\":\"BSD\",\"p\":\"1.00\",\"m\":\"SANDDOLLAR\"}".utf8).base64EncodedString())
         XCTAssertEqual(settlementMethodsInDatabase![1].1, "some_sanddollar_data")
         
-        let pendingSettlementMethodsInDatabase = try! databaseService.getPendingSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
+        let pendingSettlementMethodsInDatabase = try! databaseService.getPendingOfferSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
         XCTAssertNil(pendingSettlementMethodsInDatabase)
     }
     
@@ -1310,7 +1310,7 @@ class OfferServiceTests: XCTestCase {
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
         
-        let settlementMethodsInDatabase = try! databaseService.getSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: offerInDatabase.chainID)
+        let settlementMethodsInDatabase = try! databaseService.getOfferSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: offerInDatabase.chainID)
         var expectedSettlementMethodsInDatabase: [String] = []
         for settlementMethod in offerInTruthSource.onChainSettlementMethods {
             expectedSettlementMethodsInDatabase.append(settlementMethod.base64EncodedString())
@@ -1566,7 +1566,7 @@ class OfferServiceTests: XCTestCase {
         let offerStruct = try! blockchainService.getOffer(id: offerID)
         XCTAssertEqual(expectedSettlementMethods, offerStruct?.settlementMethods)
         
-        let pendingSettlementMethodsInDatabase = try! databaseService.getPendingSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(BigUInt(31337)))
+        let pendingSettlementMethodsInDatabase = try! databaseService.getPendingOfferSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(BigUInt(31337)))
         XCTAssertEqual(1, pendingSettlementMethodsInDatabase!.count)
         XCTAssertEqual("some_private_data", pendingSettlementMethodsInDatabase?[0].1)
         
@@ -1776,7 +1776,7 @@ class OfferServiceTests: XCTestCase {
         XCTAssertNil(try! databaseService.getOffer(id: offerID.asData().base64EncodedString()))
         
         // Check that the offer's settlement methods have been deleted from persistent storage
-        XCTAssertNil(try! databaseService.getSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(BigUInt(31337))))
+        XCTAssertNil(try! databaseService.getOfferSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(BigUInt(31337))))
     }
     
 }

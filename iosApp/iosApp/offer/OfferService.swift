@@ -211,7 +211,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), settlementMethod.privateData))
                 }
                 logger.notice("openOffer: persistently storing \(settlementMethodStrings.count) settlement methods for offer \(newOffer.id.uuidString)")
-                try databaseService.storeSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
+                try databaseService.storeOfferSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
                 if let afterPersistentStorage = afterPersistentStorage {
                     afterPersistentStorage()
                 }
@@ -351,7 +351,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                             return (try JSONEncoder().encode(settlementMethod).base64EncodedString(), settlementMethod.privateData)
                         }
                         logger.notice("editOffer: persistently storing pending settlement methods for \(offerID.uuidString)")
-                        try databaseService.storePendingSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(offer.chainID), pendingSettlementMethods: serializedSettlementMethodsAndPrivateDetails)
+                        try databaseService.storePendingOfferSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(offer.chainID), pendingSettlementMethods: serializedSettlementMethodsAndPrivateDetails)
                         let onChainSettlementMethods = serializedSettlementMethodsAndPrivateDetails.compactMap { serializedSettlementMethodWithDetails in
                             return Data(base64Encoded: serializedSettlementMethodWithDetails.0)
                         }
@@ -604,7 +604,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, newSwap in
                 logger.notice("takeOffer: removing offer \(offerToTake.id.uuidString) and its settlement methods from persistent storage")
                 try databaseService.deleteOffers(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID))
-                try databaseService.deleteSettlementMethods(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID))
+                try databaseService.deleteOfferSettlementMethods(offerID: offerToTake.id.asData().base64EncodedString(), _chainID: String(offerToTake.chainID))
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("takeOffer: encountered error during call for \(offerToTake.id.uuidString): \(error.localizedDescription)")
@@ -729,7 +729,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             for settlementMethod in offer.settlementMethods {
                 settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), settlementMethod.privateData))
             }
-            try databaseService.storeSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
+            try databaseService.storeOfferSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
             logger.notice("handleOfferOpenedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
             offerOpenedEventRepository.remove(event)
             guard offerTruthSource != nil else {
@@ -783,7 +783,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             /*
              The user of this interface is the maker of this offer, and therefore we should have pending settlement methods for this offer in persistent storage.
              */
-            let pendingSettlementMethods = try databaseService.getPendingSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
+            let pendingSettlementMethods = try databaseService.getPendingOfferSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
             var deserializedPendingSettlementMethods: [SettlementMethod] = []
             if let pendingSettlementMethods = pendingSettlementMethods {
                 if pendingSettlementMethods.count != offerStruct.settlementMethods.count {
@@ -831,9 +831,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 // Since we just deserialized these settlement methods, we should never get an error while reserializing them again
                 return (try JSONEncoder().encode(newSettlementMethod).base64EncodedString(), newSettlementMethod.privateData)
             }
-            try databaseService.storeSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString, settlementMethods: newSerializedSettlementMethods)
+            try databaseService.storeOfferSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString, settlementMethods: newSerializedSettlementMethods)
             logger.notice("handleOfferEditedEvent: persistently stored \(newSerializedSettlementMethods.count) settlement methods for \(event.id.uuidString)")
-            try databaseService.deletePendingSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
+            try databaseService.deletePendingOfferSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
             logger.notice("handleOfferEditedEvent: removed pending settlement methods from persistent storage for \(event.id.uuidString)")
             if let offer = offer {
                 try DispatchQueue.main.sync {
@@ -850,7 +850,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             for settlementMethod in offerStruct.settlementMethods {
                 settlementMethodStrings.append((settlementMethod.base64EncodedString(), nil))
             }
-            try databaseService.storeSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString, settlementMethods: settlementMethodStrings)
+            try databaseService.storeOfferSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString, settlementMethods: settlementMethodStrings)
             logger.notice("handleOfferEditedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for \(event.id.uuidString)")
             if let offer = offer {
                 DispatchQueue.main.sync {
@@ -877,7 +877,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         offerCanceledEventRepository.append(event)
         try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
         logger.notice("handleOfferCanceledEvent: deleted offer \(event.id.uuidString) from persistent storage")
-        try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
+        try databaseService.deleteOfferSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
         logger.notice("handleOfferCanceledEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
         offerCanceledEventRepository.remove(event)
         guard var offerTruthSource = offerTruthSource else {
@@ -926,7 +926,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 // Regardless of whether we are or are not the maker of this offer, we are not the taker, so we remove the offer and its settlement methods.
                 try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
                 logger.notice("handleOfferTakenEvent: deleted offer \(event.id.uuidString) from persistent storage")
-                try databaseService.deleteSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
+                try databaseService.deleteOfferSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
                 logger.notice("handleOfferTakenEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
                 DispatchQueue.main.sync {
                     offer.isTaken = true

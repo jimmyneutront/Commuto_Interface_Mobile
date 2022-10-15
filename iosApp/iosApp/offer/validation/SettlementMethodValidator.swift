@@ -9,7 +9,7 @@
 import Foundation
 
 /**
- Validates edited settlement methods for an offer made by the user of this interface.
+ Validates settlement methods belonging to the user of this interface.
  
  This function ensures that:
     - the user has selected at least one settlement method
