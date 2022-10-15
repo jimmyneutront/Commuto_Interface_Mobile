@@ -19,11 +19,7 @@ import web3swift
  - the security deposit amount is at least 10% of the maximum stablecoin amount
  - the minimum service fee amount is greater than zero
  - the user has specified a valid direction
- - the user has selected at least one settlement method
- - the user has specified a price for each selected settlement method.
- - the user has supplied their information for each selected settlement method.
- - the information that the user has supplied for each settlement method is valid.
- - the type of information that the user has supplied for each settlement method corresponds to that type of settlement method.
+ - the settlement methods supplied by the user are valid (determined via a call to `validateSettlementMethods`)
  
 - Parameters:
     - chainID: The ID of the blockchain on which the offer should be created.
@@ -71,31 +67,7 @@ func validateNewOfferData(
         throw NewOfferDataValidationError(desc: "The minimum service fee amount must be greater than zero.")
     }
     let serviceFeeRateUpperBound = serviceFeeRate * (maximumAmountBaseUnits / BigUInt(10_000))
-    guard !settlementMethods.isEmpty else {
-        throw NewOfferDataValidationError(desc: "You must specify at least one settlement method.")
-    }
-    try settlementMethods.forEach { settlementMethod in
-        guard settlementMethod.price != "" else {
-            throw NewOfferDataValidationError(desc: "You must specify a price for each settlement method you select.")
-        }
-        guard let privateData = settlementMethod.privateData else {
-            throw NewOfferDataValidationError(desc: "You must supply your information for each settlement method you select.")
-        }
-        guard let privateDataStruct = createPrivateDataStruct(privateData: privateData.data(using: .utf8) ?? Data()) else {
-            throw NewOfferDataValidationError(desc: "Your \(settlementMethod.currency) \(settlementMethod.method) has invalid details")
-        }
-        if privateDataStruct is PrivateSEPAData {
-            if settlementMethod.method != "SEPA" {
-                throw NewOfferDataValidationError(desc: "You cannot not supply SEPA details for a \(settlementMethod.method) settlement method.")
-            }
-        } else if privateDataStruct is PrivateSWIFTData {
-            if settlementMethod.method != "SWIFT" {
-                throw NewOfferDataValidationError(desc: "You cannot not supply SWIFT details for a \(settlementMethod.method) settlement method.")
-            }
-        } else {
-            throw NewOfferDataValidationError(desc: "You must select a supported settlement method")
-        }
-    }
+    let validatedSettlementMethods = try validateSettlementMethods(settlementMethods)
     return ValidatedNewOfferData(
         stablecoin: stablecoin!,
         stablecoinInformation: stablecoinInformation!,
@@ -106,7 +78,7 @@ func validateNewOfferData(
         serviceFeeAmountLowerBound: serviceFeeAmountLowerBound,
         serviceFeeAmountUpperBound: serviceFeeRateUpperBound,
         direction: direction,
-        settlementMethods: settlementMethods
+        settlementMethods: validatedSettlementMethods
     )
 }
 

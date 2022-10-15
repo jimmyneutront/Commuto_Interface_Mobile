@@ -1,5 +1,5 @@
 //
-//  EditedSettlementMethodValidationError.swift
+//  SettlementMethodValidationError.swift
 //  iosApp
 //
 //  Created by jimmyt on 8/6/22.
@@ -9,12 +9,12 @@
 import Foundation
 
 /**
- A `LocalizedError` thrown if a problem is encountered while validating data for a new offer.
+ A `LocalizedError` thrown if a problem is encountered while validating data for an offer.
  */
-struct EditedSettlementMethodValidationError: LocalizedError {
+struct SettlementMethodValidationError: LocalizedError {
     
     /**
-     Initializes a new `EditedSettlementMethodValidationError`.
+     Initializes a new `SettlementMethodValidationError`.
      
      - Parameter desc: A `String` that provides information about the context in which the error was thrown, which will be stored in the `errorDescription` property.
      */

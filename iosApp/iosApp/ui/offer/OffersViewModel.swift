@@ -247,7 +247,7 @@ class OffersViewModel: UIOfferTruthSource {
                 offer.editingOfferError = nil
                 logger.notice("editOffer: validating edited settlement methods for \(offer.id.uuidString)")
                 do {
-                    let validatedSettlementMethods = try validateEditedSettlementMethods(newSettlementMethods)
+                    let validatedSettlementMethods = try validateSettlementMethods(newSettlementMethods)
                     seal.fulfill(validatedSettlementMethods)
                 } catch {
                     seal.reject(error)

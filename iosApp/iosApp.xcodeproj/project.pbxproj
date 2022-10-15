@@ -25,8 +25,8 @@
 		6D174E2D27AD7DB800E208F7 /* CINMessageParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */; };
 		6D18F1B5289ECCFB002B667C /* EditOfferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1B4289ECCFB002B667C /* EditOfferView.swift */; };
 		6D18F1B7289ECF26002B667C /* SettlementMethodSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1B6289ECF25002B667C /* SettlementMethodSelector.swift */; };
-		6D18F1BC289EECD8002B667C /* EditedSettlementMethodValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BB289EECD8002B667C /* EditedSettlementMethodValidator.swift */; };
-		6D18F1BE289EEDF1002B667C /* EditedSettlementMethodValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BD289EEDF1002B667C /* EditedSettlementMethodValidationError.swift */; };
+		6D18F1BC289EECD8002B667C /* SettlementMethodValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BB289EECD8002B667C /* SettlementMethodValidator.swift */; };
+		6D18F1BE289EEDF1002B667C /* SettlementMethodValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BD289EEDF1002B667C /* SettlementMethodValidationError.swift */; };
 		6D18F1C0289F7890002B667C /* EditingOfferState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BF289F7890002B667C /* EditingOfferState.swift */; };
 		6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1914DA278B6DC6004A4329 /* MatrixTests.swift */; };
 		6D1D5D1028B6F18600A48282 /* SwapMessageNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1D5D0F28B6F18600A48282 /* SwapMessageNotifiable.swift */; };
@@ -180,8 +180,8 @@
 		6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CINMessageParsers.swift; sourceTree = "<group>"; };
 		6D18F1B4289ECCFB002B667C /* EditOfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditOfferView.swift; sourceTree = "<group>"; };
 		6D18F1B6289ECF25002B667C /* SettlementMethodSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethodSelector.swift; sourceTree = "<group>"; };
-		6D18F1BB289EECD8002B667C /* EditedSettlementMethodValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditedSettlementMethodValidator.swift; sourceTree = "<group>"; };
-		6D18F1BD289EEDF1002B667C /* EditedSettlementMethodValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditedSettlementMethodValidationError.swift; sourceTree = "<group>"; };
+		6D18F1BB289EECD8002B667C /* SettlementMethodValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethodValidator.swift; sourceTree = "<group>"; };
+		6D18F1BD289EEDF1002B667C /* SettlementMethodValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethodValidationError.swift; sourceTree = "<group>"; };
 		6D18F1BF289F7890002B667C /* EditingOfferState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingOfferState.swift; sourceTree = "<group>"; };
 		6D1914DA278B6DC6004A4329 /* MatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixTests.swift; sourceTree = "<group>"; };
 		6D1D5D0F28B6F18600A48282 /* SwapMessageNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapMessageNotifiable.swift; sourceTree = "<group>"; };
@@ -674,8 +674,8 @@
 				6DEE9ADF288AE20D00EF07D8 /* NewOfferDataValidator.swift */,
 				6DEE9AE1288AE39E00EF07D8 /* ValidatedNewOfferData.swift */,
 				6DEE9AE3288AFC6200EF07D8 /* NewOfferDataValidationError.swift */,
-				6D18F1BB289EECD8002B667C /* EditedSettlementMethodValidator.swift */,
-				6D18F1BD289EEDF1002B667C /* EditedSettlementMethodValidationError.swift */,
+				6D18F1BB289EECD8002B667C /* SettlementMethodValidator.swift */,
+				6D18F1BD289EEDF1002B667C /* SettlementMethodValidationError.swift */,
 				6DB0907628A5E0940005A702 /* ValidatedNewSwapData.swift */,
 				6DB0907928A5E71F0005A702 /* NewSwapDataValidator.swift */,
 				6DB0907B28A5EFA90005A702 /* NewSwapDataValidationError.swift */,
@@ -1033,7 +1033,7 @@
 				6DE6938C284A68D400086719 /* BlockchainService.swift in Sources */,
 				6DE880A128CBD40F00E6AAEC /* PaymentSentEvent.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
-				6D18F1BC289EECD8002B667C /* EditedSettlementMethodValidator.swift in Sources */,
+				6D18F1BC289EECD8002B667C /* SettlementMethodValidator.swift in Sources */,
 				6DF801D128A2C72D00DB6227 /* SwapsView.swift in Sources */,
 				6D80072828AA7C6700510D01 /* SwapTruthSource.swift in Sources */,
 				6D53F19128E9CCAF00353068 /* SettlementMethodViewModel.swift in Sources */,
@@ -1112,7 +1112,7 @@
 				6D096CE92872121700A36764 /* OfferView.swift in Sources */,
 				6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */,
 				6DA19783284A8CAD00D2D073 /* CommutoSwapProvider.swift in Sources */,
-				6D18F1BE289EEDF1002B667C /* EditedSettlementMethodValidationError.swift in Sources */,
+				6D18F1BE289EEDF1002B667C /* SettlementMethodValidationError.swift in Sources */,
 				6D18F1B5289ECCFB002B667C /* EditOfferView.swift in Sources */,
 				6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */,
 				6D80072228A9276900510D01 /* DatabaseSwap.swift in Sources */,
