@@ -15,7 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.OpeningOfferState
-import com.commuto.interfacemobile.android.offer.SettlementMethod
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.DisclosureComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository

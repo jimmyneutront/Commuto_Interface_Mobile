@@ -1,6 +1,6 @@
 package com.commuto.interfacemobile.android.offer.validation
 
-import com.commuto.interfacemobile.android.offer.SettlementMethod
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 
 /**
  * Validates edited settlement methods for an offer made by the user of this interface.

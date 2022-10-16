@@ -16,6 +16,7 @@ import com.commuto.interfacemobile.android.offer.validation.ValidatedNewSwapData
 import com.commuto.interfacemobile.android.p2p.OfferMessageNotifiable
 import com.commuto.interfacemobile.android.p2p.P2PService
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.swap.*
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
 import kotlinx.coroutines.Deferred
@@ -246,8 +247,11 @@ class OfferService (
                     state = newOffer.state.asString,
                 )
                 databaseService.storeOffer(offerForDatabase)
-                val settlementMethodStrings = newOffer.onChainSettlementMethods.map {
-                    encoder.encodeToString(it)
+                val settlementMethodStrings = mutableListOf<Pair<String, String?>>()
+                newOffer.settlementMethods.forEach {
+                    settlementMethodStrings.add(
+                        Pair(encoder.encodeToString(it.onChainData), it.privateData)
+                    )
                 }
                 Log.i(logTag, "openOffer: persistently storing ${settlementMethodStrings.size} settlement " +
                         "methods for offer ${newOffer.id}")
@@ -752,11 +756,12 @@ class OfferService (
             )
             databaseService.storeOffer(offerForDatabase)
             Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")
-            val settlementMethodStrings = offer.onChainSettlementMethods.map {
-                encoder.encodeToString(it)
+            val settlementMethodStrings = mutableListOf<Pair<String, String?>>()
+            offer.settlementMethods.forEach {
+                settlementMethodStrings.add(
+                    Pair(encoder.encodeToString(it.onChainData), it.privateData)
+                )
             }
-            databaseService.storeSettlementMethods(offerForDatabase.id, offerForDatabase.chainID,
-                settlementMethodStrings)
             Log.i(logTag, "handleOfferOpenedEvent: persistently stored ${settlementMethodStrings.size} " +
                     "settlement methods for offer ${offer.id}")
             offerOpenedEventRepository.remove(event)
@@ -814,8 +819,9 @@ class OfferService (
                     "during handleOfferEditedEvent call")
         }
         val chainIDString = event.chainID.toString()
+        // TODO: Deal with the fact that this will delete private settlement method data for offers made by the user
         val settlementMethodStrings = offerStruct.settlementMethods.map {
-            encoder.encodeToString(it)
+            Pair<String, String?>(encoder.encodeToString(it), null)
         }
         databaseService.storeSettlementMethods(offerIDString, chainIDString, settlementMethodStrings)
         Log.i(

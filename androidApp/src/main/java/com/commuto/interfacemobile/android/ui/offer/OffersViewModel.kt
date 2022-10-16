@@ -11,6 +11,7 @@ import com.commuto.interfacemobile.android.offer.validation.NewOfferDataValidati
 import com.commuto.interfacemobile.android.offer.validation.validateEditedSettlementMethods
 import com.commuto.interfacemobile.android.offer.validation.validateNewOfferData
 import com.commuto.interfacemobile.android.offer.validation.validateNewSwapData
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import kotlinx.coroutines.Dispatchers

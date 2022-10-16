@@ -1,7 +1,7 @@
 package com.commuto.interfacemobile.android.offer.validation
 
 import com.commuto.interfacemobile.android.offer.OfferDirection
-import com.commuto.interfacemobile.android.offer.SettlementMethod
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import java.math.BigInteger
 

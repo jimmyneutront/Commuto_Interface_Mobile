@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.commuto.interfacemobile.android.offer.*
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.DisclosureComposable
 import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation

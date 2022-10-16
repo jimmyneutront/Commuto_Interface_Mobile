@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.*
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository

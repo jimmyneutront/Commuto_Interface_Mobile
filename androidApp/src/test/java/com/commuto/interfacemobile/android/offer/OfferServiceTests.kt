@@ -20,6 +20,7 @@ import com.commuto.interfacemobile.android.p2p.P2PService
 import com.commuto.interfacemobile.android.p2p.TestP2PExceptionHandler
 import com.commuto.interfacemobile.android.p2p.TestSwapMessageNotifiable
 import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
+import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.swap.SwapNotifiable
 import com.commuto.interfacemobile.android.swap.SwapState
 import com.commuto.interfacemobile.android.swap.TestSwapService
@@ -186,7 +187,7 @@ class OfferServiceTests {
                 val settlementMethodsInDatabase = databaseService.getSettlementMethods(encoder
                     .encodeToString(expectedOfferIdByteArray), offerInDatabase.chainID)
                 assertEquals(settlementMethodsInDatabase!!.size, 1)
-                assertEquals(settlementMethodsInDatabase[0], encoder.encodeToString(("{\"f\":\"USD\",\"p\":" +
+                assertEquals(settlementMethodsInDatabase[0].first, encoder.encodeToString(("{\"f\":\"USD\",\"p\":" +
                         "\"SWIFT\",\"m\":\"1.00\"}").encodeToByteArray()))
             }
         }
@@ -997,7 +998,7 @@ class OfferServiceTests {
                 val settlementMethodsInDatabase = databaseService.getSettlementMethods(encoder
                     .encodeToString(expectedOfferIdByteArray), offerInDatabase.chainID)
                 assertEquals(settlementMethodsInDatabase!!.size, 1)
-                assertEquals(settlementMethodsInDatabase[0], encoder.encodeToString(("{\"f\":\"EUR\",\"p\":\"SEPA\"," +
+                assertEquals(settlementMethodsInDatabase[0].first, encoder.encodeToString(("{\"f\":\"EUR\",\"p\":\"SEPA\"," +
                         "\"m\":\"0.98\"}").encodeToByteArray()))
             }
         }
@@ -1251,11 +1252,13 @@ class OfferServiceTests {
             commutoSwapAddress = testingServerResponse.commutoSwapAddress
         )
 
-        val offerSettlementMethods = listOf(SettlementMethod(
+        val offerSettlementMethods = listOf(
+            SettlementMethod(
             currency = "FIAT",
             price = "1.00",
             method = "Bank Transfer"
-        ))
+        )
+        )
         val offerData = validateNewOfferData(
             stablecoin = testingServerResponse.stablecoinAddress,
             stablecoinInformation = StablecoinInformation(
@@ -1336,11 +1339,18 @@ class OfferServiceTests {
                     assertEquals(expectedOfferInDatabase, offerInDatabase)
 
                     val settlementMethodsInDatabase = databaseService.getSettlementMethods(
-                        expectedOfferInDatabase.id, expectedOfferInDatabase.chainID)
+                        expectedOfferInDatabase.id, expectedOfferInDatabase.chainID)!!
                     val expectedSettlementMethodsInDatabase = addedOffer.onChainSettlementMethods.map {
                         encoder.encodeToString(it)
                     }
                     assertEquals(settlementMethodsInDatabase, expectedSettlementMethodsInDatabase)
+
+                    for (index in expectedSettlementMethodsInDatabase.indices) {
+                        assertEquals(
+                            expectedSettlementMethodsInDatabase[index],
+                            settlementMethodsInDatabase[index].first
+                        )
+                    }
 
                     val offerStructOnChain = blockchainService.getOffer(addedOfferID)!!
                     assert(offerStructOnChain.isCreated)
@@ -1580,11 +1590,13 @@ class OfferServiceTests {
 
         val offerID = UUID.randomUUID()
 
-        val settlementMethodString = Json.encodeToString(SettlementMethod(
+        val settlementMethodString = Json.encodeToString(
+            SettlementMethod(
             currency = "EUR",
             price = "0.98",
             method = "SEPA",
-        ))
+        )
+        )
 
         @Serializable
         data class TestingServerResponse(val commutoSwapAddress: String, val stablecoinAddress: String)
@@ -1736,12 +1748,15 @@ class OfferServiceTests {
             assertEquals(BigInteger.valueOf(100L), swapInTruthSource.serviceFeeRate)
             assertEquals(BigInteger.ZERO, swapInTruthSource.onChainDirection)
             assertEquals(OfferDirection.BUY, swapInTruthSource.direction)
-            assert(Json.encodeToString(SettlementMethod(
+            assert(Json.encodeToString(
+                SettlementMethod(
                 currency = "EUR",
                 price = "0.98",
                 method = "SEPA",
-            )).encodeToByteArray().contentEquals(swapInTruthSource.onChainSettlementMethod))
-            assertEquals(SettlementMethod(
+            )
+            ).encodeToByteArray().contentEquals(swapInTruthSource.onChainSettlementMethod))
+            assertEquals(
+                SettlementMethod(
                 currency = "EUR",
                 price = "0.98",
                 method = "SEPA",
@@ -1774,11 +1789,13 @@ class OfferServiceTests {
                 serviceFeeAmount = swapInTruthSource.serviceFeeAmount.toString(),
                 serviceFeeRate = swapInTruthSource.serviceFeeRate.toString(),
                 onChainDirection = swapInTruthSource.onChainDirection.toString(),
-                settlementMethod = encoder.encodeToString(Json.encodeToString(SettlementMethod(
+                settlementMethod = encoder.encodeToString(Json.encodeToString(
+                    SettlementMethod(
                     currency = "EUR",
                     price = "0.98",
                     method = "SEPA",
-                )).encodeToByteArray()),
+                )
+                ).encodeToByteArray()),
                 protocolVersion = swapInTruthSource.protocolVersion.toString(),
                 isPaymentSent = 0L,
                 isPaymentReceived = 0L,
