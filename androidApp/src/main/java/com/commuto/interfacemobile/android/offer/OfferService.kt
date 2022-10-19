@@ -480,7 +480,9 @@ class OfferService (
                 val selectedOnChainSettlementMethod = offerToTake.onChainSettlementMethods.firstOrNull {
                     try {
                         val settlementMethod = Json.decodeFromString<SettlementMethod>(it.decodeToString())
-                        settlementMethod == swapData.settlementMethod
+                        settlementMethod.currency == swapData.settlementMethod.currency &&
+                                settlementMethod.method ==  swapData.settlementMethod.method &&
+                                settlementMethod.price ==  swapData.settlementMethod.price
                     } catch (exception: Exception) {
                         Log.w(logTag, "takeOffer: got exception while deserializing settlement method " +
                                 "${encoder.encodeToString(it)} for ${offerToTake.id}")
@@ -523,6 +525,7 @@ class OfferService (
                     state = SwapState.TAKING,
                     role = swapRole
                 )
+                newSwap.settlementMethod.privateData = swapData.settlementMethod.privateData
                 afterObjectCreation?.invoke()
                 Log.i(logTag, "takeOffer: persistently storing ${offerToTake.id}")
                 // Persistently store the new swap
@@ -548,7 +551,7 @@ class OfferService (
                     protocolVersion = newSwap.protocolVersion.toString(),
                     makerPrivateData = null,
                     makerPrivateDataInitializationVector = null,
-                    takerPrivateData = null,
+                    takerPrivateData = newSwap.settlementMethod.privateData,
                     takerPrivateDataInitializationVector = null,
                     isPaymentSent = 0L,
                     isPaymentReceived = 0L,
@@ -608,8 +611,13 @@ class OfferService (
                     offerToTake.isTaken.value = true
                     offerTruthSource.removeOffer(id = offerToTake.id)
                 }
-                Log.i(logTag, "takeOffer: removing offer ${offerToTake.id} from persistent storage")
+                Log.i(logTag, "takeOffer: removing offer ${offerToTake.id} and its settlement methods from " +
+                        "persistent storage")
                 databaseService.deleteOffers(
+                    offerID = offerIDB64String,
+                    chainID = offerToTake.chainID.toString()
+                )
+                databaseService.deleteSettlementMethods(
                     offerID = offerIDB64String,
                     chainID = offerToTake.chainID.toString()
                 )
