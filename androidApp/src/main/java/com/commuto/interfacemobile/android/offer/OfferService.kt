@@ -525,7 +525,7 @@ class OfferService (
                     state = SwapState.TAKING,
                     role = swapRole
                 )
-                newSwap.settlementMethod.privateData = swapData.settlementMethod.privateData
+                newSwap.takerPrivateSettlementMethodData = swapData.settlementMethod.privateData
                 afterObjectCreation?.invoke()
                 Log.i(logTag, "takeOffer: persistently storing ${offerToTake.id}")
                 // Persistently store the new swap
@@ -551,7 +551,7 @@ class OfferService (
                     protocolVersion = newSwap.protocolVersion.toString(),
                     makerPrivateData = null,
                     makerPrivateDataInitializationVector = null,
-                    takerPrivateData = newSwap.settlementMethod.privateData,
+                    takerPrivateData = newSwap.takerPrivateSettlementMethodData,
                     takerPrivateDataInitializationVector = null,
                     isPaymentSent = 0L,
                     isPaymentReceived = 0L,
