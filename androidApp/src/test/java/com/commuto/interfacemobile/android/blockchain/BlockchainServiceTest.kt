@@ -4,10 +4,7 @@ import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
 import com.commuto.interfacemobile.android.key.KeyManagerService
-import com.commuto.interfacemobile.android.offer.OfferNotifiable
-import com.commuto.interfacemobile.android.offer.OfferService
-import com.commuto.interfacemobile.android.offer.OfferServiceTests
-import com.commuto.interfacemobile.android.offer.TestOfferService
+import com.commuto.interfacemobile.android.offer.*
 import com.commuto.interfacemobile.android.swap.SwapNotifiable
 import com.commuto.interfacemobile.android.swap.SwapServiceTests
 import com.commuto.interfacemobile.android.swap.TestSwapService
@@ -404,7 +401,7 @@ class BlockchainServiceTest {
         class TestSwapService: SwapNotifiable {
             val swapFilledEventChannel = Channel<SwapFilledEvent>()
             override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
-            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(takenOffer: Offer) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {
                 swapFilledEventChannel.send(event)
             }
@@ -467,7 +464,7 @@ class BlockchainServiceTest {
         class TestSwapService: SwapNotifiable {
             val paymentSentEventChannel = Channel<PaymentSentEvent>()
             override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
-            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(takenOffer: Offer) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {
                 paymentSentEventChannel.send(event)
@@ -530,7 +527,7 @@ class BlockchainServiceTest {
         class TestSwapService: SwapNotifiable {
             val paymentReceivedEventChannel = Channel<PaymentReceivedEvent>()
             override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
-            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(takenOffer: Offer) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {
@@ -596,7 +593,7 @@ class BlockchainServiceTest {
         class TestSwapService: SwapNotifiable {
             val buyerClosedEventChannel = Channel<BuyerClosedEvent>()
             override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
-            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(takenOffer: Offer) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
@@ -662,7 +659,7 @@ class BlockchainServiceTest {
         class TestSwapService: SwapNotifiable {
             val sellerClosedEventChannel = Channel<SellerClosedEvent>()
             override suspend fun sendTakerInformationMessage(swapID: UUID, chainID: BigInteger) {}
-            override suspend fun handleNewSwap(swapID: UUID, chainID: BigInteger) {}
+            override suspend fun handleNewSwap(takenOffer: Offer) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
