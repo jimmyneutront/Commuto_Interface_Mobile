@@ -638,44 +638,68 @@ class SwapService @Inject constructor(
         Log.i(logTag, "handleMakerInformationMessage: handling for ${message.swapID}")
         val swap = swapTruthSource.swaps[message.swapID]
         if (swap != null) {
-            if (!senderInterfaceID.contentEquals(swap.makerInterfaceID)) {
-                Log.w(logTag, "handleMakerInformationMessage: got message for ${message.swapID} that was not " +
-                        "sent by swap maker")
-                return
-            }
-            val encoder = Base64.getEncoder()
-            if (!recipientInterfaceID.contentEquals(swap.takerInterfaceID)) {
-                Log.w(logTag, "handleMakerInformationMessage: got message for ${message.swapID} with recipient " +
-                        "interface ID ${encoder.encodeToString(recipientInterfaceID)} that doesn't match taker " +
-                        "interface ID ${encoder.encodeToString(swap.takerInterfaceID)}")
-                return
-            }
-            // TODO: securely store maker settlement method information once SettlementMethodService is implemented
-            when (swap.direction) {
-                OfferDirection.BUY -> {
-                    Log.i(logTag, "handleMakerInformationMessage: updating state of BUY swap ${message.swapID} " +
-                            "to ${SwapState.AWAITING_PAYMENT_SENT.asString}")
-                    databaseService.updateSwapState(
-                        swapID = encoder.encodeToString(message.swapID.asByteArray()),
+            /*
+            We should only handle this message if we are the taker of the swap; otherwise, we are the maker and we would
+            be handling our own message
+             */
+            if (swap.role == SwapRole.TAKER_AND_BUYER || swap.role == SwapRole.TAKER_AND_SELLER) {
+                if (!senderInterfaceID.contentEquals(swap.makerInterfaceID)) {
+                    Log.w(logTag, "handleMakerInformationMessage: got message for ${message.swapID} that was not " +
+                            "sent by swap maker")
+                    return
+                }
+                val encoder = Base64.getEncoder()
+                if (!recipientInterfaceID.contentEquals(swap.takerInterfaceID)) {
+                    Log.w(logTag, "handleMakerInformationMessage: got message for ${message.swapID} with recipient " +
+                            "interface ID ${encoder.encodeToString(recipientInterfaceID)} that doesn't match taker " +
+                            "interface ID ${encoder.encodeToString(swap.takerInterfaceID)}")
+                    return
+                }
+                val swapIDB64String = encoder.encodeToString(message.swapID.asByteArray())
+                if (message.settlementMethodDetails == null) {
+                    Log.w(logTag, "handleMakerInformationMessage: private data in message was null for " +
+                            "${message.swapID}")
+                } else {
+                    Log.i(logTag, "handleMakerInformationMessage: persistently storing private data in message " +
+                            "for ${message.swapID}")
+                    databaseService.updateSwapMakerPrivateSettlementMethodData(
+                        swapID = swapIDB64String,
                         chainID = swap.chainID.toString(),
-                        state = SwapState.AWAITING_PAYMENT_SENT.asString,
+                        data = message.settlementMethodDetails,
                     )
+                    Log.i(logTag, "handleMakerInformationMessage: updating ${swap.id} with private data")
                     withContext(Dispatchers.Main) {
-                        swap.state.value = SwapState.AWAITING_PAYMENT_SENT
+                        swap.makerPrivateSettlementMethodData = message.settlementMethodDetails
                     }
                 }
-                OfferDirection.SELL -> {
-                    Log.i(logTag, "handleMakerInformationMessage: updating state of SELL swap ${message.swapID} " +
-                            "to ${SwapState.AWAITING_FILLING.asString}")
-                    databaseService.updateSwapState(
-                        swapID = encoder.encodeToString(message.swapID.asByteArray()),
-                        chainID = swap.chainID.toString(),
-                        state = SwapState.AWAITING_FILLING.asString,
-                    )
-                    withContext(Dispatchers.Main) {
-                        swap.state.value = SwapState.AWAITING_FILLING
+                when (swap.direction) {
+                    OfferDirection.BUY -> {
+                        Log.i(logTag, "handleMakerInformationMessage: updating state of BUY swap ${message.swapID} " +
+                                "to ${SwapState.AWAITING_PAYMENT_SENT.asString}")
+                        databaseService.updateSwapState(
+                            swapID = swapIDB64String,
+                            chainID = swap.chainID.toString(),
+                            state = SwapState.AWAITING_PAYMENT_SENT.asString,
+                        )
+                        withContext(Dispatchers.Main) {
+                            swap.state.value = SwapState.AWAITING_PAYMENT_SENT
+                        }
+                    }
+                    OfferDirection.SELL -> {
+                        Log.i(logTag, "handleMakerInformationMessage: updating state of SELL swap ${message.swapID} " +
+                                "to ${SwapState.AWAITING_FILLING.asString}")
+                        databaseService.updateSwapState(
+                            swapID = swapIDB64String,
+                            chainID = swap.chainID.toString(),
+                            state = SwapState.AWAITING_FILLING.asString,
+                        )
+                        withContext(Dispatchers.Main) {
+                            swap.state.value = SwapState.AWAITING_FILLING
+                        }
                     }
                 }
+            } else {
+                Log.i(logTag, "handleMakerInformationMessage: detected own message for ${message.swapID}")
             }
         } else {
             Log.w(logTag, "handleMakerInformationMessage: got message for ${message.swapID} which was not found " +

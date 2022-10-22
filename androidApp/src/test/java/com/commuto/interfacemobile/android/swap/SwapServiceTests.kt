@@ -508,6 +508,7 @@ class SwapServiceTests {
             state = SwapState.AWAITING_MAKER_INFORMATION,
             role = SwapRole.TAKER_AND_BUYER
         )
+        swap.makerPrivateSettlementMethodData = "maker_settlement_method_details"
         swapTruthSource.addSwap(swap)
         val encoder = Base64.getEncoder()
         val swapForDatabase = DatabaseSwap(
@@ -549,11 +550,13 @@ class SwapServiceTests {
             recipientInterfaceID = takerKeyPair.interfaceId,
         )
 
-        assertEquals(SwapState.AWAITING_FILLING, swap.state)
+        assertEquals(SwapState.AWAITING_FILLING, swap.state.value)
+        assertEquals("maker_settlement_method_details", swap.makerPrivateSettlementMethodData)
 
         // Ensure that SwapService persistently updates swap state
         val swapInDatabase = databaseService.getSwap(encoder.encodeToString(swapID.asByteArray()))
         assertEquals(SwapState.AWAITING_FILLING.asString, swapInDatabase!!.state)
+        assertEquals("maker_settlement_method_details", swapInDatabase.makerPrivateData)
     }
 
     /**
