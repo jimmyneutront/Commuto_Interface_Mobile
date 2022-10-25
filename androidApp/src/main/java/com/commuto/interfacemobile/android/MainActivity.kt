@@ -14,6 +14,7 @@ import com.commuto.interfacemobile.android.ui.CurrentTab
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
 import com.commuto.interfacemobile.android.ui.TabButton
 import com.commuto.interfacemobile.android.ui.offer.OffersComposable
+import com.commuto.interfacemobile.android.ui.settlement.SettlementMethodsComposable
 import com.commuto.interfacemobile.android.ui.swap.SwapViewModel
 import com.commuto.interfacemobile.android.ui.swap.SwapsComposable
 import dagger.hilt.android.AndroidEntryPoint
@@ -54,6 +55,9 @@ class MainActivity : AppCompatActivity() {
                                 swapTruthSource = swapViewModel
                             )
                         }
+                        CurrentTab.SETTLEMENT_METHODS -> {
+                            SettlementMethodsComposable()
+                        }
                     }
                 }
                 Column {
@@ -74,6 +78,10 @@ class MainActivity : AppCompatActivity() {
                         TabButton(
                             label = "Swaps",
                             onClick = { currentTab.value = CurrentTab.SWAPS }
+                        )
+                        TabButton(
+                            label = "SM",
+                            onClick = {currentTab.value = CurrentTab.SETTLEMENT_METHODS}
                         )
                     }
                 }

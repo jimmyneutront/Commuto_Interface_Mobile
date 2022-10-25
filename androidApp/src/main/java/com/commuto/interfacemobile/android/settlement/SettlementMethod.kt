@@ -1,5 +1,7 @@
 package com.commuto.interfacemobile.android.settlement
 
+import com.commuto.interfacemobile.android.settlement.privatedata.PrivateSEPAData
+import com.commuto.interfacemobile.android.settlement.privatedata.PrivateSWIFTData
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -45,13 +47,23 @@ data class SettlementMethod(
                 currency = "EUR",
                 price = "",
                 method = "SEPA",
-                privateData = "Some SEPA data"
+                privateData = Json.encodeToString(
+                    PrivateSEPAData(
+                    accountHolder = "Proper Name",
+                    bic = "A BIC",
+                    iban = "An IBAN",
+                    address = "An Address"
+                ))
             ),
             SettlementMethod(
                 currency = "USD",
                 price = "",
                 method = "SWIFT",
-                privateData = "Some SWIFT data"
+                privateData = Json.encodeToString(PrivateSWIFTData(
+                    accountHolder = "Proper Name",
+                    bic = "A BIC",
+                    accountNumber = "An Account Number",
+                ))
             ),
             SettlementMethod(
                 currency = "BSD",

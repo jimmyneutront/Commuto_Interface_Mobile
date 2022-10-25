@@ -27,7 +27,7 @@ fun OffersComposable(
 
     val navController = rememberNavController()
 
-    // This should take up the entire heighth of the screen minus 50 dp, to display the bottom navigation bar.
+    // This should take up the entire height of the screen minus 50 dp, to display the bottom navigation bar.
     NavHost(
         navController = navController,
         startDestination = "OffersListComposable",
