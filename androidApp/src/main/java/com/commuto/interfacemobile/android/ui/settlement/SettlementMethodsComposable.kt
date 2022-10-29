@@ -7,13 +7,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -35,6 +38,14 @@ import kotlinx.serialization.json.Json
 fun SettlementMethodsComposable() {
 
     val navController = rememberNavController()
+
+    val settlementMethods = remember {
+        mutableStateListOf<SettlementMethod>().also { mutableStateList ->
+            SettlementMethod.sampleSettlementMethodsEmptyPrices.map {
+                mutableStateList.add(it)
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -75,11 +86,11 @@ fun SettlementMethodsComposable() {
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
                 )
                 LazyColumn {
-                    for (index in SettlementMethod.sampleSettlementMethodsEmptyPrices.indices) {
+                    for (index in settlementMethods.indices) {
                         item {
                             Button(
                                 onClick = {
-                                    navController.navigate("SettlementMethodDetailComposable/" + index)
+                                    navController.navigate("SettlementMethodDetailComposable/$index")
                                 },
                                 border = BorderStroke(1.dp, Color.Black),
                                 colors = ButtonDefaults.buttonColors(
@@ -107,7 +118,9 @@ fun SettlementMethodsComposable() {
             val index = try { backStackEntry.arguments?.getInt("index") }
             catch (e: Exception) { null }
             SettlementMethodDetailComposable(
-                settlementMethod = SettlementMethod.sampleSettlementMethodsEmptyPrices.getOrNull(index ?: -1)
+                settlementMethod = SettlementMethod.sampleSettlementMethodsEmptyPrices.getOrNull(index ?: -1),
+                settlementMethods = settlementMethods,
+                navController = navController,
             )
         }
     }
@@ -169,10 +182,15 @@ fun SettlementMethodCardComposable(settlementMethod: SettlementMethod) {
 
 /**
  * Displays all information, including private information, about a given [SettlementMethod].
+ * @param settlementMethod The [SettlementMethod] containing the information to be displayed.
+ * @param settlementMethods A [SnapshotStateList] of the user's current [SettlementMethod]s.
+ * @param navController The [NavHostController] from which the "Delete" button will pop the back stack when pressed.
  */
 @Composable
 fun SettlementMethodDetailComposable(
-    settlementMethod: SettlementMethod?
+    settlementMethod: SettlementMethod?,
+    settlementMethods: SnapshotStateList<SettlementMethod>,
+    navController: NavHostController
 ) {
 
     val privateData = remember { mutableStateOf<PrivateData?>(null) }
@@ -239,6 +257,31 @@ fun SettlementMethodDetailComposable(
                     fontWeight = FontWeight.Bold
                 )
             }
+            Button(
+                onClick = {
+                    settlementMethods.removeAll {
+                        it.method == settlementMethod.method
+                                && it.currency == settlementMethod.currency
+                                && it.privateData == settlementMethod.privateData
+                    }
+                    navController.popBackStack()
+                },
+                content = {
+                    Text(
+                        text = "Delete",
+                        style = MaterialTheme.typography.h4,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                },
+                border = BorderStroke(3.dp, Color.Red),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor =  Color.Transparent,
+                    contentColor = Color.Red,
+                ),
+                elevation = null,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     } else {
         Row(
