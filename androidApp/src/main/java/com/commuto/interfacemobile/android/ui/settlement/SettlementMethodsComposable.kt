@@ -26,9 +26,11 @@ import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateData
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateSEPAData
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateSWIFTData
+import com.commuto.interfacemobile.android.ui.SheetComposable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
@@ -39,6 +41,9 @@ fun SettlementMethodsComposable() {
 
     val navController = rememberNavController()
 
+    /**
+     * The list of the user's current settlement methods.
+     */
     val settlementMethods = remember {
         mutableStateListOf<SettlementMethod>().also { mutableStateList ->
             SettlementMethod.sampleSettlementMethodsEmptyPrices.map {
@@ -46,6 +51,11 @@ fun SettlementMethodsComposable() {
             }
         }
     }
+
+    /**
+     * Indicates whether we are showing the sheet for adding a settlement method.
+     */
+    val isShowingAddSheet = remember { mutableStateOf(false) }
 
     NavHost(
         navController = navController,
@@ -62,11 +72,13 @@ fun SettlementMethodsComposable() {
                     ) {
                         Text(
                             text = "Settlement Methods",
-                            style = MaterialTheme.typography.h2,
+                            style = MaterialTheme.typography.h4,
                             fontWeight = FontWeight.Bold,
                         )
                         Button(
-                            onClick = {},
+                            onClick = {
+                                isShowingAddSheet.value = true
+                            },
                             content = {
                                 Text(
                                     text = "Add",
@@ -77,6 +89,7 @@ fun SettlementMethodsComposable() {
                                 backgroundColor = Color.Transparent,
                                 contentColor = Color.Black,
                             ),
+                            border = BorderStroke(1.dp, Color.Black),
                             elevation = null
                         )
                     }
@@ -103,13 +116,22 @@ fun SettlementMethodsComposable() {
                                 elevation = null,
                             ) {
                                 SettlementMethodCardComposable(
-                                    settlementMethod = SettlementMethod.sampleSettlementMethodsEmptyPrices[index]
+                                    settlementMethod = settlementMethods[index]
                                 )
                             }
                         }
                     }
                 }
             }
+            SheetComposable(
+                isPresented = isShowingAddSheet,
+                content = { closeSheet ->
+                    AddSettlementMethodComposable(
+                        closeSheet = closeSheet,
+                        settlementMethods = settlementMethods,
+                    )
+                }
+            )
         }
         composable(
             "SettlementMethodDetailComposable/{index}",
@@ -118,11 +140,314 @@ fun SettlementMethodsComposable() {
             val index = try { backStackEntry.arguments?.getInt("index") }
             catch (e: Exception) { null }
             SettlementMethodDetailComposable(
-                settlementMethod = SettlementMethod.sampleSettlementMethodsEmptyPrices.getOrNull(index ?: -1),
+                settlementMethod = settlementMethods.getOrNull(index ?: -1),
                 settlementMethods = settlementMethods,
                 navController = navController,
             )
         }
+    }
+}
+
+/**
+ * An enum representing the type of settlement method that the user has decided to create.
+ */
+enum class SettlementMethodType(val description: String) {
+    SEPA("SEPA"), SWIFT("SWIFT")
+}
+
+/**
+ * A [Composable] by which the user can add settlement methods. This should only be displayed within a
+ * [SheetComposable].
+ * @param closeSheet A lambda that can close the sheet in which this is displayed.
+ * @param settlementMethods A [SnapshotStateList] containing the user's [SettlementMethod]s.
+ */
+@Composable
+fun AddSettlementMethodComposable(
+    closeSheet: () -> Unit,
+    settlementMethods: SnapshotStateList<SettlementMethod>
+) {
+
+    val selectedSettlementMethod = remember { mutableStateOf<SettlementMethodType?>(null) }
+
+    Column(
+        modifier = Modifier
+            .padding(10.dp)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Add Settlement Method",
+                style = MaterialTheme.typography.h4,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(0.75f)
+            )
+            Button(
+                onClick = {
+                    closeSheet()
+                },
+                content = {
+                    Text(
+                        text = "Cancel",
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor =  Color.Transparent,
+                    contentColor = Color.Black,
+                ),
+                border = BorderStroke(1.dp, Color.Black),
+                elevation = null,
+            )
+        }
+        for (settlementMethodType in SettlementMethodType.values()) {
+            Button(
+                onClick = {
+                    selectedSettlementMethod.value = settlementMethodType
+                },
+                content = {
+                    Text(
+                        text = settlementMethodType.description,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor =  Color.Transparent,
+                    contentColor = Color.Black,
+                ),
+                border = BorderStroke(1.dp, getColorForSettlementMethod(
+                    settlementMethodType = settlementMethodType,
+                    selectedSettlementMethod = selectedSettlementMethod
+                )),
+                contentPadding = PaddingValues(15.dp),
+                elevation = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
+        }
+        if (selectedSettlementMethod.value == SettlementMethodType.SEPA) {
+            EditableSEPADetailComposable(
+                buttonText = "Add",
+                buttonAction = { newPrivateData ->
+                    val newSettlementMethod = SettlementMethod(
+                        currency = "EUR",
+                        method = "SEPA",
+                        price = ""
+                    )
+                    try {
+                        newSettlementMethod.privateData = Json.encodeToString(newPrivateData as PrivateSEPAData)
+                        settlementMethods.add(newSettlementMethod)
+                    } catch (e: Exception) {}
+                    closeSheet()
+                }
+            )
+        } else if (selectedSettlementMethod.value == SettlementMethodType.SWIFT) {
+            EditableSWIFTDetailComposable(
+                buttonText = "Add",
+                buttonAction = { newPrivateData ->
+                    val newSettlementMethod = SettlementMethod(
+                        currency = "USD",
+                        method = "SWIFT",
+                        price = ""
+                    )
+                    try {
+                        newSettlementMethod.privateData = Json.encodeToString(newPrivateData as PrivateSWIFTData)
+                        settlementMethods.add(newSettlementMethod)
+                    } catch (e: Exception) {}
+                    closeSheet()
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Returns the proper color for a card displaying a settlement method type in [AddSettlementMethodComposable]:
+ * [Color.Green] if [settlementMethodType] equals the value of [selectedSettlementMethod], and [Color.Black] otherwise.
+ *
+ * @param settlementMethodType The type of settlement method of the card for which this computes the proper color.
+ * @param selectedSettlementMethod The type of settlement method that the user has selected.
+ */
+fun getColorForSettlementMethod(
+    settlementMethodType: SettlementMethodType,
+    selectedSettlementMethod: MutableState<SettlementMethodType?>
+): Color {
+    return if (selectedSettlementMethod.value == settlementMethodType) {
+        Color.Green
+    } else {
+        Color.Black
+    }
+}
+
+/**
+ * Allows the user to supply private SEPA data. When the user presses the "Done" button, a new [PrivateSEPAData] is
+ * created from the data they have supplied, and is passed to [buttonAction].
+ *
+ * @param buttonText The label of the button that lies below the input text fields.
+ * @param buttonAction The action that the button should perform when clicked, which receives an object implementing
+ * [PrivateData] made from the data supplied by the user.
+ */
+@Composable
+fun EditableSEPADetailComposable(
+    buttonText: String,
+    buttonAction: (PrivateData) -> Unit,
+) {
+    val accountHolder = remember { mutableStateOf("") }
+    val bic = remember { mutableStateOf("") }
+    val iban = remember { mutableStateOf("") }
+    val address = remember { mutableStateOf("") }
+
+    Column(
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = "Account Holder:",
+            style = MaterialTheme.typography.h5,
+        )
+        TextField(
+            value = accountHolder.value,
+            onValueChange = { accountHolder.value = it },
+            textStyle = MaterialTheme.typography.h4,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "BIC:",
+            style = MaterialTheme.typography.h5,
+        )
+        TextField(
+            value = bic.value,
+            onValueChange = { bic.value = it },
+            textStyle = MaterialTheme.typography.h4,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "IBAN:",
+            style = MaterialTheme.typography.h5,
+        )
+        TextField(
+            value = iban.value,
+            onValueChange = { iban.value = it },
+            textStyle = MaterialTheme.typography.h4,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "Address:",
+            style = MaterialTheme.typography.h5,
+        )
+        TextField(
+            value = address.value,
+            onValueChange = { address.value = it },
+            textStyle = MaterialTheme.typography.h4,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = {
+                buttonAction(PrivateSEPAData(
+                    accountHolder = accountHolder.value,
+                    bic = bic.value,
+                    iban = iban.value,
+                    address = address.value)
+                )
+            },
+            content = {
+                Text(
+                    text = buttonText,
+                    style = MaterialTheme.typography.h4,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            border = BorderStroke(3.dp, Color.Black),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor =  Color.Transparent,
+                contentColor = Color.Black,
+            ),
+            elevation = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+        )
+    }
+}
+
+/**
+ * Allows the user to supply private SWIFT data. When the user presses the "Done" button, a new [PrivateSWIFTData] is
+ * created from the data they have supplied, and is passed to [buttonAction].
+ *
+ * @param buttonText The label of the button that lies below the input text fields.
+ * @param buttonAction The action that the button should perform when clicked, which receives an object implementing
+ * [PrivateData] made from the data supplied by the user.
+ */
+@Composable
+fun EditableSWIFTDetailComposable(
+    buttonText: String,
+    buttonAction: (PrivateData) -> Unit,
+) {
+    val accountHolder = remember { mutableStateOf("") }
+    val bic = remember { mutableStateOf("") }
+    val accountNumber = remember { mutableStateOf("") }
+
+    Column(
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = "Account Holder:",
+            style = MaterialTheme.typography.h5,
+        )
+        TextField(
+            value = accountHolder.value,
+            onValueChange = { accountHolder.value = it },
+            textStyle = MaterialTheme.typography.h4,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "BIC:",
+            style = MaterialTheme.typography.h5,
+        )
+        TextField(
+            value = bic.value,
+            onValueChange = { bic.value = it },
+            textStyle = MaterialTheme.typography.h4,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "Account Number:",
+            style = MaterialTheme.typography.h5,
+        )
+        TextField(
+            value = accountNumber.value,
+            onValueChange = { accountNumber.value = it },
+            textStyle = MaterialTheme.typography.h4,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = {
+                buttonAction(PrivateSWIFTData(
+                    accountHolder = accountHolder.value,
+                    bic = bic.value,
+                    accountNumber = accountNumber.value)
+                )
+            },
+            content = {
+                Text(
+                    text = buttonText,
+                    style = MaterialTheme.typography.h4,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            border = BorderStroke(3.dp, Color.Black),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor =  Color.Transparent,
+                contentColor = Color.Black,
+            ),
+            elevation = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+        )
     }
 }
 
@@ -286,7 +611,8 @@ fun SettlementMethodDetailComposable(
     } else {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxSize()
         ) {
             Text(
                 text = "This settlement method is not available.",
