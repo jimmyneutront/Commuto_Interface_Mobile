@@ -66,7 +66,9 @@ fun SettlementMethodsComposable() {
             Column {
                 Box {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -458,8 +460,14 @@ fun EditableSWIFTDetailComposable(
  */
 @Composable
 fun SettlementMethodCardComposable(settlementMethod: SettlementMethod) {
-
+    /**
+     * An object implementing [PrivateData] containing private data for [settlementMethod].
+     */
     val privateData = remember { mutableStateOf<PrivateData?>(null) }
+
+    /**
+     * Indicates whether we have finished attempting to parse the private data associated with [settlementMethod].
+     */
     val finishedParsingData = remember { mutableStateOf(false) }
 
     LaunchedEffect(true) {
@@ -517,9 +525,18 @@ fun SettlementMethodDetailComposable(
     settlementMethods: SnapshotStateList<SettlementMethod>,
     navController: NavHostController
 ) {
-
+    /**
+     * An object implementing [PrivateData] containing private data for [settlementMethod].
+     */
     val privateData = remember { mutableStateOf<PrivateData?>(null) }
+    /**
+     * Indicates whether we have finished attempting to parse the private data associated with [settlementMethod].
+     */
     val finishedParsingData = remember { mutableStateOf(false) }
+    /**
+     * Indicates whether we are showing the sheet for editing a settlement method.
+     */
+    val isShowingEditSheet = remember { mutableStateOf(false) }
 
     if (settlementMethod != null) {
         LaunchedEffect(true) {
@@ -584,6 +601,28 @@ fun SettlementMethodDetailComposable(
             }
             Button(
                 onClick = {
+                    isShowingEditSheet.value = true
+                },
+                content = {
+                    Text(
+                        text = "Edit",
+                        style = MaterialTheme.typography.h4,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                },
+                border = BorderStroke(3.dp, Color.Black),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor =  Color.Transparent,
+                    contentColor = Color.Black,
+                ),
+                elevation = null,
+                modifier = Modifier
+                    .padding(vertical = 3.dp)
+                    .fillMaxWidth(),
+            )
+            Button(
+                onClick = {
                     settlementMethods.removeAll {
                         it.method == settlementMethod.method
                                 && it.currency == settlementMethod.currency
@@ -605,9 +644,21 @@ fun SettlementMethodDetailComposable(
                     contentColor = Color.Red,
                 ),
                 elevation = null,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .padding(vertical = 3.dp)
+                    .fillMaxWidth(),
             )
         }
+        SheetComposable(
+            isPresented = isShowingEditSheet,
+            content = { closeSheet ->
+                EditSettlementMethodComposable(
+                    settlementMethod = settlementMethod,
+                    privateData = privateData,
+                    closeSheet = closeSheet,
+                )
+            }
+        )
     } else {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -617,6 +668,81 @@ fun SettlementMethodDetailComposable(
             Text(
                 text = "This settlement method is not available.",
             )
+        }
+    }
+}
+
+/**
+ * Displays a [Composable] allowing the user to edit the private data of [settlementMethod], or displays an error
+ * message if the details cannot be edited. This should only be presented in a [SheetComposable].
+ * @param settlementMethod The [SettlementMethod], the private data of which this edits.
+ * @param privateData A [MutableState] containing an object implementing [PrivateData] for [settlementMethod].
+ * @param closeSheet A lambda that closes the sheet in which this is displayed.
+ */
+@Composable
+fun EditSettlementMethodComposable(
+    settlementMethod: SettlementMethod,
+    privateData: MutableState<PrivateData?>,
+    closeSheet: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .padding(10.dp)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Edit ${settlementMethod.method} Details",
+                style = MaterialTheme.typography.h4,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(0.75f)
+            )
+            Button(
+                onClick = {
+                    closeSheet()
+                },
+                content = {
+                    Text(
+                        text = "Cancel",
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor =  Color.Transparent,
+                    contentColor = Color.Black,
+                ),
+                border = BorderStroke(1.dp, Color.Black),
+                elevation = null,
+            )
+        }
+        when (settlementMethod.method) {
+            "SEPA" -> {
+                EditableSEPADetailComposable(
+                    buttonText = "Done",
+                    buttonAction = { newPrivateData ->
+                        privateData.value = newPrivateData
+                        closeSheet()
+                    }
+                )
+            }
+            "SWIFT" -> {
+                EditableSWIFTDetailComposable(
+                    buttonText = "Done",
+                    buttonAction = { newPrivateData ->
+                        privateData.value = newPrivateData
+                        closeSheet()
+                    }
+                )
+            }
+            else -> {
+                Text(
+                    text = "Unable to edit details"
+                )
+            }
         }
     }
 }
