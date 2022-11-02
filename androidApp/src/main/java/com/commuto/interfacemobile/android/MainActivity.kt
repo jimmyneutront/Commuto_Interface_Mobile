@@ -14,6 +14,7 @@ import com.commuto.interfacemobile.android.ui.CurrentTab
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
 import com.commuto.interfacemobile.android.ui.TabButton
 import com.commuto.interfacemobile.android.ui.offer.OffersComposable
+import com.commuto.interfacemobile.android.ui.settlement.SettlementMethodViewModel
 import com.commuto.interfacemobile.android.ui.settlement.SettlementMethodsComposable
 import com.commuto.interfacemobile.android.ui.swap.SwapViewModel
 import com.commuto.interfacemobile.android.ui.swap.SwapsComposable
@@ -34,6 +35,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var swapViewModel: SwapViewModel
+
+    @Inject
+    lateinit var settlementMethodViewModel: SettlementMethodViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +60,9 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
                         CurrentTab.SETTLEMENT_METHODS -> {
-                            SettlementMethodsComposable()
+                            SettlementMethodsComposable(
+                                settlementMethodViewModel = settlementMethodViewModel
+                            )
                         }
                     }
                 }

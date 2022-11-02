@@ -35,22 +35,16 @@ import kotlinx.serialization.json.Json
 
 /**
  * Displays the list of the user's settlement methods as [SettlementMethodCardComposable]s in a [LazyColumn].
+ *
+ * @param settlementMethodViewModel An object implementing [UISettlementMethodTruthSource] that acts as a single source
+ * of truth for all settlement-method-related data.
  */
 @Composable
-fun SettlementMethodsComposable() {
+fun SettlementMethodsComposable(
+    settlementMethodViewModel: UISettlementMethodTruthSource
+) {
 
     val navController = rememberNavController()
-
-    /**
-     * The list of the user's current settlement methods.
-     */
-    val settlementMethods = remember {
-        mutableStateListOf<SettlementMethod>().also { mutableStateList ->
-            SettlementMethod.sampleSettlementMethodsEmptyPrices.map {
-                mutableStateList.add(it)
-            }
-        }
-    }
 
     /**
      * Indicates whether we are showing the sheet for adding a settlement method.
@@ -101,7 +95,7 @@ fun SettlementMethodsComposable() {
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
                 )
                 LazyColumn {
-                    for (index in settlementMethods.indices) {
+                    for (index in settlementMethodViewModel.settlementMethods.indices) {
                         item {
                             Button(
                                 onClick = {
@@ -118,7 +112,7 @@ fun SettlementMethodsComposable() {
                                 elevation = null,
                             ) {
                                 SettlementMethodCardComposable(
-                                    settlementMethod = settlementMethods[index]
+                                    settlementMethod = settlementMethodViewModel.settlementMethods[index]
                                 )
                             }
                         }
@@ -130,7 +124,7 @@ fun SettlementMethodsComposable() {
                 content = { closeSheet ->
                     AddSettlementMethodComposable(
                         closeSheet = closeSheet,
-                        settlementMethods = settlementMethods,
+                        settlementMethodViewModel = settlementMethodViewModel,
                     )
                 }
             )
@@ -142,8 +136,8 @@ fun SettlementMethodsComposable() {
             val index = try { backStackEntry.arguments?.getInt("index") }
             catch (e: Exception) { null }
             SettlementMethodDetailComposable(
-                settlementMethod = settlementMethods.getOrNull(index ?: -1),
-                settlementMethods = settlementMethods,
+                settlementMethod = settlementMethodViewModel.settlementMethods.getOrNull(index ?: -1),
+                settlementMethodViewModel = settlementMethodViewModel,
                 navController = navController,
             )
         }
@@ -158,18 +152,64 @@ enum class SettlementMethodType(val description: String) {
 }
 
 /**
- * A [Composable] by which the user can add settlement methods. This should only be displayed within a
- * [SheetComposable].
+ * Displays a list of settlement method types that can be added, text fields for submitting private data corresponding
+ * to the settlement method that the user selects, and a button that adds the settlement method via
+ * [settlementMethodViewModel]. This should only be displayed within a [SheetComposable].
+ *
  * @param closeSheet A lambda that can close the sheet in which this is displayed.
- * @param settlementMethods A [SnapshotStateList] containing the user's [SettlementMethod]s.
+ * @param settlementMethodViewModel An object adopting [UISettlementMethodTruthSource] that acts as a single source of
+ * truth for all settlement-method-related data.
  */
 @Composable
 fun AddSettlementMethodComposable(
     closeSheet: () -> Unit,
-    settlementMethods: SnapshotStateList<SettlementMethod>
+    settlementMethodViewModel: UISettlementMethodTruthSource
 ) {
 
+    /**
+     * The type of settlement method that the user has decided to create, or `null` if the user has not yet decided.
+     */
     val selectedSettlementMethod = remember { mutableStateOf<SettlementMethodType?>(null) }
+
+    /**
+     * Indicates whether we are currently adding a settlement method to the collection of the user's settlement methods,
+     * and if so, what part of the settlement-method-adding process we are in.
+     */
+    val addingSettlementMethodState = remember { mutableStateOf(AddingSettlementMethodState.NONE) }
+
+    /**
+     * The [Exception] that occurred during the settlement method adding process, or `null` if no such exception has
+     * occurred.
+     */
+    val addingSettlementMethodException = remember { mutableStateOf<Exception?>(null) }
+
+    /**
+     * The text to be displayed on the button that begins the settlement method adding process.
+     */
+    val buttonText = when (addingSettlementMethodState.value) {
+        AddingSettlementMethodState.NONE -> {
+            "Add"
+        }
+        AddingSettlementMethodState.COMPLETED -> {
+            "Done"
+        }
+        else -> {
+            "Adding..."
+        }
+    }
+
+    /**
+     * The text to be displayed on the button in the upper trailing corner of this Composable, which closes the
+     * enclosing sheet without adding a settlement method when pressed.
+     */
+    val cancelButtonText = when (addingSettlementMethodState.value) {
+        AddingSettlementMethodState.COMPLETED -> {
+            "Close"
+        }
+        else -> {
+            "Cancel"
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -193,7 +233,7 @@ fun AddSettlementMethodComposable(
                 },
                 content = {
                     Text(
-                        text = "Cancel",
+                        text = cancelButtonText,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -231,36 +271,65 @@ fun AddSettlementMethodComposable(
                     .padding(vertical = 4.dp)
             )
         }
+        if (addingSettlementMethodState.value != AddingSettlementMethodState.NONE &&
+            addingSettlementMethodState.value != AddingSettlementMethodState.EXCEPTION) {
+            Text(
+                text = addingSettlementMethodState.value.description,
+                style =  MaterialTheme.typography.h6,
+            )
+        } else if (addingSettlementMethodState.value == AddingSettlementMethodState.EXCEPTION) {
+            Text(
+                text = addingSettlementMethodException.value?.message ?: "An unknown exception occurred",
+                style =  MaterialTheme.typography.h6,
+                color = Color.Red
+            )
+        }
+        /**
+         * If we have finished adding the settlement method, then the button will be labeled "Done" and should close the
+         * closing sheet when pressed.
+         */
         if (selectedSettlementMethod.value == SettlementMethodType.SEPA) {
             EditableSEPADetailComposable(
-                buttonText = "Add",
+                buttonText = buttonText,
                 buttonAction = { newPrivateData ->
-                    val newSettlementMethod = SettlementMethod(
-                        currency = "EUR",
-                        method = "SEPA",
-                        price = ""
-                    )
-                    try {
-                        newSettlementMethod.privateData = Json.encodeToString(newPrivateData as PrivateSEPAData)
-                        settlementMethods.add(newSettlementMethod)
-                    } catch (e: Exception) {}
-                    closeSheet()
+                    if (addingSettlementMethodState.value == AddingSettlementMethodState.NONE ||
+                        addingSettlementMethodState.value == AddingSettlementMethodState.EXCEPTION) {
+                        val newSettlementMethod = SettlementMethod(
+                            currency = "EUR",
+                            method = "SEPA",
+                            price = ""
+                        )
+                        settlementMethodViewModel.addSettlementMethod(
+                            settlementMethod = newSettlementMethod,
+                            newPrivateData = newPrivateData,
+                            stateOfAdding = addingSettlementMethodState,
+                            addSettlementMethodException = addingSettlementMethodException,
+                        )
+                    } else if (addingSettlementMethodState.value == AddingSettlementMethodState.COMPLETED) {
+                        closeSheet()
+                    }
                 }
             )
         } else if (selectedSettlementMethod.value == SettlementMethodType.SWIFT) {
             EditableSWIFTDetailComposable(
                 buttonText = "Add",
                 buttonAction = { newPrivateData ->
-                    val newSettlementMethod = SettlementMethod(
-                        currency = "USD",
-                        method = "SWIFT",
-                        price = ""
-                    )
-                    try {
-                        newSettlementMethod.privateData = Json.encodeToString(newPrivateData as PrivateSWIFTData)
-                        settlementMethods.add(newSettlementMethod)
-                    } catch (e: Exception) {}
-                    closeSheet()
+                    if (addingSettlementMethodState.value == AddingSettlementMethodState.NONE ||
+                        addingSettlementMethodState.value == AddingSettlementMethodState.EXCEPTION) {
+                        val newSettlementMethod = SettlementMethod(
+                            currency = "USD",
+                            method = "SWIFT",
+                            price = ""
+                        )
+                        settlementMethodViewModel.addSettlementMethod(
+                            settlementMethod = newSettlementMethod,
+                            newPrivateData = newPrivateData,
+                            stateOfAdding = addingSettlementMethodState,
+                            addSettlementMethodException = addingSettlementMethodException,
+                        )
+                    } else if (addingSettlementMethodState.value == AddingSettlementMethodState.COMPLETED) {
+                        closeSheet()
+                    }
                 }
             )
         }
@@ -516,13 +585,14 @@ fun SettlementMethodCardComposable(settlementMethod: SettlementMethod) {
 /**
  * Displays all information, including private information, about a given [SettlementMethod].
  * @param settlementMethod The [SettlementMethod] containing the information to be displayed.
- * @param settlementMethods A [SnapshotStateList] of the user's current [SettlementMethod]s.
+ * @param settlementMethodViewModel An object adopting [UISettlementMethodTruthSource] that acts as a single source of
+ * truth for all settlement-method-related data.
  * @param navController The [NavHostController] from which the "Delete" button will pop the back stack when pressed.
  */
 @Composable
 fun SettlementMethodDetailComposable(
     settlementMethod: SettlementMethod?,
-    settlementMethods: SnapshotStateList<SettlementMethod>,
+    settlementMethodViewModel: UISettlementMethodTruthSource,
     navController: NavHostController
 ) {
     /**
@@ -623,7 +693,7 @@ fun SettlementMethodDetailComposable(
             )
             Button(
                 onClick = {
-                    settlementMethods.removeAll {
+                    settlementMethodViewModel.settlementMethods.removeAll {
                         it.method == settlementMethod.method
                                 && it.currency == settlementMethod.currency
                                 && it.privateData == settlementMethod.privateData
@@ -866,5 +936,7 @@ suspend fun createDetailString(
 )
 @Composable
 fun PreviewSettlementMethodsComposable() {
-    SettlementMethodsComposable()
+    SettlementMethodsComposable(
+        settlementMethodViewModel = PreviewableSettlementMethodTruthSource()
+    )
 }
