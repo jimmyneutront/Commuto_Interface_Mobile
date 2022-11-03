@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -92,7 +93,12 @@ class SettlementMethodService @Inject constructor(
                 Log.i(logTag, "addSettlementMethod: persistently storing settlement method " +
                         settlementMethod.currency
                 )
-                // TODO: persistently store settlement method here
+                // TODO: get the actual ID of the settlement method here
+                databaseService.storeUserSettlementMethod(
+                    id = UUID.randomUUID().toString(),
+                    settlementMethod = Json.encodeToString(settlementMethod),
+                    privateData = settlementMethod.privateData
+                )
                 afterPersistentStorage?.invoke()
                 Log.i(logTag, "addSettlementMethod: adding ${settlementMethod.currency} via " +
                         "${settlementMethod.method} to settlementMethodTruthSource")
