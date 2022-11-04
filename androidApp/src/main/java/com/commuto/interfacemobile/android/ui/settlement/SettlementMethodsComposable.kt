@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,7 +29,6 @@ import com.commuto.interfacemobile.android.ui.SheetComposable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
@@ -585,8 +583,8 @@ fun SettlementMethodCardComposable(settlementMethod: SettlementMethod) {
 /**
  * Displays all information, including private information, about a given [SettlementMethod].
  * @param settlementMethod The [SettlementMethod] containing the information to be displayed.
- * @param settlementMethodViewModel An object adopting [UISettlementMethodTruthSource] that acts as a single source of
- * truth for all settlement-method-related data.
+ * @param settlementMethodViewModel An object implementing [UISettlementMethodTruthSource] that acts as a single source
+ * of truth for all settlement-method-related data.
  * @param navController The [NavHostController] from which the "Delete" button will pop the back stack when pressed.
  */
 @Composable
@@ -723,6 +721,7 @@ fun SettlementMethodDetailComposable(
             isPresented = isShowingEditSheet,
             content = { closeSheet ->
                 EditSettlementMethodComposable(
+                    settlementMethodViewModel = settlementMethodViewModel,
                     settlementMethod = settlementMethod,
                     privateData = privateData,
                     closeSheet = closeSheet,
@@ -745,16 +744,59 @@ fun SettlementMethodDetailComposable(
 /**
  * Displays a [Composable] allowing the user to edit the private data of [settlementMethod], or displays an error
  * message if the details cannot be edited. This should only be presented in a [SheetComposable].
+ * @param settlementMethodViewModel An object implementing [UISettlementMethodTruthSource] that acts as a single source
+ * of truth for all settlement-method-related data.
  * @param settlementMethod The [SettlementMethod], the private data of which this edits.
  * @param privateData A [MutableState] containing an object implementing [PrivateData] for [settlementMethod].
  * @param closeSheet A lambda that closes the sheet in which this is displayed.
  */
 @Composable
 fun EditSettlementMethodComposable(
+    settlementMethodViewModel: UISettlementMethodTruthSource,
     settlementMethod: SettlementMethod,
     privateData: MutableState<PrivateData?>,
     closeSheet: () -> Unit,
 ) {
+
+    /**
+     * Indicates whether we are currently editing the settlement method, and if so, what part of the
+     * settlement-method-editing process we are in.
+     */
+    val editingSettlementMethodState = remember { mutableStateOf(EditingSettlementMethodState.NONE) }
+
+    /**
+     * The [Error] that occured during the settlement method adding process, or `null` if no such error has occurred.
+     */
+    val editingSettlementMethodException = remember { mutableStateOf<Exception?>(null) }
+
+    /**
+     * The text to be displayed on the button that begins the settlement method editing process.
+     */
+    val buttonText = when (editingSettlementMethodState.value) {
+        EditingSettlementMethodState.NONE, EditingSettlementMethodState.EXCEPTION -> {
+            "Add"
+        }
+        EditingSettlementMethodState.COMPLETED -> {
+            "Done"
+        }
+        else -> {
+            "Editing..."
+        }
+    }
+
+    /**
+     * The text to be displayed on the button in the upper trailing corner of this Composable, which closes the
+     * enclosing sheet without editing the settlement method when pressed.
+     */
+    val cancelButtonText = when (editingSettlementMethodState.value) {
+        EditingSettlementMethodState.COMPLETED -> {
+            "Close"
+        }
+        else -> {
+            "Cancel"
+        }
+    }
+
     Column(
         modifier = Modifier
             .padding(10.dp)
@@ -777,7 +819,7 @@ fun EditSettlementMethodComposable(
                 },
                 content = {
                     Text(
-                        text = "Cancel",
+                        text = cancelButtonText,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -789,13 +831,36 @@ fun EditSettlementMethodComposable(
                 elevation = null,
             )
         }
+        if (editingSettlementMethodState.value != EditingSettlementMethodState.NONE &&
+            editingSettlementMethodState.value != EditingSettlementMethodState.EXCEPTION) {
+            Text(
+                text = editingSettlementMethodState.value.description,
+                style =  MaterialTheme.typography.h6,
+            )
+        } else if (editingSettlementMethodState.value == EditingSettlementMethodState.EXCEPTION) {
+            Text(
+                text = editingSettlementMethodException.value?.message ?: "An unknown exception occurred",
+                style =  MaterialTheme.typography.h6,
+                color = Color.Red
+            )
+        }
         when (settlementMethod.method) {
             "SEPA" -> {
                 EditableSEPADetailComposable(
-                    buttonText = "Done",
+                    buttonText = buttonText,
                     buttonAction = { newPrivateData ->
-                        privateData.value = newPrivateData
-                        closeSheet()
+                        if (editingSettlementMethodState.value == EditingSettlementMethodState.NONE ||
+                            editingSettlementMethodState.value == EditingSettlementMethodState.EXCEPTION) {
+                            settlementMethodViewModel.editSettlementMethod(
+                                settlementMethod = settlementMethod,
+                                newPrivateData = newPrivateData,
+                                stateOfEditing = editingSettlementMethodState,
+                                editSettlementMethodException = editingSettlementMethodException,
+                                privateDataMutableState = privateData,
+                            )
+                        } else if (editingSettlementMethodState.value == EditingSettlementMethodState.COMPLETED) {
+                            closeSheet()
+                        }
                     }
                 )
             }
@@ -803,8 +868,18 @@ fun EditSettlementMethodComposable(
                 EditableSWIFTDetailComposable(
                     buttonText = "Done",
                     buttonAction = { newPrivateData ->
-                        privateData.value = newPrivateData
-                        closeSheet()
+                        if (editingSettlementMethodState.value == EditingSettlementMethodState.NONE ||
+                            editingSettlementMethodState.value == EditingSettlementMethodState.EXCEPTION) {
+                            settlementMethodViewModel.editSettlementMethod(
+                                settlementMethod = settlementMethod,
+                                newPrivateData = newPrivateData,
+                                stateOfEditing = editingSettlementMethodState,
+                                editSettlementMethodException = editingSettlementMethodException,
+                                privateDataMutableState = privateData,
+                            )
+                        } else if (editingSettlementMethodState.value == EditingSettlementMethodState.COMPLETED) {
+                            closeSheet()
+                        }
                     }
                 )
             }
