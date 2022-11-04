@@ -140,6 +140,10 @@ class SettlementMethodService @Inject constructor(
                 }
                 Log.i(logTag, "editSettlementMethod: persistently storing edited private data for " +
                         "${settlementMethod.id}")
+                databaseService.updateUserSettlementMethod(
+                    id = settlementMethod.id.toString(),
+                    privateData = settlementMethodWithPrivateData.privateData
+                )
                 // TODO: update in database here
                 afterPersistentStorage?.invoke()
                 Log.i(logTag, "editSettlementMethod: editing ${settlementMethod.id} in " +

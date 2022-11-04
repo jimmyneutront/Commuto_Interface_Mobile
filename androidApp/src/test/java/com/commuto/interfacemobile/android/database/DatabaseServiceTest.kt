@@ -648,7 +648,7 @@ class DatabaseServiceTest {
      * Ensures code to store and get settlement methods works properly.
      */
     @Test
-    fun testStoreAndGetUserSettlementMethods() = runBlocking {
+    fun testStoreAndGetAndDeleteUserSettlementMethods() = runBlocking {
         val settlementMethodID = UUID.randomUUID()
         val settlementMethod = "settlement_method"
         val privateData = "some_private_data"
@@ -663,6 +663,19 @@ class DatabaseServiceTest {
 
         assertEquals(settlementMethod, returnedSettlementMethod?.first)
         assertEquals(privateData, returnedSettlementMethod?.second)
+
+        databaseService.updateUserSettlementMethod(
+            id = settlementMethodID.toString(),
+            privateData = "updated_private_data"
+        )
+
+        val updatedReturnedSettlementMethod = databaseService.getUserSettlementMethod(
+            id = settlementMethodID.toString()
+        )
+
+        assertEquals(settlementMethod, updatedReturnedSettlementMethod?.first)
+        assertEquals("updated_private_data", updatedReturnedSettlementMethod?.second)
+
     }
 
     @Test
