@@ -209,19 +209,14 @@ open class DatabaseService(
         deletionLambda: (String, String) -> Unit,
         insertionLambda: (String, String, String, String?, String?) -> Unit
     ) {
-        val encoder = Base64.getEncoder()
         withContext(databaseServiceContext) {
             deletionLambda(offerID, chainID)
             for (settlementMethod in settlementMethods) {
-                var privateDataString: String? = null
-                var initializationVectorString: String? = null
-                val privateData = settlementMethod.second?.toByteArray()
-                if (privateData != null) {
-                    val encryptedData = databaseKey.encrypt(data = privateData)
-                    privateDataString = encoder.encodeToString(encryptedData.encryptedData)
-                    initializationVectorString = encoder.encodeToString(encryptedData.initializationVector)
-                }
-                insertionLambda(offerID, chainID, settlementMethod.first, privateDataString, initializationVectorString)
+                val encryptedPrivateData = encryptPrivateSwapSettlementMethodData(
+                    privateSettlementMethodData = settlementMethod.second
+                )
+                insertionLambda(offerID, chainID, settlementMethod.first, encryptedPrivateData.first,
+                    encryptedPrivateData.second)
             }
         }
     }
@@ -246,6 +241,31 @@ open class DatabaseService(
         withContext(databaseServiceContext) {
             deletionLambda(offerID, chainID)
         }
+    }
+
+    /**
+     * Encrypts [privateSettlementMethodData] data with [databaseKey] along with the initialization vector used for
+     * encryption, and returns both as Base64 encoded strings of bytes within a pair, or returns a pair of `null` values
+     * if [privateSettlementMethodData] is `null`.
+     *
+     * @param privateSettlementMethodData The string of private data to be symmetrically encrypted with [databaseKey].
+     * @return A [Pair] containing two optional strings. If [privateSettlementMethodData] is not `null`, the first will
+     * be [privateSettlementMethodData] encrypted with [databaseKey] and a new initialization vector as a Base64 encoded
+     * string of bytes, and the second will be the initialization vector used to encrypt [privateSettlementMethodData],
+     * also as a Base64 encoded string of bytes. If [privateSettlementMethodData] is `null`, both strings will be
+     * `null`.
+     */
+    private fun encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?): Pair<String?, String?> {
+        var privateCipherDataString: String? = null
+        var initializationVectorString: String? = null
+        val privateByteArray = privateSettlementMethodData?.toByteArray()
+        if (privateByteArray != null) {
+            val encryptedData = databaseKey.encrypt(privateByteArray)
+            val encoder = Base64.getEncoder()
+            privateCipherDataString = encoder.encodeToString(encryptedData.encryptedData)
+            initializationVectorString = encoder.encodeToString(encryptedData.initializationVector)
+        }
+        return Pair(privateCipherDataString, initializationVectorString)
     }
 
     /**
@@ -746,31 +766,6 @@ open class DatabaseService(
     }
 
     /**
-     * Encrypts [privateSettlementMethodData] data with [databaseKey] along with the initialization vector used for
-     * encryption, and returns both as Base64 encoded strings of bytes within a pair, or returns a pair of `null` values
-     * if [privateSettlementMethodData] is `null`.
-     *
-     * @param privateSettlementMethodData The string of private data to be symmetrically encrypted with [databaseKey].
-     * @return A [Pair] containing two optional strings. If [privateSettlementMethodData] is not `null`, the first will
-     * be [privateSettlementMethodData] encrypted with [databaseKey] and a new initialization vector as a Base64 encoded
-     * string of bytes, and the second will be the initialization vector used to encrypt [privateSettlementMethodData],
-     * also as a Base64 encoded string of bytes. If [privateSettlementMethodData] is `null`, both strings will be
-     * `null`.
-     */
-    private fun encryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?): Pair<String?, String?> {
-        var privateCipherDataString: String? = null
-        var initializationVectorString: String? = null
-        val privateByteArray = privateSettlementMethodData?.toByteArray()
-        if (privateByteArray != null) {
-            val encryptedData = databaseKey.encrypt(privateByteArray)
-            val encoder = Base64.getEncoder()
-            privateCipherDataString = encoder.encodeToString(encryptedData.encryptedData)
-            initializationVectorString = encoder.encodeToString(encryptedData.initializationVector)
-        }
-        return Pair(privateCipherDataString, initializationVectorString)
-    }
-
-    /**
      * Updates the [Swap.requiresFill] property of a persistently stored
      * [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) with the specified [swapID] and
      * [chainID].
@@ -1027,22 +1022,14 @@ open class DatabaseService(
         settlementMethod: String,
         privateData: String?
     ) {
-        val encoder = Base64.getEncoder()
-        var privateDataString: String? = null
-        var initializationVectorString: String? = null
-        val privateBytes = privateData?.toByteArray()
-        if (privateBytes != null) {
-            val encryptedData = databaseKey.encrypt(data = privateBytes)
-            privateDataString = encoder.encodeToString(encryptedData.encryptedData)
-            initializationVectorString = encoder.encodeToString(encryptedData.initializationVector)
-        }
+        val encryptedPrivateData = encryptPrivateSwapSettlementMethodData(privateSettlementMethodData = privateData)
         withContext(databaseServiceContext) {
             database.insertUserSettlementMethod(
                 UserSettlementMethod(
                     settlementMethodID = id,
                     settlementMethod = settlementMethod,
-                    privateData = privateDataString,
-                    privateDataInitializationVector = initializationVectorString
+                    privateData = encryptedPrivateData.first,
+                    privateDataInitializationVector = encryptedPrivateData.second
                 )
             )
         }
@@ -1063,18 +1050,9 @@ open class DatabaseService(
         privateData: String?
     ) {
         Log.i(logTag, "updateUserSettlementMethod: updating $id")
-        // TODO: this is exactly the same as what is in storeUserSettlementMethod, don't duplicate code
-        val encoder = Base64.getEncoder()
-        var privateDataString: String? = null
-        var initializationVectorString: String? = null
-        val privateBytes = privateData?.toByteArray()
-        if (privateBytes != null) {
-            val encryptedData = databaseKey.encrypt(data = privateBytes)
-            privateDataString = encoder.encodeToString(encryptedData.encryptedData)
-            initializationVectorString = encoder.encodeToString(encryptedData.initializationVector)
-        }
+        val encryptedPrivateData = encryptPrivateSwapSettlementMethodData(privateSettlementMethodData = privateData)
         withContext(databaseServiceContext) {
-            database.updateUserSettlementMethod(id, privateDataString, initializationVectorString)
+            database.updateUserSettlementMethod(id, encryptedPrivateData.first, encryptedPrivateData.second)
         }
     }
 
