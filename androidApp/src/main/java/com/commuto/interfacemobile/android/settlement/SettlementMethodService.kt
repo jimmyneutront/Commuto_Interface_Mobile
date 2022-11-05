@@ -206,7 +206,7 @@ class SettlementMethodService @Inject constructor(
         withContext(Dispatchers.IO) {
             Log.i(logTag, "deleteSettlementMethod: removing ${settlementMethod.id} from persistent storage")
             try {
-                // TODO: remove settlement methods from persistent storage here
+                databaseService.deleteUserSettlementMethod(id = settlementMethod.id.toString())
                 Log.i(logTag, "deleteSettlementmethod: deleting ${settlementMethod.id} from " +
                         "settlementMethodTruthSource")
                 withContext(Dispatchers.Main) {

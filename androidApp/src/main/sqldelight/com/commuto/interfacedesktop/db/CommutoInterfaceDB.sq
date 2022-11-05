@@ -288,6 +288,10 @@ deleteSwapBySwapIDAndChainID:
 DELETE FROM Swap
 WHERE id = ? AND chainID = ?;
 
+deleteUserSettlementMethodByID:
+DELETE FROM UserSettlementMethod
+WHERE settlementMethodID = ?;
+
 removeAllOffers:
 DELETE FROM Offer;
 

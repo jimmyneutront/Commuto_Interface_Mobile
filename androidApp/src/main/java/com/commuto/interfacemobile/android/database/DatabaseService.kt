@@ -1049,11 +1049,20 @@ open class DatabaseService(
         Log.i(logTag, "storeUserSettlementMethod: stored $id")
     }
 
+    /**
+     * Updates the private settlement method data of a persistently stored settlement method with the given ID. The new
+     * private settlement method data is encrypted with [databaseKey] and a new initialization vector.
+     *
+     * @param id The ID of the settlement method, the private data of which this will update.
+     * @param privateData The new private settlement method data with which this will replace the current private
+     * settlement method data of the settlement method with the ID [id].
+     */
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun updateUserSettlementMethod(
         id: String,
         privateData: String?
     ) {
+        Log.i(logTag, "updateUserSettlementMethod: updating $id")
         // TODO: this is exactly the same as what is in storeUserSettlementMethod, don't duplicate code
         val encoder = Base64.getEncoder()
         var privateDataString: String? = null
@@ -1070,6 +1079,22 @@ open class DatabaseService(
     }
 
     /**
+     * Removes every persistently stored settlement method with an ID equal to [id] from the table of the user's
+     * settlement methods.
+     *
+     * @param id The ID of the settlement method(s) to be deleted.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun deleteUserSettlementMethod(
+        id: String,
+    ) {
+        Log.i(logTag, "deleteUserSettlementMethod: deleting $id")
+        withContext(databaseServiceContext) {
+            database.deleteUserSettlementMethod(id)
+        }
+    }
+
+    /**
      * Retrieves and decrypts the persistently stored settlement method and its private data (if any) associated with
      * the specified settlement method ID from the table of the user's settlement methods, or returns `nil` if no such
      * settlement method is found.
@@ -1082,6 +1107,7 @@ open class DatabaseService(
      */
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun getUserSettlementMethod(id: String): Pair<String, String?>? {
+        Log.i(logTag, "getUserSettlementMethod: getting $id")
         val dbSettlementMethods: List<UserSettlementMethod> = withContext(databaseServiceContext) {
             database.selectUserSettlementMethodByID(
                 id = id
