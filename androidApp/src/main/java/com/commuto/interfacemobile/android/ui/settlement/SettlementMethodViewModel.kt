@@ -67,6 +67,18 @@ class SettlementMethodViewModel
     }
 
     /**
+     * Sets the value of [stateToSet] equal to [state] on the main coroutine dispatcher.
+     */
+    private suspend fun setDeletingSettlementMethodState(
+        state: DeletingSettlementMethodState,
+        stateToSet: MutableState<DeletingSettlementMethodState>
+    ) {
+        withContext(Dispatchers.Main) {
+            stateToSet.value = state
+        }
+    }
+
+    /**
      * Adds a given [SettlementMethod] with corresponding [PrivateData] to the collection of the user's settlement
      * methods, by passing them to [SettlementMethodService.addSettlementMethod]. This also passes several closures to
      * [SettlementMethodService.addSettlementMethod] which will call [setAddingSettlementMethodState] with the current
@@ -108,16 +120,14 @@ class SettlementMethodViewModel
                         )
                     }
                 )
-                Log.i(logTag, "addSettlementMethod: added settlement method ${settlementMethod.currency} via " +
-                        settlementMethod.method
-                )
+                Log.i(logTag, "addSettlementMethod: added ${settlementMethod.id}")
                 setAddingSettlementMethodState(
                     state = AddingSettlementMethodState.COMPLETED,
                     stateToSet = stateOfAdding
                 )
             } catch (exception: Exception) {
                 Log.e(logTag, "addSettlementMethod: got exception during addSettlementMethod call for " +
-                        "${settlementMethod.currency} via ${settlementMethod.method}", exception)
+                        "${settlementMethod.id}", exception)
                 withContext(Dispatchers.Main) {
                     addSettlementMethodException.value = exception
                 }
@@ -175,7 +185,7 @@ class SettlementMethodViewModel
                     }
                 )
                 privateDataMutableState.value = newPrivateData
-                Log.i(logTag, "editSettlementMethod: edited settlement method ${settlementMethod.id}")
+                Log.i(logTag, "editSettlementMethod: edited ${settlementMethod.id}")
                 setEditingSettlementMethodState(
                     state = EditingSettlementMethodState.COMPLETED,
                     stateToSet = stateOfEditing
@@ -190,6 +200,42 @@ class SettlementMethodViewModel
                     state = EditingSettlementMethodState.EXCEPTION,
                     stateToSet = stateOfEditing
                 )
+            }
+        }
+    }
+
+    /**
+     * Deletes a given [SettlementMethod] via a call to [SettlementMethodService.deleteSettlementMethod].
+     *
+     * @param settlementMethod The user's [SettlementMethod] that they want to delete.
+     * @param stateOfDeleting A [MutableState] wrapped around a [DeletingSettlementMethodState] value, describing the
+     * current state of the settlement-method-deleting process.
+     * @param deleteSettlementMethodException A [MutableState] around an optional [Exception], the wrapped value of
+     * which this will set equal to the exception that occurs in the settlement-method-deleting process, if any.
+     */
+    override fun deleteSettlementMethod(
+        settlementMethod: SettlementMethod,
+        stateOfDeleting: MutableState<DeletingSettlementMethodState>,
+        deleteSettlementMethodException: MutableState<Exception?>,
+    ) {
+        viewModelScope.launch {
+            try {
+                setDeletingSettlementMethodState(
+                    state = DeletingSettlementMethodState.DELETING,
+                    stateToSet = stateOfDeleting
+                )
+                settlementMethodService.deleteSettlementMethod(
+                    settlementMethod = settlementMethod
+                )
+                Log.i(logTag, "deleteSettlementMethod: deleted ${settlementMethod.id}")
+                setDeletingSettlementMethodState(
+                    state = DeletingSettlementMethodState.COMPLETED,
+                    stateToSet = stateOfDeleting
+                )
+            } catch (exception: Exception) {
+                Log.e(logTag, "deleteSettlementMethod: got exception during deleteSettlementMethod call for " +
+                        "${settlementMethod.id}")
+                deleteSettlementMethodException.value = exception
             }
         }
     }

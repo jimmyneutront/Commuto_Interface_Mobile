@@ -15,7 +15,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -135,8 +134,7 @@ fun SettlementMethodsComposable(
             catch (e: Exception) { null }
             SettlementMethodDetailComposable(
                 settlementMethod = settlementMethodViewModel.settlementMethods.getOrNull(index ?: -1),
-                settlementMethodViewModel = settlementMethodViewModel,
-                navController = navController,
+                settlementMethodViewModel = settlementMethodViewModel
             )
         }
     }
@@ -585,13 +583,11 @@ fun SettlementMethodCardComposable(settlementMethod: SettlementMethod) {
  * @param settlementMethod The [SettlementMethod] containing the information to be displayed.
  * @param settlementMethodViewModel An object implementing [UISettlementMethodTruthSource] that acts as a single source
  * of truth for all settlement-method-related data.
- * @param navController The [NavHostController] from which the "Delete" button will pop the back stack when pressed.
  */
 @Composable
 fun SettlementMethodDetailComposable(
     settlementMethod: SettlementMethod?,
     settlementMethodViewModel: UISettlementMethodTruthSource,
-    navController: NavHostController
 ) {
     /**
      * An object implementing [PrivateData] containing private data for [settlementMethod].
@@ -605,6 +601,30 @@ fun SettlementMethodDetailComposable(
      * Indicates whether we are showing the sheet for editing a settlement method.
      */
     val isShowingEditSheet = remember { mutableStateOf(false) }
+    /**
+     * Indicates whether we are currently deleting a settlement method from the collection of the user's settlement
+     * methods, and if so, what part of the settlement-method-deleting process we are in.
+     */
+    val deletingSettlementMethodState = remember { mutableStateOf(DeletingSettlementMethodState.NONE) }
+    /**
+     * The [Exception] that occurred during the settlement method deleting process, or `null` if no such exception has
+     * occurred.
+     */
+    val deletingSettlementMethodException = remember { mutableStateOf<Exception?>(null) }
+    /**
+     * The text to be displayed on the button that begins the settlement method deleting process.
+     */
+    val buttonText = when(deletingSettlementMethodState.value) {
+        DeletingSettlementMethodState.NONE, DeletingSettlementMethodState.EXCEPTION -> {
+            "Delete"
+        }
+        DeletingSettlementMethodState.COMPLETED -> {
+            "Done"
+        }
+        else -> {
+            "Deleting..."
+        }
+    }
 
     if (settlementMethod != null) {
         LaunchedEffect(true) {
@@ -691,16 +711,15 @@ fun SettlementMethodDetailComposable(
             )
             Button(
                 onClick = {
-                    settlementMethodViewModel.settlementMethods.removeAll {
-                        it.method == settlementMethod.method
-                                && it.currency == settlementMethod.currency
-                                && it.privateData == settlementMethod.privateData
-                    }
-                    navController.popBackStack()
+                    settlementMethodViewModel.deleteSettlementMethod(
+                        settlementMethod = settlementMethod,
+                        stateOfDeleting = deletingSettlementMethodState,
+                        deleteSettlementMethodException = deletingSettlementMethodException
+                    )
                 },
                 content = {
                     Text(
-                        text = "Delete",
+                        text = buttonText,
                         style = MaterialTheme.typography.h4,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
@@ -765,7 +784,8 @@ fun EditSettlementMethodComposable(
     val editingSettlementMethodState = remember { mutableStateOf(EditingSettlementMethodState.NONE) }
 
     /**
-     * The [Error] that occured during the settlement method adding process, or `null` if no such error has occurred.
+     * The [Exception] that occurred during the settlement method adding process, or `null` if no such exception has
+     * occurred.
      */
     val editingSettlementMethodException = remember { mutableStateOf<Exception?>(null) }
 

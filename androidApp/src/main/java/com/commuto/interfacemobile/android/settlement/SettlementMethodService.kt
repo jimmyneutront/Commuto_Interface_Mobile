@@ -102,8 +102,8 @@ class SettlementMethodService @Inject constructor(
     }
 
     /**
-     * Attempts to edit edit the private data of the given [SettlementMethod] in the list of the user's settlement
-     * methods, both in [settlementMethodTruthSource] and in persistent storage.
+     * Attempts to edit the private data of the given [SettlementMethod] in the list of the user's settlement methods,
+     * both in [settlementMethodTruthSource] and in persistent storage.
      *
      * On the IO coroutine dispatcher, this validates and serializes the supplied private data via
      * [serializePrivateSettlementMethodData]. Then this updates the private data of the settlement method in persistent
@@ -144,7 +144,6 @@ class SettlementMethodService @Inject constructor(
                     id = settlementMethod.id.toString(),
                     privateData = settlementMethodWithPrivateData.privateData
                 )
-                // TODO: update in database here
                 afterPersistentStorage?.invoke()
                 Log.i(logTag, "editSettlementMethod: editing ${settlementMethod.id} in " +
                         "settlementMethodTruthSource")
@@ -193,6 +192,34 @@ class SettlementMethodService @Inject constructor(
             }
         }
         return settlementMethod
+    }
+
+    /**
+     * Attempts to delete the given [SettlementMethod] from the list of the user's settlement methods, both in
+     * [settlementMethodTruthSource] and in persistent storage.
+     *
+     * @param settlementMethod The existing [SettlementMethod] that this will delete.
+     */
+    suspend fun deleteSettlementMethod(
+        settlementMethod: SettlementMethod,
+    ) {
+        withContext(Dispatchers.IO) {
+            Log.i(logTag, "deleteSettlementMethod: removing ${settlementMethod.id} from persistent storage")
+            try {
+                // TODO: remove settlement methods from persistent storage here
+                Log.i(logTag, "deleteSettlementmethod: deleting ${settlementMethod.id} from " +
+                        "settlementMethodTruthSource")
+                withContext(Dispatchers.Main) {
+                    settlementMethodTruthSource.settlementMethods.removeIf {
+                        it.id == settlementMethod.id
+                    }
+                }
+            } catch (exception: Exception) {
+                Log.e(logTag, "deleteSettlementMethod: encountered exception while deleting " +
+                        "${settlementMethod.id}", exception)
+                throw exception
+            }
+        }
     }
 
 }
