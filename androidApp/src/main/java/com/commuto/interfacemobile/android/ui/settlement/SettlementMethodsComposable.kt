@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -20,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.commuto.interfacemobile.android.R
 import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateData
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateSEPAData
@@ -91,26 +93,30 @@ fun SettlementMethodsComposable(
                     modifier = Modifier.padding(horizontal = 10.dp),
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
                 )
-                LazyColumn {
-                    for (index in settlementMethodViewModel.settlementMethods.indices) {
-                        item {
-                            Button(
-                                onClick = {
-                                    navController.navigate("SettlementMethodDetailComposable/$index")
-                                },
-                                border = BorderStroke(1.dp, Color.Black),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color.Transparent
-                                ),
-                                modifier = Modifier
-                                    .padding(PaddingValues(top = 5.dp))
-                                    .padding(horizontal = 5.dp),
-                                contentPadding = PaddingValues(10.dp),
-                                elevation = null,
-                            ) {
-                                SettlementMethodCardComposable(
-                                    settlementMethod = settlementMethodViewModel.settlementMethods[index]
-                                )
+                if (settlementMethodViewModel.settlementMethods.size == 0) {
+                    SettlementMethodsNoneFoundComposable()
+                } else {
+                    LazyColumn {
+                        for (index in settlementMethodViewModel.settlementMethods.indices) {
+                            item {
+                                Button(
+                                    onClick = {
+                                        navController.navigate("SettlementMethodDetailComposable/$index")
+                                    },
+                                    border = BorderStroke(1.dp, Color.Black),
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor = Color.Transparent
+                                    ),
+                                    modifier = Modifier
+                                        .padding(PaddingValues(top = 5.dp))
+                                        .padding(horizontal = 5.dp),
+                                    contentPadding = PaddingValues(10.dp),
+                                    elevation = null,
+                                ) {
+                                    SettlementMethodCardComposable(
+                                        settlementMethod = settlementMethodViewModel.settlementMethods[index]
+                                    )
+                                }
                             }
                         }
                     }
@@ -137,6 +143,20 @@ fun SettlementMethodsComposable(
                 settlementMethodViewModel = settlementMethodViewModel
             )
         }
+    }
+}
+
+@Composable
+private fun SettlementMethodsNoneFoundComposable() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Text(
+            text = "You have not added any settlement methods.",
+            style = MaterialTheme.typography.body1,
+            modifier = Modifier.padding(horizontal = 10.dp)
+        )
     }
 }
 
