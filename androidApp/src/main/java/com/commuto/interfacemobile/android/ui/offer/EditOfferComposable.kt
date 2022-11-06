@@ -20,6 +20,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.EditingOfferState
 import com.commuto.interfacemobile.android.offer.Offer
+import com.commuto.interfacemobile.android.ui.settlement.PreviewableSettlementMethodTruthSource
+import com.commuto.interfacemobile.android.ui.settlement.UISettlementMethodTruthSource
 
 /**
  * Allows the user to edit one of their [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)s.
@@ -27,12 +29,15 @@ import com.commuto.interfacemobile.android.offer.Offer
  * @param offer The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) for which this view
  * allows editing.
  * @param offerTruthSource The [OffersViewModel] that acts as a single source of truth for all offer-related data.
+ * @param settlementMethodTruthSource An object implementing [UISettlementMethodTruthSource] that acts as a single
+ * source of truth for all settlement-method-related data.
  * @param stablecoinCurrencyCode The currency code of the offer's stablecoin.
  */
 @Composable
 fun EditOfferComposable(
     offer: Offer?,
     offerTruthSource: UIOfferTruthSource,
+    settlementMethodTruthSource: UISettlementMethodTruthSource,
     stablecoinCurrencyCode: String
 ) {
 
@@ -72,14 +77,11 @@ fun EditOfferComposable(
                 text = "Settlement Methods:",
                 style =  MaterialTheme.typography.h6,
             )
-            // TODO: re-enable this once EditOfferView can get a settlement method truth source
-            /*
             SettlementMethodSelector(
-                settlementMethods = settlementMethods,
+                settlementMethodTruthSource = settlementMethodTruthSource,
                 stablecoinCurrencyCode = stablecoinCurrencyCode,
                 selectedSettlementMethods = offer.selectedSettlementMethods
             )
-            */
             if (offer.editingOfferState.value == EditingOfferState.EXCEPTION) {
                 Text(
                     text = offer.editingOfferException?.message ?: "An unknown exception occurred",
@@ -133,6 +135,7 @@ fun PreviewEditOfferComposable() {
     EditOfferComposable(
         offer = Offer.sampleOffers[0],
         offerTruthSource = PreviewableOfferTruthSource(),
+        settlementMethodTruthSource = PreviewableSettlementMethodTruthSource(),
         stablecoinCurrencyCode = "STBL"
     )
 }

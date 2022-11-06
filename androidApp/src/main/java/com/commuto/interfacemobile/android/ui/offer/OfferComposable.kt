@@ -26,6 +26,7 @@ import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import com.commuto.interfacemobile.android.ui.settlement.SettlementMethodPrivateDetailComposable
+import com.commuto.interfacemobile.android.ui.settlement.UISettlementMethodTruthSource
 import java.util.*
 
 /**

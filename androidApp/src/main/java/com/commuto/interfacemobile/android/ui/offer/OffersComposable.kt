@@ -72,6 +72,7 @@ fun OffersComposable(
             EditOfferComposable(
                 offer = offerTruthSource.offers[id],
                 offerTruthSource = offerTruthSource,
+                settlementMethodTruthSource = settlementMethodTruthSource,
                 stablecoinCurrencyCode = stablecoinCurrencyCode
             )
         }
