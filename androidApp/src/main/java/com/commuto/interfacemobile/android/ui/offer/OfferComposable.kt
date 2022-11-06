@@ -25,6 +25,7 @@ import com.commuto.interfacemobile.android.ui.DisclosureComposable
 import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
+import com.commuto.interfacemobile.android.ui.settlement.PreviewableSettlementMethodTruthSource
 import com.commuto.interfacemobile.android.ui.settlement.SettlementMethodPrivateDetailComposable
 import com.commuto.interfacemobile.android.ui.settlement.UISettlementMethodTruthSource
 import java.util.*
@@ -34,6 +35,8 @@ import java.util.*
  *
  * @param offerTruthSource The OffersViewModel that acts as a single source of truth for all offer-related data.
  * @param id The ID of the offer about which this [OfferComposable] is displaying information.
+ * @param settlementMethodTruthSource An object implementing [UISettlementMethodTruthSource] that acts as a single
+ * source of truth for all settlement-method-related data.
  * @param stablecoinInfoRepo The [StablecoinInformationRepository] that this [Composable] uses to get stablecoin name
  * and currency code information. Defaults to [StablecoinInformationRepository.hardhatStablecoinInfoRepo] if no
  * other value is passed.
@@ -43,6 +46,7 @@ import java.util.*
 fun OfferComposable(
     offerTruthSource: UIOfferTruthSource,
     id: UUID?,
+    settlementMethodTruthSource: UISettlementMethodTruthSource,
     stablecoinInfoRepo: StablecoinInformationRepository =
         StablecoinInformationRepository.hardhatStablecoinInfoRepo,
     navController: NavController
@@ -335,6 +339,7 @@ fun OfferComposable(
                     closeSheet = closeSheet,
                     offerTruthSource = offerTruthSource,
                     id = id,
+                    settlementMethodTruthSource = settlementMethodTruthSource,
                 )
             }
         )
@@ -500,7 +505,12 @@ fun buildPriceDescription(settlementMethod: SettlementMethod, stablecoin: String
 )
 @Composable
 fun PreviewOfferComposableWithDaiOffer() {
-    OfferComposable(PreviewableOfferTruthSource(), Offer.sampleOffers[0].id, navController = rememberNavController())
+    OfferComposable(
+        offerTruthSource = PreviewableOfferTruthSource(),
+        id = Offer.sampleOffers[0].id,
+        settlementMethodTruthSource = PreviewableSettlementMethodTruthSource(),
+        navController = rememberNavController()
+    )
 }
 
 /**
@@ -511,7 +521,12 @@ fun PreviewOfferComposableWithDaiOffer() {
 )
 @Composable
 fun PreviewOfferComposableWithUnknownStablecoinOffer() {
-    OfferComposable(PreviewableOfferTruthSource(), Offer.sampleOffers[3].id, navController = rememberNavController())
+    OfferComposable(
+        offerTruthSource = PreviewableOfferTruthSource(),
+        id = Offer.sampleOffers[3].id,
+        settlementMethodTruthSource = PreviewableSettlementMethodTruthSource(),
+        navController = rememberNavController()
+    )
 }
 
 /**
@@ -522,7 +537,12 @@ fun PreviewOfferComposableWithUnknownStablecoinOffer() {
 )
 @Composable
 fun PreviewOfferComposableWithRandomUUID() {
-    OfferComposable(PreviewableOfferTruthSource(), UUID.randomUUID(), navController = rememberNavController())
+    OfferComposable(
+        offerTruthSource = PreviewableOfferTruthSource(),
+        id = UUID.randomUUID(),
+        settlementMethodTruthSource = PreviewableSettlementMethodTruthSource(),
+        navController = rememberNavController()
+    )
 }
 
 /**
@@ -535,5 +555,10 @@ fun PreviewOfferComposableWithRandomUUID() {
 )
 @Composable
 fun PreviewOfferComposableWithNull() {
-    OfferComposable(PreviewableOfferTruthSource(),null, navController = rememberNavController())
+    OfferComposable(
+        offerTruthSource = PreviewableOfferTruthSource(),
+        id = null,
+        settlementMethodTruthSource = PreviewableSettlementMethodTruthSource(),
+        navController = rememberNavController()
+    )
 }

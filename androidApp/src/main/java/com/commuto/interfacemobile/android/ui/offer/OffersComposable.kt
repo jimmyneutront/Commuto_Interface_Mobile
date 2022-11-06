@@ -56,7 +56,12 @@ fun OffersComposable(
         ) { backStackEntry ->
             val id = try { UUID.fromString(backStackEntry.arguments?.getString("id")) }
             catch (e: Throwable) { null }
-            OfferComposable(offerTruthSource, id, navController = navController)
+            OfferComposable(
+                offerTruthSource = offerTruthSource,
+                id = id,
+                settlementMethodTruthSource = settlementMethodTruthSource,
+                navController = navController
+            )
         }
         composable(
             "EditOfferComposable/{id}/{stablecoinCurrencyCode}",
