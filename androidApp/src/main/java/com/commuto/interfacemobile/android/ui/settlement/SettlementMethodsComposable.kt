@@ -50,10 +50,10 @@ fun SettlementMethodsComposable(
 
     NavHost(
         navController = navController,
-        startDestination = "SettlementMethodsListComposable",
+        startDestination = "SettlementMethodListComposable",
         modifier = Modifier.height((LocalConfiguration.current.screenHeightDp - 50).dp)
     ) {
-        composable("SettlementMethodsListComposable") {
+        composable("SettlementMethodListComposable") {
             Column {
                 Box {
                     Row(
@@ -99,7 +99,7 @@ fun SettlementMethodsComposable(
                             item {
                                 Button(
                                     onClick = {
-                                        navController.navigate("SettlementMethodDetailComposable/$index")
+                                        navController.navigate("UserSettlementMethodDetailComposable/$index")
                                     },
                                     border = BorderStroke(1.dp, Color.Black),
                                     colors = ButtonDefaults.buttonColors(
@@ -131,12 +131,12 @@ fun SettlementMethodsComposable(
             )
         }
         composable(
-            "SettlementMethodDetailComposable/{index}",
+            "UserSettlementMethodDetailComposable/{index}",
             arguments = listOf(navArgument("index") { type = NavType.IntType })
         ) { backStackEntry ->
             val index = try { backStackEntry.arguments?.getInt("index") }
             catch (e: Exception) { null }
-            SettlementMethodDetailComposable(
+            UserSettlementMethodDetailComposable(
                 settlementMethod = settlementMethodViewModel.settlementMethods.getOrNull(index ?: -1),
                 settlementMethodViewModel = settlementMethodViewModel
             )
@@ -597,13 +597,14 @@ fun SettlementMethodCardComposable(settlementMethod: SettlementMethod) {
 }
 
 /**
- * Displays all information, including private information, about a given [SettlementMethod].
+ * Displays all information, including private information, about a given [SettlementMethod] that belongs to the user of
+ * this interface.
  * @param settlementMethod The [SettlementMethod] containing the information to be displayed.
  * @param settlementMethodViewModel An object implementing [UISettlementMethodTruthSource] that acts as a single source
  * of truth for all settlement-method-related data.
  */
 @Composable
-fun SettlementMethodDetailComposable(
+fun UserSettlementMethodDetailComposable(
     settlementMethod: SettlementMethod?,
     settlementMethodViewModel: UISettlementMethodTruthSource,
 ) {
@@ -684,27 +685,9 @@ fun SettlementMethodDetailComposable(
                 style = MaterialTheme.typography.h4,
                 fontWeight = FontWeight.Bold
             )
-            if (privateData.value != null) {
-                when (privateData.value) {
-                    is PrivateSEPAData -> {
-                        SEPADetailComposable(privateData.value as PrivateSEPAData)
-                    }
-                    is PrivateSWIFTData -> {
-                        SWIFTDetailComposable(privateData.value as PrivateSWIFTData)
-                    }
-                    else -> {
-                        Text(
-                            text = "Unknown Settlement Method Type"
-                        )
-                    }
-                }
-            } else if (finishedParsingData.value) {
-                Text(
-                    text = "Unable to parse data",
-                    style = MaterialTheme.typography.h4,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            SettlementMethodPrivateDetailComposable(
+                settlementMethod = settlementMethod
+            )
             Button(
                 onClick = {
                     isShowingEditSheet.value = true
@@ -776,6 +759,56 @@ fun SettlementMethodDetailComposable(
             )
         }
     }
+}
+
+/**
+ * Displays private information of a [SettlementMethod] that does not necessarily belong to the user of this interface.
+ *
+ * @param settlementMethod The [SettlementMethod] for which this displays private details.
+ */
+@Composable
+fun SettlementMethodPrivateDetailComposable(
+    settlementMethod: SettlementMethod
+) {
+    /**
+     * An object implementing [PrivateData] containing private data for [settlementMethod].
+     */
+    val privateData = remember { mutableStateOf<PrivateData?>(null) }
+    /**
+     * Indicates whether we have finished attempting to parse the private data associated with [settlementMethod].
+     */
+    val finishedParsingData = remember { mutableStateOf(false) }
+
+    LaunchedEffect(true) {
+        createPrivateDataObject(
+            settlementMethod = settlementMethod,
+            privateData = privateData,
+            finishedParsingData = finishedParsingData
+        )
+    }
+
+    if (privateData.value != null) {
+        when (privateData.value) {
+            is PrivateSEPAData -> {
+                SEPADetailComposable(privateData.value as PrivateSEPAData)
+            }
+            is PrivateSWIFTData -> {
+                SWIFTDetailComposable(privateData.value as PrivateSWIFTData)
+            }
+            else -> {
+                Text(
+                    text = "Unable to deserialize settlement method details."
+                )
+            }
+        }
+    } else if (finishedParsingData.value) {
+        Text(
+            text = "No details found.",
+            style = MaterialTheme.typography.h4,
+            fontWeight = FontWeight.Bold
+        )
+    }
+
 }
 
 /**

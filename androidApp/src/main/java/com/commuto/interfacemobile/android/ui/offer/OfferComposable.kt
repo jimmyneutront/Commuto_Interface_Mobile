@@ -25,6 +25,7 @@ import com.commuto.interfacemobile.android.ui.DisclosureComposable
 import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
+import com.commuto.interfacemobile.android.ui.settlement.SettlementMethodPrivateDetailComposable
 import java.util.*
 
 /**
@@ -157,7 +158,11 @@ fun OfferComposable(
                 modifier = Modifier.offset(x = 9.dp)
             ) {
                 Column {
-                    SettlementMethodsListComposable(stablecoinInformation, settlementMethods)
+                    SettlementMethodListComposable(
+                        stablecoinInformation = stablecoinInformation,
+                        settlementMethods = settlementMethods,
+                        isUserMaker = offer.isUserMaker,
+                    )
                 }
             }
             Column(
@@ -397,11 +402,14 @@ fun createRoleDescription(offerDirection: OfferDirection, stablecoinInformation:
  *
  * @param stablecoinInformation A [StablecoinInformation?] for this offer's stablecoin.
  * @param settlementMethods The settlement methods to be displayed.
+ * @param isUserMaker Indicates whether the user is the maker of the offer for which this is displaying settlement
+ * methods.
  */
 @Composable
-fun SettlementMethodsListComposable(
+fun SettlementMethodListComposable(
     stablecoinInformation: StablecoinInformation?,
-    settlementMethods: SnapshotStateList<SettlementMethod>
+    settlementMethods: SnapshotStateList<SettlementMethod>,
+    isUserMaker: Boolean,
 ) {
     val stablecoinCode = stablecoinInformation?.currencyCode ?: "Unknown Stablecoin"
     Text(
@@ -414,7 +422,11 @@ fun SettlementMethodsListComposable(
         ) {
             settlementMethods.forEach {
                 item {
-                    SettlementMethodComposable(stablecoin = stablecoinCode, settlementMethod = it)
+                    SettlementMethodComposable(
+                        stablecoin = stablecoinCode,
+                        settlementMethod = it,
+                        isUserMaker = isUserMaker,
+                    )
                     Spacer(modifier = Modifier.width(9.dp))
                 }
             }
@@ -433,9 +445,11 @@ fun SettlementMethodsListComposable(
  * @param stablecoin The human readable symbol of the stablecoin for which the offer related to these settlement methods
  * has been made.
  * @param settlementMethod The settlement method that this card displays.
+ * @param isUserMaker Indicates whether the user of this interface is the maker of the offer for which this is
+ * displaying settlement method information.
  */
 @Composable
-fun SettlementMethodComposable(stablecoin: String, settlementMethod: SettlementMethod) {
+fun SettlementMethodComposable(stablecoin: String, settlementMethod: SettlementMethod, isUserMaker: Boolean) {
     Column(
         modifier = Modifier
             .border(width = 1.dp, color = Color.Black, CutCornerShape(0.dp))
@@ -449,6 +463,9 @@ fun SettlementMethodComposable(stablecoin: String, settlementMethod: SettlementM
             text = buildPriceDescription(settlementMethod, stablecoin),
             modifier = Modifier.padding(3.dp)
         )
+        if (isUserMaker) {
+            SettlementMethodPrivateDetailComposable(settlementMethod = settlementMethod)
+        }
     }
 }
 
