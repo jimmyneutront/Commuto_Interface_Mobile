@@ -19,6 +19,8 @@ import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.DisclosureComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
+import com.commuto.interfacemobile.android.ui.settlement.PreviewableSettlementMethodTruthSource
+import com.commuto.interfacemobile.android.ui.settlement.UISettlementMethodTruthSource
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
@@ -27,6 +29,8 @@ import java.math.RoundingMode
  * The screen for opening a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
  *
  * @param offerTruthSource The OffersViewModel that acts as a single source of truth for all offer-related data.
+ * @param settlementMethodTruthSource An object implementing [UISettlementMethodTruthSource] that acts as a single
+ * source of truth for all settlement-method-related data.
  * @param chainID The ID of the blockchain on which the new offer will be opened.
  * @param stablecoins A [StablecoinInformationRepository] for all supported stablecoins on the blockchain specified by
  * [chainID].
@@ -34,6 +38,7 @@ import java.math.RoundingMode
 @Composable
 fun OpenOfferComposable(
     offerTruthSource: UIOfferTruthSource,
+    settlementMethodTruthSource: UISettlementMethodTruthSource,
     chainID: BigInteger,
     stablecoins: StablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
 ) {
@@ -87,17 +92,6 @@ fun OpenOfferComposable(
      * amount.
      */
     val securityDepositAmount = remember { mutableStateOf(BigDecimal.ZERO) }
-
-    /**
-     * The list of [SettlementMethod]s from which the user can choose.
-     *
-     * We want a copy of the list of sample settlement methods, we don't want to actually change any of them at all.
-     */
-    val settlementMethods = remember {
-        SettlementMethod.sampleSettlementMethodsEmptyPrices.map {
-            it.copy()
-        }
-    }
 
     /**
      * The [SettlementMethod]s that the user has selected.
@@ -264,7 +258,7 @@ fun OpenOfferComposable(
             style =  MaterialTheme.typography.h6,
         )
         SettlementMethodSelector(
-            settlementMethods = settlementMethods,
+            settlementMethodTruthSource = settlementMethodTruthSource,
             stablecoinCurrencyCode = stablecoinCurrencyCode,
             selectedSettlementMethods = selectedSettlementMethods
         )
@@ -411,6 +405,7 @@ fun StablecoinListComposable(
 fun PreviewOpenOfferComposable() {
     OpenOfferComposable(
         offerTruthSource = PreviewableOfferTruthSource(),
+        settlementMethodTruthSource = PreviewableSettlementMethodTruthSource(),
         chainID = BigInteger.ONE
     )
 }

@@ -10,7 +10,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,7 +20,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.EditingOfferState
 import com.commuto.interfacemobile.android.offer.Offer
-import com.commuto.interfacemobile.android.settlement.SettlementMethod
 
 /**
  * Allows the user to edit one of their [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)s.
@@ -37,15 +35,6 @@ fun EditOfferComposable(
     offerTruthSource: UIOfferTruthSource,
     stablecoinCurrencyCode: String
 ) {
-
-    /*
-    We want a copy of the list of sample settlement methods, we don't want to actually change any of them at all.
-     */
-    val settlementMethods = remember {
-        SettlementMethod.sampleSettlementMethodsEmptyPrices.map {
-            it.copy()
-        }
-    }
 
     if (offer == null) {
         Row(
@@ -83,11 +72,14 @@ fun EditOfferComposable(
                 text = "Settlement Methods:",
                 style =  MaterialTheme.typography.h6,
             )
+            // TODO: re-enable this once EditOfferView can get a settlement method truth source
+            /*
             SettlementMethodSelector(
                 settlementMethods = settlementMethods,
                 stablecoinCurrencyCode = stablecoinCurrencyCode,
                 selectedSettlementMethods = offer.selectedSettlementMethods
             )
+            */
             if (offer.editingOfferState.value == EditingOfferState.EXCEPTION) {
                 Text(
                     text = offer.editingOfferException?.message ?: "An unknown exception occurred",

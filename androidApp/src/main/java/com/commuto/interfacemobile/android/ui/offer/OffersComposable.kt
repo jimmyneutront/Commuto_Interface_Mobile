@@ -11,6 +11,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.commuto.interfacemobile.android.ui.settlement.PreviewableSettlementMethodTruthSource
+import com.commuto.interfacemobile.android.ui.settlement.UISettlementMethodTruthSource
 import java.math.BigInteger
 import java.util.*
 
@@ -19,10 +21,13 @@ import java.util.*
  *
  * @param offerTruthSource An object implementing [UIOfferTruthSource] that acts as a single source of truth for all
  * offer-related data.
+ * @param settlementMethodTruthSource An object implementing [UISettlementMethodTruthSource] that acts as a single
+ * source of truth for all settlement-method-related data.
  */
 @Composable
 fun OffersComposable(
     offerTruthSource: UIOfferTruthSource,
+    settlementMethodTruthSource: UISettlementMethodTruthSource
 ) {
 
     val navController = rememberNavController()
@@ -41,6 +46,7 @@ fun OffersComposable(
         ) {
             OpenOfferComposable(
                 offerTruthSource = offerTruthSource,
+                settlementMethodTruthSource = settlementMethodTruthSource,
                 chainID = BigInteger.valueOf(31337L)
             )
         }
@@ -79,6 +85,7 @@ fun OffersComposable(
 @Composable
 fun PreviewOffersComposable() {
     OffersComposable(
-        PreviewableOfferTruthSource()
+        PreviewableOfferTruthSource(),
+        PreviewableSettlementMethodTruthSource(),
     )
 }

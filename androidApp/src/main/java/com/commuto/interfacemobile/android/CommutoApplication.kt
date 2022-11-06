@@ -4,6 +4,7 @@ import android.app.Application
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.p2p.P2PService
+import com.commuto.interfacemobile.android.settlement.SettlementMethodService
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 

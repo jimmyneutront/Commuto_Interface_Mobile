@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
                         CurrentTab.OFFERS -> {
                             OffersComposable(
                                 offerTruthSource = offersViewModel,
+                                settlementMethodTruthSource = settlementMethodViewModel,
                             )
                         }
                         CurrentTab.SWAPS -> {
