@@ -554,7 +554,7 @@ fun SettlementMethodCardComposable(settlementMethod: SettlementMethod) {
     val finishedParsingData = remember { mutableStateOf(false) }
 
     LaunchedEffect(true) {
-        createPrivateDataObject(
+        createPrivateDataObjectForUI(
             settlementMethod = settlementMethod,
             privateData = privateData,
             finishedParsingData = finishedParsingData
@@ -647,7 +647,7 @@ fun UserSettlementMethodDetailComposable(
 
     if (settlementMethod != null) {
         LaunchedEffect(true) {
-            createPrivateDataObject(
+            createPrivateDataObjectForUI(
                 settlementMethod = settlementMethod,
                 privateData = privateData,
                 finishedParsingData = finishedParsingData
@@ -780,7 +780,7 @@ fun SettlementMethodPrivateDetailComposable(
     val finishedParsingData = remember { mutableStateOf(false) }
 
     LaunchedEffect(true) {
-        createPrivateDataObject(
+        createPrivateDataObjectForUI(
             settlementMethod = settlementMethod,
             privateData = privateData,
             finishedParsingData = finishedParsingData
@@ -1045,7 +1045,7 @@ fun SWIFTDetailComposable(privateData: PrivateSWIFTData) {
  * main coroutine dispatcher, sets the value of [privateData] equal to the result and sets the value of
  * [finishedParsingData] to true.
  */
-suspend fun createPrivateDataObject(
+suspend fun createPrivateDataObjectForUI(
     settlementMethod: SettlementMethod,
     privateData: MutableState<PrivateData?>,
     finishedParsingData: MutableState<Boolean>,

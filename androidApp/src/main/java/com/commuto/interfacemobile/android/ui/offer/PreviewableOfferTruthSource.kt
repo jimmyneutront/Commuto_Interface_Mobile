@@ -86,6 +86,7 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     override fun takeOffer(
         offer: Offer,
         takenSwapAmount: BigDecimal,
-        settlementMethod: SettlementMethod?
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
     ) {}
 }
