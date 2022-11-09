@@ -184,7 +184,7 @@ class OfferServiceTests {
                 assertEquals(offerInDatabase.onChainDirection, "1")
                 assertEquals(offerInDatabase.protocolVersion, "1")
                 assertEquals(offerInDatabase.state, OfferState.AWAITING_PUBLIC_KEY_ANNOUNCEMENT.asString)
-                val settlementMethodsInDatabase = databaseService.getSettlementMethods(encoder
+                val settlementMethodsInDatabase = databaseService.getOfferSettlementMethods(encoder
                     .encodeToString(expectedOfferIdByteArray), offerInDatabase.chainID)
                 assertEquals(settlementMethodsInDatabase!!.size, 1)
                 assertEquals(settlementMethodsInDatabase[0].first, encoder.encodeToString(("{\"f\":\"USD\",\"p\":" +
@@ -973,7 +973,7 @@ class OfferServiceTests {
             Pair(Json.encodeToString(it), it.privateData)
         }
         runBlocking {
-            databaseService.storeSettlementMethods(
+            databaseService.storeOfferSettlementMethods(
                 offerID = encoder.encodeToString(expectedOfferId.asByteArray()),
                 chainID = offerForDatabase.chainID,
                 settlementMethods = serializedSettlementMethodsAndPrivateDetails
@@ -998,7 +998,7 @@ class OfferServiceTests {
             Pair(Json.encodeToString(it), it.privateData)
         }
         runBlocking {
-            databaseService.storePendingSettlementMethods(
+            databaseService.storePendingOfferSettlementMethods(
                 offerID = offerIDB64String,
                 chainID = offerForDatabase.chainID,
                 pendingSettlementMethods = serializedPendingSettlementMethodsAndPrivateDetails
@@ -1029,7 +1029,7 @@ class OfferServiceTests {
                 assertEquals(expectedOfferId, offerEditedEventRepository.appendedEvent!!.offerID)
                 assertEquals(expectedOfferId, offerEditedEventRepository.removedEvent!!.offerID)
 
-                val settlementMethodsInDatabase = databaseService.getSettlementMethods(
+                val settlementMethodsInDatabase = databaseService.getOfferSettlementMethods(
                     offerID = offerIDB64String,
                     chainID = offerForDatabase.chainID
                 )
@@ -1043,7 +1043,7 @@ class OfferServiceTests {
                 assertEquals("some_sanddollar_data",
                     settlementMethodsInDatabase[1].second)
 
-                val pendingSettlementMethodsInDatabase = databaseService.getPendingSettlementMethods(
+                val pendingSettlementMethodsInDatabase = databaseService.getPendingOfferSettlementMethods(
                     offerID = offerIDB64String,
                     chainID = offerForDatabase.chainID
                 )
@@ -1386,7 +1386,7 @@ class OfferServiceTests {
                     )
                     assertEquals(expectedOfferInDatabase, offerInDatabase)
 
-                    val settlementMethodsInDatabase = databaseService.getSettlementMethods(
+                    val settlementMethodsInDatabase = databaseService.getOfferSettlementMethods(
                         expectedOfferInDatabase.id, expectedOfferInDatabase.chainID)!!
                     val expectedSettlementMethodsInDatabase = addedOffer.onChainSettlementMethods.map {
                         encoder.encodeToString(it)
@@ -1654,7 +1654,7 @@ class OfferServiceTests {
             }
 
             val encoder = Base64.getEncoder()
-            val pendingSettlementMethodsInDatabase = databaseService.getPendingSettlementMethods(
+            val pendingSettlementMethodsInDatabase = databaseService.getPendingOfferSettlementMethods(
                 offerID = encoder.encodeToString(offerID.asByteArray()),
                 chainID = BigInteger.valueOf(31337L).toString()
             )
@@ -1932,7 +1932,7 @@ class OfferServiceTests {
             assertNull(databaseService.getOffer(id = offerIDB64String))
 
             // Check that the offer's settlement methods have been deleted from persistent storage
-            assertNull(databaseService.getSettlementMethods(
+            assertNull(databaseService.getOfferSettlementMethods(
                 offerID = offerIDB64String,
                 chainID = BigInteger.valueOf(31337L).toString()),
             )

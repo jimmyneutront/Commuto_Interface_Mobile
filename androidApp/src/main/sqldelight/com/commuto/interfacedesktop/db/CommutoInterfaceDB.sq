@@ -19,7 +19,7 @@ state TEXT NOT NULL
 );
 
 createSettlementMethodTable:
-CREATE TABLE SettlementMethod (
+CREATE TABLE OfferSettlementMethod (
 id TEXT NOT NULL,
 chainID TEXT NOT NULL,
 settlementMethod TEXT NOT NULL,
@@ -27,8 +27,8 @@ privateData TEXT,
 privateDataInitializationVector TEXT
 );
 
-createPendingSettlementMethodTable:
-CREATE TABLE PendingSettlementMethod (
+createPendingOfferSettlementMethodTable:
+CREATE TABLE PendingOfferSettlementMethod (
 id TEXT NOT NULL,
 chainID TEXT NOT NULL,
 settlementMethod TEXT NOT NULL,
@@ -113,8 +113,8 @@ VALUES(?, ?, ?, ?, ?, ?, ?,
 ?, ?, ?, ?, ?,
 ?, ?, ?, ?);
 
-insertSettlementMethod:
-INSERT INTO SettlementMethod(
+insertOfferSettlementMethod:
+INSERT INTO OfferSettlementMethod(
     id,
     chainID,
     settlementMethod,
@@ -123,8 +123,8 @@ INSERT INTO SettlementMethod(
 )
 VALUES(?, ?, ?, ?, ?);
 
-insertPendingSettlementMethod:
-INSERT INTO PendingSettlementMethod(
+insertPendingOfferSettlementMethod:
+INSERT INTO PendingOfferSettlementMethod(
     id,
     chainID,
     settlementMethod,
@@ -248,12 +248,12 @@ selectOfferByOfferId:
 SELECT * FROM Offer
 WHERE id = ?;
 
-selectSettlementMethodByOfferIdAndChainID:
-SELECT * FROM SettlementMethod
+selectOfferSettlementMethodByOfferIdAndChainID:
+SELECT * FROM OfferSettlementMethod
 WHERE id = ? AND chainID = ?;
 
-selectPendingSettlementMethodByOfferIdAndChainID:
-SELECT * FROM PendingSettlementMethod
+selectPendingOfferSettlementMethodByOfferIdAndChainID:
+SELECT * FROM PendingOfferSettlementMethod
 WHERE id = ? AND chainID = ?;
 
 selectKeyPairByInterfaceId:
@@ -276,12 +276,12 @@ deleteOfferByOfferIdAndChainID:
 DELETE FROM Offer
 WHERE id = ? AND chainID = ?;
 
-deleteSettlementMethodByOfferIdAndChainID:
-DELETE FROM SettlementMethod
+deleteOfferSettlementMethodByOfferIdAndChainID:
+DELETE FROM OfferSettlementMethod
 WHERE id = ? AND chainID = ?;
 
-deletePendingSettlementMethodByOfferIdAndChainID:
-DELETE FROM PendingSettlementMethod
+deletePendingOfferSettlementMethodByOfferIdAndChainID:
+DELETE FROM PendingOfferSettlementMethod
 WHERE id = ? AND chainID = ?;
 
 deleteSwapBySwapIDAndChainID:
@@ -295,11 +295,11 @@ WHERE settlementMethodID = ?;
 removeAllOffers:
 DELETE FROM Offer;
 
-removeAllSettlementMethods:
-DELETE FROM SettlementMethod;
+removeAllOfferSettlementMethods:
+DELETE FROM OfferSettlementMethod;
 
-removeAllPendingSettlementMethods:
-DELETE FROM PendingSettlementMethod;
+removeAllPendingOfferSettlementMethods:
+DELETE FROM PendingOfferSettlementMethod;
 
 removeAllKeyPairs:
 DELETE FROM KeyPair;
