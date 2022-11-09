@@ -24,6 +24,7 @@ import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateData
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateSEPAData
 import com.commuto.interfacemobile.android.settlement.privatedata.PrivateSWIFTData
+import com.commuto.interfacemobile.android.settlement.privatedata.createPrivateDataObject
 import com.commuto.interfacemobile.android.ui.SheetComposable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -1041,9 +1042,8 @@ fun SWIFTDetailComposable(privateData: PrivateSWIFTData) {
 }
 
 /**
- * Attempts to create a private data structure by deserializing the private data of [settlementMethod], and then on the
- * main coroutine dispatcher, sets the value of [privateData] equal to the result and sets the value of
- * [finishedParsingData] to true.
+ * Attempts to create a private data structure via [createPrivateDataObject]. Then, on the main coroutine dispatcher,
+ * sets the value of [privateData] equal to the result and sets the value of [finishedParsingData] to true.
  */
 suspend fun createPrivateDataObjectForUI(
     settlementMethod: SettlementMethod,
@@ -1051,27 +1051,11 @@ suspend fun createPrivateDataObjectForUI(
     finishedParsingData: MutableState<Boolean>,
 ) {
     withContext(Dispatchers.IO) {
-        val privateDataString = settlementMethod.privateData
-        if (privateDataString != null) {
-            try {
-                val privateSEPAData = Json.decodeFromString<PrivateSEPAData>(privateDataString)
-                withContext(Dispatchers.Main) {
-                    privateData.value = privateSEPAData
-                    finishedParsingData.value = true
-                }
-                return@withContext
-            } catch (exception: Exception) {}
-            try {
-                val privateSWIFTData = Json.decodeFromString<PrivateSWIFTData>(privateDataString)
-                withContext(Dispatchers.Main) {
-                    privateData.value = privateSWIFTData
-                    finishedParsingData.value = true
-                }
-                return@withContext
-            } catch (exception: Exception) {}
+        val createdPrivateData = createPrivateDataObject(settlementMethod.privateData)
+        withContext(Dispatchers.Main) {
+            privateData.value = createdPrivateData
+            finishedParsingData.value = true
         }
-        finishedParsingData.value = true
-        return@withContext
     }
 }
 
