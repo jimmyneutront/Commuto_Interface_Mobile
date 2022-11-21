@@ -41,6 +41,111 @@ class CommutoCoreInteraction: XCTestCase {
         print(ownPaymentDetails)
     }
     
+    /**
+     Demonstrate the new transaction pipeline
+     */
+    func testNewTransactionPipeline() throws {
+        // Restore Hardhat account #1
+        let password = "a_password"
+        let key = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+        let formattedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keyData = Data.fromHex(formattedKey)!
+        let keyStore = try! EthereumKeystoreV3(privateKey: keyData, password: password)!
+        let keystoreManager = KeystoreManager([keyStore])
+        let address = keyStore.getAddress()!
+        
+        // The address to which we will send some ERC20 tokens (Hardhat account #2)
+        let tokenRecipientAddress = EthereumAddress("0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc")!
+        // The contract address of the tokens that we will send (Dai on Hardhat as set up by CommutoSwap test scripts)
+        let ERC20ContractAddress = EthereumAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3")!
+        
+        // Set up web3 instance
+        let endpoint = ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!
+        let web3 = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+        web3.addKeystoreManager(keystoreManager)
+        
+        // Create the contract object
+        let contract = web3.contract(Web3.Utils.erc20ABI, at: ERC20ContractAddress, abiVersion: 2)!
+        
+        // Here we create the transaction that will transfer tokens to the recipient. We estimate its gas cost, the current gas price, and the proper nonce for the user's account when creating the transaction. Then we show the estimated gas cost/gas limit, price per gas, and total estimated price for gas to the user. We should wait for them to either cancel the process, continue with the default options, or specify a custom gas price/gas limit. Note that we do NOT do anything with the transaction ID here, because if the user changes the gas limit/gas price, the actual transaction ID will be different.
+        let amount = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+        var options = TransactionOptions.defaultOptions
+        options.from = address
+        
+        // Note: we temporarily replace these with the manual values below until we upgrade to web3swift 2.6.6, which will fix revert with message "Error: Transaction's maxFeePerGas (0) is less than the block's baseFeePerGas" caused by London upgrade
+        // options.gasPrice = .automatic
+        // options.gasLimit = .automatic
+        
+        options.gasPrice = .manual(BigUInt(875000000))
+        options.gasLimit = .manual(BigUInt(30000000))
+        
+        let writeTransaction: WriteTransaction = contract.write("transfer", parameters: [tokenRecipientAddress, amount!] as [AnyObject], extraData: Data(), transactionOptions: options)!
+        var ethereumTransaction = try! writeTransaction.assemble()
+        print("ERC20 Transfer Transaction:")
+        print("Estimated Gas Cost/Gas Limit: \(ethereumTransaction.gasLimit)")
+        print("Gas Price (Wei per Gas): \(ethereumTransaction.gasPrice)")
+        print("Total Cost of Gas (in Wei): \(ethereumTransaction.gasLimit * ethereumTransaction.gasPrice)")
+        
+        // If the user cancels the process, we stop here. Otherwise, we should create a new TransactionOptions object using the gas limit and price per gas specified by the user, if any, reassemble the transaction using these new transaction options, sign the transaction, and record and save its transaction ID,
+        let newOptions = options
+        ethereumTransaction = try! writeTransaction.assemble(transactionOptions: newOptions)
+        try! Web3Signer.signTX(transaction: &ethereumTransaction, keystore: keystoreManager, account: address, password: password)
+        guard let transactionID = ethereumTransaction.txid else {
+            throw Web3Error.inputError(desc: "Unable to get ID of transaction")
+        }
+        print("Transaction ID: \(transactionID)")
+        
+        // We add the ID of our new transaction to a list/map of transaction IDs. Whenever BlockchainService gets a new block and begins to parse transactions in that block, it should check if each transaction's id is present in transactionsOfInterest. If so, it should create the appropriate event for that transaction, and hand it off to the proper service.
+        var transactionsOfInterest: [String: Bool] = [transactionID: false]
+        
+        // Now we finally send the transaction to the blockchain node.
+        let transactionSendingResult = try web3.eth.sendRawTransaction(ethereumTransaction)
+        
+        var transactionIsConfirmed = false
+        // Setting up the Commuto test environment requires about 40 transactions; there is no need to parse them here.
+        var lastParsedBlockNumber = BigUInt(40)
+        var latestBlockNumber = BigUInt(1)
+        
+        // We continually try to get new blocks. Every time we do, we check every transaction in it, searching for our transaction of interest.
+        while (!transactionIsConfirmed) {
+            latestBlockNumber = try web3.eth.getBlockNumber()
+            if (latestBlockNumber > lastParsedBlockNumber) {
+                let numberOfBlockToParse = lastParsedBlockNumber + BigUInt(1)
+                let block = try web3.eth.getBlockByNumber(numberOfBlockToParse)
+                for transaction in block.transactions {
+                    switch transaction {
+                        // This contains call has O(n) complexity, we are using this only for demonstration purposes. In production, transactionsOfInterest should map transaction IDs to some kind of TransactionOfInterest object, containing the block height/time at which the tx was created, so we can notify the user if we believe a transaction has been dropped or otherwise lost.
+                    case .hash(let data):
+                        let txid = data.toHexString().addHexPrefix().lowercased()
+                        if transactionsOfInterest.contains(where: { key, value in
+                            key == txid
+                        }) {
+                            transactionsOfInterest[key] = true
+                            transactionIsConfirmed = true
+                        }
+                    case .transaction(let ethereumTransactionInBlock):
+                        let txid = ethereumTransactionInBlock.txid
+                        if transactionsOfInterest.contains(where: { key, value in
+                            key == txid
+                        }) {
+                            transactionsOfInterest[key] = true
+                            transactionIsConfirmed = true
+                        }
+                    case .null:
+                        ()
+                    }
+                }
+                lastParsedBlockNumber = lastParsedBlockNumber + BigUInt(1)
+            } else {
+                sleep(3)
+            }
+            
+        }
+        
+        print("Transaction confirmed. Hash: \(transactionSendingResult.hash)")
+        
+    }
+    
     func testTransferEth() {
         //TODO: Check that account 2 actually ends up with 1 more eth than starts with
         //Restore Hardhat account #1
