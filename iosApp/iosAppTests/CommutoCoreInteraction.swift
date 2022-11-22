@@ -67,26 +67,27 @@ class CommutoCoreInteraction: XCTestCase {
         // Create the contract object
         let contract = web3.contract(Web3.Utils.erc20ABI, at: ERC20ContractAddress, abiVersion: 2)!
         
-        // Here we create the transaction that will transfer tokens to the recipient. We estimate its gas cost, the current gas price, and the proper nonce for the user's account when creating the transaction. Then we show the estimated gas cost/gas limit, price per gas, and total estimated price for gas to the user. We should wait for them to either cancel the process, continue with the default options, or specify a custom gas price/gas limit. Note that we do NOT do anything with the transaction ID here, because if the user changes the gas limit/gas price, the actual transaction ID will be different.
+        // Here we create the transaction that will transfer tokens to the recipient. We estimate the gas limit, current maximum fee per gas, and the proper nonce for the user's account when creating the transaction. Then we show the estimated gas cost/gas limit, maximum fee per gas, and the total cost of gas to the user. We should wait for them to either cancel the process, continue with the default options, or specify a custom max priority fee per gas, max fee per gas, or gas limit. Note that we do NOT do anything with the transaction ID here, because if the user changes the gas limit/gas price, the actual transaction ID will be different.
         let amount = Web3.Utils.parseToBigUInt("100.0", units: .eth)
-        var options = TransactionOptions.defaultOptions
+        var options = TransactionOptions()
+        options.type = .eip1559
         options.from = address
+        options.maxPriorityFeePerGas = .automatic
+        options.maxFeePerGas = .automatic
         
-        // Note: we temporarily replace these with the manual values below until we upgrade to web3swift 2.6.6, which will fix revert with message "Error: Transaction's maxFeePerGas (0) is less than the block's baseFeePerGas" caused by London upgrade
-        // options.gasPrice = .automatic
-        // options.gasLimit = .automatic
-        
-        options.gasPrice = .manual(BigUInt(875000000))
-        options.gasLimit = .manual(BigUInt(30000000))
-        
+        // We are using a hacky custom write method here, that will create a transaction of the type specified in the passed TransactionOptions. Normally, web3swift creates a legacy (pre-London) transaction regardless, which causes a node error because the maxFeePerGas of the transaction will end up being zero after serialization (since the transaction object itself has no actual maxFeePerGas property)
         let writeTransaction: WriteTransaction = contract.write("transfer", parameters: [tokenRecipientAddress, amount!] as [AnyObject], extraData: Data(), transactionOptions: options)!
+        var writeTransactionParameters = writeTransaction.transaction.parameters
+        // Here we TEMPORARILY give our transaction a maxFeePerGas of 100.0 eth (just an arbitrary number) so the maxFeePerGas field of our serialized transaction will not be zero during gas estimation. Otherwise, we get a node error complaining about "Transaction's maxFeePerGas (0) is less than the block's baseFeePerGas"
+        writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+        writeTransaction.transaction.parameters = writeTransactionParameters
         var ethereumTransaction = try! writeTransaction.assemble()
         print("ERC20 Transfer Transaction:")
         print("Estimated Gas Cost/Gas Limit: \(ethereumTransaction.gasLimit)")
-        print("Gas Price (Wei per Gas): \(ethereumTransaction.gasPrice)")
-        print("Total Cost of Gas (in Wei): \(ethereumTransaction.gasLimit * ethereumTransaction.gasPrice)")
+        print("Max Fee Per Gas (Wei): \(ethereumTransaction.maxFeePerGas)")
+        print("Total Cost of Gas (in Wei): \(ethereumTransaction.gasLimit * ethereumTransaction.maxFeePerGas)")
         
-        // If the user cancels the process, we stop here. Otherwise, we should create a new TransactionOptions object using the gas limit and price per gas specified by the user, if any, reassemble the transaction using these new transaction options, sign the transaction, and record and save its transaction ID,
+        // If the user cancels the process, we stop here. Otherwise, we should create a new TransactionOptions object using the max priority fee per gas and max fee per gas specified by the user, if any, reassemble the transaction using these new transaction options, sign the transaction, and record and save its transaction ID.
         let newOptions = options
         ethereumTransaction = try! writeTransaction.assemble(transactionOptions: newOptions)
         try! Web3Signer.signTX(transaction: &ethereumTransaction, keystore: keystoreManager, account: address, password: password)
