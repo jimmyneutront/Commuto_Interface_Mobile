@@ -6,7 +6,8 @@ target 'iosApp' do
   pod 'CryptoSwift'
   pod 'Switrix', :path => '../../Switrix'
   pod 'SQLite.swift'
-  pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git', :branch => 'develop'
+  pod 'web3swift', '2.6.6'
+  #pod 'web3swift', :git => 'https://github.com/jimmyneutront/web3swift.git', :branch => 'develop'
   #pod 'trixnity_clientserverapi_client', :path => '../../trixnity/trixnity-clientserverapi/trixnity-clientserverapi-client'
   target :iosAppTests
     pod 'Switrix', :path => '../../Switrix'

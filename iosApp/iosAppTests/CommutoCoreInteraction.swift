@@ -90,7 +90,7 @@ class CommutoCoreInteraction: XCTestCase {
         let newOptions = options
         ethereumTransaction = try! writeTransaction.assemble(transactionOptions: newOptions)
         try! Web3Signer.signTX(transaction: &ethereumTransaction, keystore: keystoreManager, account: address, password: password)
-        guard let transactionID = ethereumTransaction.txid else {
+        guard let transactionID = ethereumTransaction.hash?.toHexString().addHexPrefix().lowercased() else {
             throw Web3Error.inputError(desc: "Unable to get ID of transaction")
         }
         print("Transaction ID: \(transactionID)")
@@ -124,7 +124,7 @@ class CommutoCoreInteraction: XCTestCase {
                             transactionIsConfirmed = true
                         }
                     case .transaction(let ethereumTransactionInBlock):
-                        let txid = ethereumTransactionInBlock.txid
+                        let txid = ethereumTransactionInBlock.hash?.toHexString().addHexPrefix().lowercased()
                         if transactionsOfInterest.contains(where: { key, value in
                             key == txid
                         }) {
