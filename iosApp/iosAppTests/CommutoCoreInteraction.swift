@@ -42,6 +42,39 @@ class CommutoCoreInteraction: XCTestCase {
     }
     
     /**
+     Nearly identical to `EthereumContract`'s `method` method, except this passes `type` to any `EthereumParameters` struct that it creates.
+     */
+    func method(method: String = "fallback", parameters: [AnyObject], extraData: Data, type: TransactionType?, contract: EthereumContract) -> EthereumTransaction? {
+        guard let to = contract.address else { return nil }
+        if (method == "fallback") {
+            let params = EthereumParameters(type: type, gasLimit: BigUInt(0), gasPrice: BigUInt(0))
+            let transaction = EthereumTransaction(to: to, value: BigUInt(0), data: extraData, parameters: params)
+            
+            return transaction
+        }
+        let foundMethod = contract.methods.filter { (key, value) -> Bool in
+            return key == method
+        }
+        guard foundMethod.count == 1 else { return nil }
+        let abiMethod = foundMethod[method]
+        guard let encodedData = abiMethod?.encodeParameters(parameters) else { return nil }
+        let params = EthereumParameters(type: type, gasLimit: BigUInt(0), gasPrice: BigUInt(0))
+        let transaction = EthereumTransaction(to: to, value: BigUInt(0), data: encodedData, parameters: params)
+        return transaction
+    }
+    
+    /**
+     Nearly identical to `web3.web3contract`'s `write` method, except this passes the type in `transactionOptions` to the custom `method` implementation defined above.
+     */
+    func write(method: String = "fallback", parameters: [AnyObject], extraData: Data, transactionOptions: TransactionOptions, contract: web3.web3contract) -> WriteTransaction? {
+        let mergedOptions = contract.transactionOptions?.merge(transactionOptions)
+        guard var tx = self.method(method: method, parameters: parameters, extraData: extraData, type: transactionOptions.type, contract: contract.contract) else { return nil }
+        tx.chainID = contract.web3.provider.network?.chainID
+        let writeTX = WriteTransaction.init(transaction: tx, web3: contract.web3, contract: contract.contract, method: method, transactionOptions: mergedOptions)
+        return writeTX
+    }
+    
+    /**
      Demonstrate the new transaction pipeline
      */
     func testNewTransactionPipeline() throws {
@@ -77,18 +110,18 @@ class CommutoCoreInteraction: XCTestCase {
         options.nonce = .pending
         
         // We are using a hacky custom write method here, that will create a transaction of the type specified in the passed TransactionOptions. Normally, web3swift creates a legacy (pre-London) transaction regardless, which causes a node error because the maxFeePerGas of the transaction will end up being zero after serialization (since the transaction object itself has no actual maxFeePerGas property)
-        let writeTransaction: WriteTransaction = contract.write("transfer", parameters: [tokenRecipientAddress, amount!] as [AnyObject], extraData: Data(), transactionOptions: options)!
+        let writeTransaction: WriteTransaction = write(method: "transfer", parameters: [tokenRecipientAddress, amount!] as [AnyObject], extraData: Data(), transactionOptions: options, contract: contract)!
         var writeTransactionParameters = writeTransaction.transaction.parameters
         // Here we TEMPORARILY give our transaction a maxFeePerGas of 100.0 eth (just an arbitrary number) so the maxFeePerGas field of our serialized transaction will not be zero during gas estimation. Otherwise, we get a node error complaining about "Transaction's maxFeePerGas (0) is less than the block's baseFeePerGas"
         writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
         writeTransaction.transaction.parameters = writeTransactionParameters
         var ethereumTransaction = try! writeTransaction.assemble()
         print("ERC20 Transfer Transaction:")
-        print("Estimated Gas Cost/Gas Limit: \(ethereumTransaction.gasLimit)")
-        print("Max Fee Per Gas (Wei): \(ethereumTransaction.maxFeePerGas)")
-        print("Total Cost of Gas (in Wei): \(ethereumTransaction.gasLimit * ethereumTransaction.maxFeePerGas)")
+        print("Estimated Gas Cost/Gas Limit: \(ethereumTransaction.parameters.gasLimit!)")
+        print("Max Fee Per Gas (Wei): \(ethereumTransaction.parameters.maxFeePerGas!)")
+        print("Total Cost of Gas (in Wei): \(ethereumTransaction.parameters.gasLimit! * ethereumTransaction.parameters.maxFeePerGas!)")
         
-        // If the user cancels the process, we stop here. Otherwise, we should create a new TransactionOptions object using the max priority fee per gas and max fee per gas specified by the user, if any, reassemble the transaction using these new transaction options, sign the transaction, and record and save its transaction ID.
+        // If the user cancels the process, we stop here. Otherwise, we should create a new TransactionOptions struct using the gas limit, max priority fee per gas and max fee per gas specified by the user, if any, reassemble the transaction using these new transaction options, sign the transaction, and record and save its transaction ID.
         let newOptions = options
         ethereumTransaction = try! writeTransaction.assemble(transactionOptions: newOptions)
         try! Web3Signer.signTX(transaction: &ethereumTransaction, keystore: keystoreManager, account: address, password: password)
