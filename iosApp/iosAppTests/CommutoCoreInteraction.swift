@@ -57,7 +57,7 @@ class CommutoCoreInteraction: XCTestCase {
         // The address to which we will send some ERC20 tokens (Hardhat account #2)
         let tokenRecipientAddress = EthereumAddress("0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc")!
         // The contract address of the tokens that we will send (Dai on Hardhat as set up by CommutoSwap test scripts)
-        let ERC20ContractAddress = EthereumAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3")!
+        let ERC20ContractAddress = EthereumAddress("0x663F3ad617193148711d28f5334eE4Ed07016602")!
         
         // Set up web3 instance
         let endpoint = ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!
@@ -74,6 +74,7 @@ class CommutoCoreInteraction: XCTestCase {
         options.from = address
         options.maxPriorityFeePerGas = .automatic
         options.maxFeePerGas = .automatic
+        options.nonce = .pending
         
         // We are using a hacky custom write method here, that will create a transaction of the type specified in the passed TransactionOptions. Normally, web3swift creates a legacy (pre-London) transaction regardless, which causes a node error because the maxFeePerGas of the transaction will end up being zero after serialization (since the transaction object itself has no actual maxFeePerGas property)
         let writeTransaction: WriteTransaction = contract.write("transfer", parameters: [tokenRecipientAddress, amount!] as [AnyObject], extraData: Data(), transactionOptions: options)!
@@ -144,6 +145,60 @@ class CommutoCoreInteraction: XCTestCase {
         }
         
         print("Transaction confirmed. Hash: \(transactionSendingResult.hash)")
+        
+    }
+    
+    /**
+     Demonstrate the handling of reverted transactions in the new transaction pipeline.
+     
+     Ideally, when the user does something that results in the creation and broadcasting of a write transaction, they stay in the app long enough and their transaction is confirmed quick enough so that, if it reverts, the send-transaction call throws an error containing the revert string. However, if the user leaves the app before the transaction is confirmed, we will never get this revert string, since it is not stored anywhere on-chain. When we re-start the app, the best we can do is attempt to get the receipt of the transaction and check if its status is failed. If it is, then `BlockchainService` can notify the proper service object, which can display a message like "Transaction failed for unknown reason" to the user.
+     */
+    func testNewTransactionPipelineRevertHandling() throws {
+        // Restore Hardhat account #19 (to which no test Dai should be transfered, otherwise this test will fail)
+        let password = "a_password"
+        let formattedKey = "df57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e".trimmingCharacters(in: .whitespacesAndNewlines)
+        let keyStore = try! EthereumKeystoreV3(privateKey: Data.fromHex(formattedKey)!, password: password)!
+        let keystoreManager = KeystoreManager([keyStore])
+        
+        // The address to which we will send some ERC20 tokens (Hardhat account #2)
+        let tokenRecipientAddress = EthereumAddress("0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc")!
+        // The contract address of the tokens that we will send (Dai on Hardhat as set up by CommutoSwap test scripts)
+        let ERC20ContractAddress = EthereumAddress("0x663F3ad617193148711d28f5334eE4Ed07016602")!
+        
+        // Set up web3 instance
+        let endpoint = ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!
+        let web3 = web3(provider: Web3HttpProvider(URL(string: endpoint)!)!)
+        web3.addKeystoreManager(keystoreManager)
+        
+        // Create the contract object
+        let contract = web3.contract(Web3.Utils.erc20ABI, at: ERC20ContractAddress, abiVersion: 2)!
+        
+        // Create transaction options. We use the legacy type and manually specify the gas limit and gas price because this test demonstrates error handling, not transaction creation.
+        var options = TransactionOptions()
+        options.from = keyStore.getAddress()
+        options.type = .legacy
+        options.gasLimit = .manual(BigUInt(30000000))
+        options.gasPrice = .manual(BigUInt(30000000))
+                
+        // Create and sign the transaction, and then save its hash.
+        var ethereumTransaction = try contract.write("transfer", parameters: [tokenRecipientAddress, Web3.Utils.parseToBigUInt("100.0", units: .eth)!] as [AnyObject], extraData: Data(), transactionOptions: options)!.assemble()
+        try! Web3Signer.signTX(transaction: &ethereumTransaction, keystore: keystoreManager, account: keyStore.getAddress()!, password: password)
+        guard let transactionHash = ethereumTransaction.hash?.toHexString().addHexPrefix().lowercased() else {
+            throw Web3Error.inputError(desc: "Unable to get hash of transaction")
+        }
+
+        // Send the transaction to the node. The transaction will revert because Hardhat Address #19 has zero token balance, meaning the sendRawTransaction call with throw a Web3Error.nodeError. We catch such an error and check for the proper revert string.
+        do {
+            _ = try web3.eth.sendRawTransaction(ethereumTransaction)
+        } catch Web3Error.nodeError(let desc){
+            if desc != "Error: VM Exception while processing transaction: reverted with reason string \'ERC20: transfer amount exceeds balance\'" {
+                throw Web3Error.nodeError(desc: desc)
+            }
+        }
+        
+        // We get the receipt of the reverted transaction and ensure that it has the proper transaction status. In production, we should get the proper TransactionOfInterest-like object from the list/map of transaction ids, and then notify the proper service object of transaction failure.
+        let transactionReceipt = try web3.eth.getTransactionReceipt(transactionHash)
+        XCTAssertEqual(TransactionReceipt.TXStatus.failed, transactionReceipt.status)
         
     }
     
