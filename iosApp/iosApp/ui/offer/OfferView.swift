@@ -85,6 +85,11 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
     @State private var isShowingTakeOfferSheet = false
     
     /**
+     Indicates whether or not we are showing the sheet that allows the user to cancel the offer, if they are the maker.
+     */
+    @State private var isShowingCancelOfferSheet = false
+    
+    /**
      The string that  will be displayed in the label  of the button that edits the offer.
      */
     var takeOfferButtonLabel: String {
@@ -199,6 +204,7 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                         )
                         .accentColor(Color.primary)
                         if (offer.isUserMaker) {
+                            // The user is the maker of this offer, so we display buttons for editing and canceling the offer
                             if offer.editingOfferState == .error {
                                 Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
                                     .foregroundColor(Color.red)
@@ -231,10 +237,13 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                             }
                             Button(
                                 action: {
+                                    isShowingCancelOfferSheet = true
                                     // Don't let the user try to cancel the offer if it is already canceled or being canceled
+                                    /*
                                     if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
                                         offerTruthSource.cancelOffer(offer)
                                     }
+                                     */
                                 },
                                 label: {
                                     Text(cancelingOfferButtonLabel)
@@ -249,7 +258,15 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                                 }
                             )
                             .accentColor(Color.red)
+                            .sheet(isPresented: $isShowingCancelOfferSheet) {
+                                CancelOfferView(
+                                    offer: offer,
+                                    isShowingCancelOfferSheet: $isShowingCancelOfferSheet,
+                                    offerTruthSource: offerTruthSource
+                                )
+                            }
                         } else if (offer.state == .offerOpened) {
+                            // The user is not the maker of this offer, so we display a button for canceling the offer
                             if offer.takingOfferState == .error {
                                 Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
                                     .foregroundColor(Color.red)

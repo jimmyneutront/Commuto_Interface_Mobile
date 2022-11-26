@@ -392,20 +392,6 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 return SwapRole.makerAndSeller
             }
         }
-        let deserializedSelectedSettlementMethod = try? JSONDecoder().decode(SettlementMethod.self, from: swapOnChain.settlementMethod)
-        if deserializedSelectedSettlementMethod == nil {
-            logger.warning("handleNewSwap: unable to deserialize selected settlement method \(swapOnChain.settlementMethod.base64EncodedString()) for \(takenOffer.id)")
-        }
-        let selectedSettlementMethod = takenOffer.settlementMethods.first { settlementMethod in
-            if deserializedSelectedSettlementMethod?.currency == settlementMethod.currency && deserializedSelectedSettlementMethod?.price == settlementMethod.price && deserializedSelectedSettlementMethod?.method == settlementMethod.method {
-                return true
-            } else {
-                return false
-            }
-        }
-        if selectedSettlementMethod == nil {
-            logger.warning("handleNewSwap: unable to find settlement for offer \(takenOffer.id) matching that selected by taker: \(swapOnChain.settlementMethod.base64EncodedString())")
-        }
         let newSwap = try Swap(
             isCreated: swapOnChain.isCreated,
             requiresFill: swapOnChain.requiresFill,
@@ -433,7 +419,19 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             state: .awaitingTakerInformation,
             role: swapRole
         )
-        newSwap.makerPrivateSettlementMethodData = selectedSettlementMethod?.privateData
+        let deserializedSelectedSettlementMethod = try? JSONDecoder().decode(SettlementMethod.self, from: swapOnChain.settlementMethod)
+        if let deserializedSelectedSettlementMethod = deserializedSelectedSettlementMethod {
+            let selectedSettlementMethod = takenOffer.settlementMethods.first { settlementMethod in
+                return deserializedSelectedSettlementMethod.currency == settlementMethod.currency && deserializedSelectedSettlementMethod.price == settlementMethod.price && deserializedSelectedSettlementMethod.method == settlementMethod.method
+            }
+            if let selectedSettlementMethod = selectedSettlementMethod {
+                newSwap.makerPrivateSettlementMethodData = selectedSettlementMethod.privateData
+            } else {
+                logger.warning("handleNewSwap: unable to find settlement for offer \(takenOffer.id) matching that selected by taker: \(swapOnChain.settlementMethod.base64EncodedString())")
+            }
+        } else {
+            logger.warning("handleNewSwap: unable to deserialize selected settlement method \(swapOnChain.settlementMethod.base64EncodedString()) for \(takenOffer.id)")
+        }
         // Persistently store new swap object
         logger.notice("handleNewSwap: persistently storing \(takenOffer.id.uuidString)")
         let newSwapForDatabase = DatabaseSwap(

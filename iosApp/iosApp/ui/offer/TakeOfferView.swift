@@ -44,11 +44,11 @@ struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
     @State var specifiedStablecoinAmount = 0
     
     /**
-     The settlement method (created by the offer maker) )by which the user has chosen to send/receive traditional currency payment, or `nil` if the user has not made such a selection.
+     The settlement method (created by the offer maker) by which the user has chosen to send/receive traditional currency payment, or `nil` if the user has not made such a selection.
      */
     @State var selectedMakerSettlementMethod: SettlementMethod? = nil
     /**
-     The user's/taker's settlement method corresponding to `selectedMakerSettlementMethod`, containing the user's/taker's private data which will be sent to the maker. Must have the same currency and method value as `selectedMakerSettlementMethod`
+     The user's/taker's settlement method corresponding to `selectedMakerSettlementMethod`, containing the user's/taker's private data which will be sent to the maker. Must have the same currency and method value as `selectedMakerSettlementMethod`.
      */
     @State var selectedTakerSettlementMethod: SettlementMethod? = nil
     
@@ -239,7 +239,7 @@ struct FilterableSettlementMethodSelector<TruthSource>: View where TruthSource: 
     @ObservedObject var settlementMethodTruthSource: TruthSource
     
     /**
-     All settlement methods belonging to the user with method and currency properties equal to that of `selectedMakerSettlementMethod`, or none if `selectedMakerSettlementMethod` is nil.
+     All settlement methods belonging to the user with method and currency properties equal to that of `selectedMakerSettlementMethod`, or none if `selectedMakerSettlementMethod` is `nil`.
      */
     var matchingSettlementMethods: [SettlementMethod] {
         settlementMethodTruthSource.settlementMethods.filter { settlementMethod in

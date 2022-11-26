@@ -316,6 +316,32 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
+     Attempts to create an `EthereumTransaction` that will cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface, with the ID specified by `offerID` and on the blockchain specified by `chainID`.
+     
+     On the global `DispatchQueue`, this calls `BlockchainService.createCancelOfferTransaction`, passing `offerID` and `chainID`, and pipes the result to the seal of the `Promise` this returns.
+     
+     - Parameters:
+        - offerID: The ID of the `Offer` to be canceled.
+        - chainID: The ID of the blockchain on which the `Offer` exists.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of cancelling the offer specified by `offerID` on the blockchain specified by `chainID`.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a promise, this error will not actually be thrown, but will be passed to `seal.reject.`
+     */
+    func createCancelOfferTransaction(offerID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createCancelOfferTransaction: creating for \(offerID.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    seal.reject(OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during createCancelOfferTransaction call"))
+                    return
+                }
+                blockchainService.createCancelOfferTransaction(offerID: offerID, chainID: chainID).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
      Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
      On the global `DispatchQueue`, this serializes the new settlement methods, saves them and their private data persistently as pending settlement methods, and calls the CommutoSwap contract's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, passing the offer ID and an `OfferStruct` containing the new serialized settlement methods.
@@ -747,7 +773,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`.
      
-     Once notified, `OfferService` saves `event` in `offerEditedEventsRepository`, gets updated on-chain offer data by calling `blockchainService`'s `getOffer` method, and verifies that the chain ID of the event and the offer data match. Then this checks if the user of the interface is the maker of the offer being edited. If so, then the new settlement methods for the offer and their associated private data should be stored in the pending settlement methods database table. So this gets that data from `databaseService`, and then deserialzes the data to `SettlementMethod` objects and adds them to a list, logging warnings when such a `SettlementMethod` has no associated private data. Then this creates another list of `SettlementMethod` objects that it creates by deserializing the settlement method data in the new on-chain offer data. Then this iterates through the latter list of `SettlementMethod` objects, searching for maching `SettlementMethod` objects in the former list (matching meaning that price, currency, and fiat currency values are equal; obviously on-chain settlement methods will have no private data). If, for a given `SettlementMethod` in the latter list, a matching `SettlementMethod` (which definitely has associated private data) is found in the former list, the matching element in the former list is added to a third list of `SettlementMethods`. Once this iteration task is complete, this persistently stores the third list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`. If the user of this interface is not the maker of the offer being edited, this creates a new list of `SettlementMethod`s by deserializing the settlement method data in the new on-chain offer data, persistently stores the list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`.
+     Once notified, `OfferService` saves `event` in `offerEditedEventRepository`, gets updated on-chain offer data by calling `BlockchainService.getOffer`, and verifies that the chain ID of the event and the offer data match. Then this checks if the user of the interface is the maker of the offer being edited. If so, then the new settlement methods for the offer and their associated private data should be stored in the pending settlement methods database table. So this gets that data from `databaseService`, and then deserializes the data to `SettlementMethod` objects and adds them to a list, logging warnings when such a `SettlementMethod` has no associated private data. Then this creates another list of `SettlementMethod` objects that it creates by deserializing the settlement method data in the new on-chain offer data. Then this iterates through the latter list of `SettlementMethod` objects, searching for matching `SettlementMethod` objects in the former list (matching meaning that price, currency, and fiat currency values are equal; obviously on-chain settlement methods will have no private data). If, for a given `SettlementMethod` in the latter list, a matching `SettlementMethod` (which definitely has associated private data) is found in the former list, the matching element in the former list is added to a third list of `SettlementMethods`. Once this iteration task is complete, this persistently stores the third list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`. If the user of this interface is not the maker of the offer being edited, this creates a new list of `SettlementMethod`s by deserializing the settlement method data in the new on-chain offer data, persistently stores the list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`.
      
      - Parameter event: The `OfferEditedEvent` of which `OfferService` is being notified.
      
@@ -761,7 +787,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         }
         // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
         guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
-            logger.notice("handleOfferEditedEvent: no on-chain offer was found with ID specified in OfferOpenedEvent in handleOfferOpenedEvent call. OfferOpenedEvent.id: \(event.id.uuidString)")
+            logger.notice("handleOfferEditedEvent: no on-chain offer was found with ID specified in OfferEditedEvent in handleOfferEditedEvent call. OfferEditedEvent.id: \(event.id.uuidString)")
             return
         }
         logger.notice("handleOfferEditedEvent: got offer \(event.id.uuidString)")
@@ -770,7 +796,6 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         }
         let offerIDB64String = event.id.asData().base64EncodedString()
         let chainIDString = String(event.chainID)
-        var newSettlementMethods: [SettlementMethod] = []
         guard let offerTruthSource = offerTruthSource else {
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferEditedEvent call")
         }
@@ -783,6 +808,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             /*
              The user of this interface is the maker of this offer, and therefore we should have pending settlement methods for this offer in persistent storage.
              */
+            var newSettlementMethods: [SettlementMethod] = []
             let pendingSettlementMethods = try databaseService.getPendingOfferSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
             var deserializedPendingSettlementMethods: [SettlementMethod] = []
             if let pendingSettlementMethods = pendingSettlementMethods {
@@ -820,6 +846,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     } else {
                         logger.warning("handleOfferEditedEvent: unable to find pending settlement method for on-chain settlement method \(onChainSettlementMethod) for \(event.id.uuidString)")
                     }
+                } catch {
+                    logger.warning("handleOfferEditedEvent: encountered error while deserializing on-chain settlement method \(onChainSettlementMethod.base64EncodedString()) for \(event.id.uuidString)")
                 }
             }
             
@@ -828,7 +856,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }
             
             let newSerializedSettlementMethods = try newSettlementMethods.map { newSettlementMethod in
-                // Since we just deserialized these settlement methods, we should never get an error while reserializing them again
+                // Since we just deserialized these settlement methods, we should never get an error while re-serializing them again
                 return (try JSONEncoder().encode(newSettlementMethod).base64EncodedString(), newSettlementMethod.privateData)
             }
             try databaseService.storeOfferSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString, settlementMethods: newSerializedSettlementMethods)
@@ -895,7 +923,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventsRepository` and calls `SwapService.sendTakerInformationMessage`, passing the swap ID and chain ID in `event`. If this call returns true, then the user of this interface is the taker of this offer and all necessary action has been taken, so this returns. Otherwise, the user of this interface is not the taker of this offer, and therefore this searches for an `Offer` in `offerTruthSource` with an ID equal to that specified in `event`. If this finds such an `Offer`, this ensures that the chain ID of the offer and the chain ID specified in `event` match, and then checks if the user of this interface is the maker of the offer. If so, this calls `swapService.handleNewSwap`. Then, regardless of whether the user of this interface is the maker of the offer, this removes the corresponding offer and its settlement methods from persistent storage, and then synchronously removes the `Offer` from `offersTruthSource` on the main thread. Finally, regardless of whether the user of this interface is the maker or taker of this offer or neither, this removes `event` from `offerTakenEventRepository`.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferTakenEvent`. Once notified, `OfferService` saves `event` in `offerTakenEventRepository` and calls `SwapService.sendTakerInformationMessage`, passing the swap ID and chain ID in `event`. If this call returns true, then the user of this interface is the taker of this offer and all necessary action has been taken, so this returns. Otherwise, the user of this interface is not the taker of this offer, and therefore this searches for an `Offer` in `offerTruthSource` with an ID equal to that specified in `event`. If this finds such an `Offer`, this ensures that the chain ID of the offer and the chain ID specified in `event` match, and then checks if the user of this interface is the maker of the offer. If so, this calls `swapService.handleNewSwap`. Then, regardless of whether the user of this interface is the maker of the offer, this removes the corresponding offer and its settlement methods from persistent storage, and then synchronously removes the `Offer` from `offersTruthSource` on the main thread. Finally, regardless of whether the user of this interface is the maker or taker of this offer or neither, this removes `event` from `offerTakenEventRepository`.
      
      - Parameter event: The `OfferTakenEvent` of which `OfferService` is being notified.
      
@@ -915,6 +943,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }
             guard let offer = offerTruthSource.offers[event.id] else {
                 logger.notice("handleOfferTakenEvent: got event for offer \(event.id.uuidString) not found in offerTruthSource")
+                offerTakenEventRepository.remove(event)
                 return
             }
             if (offer.chainID == event.chainID) {

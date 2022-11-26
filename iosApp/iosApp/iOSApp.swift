@@ -83,8 +83,8 @@ struct iOSApp: App {
         // Register the OffersViewModel singleton
         container.register(OffersViewModel.self) { r in
             OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!)
-            
         }
+            .inObjectScope(.container)
         // Register the SwapViewModel singleton
         container.register(SwapViewModel.self) { r in SwapViewModel(swapService: r.resolve(SwapService.self)!) }
             .inObjectScope(.container)

@@ -35,6 +35,9 @@ enum EditingSettlementMethodState {
      */
     case error
     
+    /**
+     A human-readable string describing the current state.
+     */
     var description: String {
         switch self {
         case .none: // Note: This should not be used
@@ -48,7 +51,7 @@ enum EditingSettlementMethodState {
         case .completed:
             return "Settlement method edited."
         case .error:
-            return "An error occured." // Note: This should not be used; instead, the actual error message should be displayed.
+            return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed.
         }
     }
     

@@ -173,7 +173,7 @@ class DatabaseService {
     /**
      A database structure representing an initialization vector used to encrypt a `makerPrivateSettlementMethodData`. This field is optional because this interface may not have   `makerPrivateSettlementMethodData`.
      */
-    let makerPrivateSettlementMethodDataInitializationVector = Expression<String?>("privateDataInitializationVector")
+    let makerPrivateSettlementMethodDataInitializationVector = Expression<String?>("makerPrivateDataInitializationVector")
     /**
      A database structure representing a taker's encrypted private data for their swap's settlement method. This field is optional because this interface may not yet have obtained the swap taker's private data.
      */
@@ -486,7 +486,7 @@ class DatabaseService {
     }
     
     /**
-     Encrypts `privateSettlementMethodData` with `databaseKey` along with the initialization vector used for encryption, and returns both as Base64 encoded strings of bytes within a tuple, or returns `nil` if `privateSettlementMethodData` is `nil`.
+     Encrypts `privateSettlementMethodData` with `databaseKey` along with the initialization vector used for encryption, and returns both as Base64 encoded strings of bytes within a tuple, or returns a tuple of two `nil` values if `privateSettlementMethodData` is `nil`.
      
      - Parameter privateSettlementMethodData: The string of private data to be symmetrically encrypted with `databaseKey`.
      - Returns: A tuple containing to optional strings. If `privateSettlementMethodData` is not `nil`, the first will be `privateSettlementMethodData` encrypted with `databaseKey` and a new initialization vector as a Base64 encoded string of bytes, and the second will be the initialization vector used to encrypt `privateSettlementMethodData`, also as a Base64 encoded string of bytes. If `privateSettlementMethodData` is `nil`, both strings will be `nil`
@@ -505,19 +505,17 @@ class DatabaseService {
     }
     
     /**
-     Decrypts `privateSettlementMethodData` with `databaseKey` and `privateSettlementMethodDataInitializationVector` and then returns the result as a UTF-8 string, or returns `nil` if `privateSettlementMethodData` or `privateSettlementMethodDataInitializationVector` is `nil`.
+     Decrypts `privateSettlementMethodData` with `databaseKey` and `privateSettlementMethodDataInitializationVector` and then returns the result as a UTF-8 string, or returns `nil` if `privateSettlementMethodData` or `privateSettlementMethodDataInitializationVector` is `nil` or if decryption is unsuccessful.
      
      - Parameters:
         - privateSettlementMethodData: The private data to be decrypted, as a Base64 encoded string of bytes.
         - privateSettlementMethodDataInitializationVector: The initialization vector that will be used to decrypt `privateSettlementMethodData`, as a Base64 encoded string of bytes.
      
-     - Returns: An optional string that will either be a UTF-8 string made from the results of decryption, or `nil` if either of the parameters are `nil`.
+     - Returns: An optional string that will either be a UTF-8 string made from the results of decryption, or `nil` if either of the parameters are `nil` or if decryption is unsuccessful.
      */
     private func decryptPrivateSwapSettlementMethodData(privateSettlementMethodData: String?, privateSettlementMethodDataInitializationVector: String?) throws -> String? {
         var decryptedPrivateDataString: String? = nil
-        let privateDataCipherString = privateSettlementMethodData
-        let privateDataInitializationVectorString = privateSettlementMethodDataInitializationVector
-        if let privateDataCipherString = privateDataCipherString, let privateDataInitializationVectorString = privateDataInitializationVectorString {
+        if let privateDataCipherString = privateSettlementMethodData, let privateDataInitializationVectorString = privateSettlementMethodDataInitializationVector {
             let privateCipherData = Data(base64Encoded: privateDataCipherString)
             let privateDataInitializationVector = Data(base64Encoded: privateDataInitializationVectorString)
             if let privateCipherData = privateCipherData, let privateDataInitializationVector = privateDataInitializationVector {
@@ -534,7 +532,7 @@ class DatabaseService {
      Attempts to decrypt the supplied cipher data using `databaseKey` and the supplied initialization vector string.
      
      - Parameters:
-        - privateDataCipherString: The cipher data to be decrypted, as a Base64-encoded string/
+        - privateDataCipherString: The cipher data to be decrypted, as a Base64-encoded string.
         - privateDataInitializationVector: The initialization vector with which to decrypt `privateDataCipherString`.
         - decryptionFailureHandler: A closure that will be executed if decryption fails.
         - decodingFailureHandler: A closure that will be executed if decoding the cipher string or initialization vector fails.
@@ -620,7 +618,7 @@ class DatabaseService {
      - Parameters:
         - offerID: The ID of the offer or swap to be associated with the settlement methods.
         - chainID: The ID of the blockchain on which the `Offer` or `Swap` corresponding to these settlement methods exists, as a `String`.
-        - settlementMethods: The settlement methods to be persistently stored, as a tuple containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
+        - settlementMethods: The settlement methods to be persistently stored, as tuples containing a string and an optional string, in that order. The first element in a tuple is the public settlement method data, including price, currency and type. The second element element in a tuple is private data (such as an address or bank account number) for the settlement method, if any.
      */
     func storeOfferSettlementMethods(offerID: String, _chainID: String, settlementMethods _settlementMethods: [(String, String?)]) throws {
         try insertSettlementMethodsIntoTable(offerID: offerID, _chainID: _chainID, settlementMethods: _settlementMethods, table: offerSettlementMethods)
@@ -641,8 +639,6 @@ class DatabaseService {
 
     /**
      Calls `DatabaseService.getAndDecryptSettlementMethodsFromTable`, passing all parameters passed to this function and the table of the offer's current settlement methods.
-     
-     Retrieves the persistently stored settlement methods their private data (if any) associated with the specified offer ID and chain ID, or returns `nil` if no such settlement methods are present.
      
      - Parameters:
         - offerID: The ID of the offer for which settlement methods should be returned, as a Base64-`String` of bytes.
@@ -682,8 +678,6 @@ class DatabaseService {
 
     /**
      Calls `DatabaseService.getAndDecryptSettlementMethodsFromTable`, passing all parameters passed to this function and the table of the offer's pending settlement methods.
-     
-     Retrieves the persistently stored pending settlement methods their private data (if any) associated with the specified offer ID and chain ID, or returns `nil` if no such pending settlement methods are present.
      
      - Parameters:
         - offerID: The ID of the offer for which pending settlement methods should be returned, as a Base64-`String` of bytes.
@@ -999,7 +993,7 @@ class DatabaseService {
             throw DatabaseServiceError.unexpectedQueryResult(message: "Multiple Swaps found with given swap id \(_id)")
         } else if result.count == 1 {
             guard result[0][id] == _id else {
-                throw DatabaseServiceError.unexpectedQueryResult(message: "Swap ID of returned ")
+                throw DatabaseServiceError.unexpectedQueryResult(message: "Returned swap ID \(result[0][id]) did not match specified swap ID \(_id)")
             }
             let decryptedMakerPrivateData = try decryptPrivateSwapSettlementMethodData(
                 privateSettlementMethodData: result[0][makerPrivateSettlementMethodData],
@@ -1089,7 +1083,7 @@ class DatabaseService {
     }
     
     /**
-     Removes every persistently stored settlement method with an ID equal to `id` from `userSettlementMethods`.
+     Removes every persistently stored settlement method with an ID equal to `id` from the table of the user's settlement methods.
      
      - Parameter id: The ID of the settlement method(s) to be deleted.
      */
@@ -1107,7 +1101,7 @@ class DatabaseService {
      
      - Throws `DatabaseServiceError.unexpectedNilError` If the database query returns a non-empty result that somehow doesn't have a first element.
      
-     - Returns: `nil` if no such settlement method si found, or a tuple containing a string and an optional string, the first of which is a settlement method associated with `id`, the second of which is the private data associated with that settlement method, or `nil` if no such data is found or if it cannot be decrypted.
+     - Returns: `nil` if no such settlement method is found, or a tuple containing a string and an optional string, the first of which is a settlement method associated with `id`, the second of which is the private data associated with that settlement method, or `nil` if no such data is found or if it cannot be decrypted.
      */
     func getUserSettlementMethod(id: String) throws -> (String, String?)? {
         logger.notice("getUserSettlementMethod: getting \(id)")

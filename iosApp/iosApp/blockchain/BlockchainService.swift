@@ -36,6 +36,7 @@ class BlockchainService {
         w3 = web3Instance
         self.commutoSwapAddress = commutoSwapAddress
         commutoSwap = CommutoSwapProvider.provideCommutoSwap(web3Instance: web3Instance, commutoSwapAddress: commutoSwapAddress)
+        commutoSwapEthereumContract = CommutoSwapProvider.provideCommutoSwapEthereumContract(commutoSwapAddress: commutoSwapAddress)!
         #warning("TODO: we temporarily create a wallet here until WalletService is implemented.")
         let ethPassword = "web3swift"
         let ethPrivateKey = "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
@@ -122,6 +123,11 @@ class BlockchainService {
      The web3swift `web3.contract` instance of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) that `BlockchainService` uses to parse transaction receipts for CommutoSwap events and interact with the CommutoSwap contract on chain.
      */
     private let commutoSwap: web3.web3contract
+    
+    /**
+     An `EthereumContract` identical to that wrapped by `commutoSwap`. We need this because the `EthereumContract` wrapped by `commutoSwap` has the internal protection level, and we must call some of this struct's methods in the transaction creation pipeline.
+     */
+    private let commutoSwapEthereumContract: EthereumContract
     
     /**
      Creates a new `Thread` to run `listenLoop()`,  updates `listenThread` with a reference to the new `Thread`, and starts it.
@@ -273,6 +279,57 @@ class BlockchainService {
     }
     
     /**
+     Nearly identical to `EthereumContract`'s `method` method, except this passes `type` to any `EthereumParameters` struct that it creates.
+     
+     - Parameters:
+        - method: The name of the contract method to call.
+        - parameters: The parameters that will be passed to the method specified by `method`.
+        - extraData: Extra data that will be included in the transaction.
+        - type: The type of the transaction to create.
+        - contract: The contract containing the method that this transaction will call.
+     
+     - Returns: An optional `EthereumTransaction` of the specified `type` that calls the `method` method of `contract`, with the specified `parameters` and `extraData`.
+     */
+    func method(method: String = "fallback", parameters: [AnyObject], extraData: Data, type: TransactionType?, contract: EthereumContract) -> EthereumTransaction? {
+        guard let to = contract.address else { return nil }
+        if (method == "fallback") {
+            let params = EthereumParameters(type: type, gasLimit: BigUInt(0), gasPrice: BigUInt(0))
+            let transaction = EthereumTransaction(to: to, value: BigUInt(0), data: extraData, parameters: params)
+            
+            return transaction
+        }
+        let foundMethod = contract.methods.filter { (key, value) -> Bool in
+            return key == method
+        }
+        guard foundMethod.count == 1 else { return nil }
+        let abiMethod = foundMethod[method]
+        guard let encodedData = abiMethod?.encodeParameters(parameters) else { return nil }
+        let params = EthereumParameters(type: type, gasLimit: BigUInt(0), gasPrice: BigUInt(0))
+        let transaction = EthereumTransaction(to: to, value: BigUInt(0), data: encodedData, parameters: params)
+        return transaction
+    }
+    
+    /**
+     Nearly identical to `web3.web3contract`'s `write` method, except this passes the type in `transactionOptions` to the custom `method` implementation defined above.
+     
+     - Parameters:
+        - method: The name of the contract method to call.
+        - parameters: The parameters that will be passed to the method specified by `method`.
+        - extraData: Extra data that will be included in the transaction.
+        - transactionOptions: Options with which the transaction will be created.
+        - contract: The contract containing the method that this transaction will call.
+  
+     - Returns: An optional `WriteTransaction` with the specified `transactionOptions` that calls the `method` method of `contract`, with the specified `parameters` and `extraData`.
+     */
+    func createWriteTransaction(method: String = "fallback", parameters: [AnyObject], extraData: Data, transactionOptions: TransactionOptions, contract: EthereumContract) -> WriteTransaction? {
+        let mergedOptions = contract.transactionOptions?.merge(transactionOptions)
+        guard var tx = self.method(method: method, parameters: parameters, extraData: extraData, type: transactionOptions.type, contract: contract) else { return nil }
+        tx.chainID = self.w3.provider.network?.chainID
+        let writeTX = WriteTransaction.init(transaction: tx, web3: self.w3, contract: contract, method: method, transactionOptions: mergedOptions)
+        return writeTX
+    }
+    
+    /**
      A `Promise` wrapper around the [ERC20](https://eips.ethereum.org/EIPS/eip-20) `approve` function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
      
      - Parameters:
@@ -375,6 +432,43 @@ class BlockchainService {
             }.catch { error in
                 seal.reject(error)
             }
+        }
+    }
+    
+    /**
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the users account to call CommutoSwaps [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     
+     - Parameters:
+        - offerID: The ID of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be canceled.
+        - chainID: The blockchain ID on which the offer to be canceled exists.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will cancel the offer specified by `offerID` on the chain specified by `chainID`.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the user's address is nil, or if we get nil while creating the transaction. Since this function returns a `Promise`, these errors will not be thrown but rather passed to the seal rejection call.
+     */
+    func createCancelOfferTransaction(offerID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            var options = TransactionOptions()
+            options.type = .eip1559
+            guard let address = ethKeyStore.getAddress() else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting user's address while creating cancelOffer transaction for \(offerID.uuidString)"))
+                return
+            }
+            options.from = address
+            options.maxPriorityFeePerGas = .automatic
+            options.maxFeePerGas = .automatic
+            options.nonce = .pending
+            
+            let writeTransaction = self.createWriteTransaction(method: "cancelOffer", parameters: [offerID.asData()] as [AnyObject], extraData: Data(), transactionOptions: options, contract: commutoSwapEthereumContract)
+            guard let writeTransaction = writeTransaction else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating cancelOffer transaction for \(offerID.uuidString)"))
+                return
+            }
+            var writeTransactionParameters = writeTransaction.transaction.parameters
+            writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+            writeTransaction.transaction.parameters = writeTransactionParameters
+            let ethereumTransaction = try writeTransaction.assemble()
+            seal.fulfill(ethereumTransaction)
         }
     }
     

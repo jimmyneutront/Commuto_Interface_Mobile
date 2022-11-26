@@ -452,7 +452,7 @@ struct EditSettlementMethodView<TruthSource>: View where TruthSource: UISettleme
      */
     @State private var editingSettlementMethodState: EditingSettlementMethodState = .none
     /**
-     The `Error` that occured during the settlement method adding process, or `nil` if no such error has occured.
+     The `Error` that occurred during the settlement method adding process, or `nil` if no such error has occurred.
      */
     @State private var editSettlementMethodError: Error? = nil
     /**

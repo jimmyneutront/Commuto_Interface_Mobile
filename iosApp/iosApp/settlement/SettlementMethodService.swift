@@ -92,7 +92,7 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
                 settlementMethodTruthSource.settlementMethods.append(newSettlementMethod)
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-                self.logger.notice("addSettlementMethod: encountered error while adding \(settlementMethod.id): \(error.localizedDescription)")
+                self.logger.error("addSettlementMethod: encountered error while adding \(settlementMethod.id): \(error.localizedDescription)")
                 seal.reject(error)
             }
         }
@@ -156,7 +156,7 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
                 }
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-                self.logger.notice("editSettlementMethod: encountered error while editing \(settlementMethod.id): \(error.localizedDescription)")
+                self.logger.error("editSettlementMethod: encountered error while editing \(settlementMethod.id): \(error.localizedDescription)")
                 seal.reject(error)
             }
         }
@@ -171,7 +171,7 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
      
      - Returns: `settlementMethod`, the private data property of which is `privateData` serialized to a string.
      
-     - Throws: A `SettlementMethodServiceError.privateDataSerialization` error cannot be cast as the type of private data corresponding to the type specified in `settlementMethod`, or if serialization fails.
+     - Throws: A `SettlementMethodServiceError.privateDataSerialization` error if 'privateData' cannot be cast as the type of private data corresponding to the type specified in `settlementMethod`, or if serialization fails.
      */
     private func serializePrivateSettlementMethodData(settlementMethod: SettlementMethod, privateData: PrivateData) throws -> SettlementMethod {
         var settlementMethod = settlementMethod
@@ -227,7 +227,7 @@ class SettlementMethodService<_SettlementMethodTruthSource> where _SettlementMet
                 }
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-                self.logger.notice("deleteSettlementMethod: encountered error while deleting \(settlementMethod.id): \(error.localizedDescription)")
+                self.logger.error("deleteSettlementMethod: encountered error while deleting \(settlementMethod.id): \(error.localizedDescription)")
                 seal.reject(error)
             }
         }

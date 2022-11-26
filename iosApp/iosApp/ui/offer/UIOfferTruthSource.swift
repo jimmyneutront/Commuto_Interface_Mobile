@@ -59,8 +59,23 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
      
      - Parameter offer: The `Offer` to be canceled.
      */
+    @available(*, deprecated, message: "Use the new offer pipeline with improved transaction state management")
     func cancelOffer(
         _ offer: Offer
+    )
+    
+    /**
+     Attempts to create an `EthereumTransaction` to cancel `offer`, which should be made by the user of this interface.
+     
+     - Parameters:
+        - offer: The `Offer` to be canceled.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createCancelOfferTransaction(
+        offer: Offer,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
     )
     
     /**

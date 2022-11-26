@@ -228,6 +228,33 @@ class OffersViewModel: UIOfferTruthSource {
     }
     
     /**
+     Attempts to create an `EthereumTransaction` to cancel `offer`, which should be made by the user of this interface.
+     
+     This passes `offer`'s ID and chain ID to `offerService.cancelOffer` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - offer: The `Offer` to be canceled.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createCancelOfferTransaction(
+        offer: Offer,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createCancelOfferTransaction: creating for \(offer.id.uuidString)")
+                offerService.createCancelOfferTransaction(offerID: offer.id, chainID: offer.chainID).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
      Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
      This validates `newSettlementMethods`, passes the offer ID and validated settlement methods to `offerService.editOffer`, and then clears `offer.selectedSettlementMethods`
