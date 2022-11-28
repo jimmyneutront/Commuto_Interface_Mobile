@@ -209,6 +209,7 @@ class OffersViewModel: UIOfferTruthSource {
      
      - Parameter offer: The `Offer` to be canceled.
      */
+    @available(*, deprecated, message: "Use cancelOffer with new transaction pipeline")
     func cancelOffer(_ offer: Offer) {
         setCancelingOfferState(offerID: offer.id, state: .canceling)
         offer.cancelingOfferError = nil
@@ -252,6 +253,22 @@ class OffersViewModel: UIOfferTruthSource {
         }.catch(on: DispatchQueue.main) { error in
             errorHandler(error)
         }
+    }
+    
+    func cancelOffer(offer: Offer, offerCancellationTransaction: EthereumTransaction?) {
+        setCancelingOfferState(offerID: offer.id, state: .canceling)
+        offer.cancelingOfferError = nil
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("cancelOffer: canceling offer \(offer.id.uuidString)")
+        }
+        offerService.cancelOffer(offer: offer, offerCancellationTransaction: offerCancellationTransaction)
+            .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+            self.logger.notice("cancelOffer: successfully broadcast transaction for \(offer.id.uuidString)")
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("cancelOffer: got error during cancelOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+                offer.cancelingOfferError = error
+                setCancelingOfferState(offerID: offer.id, state: .error)
+            }
     }
     
     /**

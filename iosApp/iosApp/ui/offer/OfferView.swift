@@ -237,13 +237,10 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                             }
                             Button(
                                 action: {
-                                    isShowingCancelOfferSheet = true
                                     // Don't let the user try to cancel the offer if it is already canceled or being canceled
-                                    /*
                                     if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
-                                        offerTruthSource.cancelOffer(offer)
+                                        isShowingCancelOfferSheet = true
                                     }
-                                     */
                                 },
                                 label: {
                                     Text(cancelingOfferButtonLabel)

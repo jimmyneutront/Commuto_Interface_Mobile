@@ -107,6 +107,9 @@ class Offer: ObservableObject {
      (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occurred during the offer cancellation process, or `nil` if no such error has occurred.
      */
     var cancelingOfferError: Error? = nil
+    
+    var offerCancellationTransactionHash: String? = nil
+    
     /**
     (This property is used only if the maker of this offer is the user of this interface.) The new `SettlementMethod`s with which the user wants to replace the offer's current settlement methods by editing the offer. If the user is not currently editing this offer, (or if the user is not the maker of this offer) this array should be empty.
      */

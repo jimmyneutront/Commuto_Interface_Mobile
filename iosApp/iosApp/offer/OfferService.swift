@@ -341,6 +341,68 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         }
     }
     
+    #warning("TODO: we should be using offer cancellation state here, not offer state. Additionally, offer cancellation state should be persistently stored")
+    func cancelOffer(offer: Offer, offerCancellationTransaction: EthereumTransaction?) -> Promise<Void> {
+        return Promise { seal in
+            Promise<(EthereumTransaction, String, BlockchainService)> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("cancelOffer: canceling \(offer.id.uuidString)")
+                    // If we can't find the offer in offerTruthSource, we assume it is not taken
+                    guard !(offer.isTaken) else {
+                        seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offer.id.uuidString) is taken and cannot be canceled."))
+                        return
+                    }
+                    do {
+                        guard var offerCancellationTransaction = offerCancellationTransaction else {
+                            throw OfferServiceError.unexpectedNilError(desc: "Transaction was nil during cancelOffer call for \(offer.id.uuidString)")
+                        }
+                        guard let blockchainService = blockchainService else {
+                            throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during cancelOffer call for \(offer.id.uuidString)")
+                        }
+                        logger.notice("cancelOffer: signing transaction for \(offer.id.uuidString)")
+                        try blockchainService.signTransaction(&offerCancellationTransaction)
+                        guard let transactionHashWithoutHexPrefix = offerCancellationTransaction.hash?.toHexString().lowercased() else {
+                            throw OfferServiceError.unexpectedNilError(desc: "Unable to get hash of transaction for \(offer.id.uuidString)")
+                        }
+                        var transactionHash = transactionHashWithoutHexPrefix
+                        if !transactionHash.hasPrefix("0x") {
+                            transactionHash = "0x" + transactionHash
+                        }
+                        #warning("TODO: we should also record the current time and block hight here, store it in the offer and in persistent storage")
+                        logger.notice("cancelOffer: persistently storing tx hash \(transactionHash) for \(offer.id.uuidString)")
+                        #warning("TODO: persistently store tx hash here")
+                        logger.notice("cancelOffer: persistently updating offer \(offer.id.uuidString) state to canceling")
+                        try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.canceling.asString)
+                        logger.notice("cancelOffer: updating offer \(offer.id.uuidString) state to canceling and storing tx hash \(transactionHash) in offer")
+                        seal.fulfill((offerCancellationTransaction, transactionHash, blockchainService))
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.get(on: DispatchQueue.main) { _, transactionHash, _ in
+                offer.state = .canceling
+                offer.offerCancellationTransactionHash = transactionHash
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { nonNilOfferCancellationTransaction, transactionHash, blockchainService -> Promise<TransactionSendingResult> in
+                self.logger.notice("cancelOffer: sending \(transactionHash) for \(offer.id.uuidString)")
+                return blockchainService.sendTransaction(nonNilOfferCancellationTransaction)
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("cancelOffer: persistently updating state of \(offer.id.uuidString) to  cancelOfferTxBroadcast")
+                do {
+                    try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.cancelOfferTransactionBroadcast.asString)
+                    logger.notice("cancelOffer: updating offer \(offer.id.uuidString) state to cancelOfferTxBroadcast")
+                }
+            }.get(on: DispatchQueue.main) { _ in
+                offer.state = .cancelOfferTransactionBroadcast
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                #warning("TODO: update cancelling offer state to error here")
+                self.logger.error("cancelOffer: encountered error while canceling \(offer.id.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
     /**
      Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      

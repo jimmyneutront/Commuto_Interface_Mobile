@@ -78,6 +78,8 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
         errorHandler: @escaping (Error) -> Void
     )
     
+    func cancelOffer(offer: Offer, offerCancellationTransaction: EthereumTransaction?)
+    
     /**
      Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      

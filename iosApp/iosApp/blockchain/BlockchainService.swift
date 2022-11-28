@@ -278,6 +278,11 @@ class BlockchainService {
         }
     }
     
+    #warning("TODO: This should be MUCH more complicated. It should accept some kind of wrapper struct around an EthereumTransaction, that also contains time/block height at which the transaction was created and what the transaction does, so that the listen loop can handle transaction confirmation properly.")
+    func sendTransaction(_ transaction: EthereumTransaction) -> Promise<TransactionSendingResult> {
+        return w3.eth.sendRawTransactionPromise(transaction)
+    }
+    
     /**
      Nearly identical to `EthereumContract`'s `method` method, except this passes `type` to any `EthereumParameters` struct that it creates.
      
@@ -327,6 +332,13 @@ class BlockchainService {
         tx.chainID = self.w3.provider.network?.chainID
         let writeTX = WriteTransaction.init(transaction: tx, web3: self.w3, contract: contract, method: method, transactionOptions: mergedOptions)
         return writeTX
+    }
+    
+    func signTransaction(_ transaction: inout EthereumTransaction) throws {
+        guard let address = ethKeyStore.getAddress() else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting address to sign transaction")
+        }
+        try Web3Signer.signTX(transaction: &transaction, keystore: ethKeyStore, account: address, password: ethPassword)
     }
     
     /**
