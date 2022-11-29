@@ -32,7 +32,7 @@ enum OfferState {
     case taken
     
     
-    #warning("TODO: we should probably remove this state and just use offer cancellation state instead, same for cancelOfferTransactionBroadcast")
+    #warning("TODO: remove canceling and cancelOfferTransactionBroadcast states once old cancelOffer code is removed")
     /**
      Indicates that the corresponding offer will be canceled, but [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) has not yet been called for it.
      */

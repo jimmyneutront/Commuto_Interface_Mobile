@@ -9,7 +9,6 @@
 import SwiftUI
 import web3swift
 
-#warning("TODO: only allow canceling offer if cancellation state is none or error")
 /**
  Allows the user to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) that they have made, and displays the neccessary gas and gas cost before actually cancelling the Offer. This should only be presented inside a sheet.
  */
@@ -53,7 +52,7 @@ struct CancelOfferView<Offer_TruthSource>: View where Offer_TruthSource: UIOffer
                             isShowingCancelOfferSheet = false
                         },
                         label: {
-                            Text("Cancel")
+                            Text("Close")
                         }
                     )
                     .accentColor(Color.primary)
@@ -81,7 +80,9 @@ struct CancelOfferView<Offer_TruthSource>: View where Offer_TruthSource: UIOffer
                         }
                         Button(
                             action: {
+                                // Close the sheet in which this view is presented as soon as the user begins the canceling process.
                                 offerTruthSource.cancelOffer(offer: offer, offerCancellationTransaction: cancelOfferTransaction)
+                                isShowingCancelOfferSheet = false
                             },
                             label: {
                                 Text("Cancel Offer")

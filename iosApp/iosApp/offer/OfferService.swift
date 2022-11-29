@@ -341,7 +341,19 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         }
     }
     
-    #warning("TODO: we should be using offer cancellation state here, not offer state. Additionally, offer cancellation state should be persistently stored")
+    /**
+     Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     On the global `DispatchQueue`, this ensures that the offer is not taken or already being canceled, and that `offerCancellationTransaction` is not `nil`. Then it signs `offerCancellationTransaction`, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `offer` and sets `offer`'s `Offer.cancelingOfferState` property to `CancelingOfferState.sendingTransaction`. Then, on the global `DispatchQueue` it sends `offerCancellationTransaction` to the blockchain. Once a response is received, this persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this sets the value of `offer`'s `Offer.cancelingOfferState` to `OfferState.awaitingTransactionConfirmation`.
+     
+     - Parameters:
+        - offer: The `Offer` being canceled.
+        - offerCancellationTransaction: An optional `EthereumTransaction` that can cancel `offer`.
+     
+     - Returns: An empty `Promise` that will be fulfilled when `offer` is canceled.
+     
+     - Throws: An `OfferServiceError.offerNotAvailableError` if `offer` is taken, or if it is already being canceled, or an `OfferServiceError.unexpectedNilError` if `offerCancellationTransaction` or `blockchainService` are `nil`, or if the hash of `offerCancellationTransaction` after signing is `nil`,. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     */
     func cancelOffer(offer: Offer, offerCancellationTransaction: EthereumTransaction?) -> Promise<Void> {
         return Promise { seal in
             Promise<(EthereumTransaction, String, BlockchainService)> { seal in
@@ -350,6 +362,10 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     // If we can't find the offer in offerTruthSource, we assume it is not taken
                     guard !(offer.isTaken) else {
                         seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offer.id.uuidString) is taken and cannot be canceled."))
+                        return
+                    }
+                    guard (offer.cancelingOfferState == .none || offer.cancelingOfferState == .validating || offer.cancelingOfferState == .error) else {
+                        seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offer.id.uuidString) is already being canceled."))
                         return
                     }
                     do {
@@ -371,33 +387,37 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         #warning("TODO: we should also record the current time and block hight here, store it in the offer and in persistent storage")
                         logger.notice("cancelOffer: persistently storing tx hash \(transactionHash) for \(offer.id.uuidString)")
                         #warning("TODO: persistently store tx hash here")
-                        logger.notice("cancelOffer: persistently updating offer \(offer.id.uuidString) state to canceling")
-                        try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.canceling.asString)
-                        logger.notice("cancelOffer: updating offer \(offer.id.uuidString) state to canceling and storing tx hash \(transactionHash) in offer")
+                        logger.notice("cancelOffer: persistently updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction")
+                        #warning("TODO: update cancelingOfferState in persistent storage here")
+                        logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(transactionHash) in offer")
                         seal.fulfill((offerCancellationTransaction, transactionHash, blockchainService))
                     } catch {
                         seal.reject(error)
                     }
                 }
             }.get(on: DispatchQueue.main) { _, transactionHash, _ in
-                offer.state = .canceling
+                offer.cancelingOfferState = .sendingTransaction
                 offer.offerCancellationTransactionHash = transactionHash
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { nonNilOfferCancellationTransaction, transactionHash, blockchainService -> Promise<TransactionSendingResult> in
                 self.logger.notice("cancelOffer: sending \(transactionHash) for \(offer.id.uuidString)")
                 return blockchainService.sendTransaction(nonNilOfferCancellationTransaction)
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
-                logger.notice("cancelOffer: persistently updating state of \(offer.id.uuidString) to  cancelOfferTxBroadcast")
+                logger.notice("cancelOffer: persistently updating cancelingOfferState of \(offer.id.uuidString) to awaitingTransactionConfirmation")
                 do {
-                    try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.cancelOfferTransactionBroadcast.asString)
-                    logger.notice("cancelOffer: updating offer \(offer.id.uuidString) state to cancelOfferTxBroadcast")
+                    #warning("TODO: update cancelingOfferState in persistent storage here")
+                    logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to awaitingTransactionConfirmation")
                 }
             }.get(on: DispatchQueue.main) { _ in
-                offer.state = .cancelOfferTransactionBroadcast
+                offer.cancelingOfferState = .awaitingTransactionConfirmation
             }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 #warning("TODO: update cancelling offer state to error here")
-                self.logger.error("cancelOffer: encountered error while canceling \(offer.id.uuidString): \(error.localizedDescription)")
+                self.logger.error("cancelOffer: encountered error while canceling \(offer.id.uuidString), setting cancelingOfferState to error: \(error.localizedDescription)")
+                offer.cancelingOfferError = error
+                DispatchQueue.main.async {
+                    offer.cancelingOfferState = .error
+                }
                 seal.reject(error)
             }
         }

@@ -279,6 +279,13 @@ class BlockchainService {
     }
     
     #warning("TODO: This should be MUCH more complicated. It should accept some kind of wrapper struct around an EthereumTransaction, that also contains time/block height at which the transaction was created and what the transaction does, so that the listen loop can handle transaction confirmation properly.")
+    /**
+     Sends an `EthereumTransaction` to the blockchain node via a call to [eth_sendRawTransaction](https://ethereum.github.io/execution-apis/api-documentation/).
+     
+     - Parameter transaction: The `EthereumTransaction` to be sent to the node as a raw transaction.
+     
+     - Returns: A `Promise` wrapped around a `TransactionSendingResult` decoded from the node's response.
+     */
     func sendTransaction(_ transaction: EthereumTransaction) -> Promise<TransactionSendingResult> {
         return w3.eth.sendRawTransactionPromise(transaction)
     }
@@ -334,6 +341,11 @@ class BlockchainService {
         return writeTX
     }
     
+    /**
+     Signs the given transaction with the user's key.
+     
+     - Parameter transaction: The `EthereumTransaction` to be signed.
+     */
     func signTransaction(_ transaction: inout EthereumTransaction) throws {
         guard let address = ethKeyStore.getAddress() else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting address to sign transaction")

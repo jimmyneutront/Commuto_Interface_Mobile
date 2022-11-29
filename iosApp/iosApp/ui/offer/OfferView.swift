@@ -53,17 +53,21 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
     var cancelingOfferButtonLabel: String {
         if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
             return "Cancel Offer"
-        } else if offer.cancelingOfferState == .canceling {
-            return "Canceling Offer"
+        } else if offer.cancelingOfferState == .validating {
+            return "Validating"
+        } else if offer.cancelingOfferState == .sendingTransaction {
+            return "Sending Offer Cancellation Transaction"
+        } else if offer.cancelingOfferState == .awaitingTransactionConfirmation {
+            return "Awaiting Transaction Confirmation"
         } else {
             return "Offer Canceled"
         }
     }
     
     /**
-     The color of the outline around the button that cancels the offer.
+     The color of the the button that cancels the offer.
      */
-    var cancelingOfferButtonOutlineColor: Color {
+    var cancelingOfferButtonColor: Color {
         if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
             return Color.red
         } else {
@@ -250,11 +254,11 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                                         .frame(maxWidth: .infinity)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10)
-                                                .stroke(cancelingOfferButtonOutlineColor, lineWidth: 3)
+                                                .stroke(cancelingOfferButtonColor, lineWidth: 3)
                                         )
                                 }
                             )
-                            .accentColor(Color.red)
+                            .accentColor(cancelingOfferButtonColor)
                             .sheet(isPresented: $isShowingCancelOfferSheet) {
                                 CancelOfferView(
                                     offer: offer,

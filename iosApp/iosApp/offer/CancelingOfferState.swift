@@ -15,11 +15,19 @@ enum CancelingOfferState {
      */
     case none
     /**
-     Indicates that we are currently canceling the corresponding offer.
+     Indicates that we are currently checking whether the corresponding offer can be canceled.
      */
-    case canceling
+    case validating
     /**
-     Indicates that we have canceled the corresponding offer.
+     Indicates that we are currently sending the transaction that will cancel the corresponding offer.
+     */
+    case sendingTransaction
+    /**
+     Indicates that we have sent the transaction that will cancel the corresponding offer, and are waiting for it to be confirmed.
+     */
+    case awaitingTransactionConfirmation
+    /**
+     Indicates that we have canceled the corresponding offer, and the transaction that did so has been confirmed.
      */
     case completed
     /**

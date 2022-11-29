@@ -73,6 +73,7 @@ class OffersViewModel: UIOfferTruthSource {
         }
     }
     
+    #warning("TODO: Remove this once old cancelOffer method is removed")
     /**
      Sets the `cancelingOfferState` property of the `Offer` in `offers` with the specified `offerID` on the main `DispatchQueue`.
      
@@ -211,7 +212,6 @@ class OffersViewModel: UIOfferTruthSource {
      */
     @available(*, deprecated, message: "Use cancelOffer with new transaction pipeline")
     func cancelOffer(_ offer: Offer) {
-        setCancelingOfferState(offerID: offer.id, state: .canceling)
         offer.cancelingOfferError = nil
         Promise<Void> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
@@ -255,19 +255,26 @@ class OffersViewModel: UIOfferTruthSource {
         }
     }
     
+    /**
+     Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     This clears any offer-canceling-related error of `offer`, and sets `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.validating`.
+     
+     - Parameters:
+        - offer: The `Offer` to be canceled.
+        - offerCancellationTransaction: An optional `EthereumTransaction` that can cancel `offer`.
+     */
     func cancelOffer(offer: Offer, offerCancellationTransaction: EthereumTransaction?) {
-        setCancelingOfferState(offerID: offer.id, state: .canceling)
         offer.cancelingOfferError = nil
+        offer.cancelingOfferState = .validating
         DispatchQueue.global(qos: .userInitiated).sync {
             logger.notice("cancelOffer: canceling offer \(offer.id.uuidString)")
         }
         offerService.cancelOffer(offer: offer, offerCancellationTransaction: offerCancellationTransaction)
             .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
-            self.logger.notice("cancelOffer: successfully broadcast transaction for \(offer.id.uuidString)")
+                self.logger.notice("cancelOffer: successfully broadcast transaction for \(offer.id.uuidString)")
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
                 logger.error("cancelOffer: got error during cancelOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
-                offer.cancelingOfferError = error
-                setCancelingOfferState(offerID: offer.id, state: .error)
             }
     }
     

@@ -71,6 +71,9 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
      */
     func createCancelOfferTransaction(offer: Offer, createdTransactionHandler: (EthereumTransaction) -> Void, errorHandler: (Error) -> Void) {}
     
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
     func cancelOffer(offer: Offer, offerCancellationTransaction: EthereumTransaction?) {}
     
     /**
