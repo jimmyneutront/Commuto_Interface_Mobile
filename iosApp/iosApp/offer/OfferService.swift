@@ -203,7 +203,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     chainID: String(newOffer.chainID),
                     havePublicKey: newOffer.havePublicKey,
                     isUserMaker: newOffer.isUserMaker,
-                    state: newOffer.state.asString
+                    state: newOffer.state.asString,
+                    offerCancellationTransactionHash: newOffer.offerCancellationTransactionHash
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
                 var settlementMethodStrings: [(String, String?)] = []
@@ -386,7 +387,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         }
                         #warning("TODO: we should also record the current time and block hight here, store it in the offer and in persistent storage")
                         logger.notice("cancelOffer: persistently storing tx hash \(transactionHash) for \(offer.id.uuidString)")
-                        #warning("TODO: persistently store tx hash here")
+                        try databaseService.updateOfferCancellationTransactionHash(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: transactionHash)
                         logger.notice("cancelOffer: persistently updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction")
                         #warning("TODO: update cancelingOfferState in persistent storage here")
                         logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(transactionHash) in offer")
@@ -829,7 +830,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 chainID: String(offer.chainID),
                 havePublicKey: offer.havePublicKey,
                 isUserMaker: offer.isUserMaker,
-                state: offer.state.asString
+                state: offer.state.asString,
+                offerCancellationTransactionHash: offer.offerCancellationTransactionHash
             )
             try databaseService.storeOffer(offer: offerForDatabase)
             logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")

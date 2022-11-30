@@ -223,6 +223,10 @@ class DatabaseService {
      */
     let offerState = Expression<String>("state")
     /**
+     A database structure representing the hash of a transaction that canceled an offe
+     */
+    let offerCancellationTransactionHash = Expression<String?>("offerCancellationTransactionHash")
+    /**
      A database structure representing a `Swaps`'s `state` property.
      */
     let swapState = Expression<String>("state")
@@ -256,6 +260,7 @@ class DatabaseService {
             t.column(havePublicKey)
             t.column(isUserMaker)
             t.column(offerState)
+            t.column(offerCancellationTransactionHash)
         })
         try connection.run(offerSettlementMethods.create { t in
             t.column(id)
@@ -343,7 +348,8 @@ class DatabaseService {
                     chainID <- offer.chainID,
                     havePublicKey <- offer.havePublicKey,
                     isUserMaker <- offer.isUserMaker,
-                    offerState <- offer.state
+                    offerState <- offer.state,
+                    offerCancellationTransactionHash <- offer.offerCancellationTransactionHash
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.id" {
@@ -381,6 +387,21 @@ class DatabaseService {
             try connection.run(offers.filter(id == offerID && chainID == _chainID).update(offerState <- state))
         }
         logger.notice("updateOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `offerCancellationTransactionHash` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `offerCancellationTransactionHash` field.
+     */
+    func updateOfferCancellationTransactionHash(offerID: String, _chainID: String, transactionHash: String?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(offerCancellationTransactionHash <- transactionHash))
+        }
+        logger.notice("updateOfferState: set value to \(transactionHash ?? "nil") for offer with B64 ID \(offerID), if present")
     }
     
     /**
@@ -438,7 +459,8 @@ class DatabaseService {
                 chainID: result[0][chainID],
                 havePublicKey: result[0][havePublicKey],
                 isUserMaker: result[0][isUserMaker],
-                state: result[0][offerState]
+                state: result[0][offerState],
+                offerCancellationTransactionHash: result[0][offerCancellationTransactionHash]
             )
         } else {
             logger.notice("getOffer: no offer found with B64 ID \(_id)")

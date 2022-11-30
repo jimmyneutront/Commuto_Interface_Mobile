@@ -275,7 +275,8 @@ class OfferServiceTests: XCTestCase {
             chainID: String(offer.chainID),
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
-            state: OfferState.openOfferTransactionBroadcast.asString
+            state: OfferState.openOfferTransactionBroadcast.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -804,7 +805,8 @@ class OfferServiceTests: XCTestCase {
             chainID: String(offer.chainID),
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
-            state: offer.state.asString
+            state: offer.state.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -941,7 +943,8 @@ class OfferServiceTests: XCTestCase {
             chainID: String(offer.chainID),
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
-            state: offer.state.asString
+            state: offer.state.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         let serializedSettlementMethodsAndPrivateDetails = offer.settlementMethods.compactMap { settlementMethod in
@@ -1062,7 +1065,8 @@ class OfferServiceTests: XCTestCase {
             chainID: String(offer.chainID),
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
-            state: offer.state.asString
+            state: offer.state.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1306,7 +1310,8 @@ class OfferServiceTests: XCTestCase {
             chainID: String(BigUInt(31337)),
             havePublicKey: true,
             isUserMaker: true,
-            state: "openOfferTxPublished"
+            state: "openOfferTxPublished",
+            offerCancellationTransactionHash: offerInTruthSource.offerCancellationTransactionHash
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
         
@@ -1438,7 +1443,8 @@ class OfferServiceTests: XCTestCase {
             chainID: String(offer.chainID),
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
-            state: offer.state.asString
+            state: offer.state.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1680,7 +1686,8 @@ class OfferServiceTests: XCTestCase {
             chainID: String(offer.chainID),
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
-            state: offer.state.asString
+            state: offer.state.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         

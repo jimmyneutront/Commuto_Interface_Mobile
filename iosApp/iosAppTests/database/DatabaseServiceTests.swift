@@ -40,7 +40,8 @@ class DatabaseServiceTests: XCTestCase {
             chainID: "a_chain_id",
             havePublicKey: false,
             isUserMaker: false,
-            state: "a_state_here"
+            state: "a_state_here",
+            offerCancellationTransactionHash: "a_tx_hash_here"
         )
         try dbService.storeOffer(offer: offerToStore)
         let anotherOfferToStore = DatabaseOffer(
@@ -59,7 +60,8 @@ class DatabaseServiceTests: XCTestCase {
             chainID: "another_chain_id",
             havePublicKey: false,
             isUserMaker: false,
-            state: "a_state_here"
+            state: "a_state_here",
+            offerCancellationTransactionHash: "a_tx_hash_here"
         )
         // This should do nothing and not throw
         try dbService.storeOffer(offer: anotherOfferToStore)
@@ -88,7 +90,8 @@ class DatabaseServiceTests: XCTestCase {
             chainID: "a_chain_id",
             havePublicKey: false,
             isUserMaker: false,
-            state: "a_state_here"
+            state: "a_state_here",
+            offerCancellationTransactionHash: "a_tx_hash_here"
         )
         try dbService.storeOffer(offer: offerToStore)
         try dbService.updateOfferHavePublicKey(offerID: "a_uuid", _chainID: "a_chain_id", _havePublicKey: true)
@@ -116,12 +119,44 @@ class DatabaseServiceTests: XCTestCase {
             chainID: "a_chain_id",
             havePublicKey: false,
             isUserMaker: false,
-            state: "an_outdated_state_here"
+            state: "an_outdated_state_here",
+            offerCancellationTransactionHash: "a_tx_hash_here"
         )
         try dbService.storeOffer(offer: offerToStore)
         try dbService.updateOfferState(offerID: "a_uuid", _chainID: "a_chain_id", state: "a_new_state_here")
         let returnedOffer = try dbService.getOffer(id: "a_uuid")
         XCTAssertEqual(returnedOffer!.state, "a_new_state_here")
+    }
+    
+    /**
+     Ensures that code to update a persistently stored offer's `offerCancellationTransactionhash` property works properly.
+     */
+    func testUpdateOfferCancellationTransactionHash() throws {
+        let offerToStore = DatabaseOffer(
+            id: "a_uuid",
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: "interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            protocolVersion: "some_version",
+            chainID: "a_chain_id",
+            havePublicKey: false,
+            isUserMaker: false,
+            state: "a_state_here",
+            offerCancellationTransactionHash: nil
+        )
+        try dbService.storeOffer(offer: offerToStore)
+        let returnedOfferBeforeUpdate = try dbService.getOffer(id: "a_uuid")
+        XCTAssertNil(returnedOfferBeforeUpdate!.offerCancellationTransactionHash)
+        try dbService.updateOfferCancellationTransactionHash(offerID: "a_uuid", _chainID: "a_chain_id", transactionHash: "a_tx_hash_here")
+        let returnedOfferAfterUpdate = try dbService.getOffer(id: "a_uuid")
+        XCTAssertEqual("a_tx_hash_here", returnedOfferBeforeUpdate!.offerCancellationTransactionHash)
     }
     
     /**
