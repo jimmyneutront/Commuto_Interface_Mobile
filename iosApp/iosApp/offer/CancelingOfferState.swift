@@ -34,4 +34,25 @@ enum CancelingOfferState {
      Indicates that we encountered an error while canceling the corresponding offer.
      */
     case error
+    
+    /**
+     Returns a `String` corresponding to a particular case of `CancelingOfferState`.
+     */
+    var asString: String {
+        switch self {
+        case .none:
+            return "none"
+        case .validating:
+            return "validating"
+        case .sendingTransaction:
+            return "sendingTransaction"
+        case .awaitingTransactionConfirmation:
+            return "awaitingTransactionConfirmation"
+        case .completed:
+            return "completed"
+        case .error:
+            return "error"
+        }
+    }
+    
 }

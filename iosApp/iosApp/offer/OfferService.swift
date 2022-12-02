@@ -204,6 +204,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     havePublicKey: newOffer.havePublicKey,
                     isUserMaker: newOffer.isUserMaker,
                     state: newOffer.state.asString,
+                    cancelingOfferState: newOffer.cancelingOfferState.asString,
                     offerCancellationTransactionHash: newOffer.offerCancellationTransactionHash
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
@@ -389,7 +390,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         logger.notice("cancelOffer: persistently storing tx hash \(transactionHash) for \(offer.id.uuidString)")
                         try databaseService.updateOfferCancellationTransactionHash(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: transactionHash)
                         logger.notice("cancelOffer: persistently updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction")
-                        #warning("TODO: update cancelingOfferState in persistent storage here")
+                        try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.sendingTransaction.asString)
                         logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(transactionHash) in offer")
                         seal.fulfill((offerCancellationTransaction, transactionHash, blockchainService))
                     } catch {
@@ -404,17 +405,18 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 return blockchainService.sendTransaction(nonNilOfferCancellationTransaction)
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
                 logger.notice("cancelOffer: persistently updating cancelingOfferState of \(offer.id.uuidString) to awaitingTransactionConfirmation")
-                do {
-                    #warning("TODO: update cancelingOfferState in persistent storage here")
-                    logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to awaitingTransactionConfirmation")
-                }
+                try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.awaitingTransactionConfirmation.asString)
+                logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to awaitingTransactionConfirmation")
             }.get(on: DispatchQueue.main) { _ in
                 offer.cancelingOfferState = .awaitingTransactionConfirmation
             }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
                 seal.fulfill(())
-            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
-                #warning("TODO: update cancelling offer state to error here")
-                self.logger.error("cancelOffer: encountered error while canceling \(offer.id.uuidString), setting cancelingOfferState to error: \(error.localizedDescription)")
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("cancelOffer: encountered error while canceling \(offer.id.uuidString), setting cancelingOfferState to error: \(error.localizedDescription)")
+                // It's OK that we don't handle database errors here, because if such an error occurs and the canceling offer state isn't updated to error, then when the app restarts, we will check the offer cancelation transaction, and then discover and handle the error then.
+                do {
+                    try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.error.asString)
+                } catch {}
                 offer.cancelingOfferError = error
                 DispatchQueue.main.async {
                     offer.cancelingOfferState = .error
@@ -831,6 +833,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 havePublicKey: offer.havePublicKey,
                 isUserMaker: offer.isUserMaker,
                 state: offer.state.asString,
+                cancelingOfferState: offer.cancelingOfferState.asString,
                 offerCancellationTransactionHash: offer.offerCancellationTransactionHash
             )
             try databaseService.storeOffer(offer: offerForDatabase)

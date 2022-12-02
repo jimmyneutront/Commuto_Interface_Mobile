@@ -1053,7 +1053,10 @@ class OfferService (
                  */
                 databaseService.deleteOffers(offerID = offerIdString, chainID = event.chainID.toString())
                 Log.i(logTag, "handleOfferTakenEvent: deleted offer ${event.offerID} from persistent storage")
-                databaseService.deleteOfferSettlementMethods(offerID = offerIdString, chainID = event.chainID.toString())
+                databaseService.deleteOfferSettlementMethods(
+                    offerID = offerIdString,
+                    chainID = event.chainID.toString()
+                )
                 Log.i(logTag, "handleOfferTakenEvent: deleted settlement methods of offer ${event.offerID} from " +
                         "persistent storage")
                 withContext(Dispatchers.Main) {

@@ -75,6 +75,10 @@ struct DatabaseOffer: Equatable {
      */
     let state: String
     /**
+     The `cancelingOfferState` property of an `Offer` as a `String`.
+     */
+    let cancelingOfferState: String
+    /**
      The hash of the transaction that canceled this `Offer` as a hexadecimal `String`, or `nil` if no such transaction exists.
      */
     let offerCancellationTransactionHash: String?

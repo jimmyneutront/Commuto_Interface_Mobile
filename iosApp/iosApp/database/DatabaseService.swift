@@ -223,6 +223,10 @@ class DatabaseService {
      */
     let offerState = Expression<String>("state")
     /**
+     A database structure representing an `Offer`'s `cancelingOfferState` property.
+     */
+    let cancelingOfferState = Expression<String>("cancelingOfferState")
+    /**
      A database structure representing the hash of a transaction that canceled an offe
      */
     let offerCancellationTransactionHash = Expression<String?>("offerCancellationTransactionHash")
@@ -260,6 +264,7 @@ class DatabaseService {
             t.column(havePublicKey)
             t.column(isUserMaker)
             t.column(offerState)
+            t.column(cancelingOfferState)
             t.column(offerCancellationTransactionHash)
         })
         try connection.run(offerSettlementMethods.create { t in
@@ -349,6 +354,7 @@ class DatabaseService {
                     havePublicKey <- offer.havePublicKey,
                     isUserMaker <- offer.isUserMaker,
                     offerState <- offer.state,
+                    cancelingOfferState <- offer.cancelingOfferState,
                     offerCancellationTransactionHash <- offer.offerCancellationTransactionHash
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
@@ -387,6 +393,21 @@ class DatabaseService {
             try connection.run(offers.filter(id == offerID && chainID == _chainID).update(offerState <- state))
         }
         logger.notice("updateOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `cancelingOfferState` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `cancelingOfferState` field.
+     */
+    func updateCancelingOfferState(offerID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(cancelingOfferState <- state))
+        }
+        logger.notice("updateCancelingOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
     }
     
     /**
@@ -460,6 +481,7 @@ class DatabaseService {
                 havePublicKey: result[0][havePublicKey],
                 isUserMaker: result[0][isUserMaker],
                 state: result[0][offerState],
+                cancelingOfferState: result[0][cancelingOfferState],
                 offerCancellationTransactionHash: result[0][offerCancellationTransactionHash]
             )
         } else {

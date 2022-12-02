@@ -157,7 +157,8 @@ class SettlementMethodService @Inject constructor(
                     }
                 }
             } catch (exception: Exception) {
-                Log.e(logTag, "editSettlementMethod: encountered exception while editing ${settlementMethod.id}")
+                Log.e(logTag, "editSettlementMethod: encountered exception while editing ${settlementMethod.id}",
+                    exception)
                 throw exception
             }
         }

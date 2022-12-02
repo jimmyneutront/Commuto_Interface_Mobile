@@ -192,7 +192,7 @@ class SettlementMethodViewModel
                 )
             } catch (exception: Exception) {
                 Log.e(logTag, "editSettlementMethod: got exception during editSettlementMethod call for " +
-                        "${settlementMethod.id}")
+                        "${settlementMethod.id}", exception)
                 withContext(Dispatchers.Main) {
                     editSettlementMethodException.value = exception
                 }

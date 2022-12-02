@@ -276,6 +276,7 @@ class OfferServiceTests: XCTestCase {
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
             state: OfferState.openOfferTransactionBroadcast.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
@@ -806,6 +807,7 @@ class OfferServiceTests: XCTestCase {
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
@@ -944,6 +946,7 @@ class OfferServiceTests: XCTestCase {
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
@@ -1066,6 +1069,7 @@ class OfferServiceTests: XCTestCase {
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
@@ -1311,6 +1315,7 @@ class OfferServiceTests: XCTestCase {
             havePublicKey: true,
             isUserMaker: true,
             state: "openOfferTxPublished",
+            cancelingOfferState: offerInTruthSource.cancelingOfferState.asString,
             offerCancellationTransactionHash: offerInTruthSource.offerCancellationTransactionHash
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
@@ -1444,6 +1449,7 @@ class OfferServiceTests: XCTestCase {
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
@@ -1687,6 +1693,7 @@ class OfferServiceTests: XCTestCase {
             havePublicKey: offer.havePublicKey,
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
