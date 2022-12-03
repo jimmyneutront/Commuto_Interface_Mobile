@@ -1349,7 +1349,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService.cancelOffer` and `BlockchainService.cancelOffer` function properly.
+     Ensures that `OfferService.cancelOffer`, `OfferService.createCancelOfferTransaction` and `BlockchainService.sendTransaction` function properly.
      */
     func testCancelOffer() {
         
@@ -1459,16 +1459,19 @@ class OfferServiceTests: XCTestCase {
         
         let cancellationExpectation = XCTestExpectation(description: "Fulfilled when offerService.cancelOffer returns")
         
-        offerService.cancelOffer(offerID: offerID, chainID: BigUInt(31337)).done {
+        offerService.createCancelOfferTransaction(offerID: offerID, chainID: BigUInt(31337)).then { transaction in
+            return offerService.cancelOffer(offer: offer, offerCancellationTransaction: transaction)
+        }.done {
             cancellationExpectation.fulfill()
         }.cauterize()
         
         wait(for: [cancellationExpectation], timeout: 30.0)
         
-        XCTAssertEqual(offerTruthSource.offers[offerID]?.state, .cancelOfferTransactionBroadcast)
-        
+        XCTAssertEqual(offerTruthSource.offers[offerID]?.cancelingOfferState, .awaitingTransactionConfirmation)
+        XCTAssertNotNil(offerTruthSource.offers[offerID]?.offerCancellationTransactionHash)
         let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())!
-        XCTAssertEqual(offerInDatabase.state, "cancelOfferTxBroadcast")
+        XCTAssertEqual(offerInDatabase.cancelingOfferState, "awaitingTransactionConfirmation")
+        XCTAssertNotNil(offerInDatabase.offerCancellationTransactionHash)
         
         let offerStruct = try! blockchainService.getOffer(id: offerID)
         XCTAssertNil(offerStruct)
