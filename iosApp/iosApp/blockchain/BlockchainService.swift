@@ -92,7 +92,12 @@ class BlockchainService {
     /**
      The number of the most recently confirmed block.
      */
-    private var newestBlockNum = UInt64()
+    private(set) var newestBlockNum = UInt64()
+    
+    /**
+     A list of `BlockchainTransaction`s created by this interface that `BlockchainService` will monitor for confirmation, transaction dropping, transaction failure and transaction success.
+     */
+    private var transactionsToMonitor: [BlockchainTransaction] = []
     
     /**
      The number of seconds that `BlockchainService` should wait after parsing a block before it begins parsing another block.
@@ -278,16 +283,16 @@ class BlockchainService {
         }
     }
     
-    #warning("TODO: This should be MUCH more complicated. It should accept some kind of wrapper struct around an EthereumTransaction, that also contains time/block height at which the transaction was created and what the transaction does, so that the listen loop can handle transaction confirmation properly.")
     /**
-     Sends an `EthereumTransaction` to the blockchain node via a call to [eth_sendRawTransaction](https://ethereum.github.io/execution-apis/api-documentation/).
+     Stores `transaction` in `transactionsToMonitor`, and then sends the wrapped  `EthereumTransaction` to the blockchain node via a call to [eth_sendRawTransaction](https://ethereum.github.io/execution-apis/api-documentation/).
      
-     - Parameter transaction: The `EthereumTransaction` to be sent to the node as a raw transaction.
+     - Parameter transaction: The `BlockchainTransaction` to be monitored, wrapping an `EthereumTransaction` to be sent to the node as a raw transaction.
      
      - Returns: A `Promise` wrapped around a `TransactionSendingResult` decoded from the node's response.
      */
-    func sendTransaction(_ transaction: EthereumTransaction) -> Promise<TransactionSendingResult> {
-        return w3.eth.sendRawTransactionPromise(transaction)
+    func sendTransaction(_ transaction: BlockchainTransaction) -> Promise<TransactionSendingResult> {
+        transactionsToMonitor.append(transaction)
+        return w3.eth.sendRawTransactionPromise(transaction.transaction)
     }
     
     /**

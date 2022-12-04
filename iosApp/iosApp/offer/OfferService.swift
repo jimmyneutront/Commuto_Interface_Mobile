@@ -402,7 +402,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 offer.offerCancellationTransactionHash = transactionHash
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { nonNilOfferCancellationTransaction, transactionHash, blockchainService -> Promise<TransactionSendingResult> in
                 self.logger.notice("cancelOffer: sending \(transactionHash) for \(offer.id.uuidString)")
-                return blockchainService.sendTransaction(nonNilOfferCancellationTransaction)
+                let blockchainTransaction = BlockchainTransaction(transaction: nonNilOfferCancellationTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .cancelOffer)
+                return blockchainService.sendTransaction(blockchainTransaction)
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
                 logger.notice("cancelOffer: persistently updating cancelingOfferState of \(offer.id.uuidString) to awaitingTransactionConfirmation")
                 try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.awaitingTransactionConfirmation.asString)
