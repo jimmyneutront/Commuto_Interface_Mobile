@@ -346,7 +346,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     On the global `DispatchQueue`, this ensures that the offer is not taken or already being canceled, and that `offerCancellationTransaction` is not `nil`. Then it signs `offerCancellationTransaction`, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `offer` and sets `offer`'s `Offer.cancelingOfferState` property to `CancelingOfferState.sendingTransaction`. Then, on the global `DispatchQueue` it sends `offerCancellationTransaction` to the blockchain. Once a response is received, this persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this sets the value of `offer`'s `Offer.cancelingOfferState` to `OfferState.awaitingTransactionConfirmation`.
+     On the global `DispatchQueue`, this ensures that the offer is not taken or already being canceled, and that `offerCancellationTransaction` is not `nil`. Then it signs `offerCancellationTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `offer` and sets `offer`'s `Offer.cancelingOfferState` property to `CancelingOfferState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `offerCancellationTransaction` to the blockchain. Once a response is received, this persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this sets the value of `offer`'s `Offer.cancelingOfferState` to `OfferState.awaitingTransactionConfirmation`.
      
      - Parameters:
         - offer: The `Offer` being canceled.
@@ -354,11 +354,11 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      
      - Returns: An empty `Promise` that will be fulfilled when `offer` is canceled.
      
-     - Throws: An `OfferServiceError.offerNotAvailableError` if `offer` is taken, or if it is already being canceled, or an `OfferServiceError.unexpectedNilError` if `offerCancellationTransaction` or `blockchainService` are `nil`, or if the hash of `offerCancellationTransaction` after signing is `nil`,. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: An `OfferServiceError.offerNotAvailableError` if `offer` is taken, or if it is already being canceled, or an `OfferServiceError.unexpectedNilError` if `offerCancellationTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func cancelOffer(offer: Offer, offerCancellationTransaction: EthereumTransaction?) -> Promise<Void> {
         return Promise { seal in
-            Promise<(EthereumTransaction, String, BlockchainService)> { seal in
+            Promise<(BlockchainTransaction, BlockchainService)> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("cancelOffer: canceling \(offer.id.uuidString)")
                     // If we can't find the offer in offerTruthSource, we assume it is not taken
@@ -379,31 +379,24 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         }
                         logger.notice("cancelOffer: signing transaction for \(offer.id.uuidString)")
                         try blockchainService.signTransaction(&offerCancellationTransaction)
-                        guard let transactionHashWithoutHexPrefix = offerCancellationTransaction.hash?.toHexString().lowercased() else {
-                            throw OfferServiceError.unexpectedNilError(desc: "Unable to get hash of transaction for \(offer.id.uuidString)")
-                        }
-                        var transactionHash = transactionHashWithoutHexPrefix
-                        if !transactionHash.hasPrefix("0x") {
-                            transactionHash = "0x" + transactionHash
-                        }
+                        let blockchainTransactionForOfferCancellation = try BlockchainTransaction(transaction: offerCancellationTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .cancelOffer)
                         #warning("TODO: we should also record the current time and block hight here, store it in the offer and in persistent storage")
-                        logger.notice("cancelOffer: persistently storing tx hash \(transactionHash) for \(offer.id.uuidString)")
-                        try databaseService.updateOfferCancellationTransactionHash(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: transactionHash)
+                        logger.notice("cancelOffer: persistently storing tx hash \(blockchainTransactionForOfferCancellation.transactionHash) for \(offer.id.uuidString)")
+                        try databaseService.updateOfferCancellationTransactionHash(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: blockchainTransactionForOfferCancellation.transactionHash)
                         logger.notice("cancelOffer: persistently updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction")
                         try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.sendingTransaction.asString)
-                        logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(transactionHash) in offer")
-                        seal.fulfill((offerCancellationTransaction, transactionHash, blockchainService))
+                        logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(blockchainTransactionForOfferCancellation.transactionHash) in offer")
+                        seal.fulfill((blockchainTransactionForOfferCancellation, blockchainService))
                     } catch {
                         seal.reject(error)
                     }
                 }
-            }.get(on: DispatchQueue.main) { _, transactionHash, _ in
+            }.get(on: DispatchQueue.main) { offerCancellationTransaction, _ in
                 offer.cancelingOfferState = .sendingTransaction
-                offer.offerCancellationTransactionHash = transactionHash
-            }.then(on: DispatchQueue.global(qos: .userInitiated)) { nonNilOfferCancellationTransaction, transactionHash, blockchainService -> Promise<TransactionSendingResult> in
-                self.logger.notice("cancelOffer: sending \(transactionHash) for \(offer.id.uuidString)")
-                let blockchainTransaction = BlockchainTransaction(transaction: nonNilOfferCancellationTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .cancelOffer)
-                return blockchainService.sendTransaction(blockchainTransaction)
+                offer.offerCancellationTransactionHash = offerCancellationTransaction.transactionHash
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { offerCancellationTransaction, blockchainService -> Promise<TransactionSendingResult> in
+                self.logger.notice("cancelOffer: sending \(offerCancellationTransaction.transactionHash) for \(offer.id.uuidString)")
+                return blockchainService.sendTransaction(offerCancellationTransaction)
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
                 logger.notice("cancelOffer: persistently updating cancelingOfferState of \(offer.id.uuidString) to awaitingTransactionConfirmation")
                 try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.awaitingTransactionConfirmation.asString)

@@ -627,7 +627,6 @@
 			isa = PBXGroup;
 			children = (
 				6DDFAFA3284AAC42004BC95F /* commutoswap */,
-				6DDE936E293C5D42008017DF /* BlockchainTransactionType.swift */,
 			);
 			path = events;
 			sourceTree = "<group>";
@@ -661,6 +660,7 @@
 				6D70A5CB28669543003FEDF3 /* BlockchainEventRepository.swift */,
 				6D7D3CE028847D9A0004F7F2 /* EthereumAddressExtensions.swift */,
 				6DDE936C293C5AFB008017DF /* BlockchainTransaction.swift */,
+				6DDE936E293C5D42008017DF /* BlockchainTransactionType.swift */,
 			);
 			path = blockchain;
 			sourceTree = "<group>";

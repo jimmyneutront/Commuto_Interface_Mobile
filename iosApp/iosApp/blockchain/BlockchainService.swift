@@ -289,10 +289,17 @@ class BlockchainService {
      - Parameter transaction: The `BlockchainTransaction` to be monitored, wrapping an `EthereumTransaction` to be sent to the node as a raw transaction.
      
      - Returns: A `Promise` wrapped around a `TransactionSendingResult` decoded from the node's response.
+     
+     - Throws: A `BlockchainServiceError.unexpectedNilError` if the `BlockchainTransaction.transaction` property of `transaction` is `nil`. Because this function returns a `Promise`, error will not actually be thrown, but will be passed to `seal.reject`.
      */
     func sendTransaction(_ transaction: BlockchainTransaction) -> Promise<TransactionSendingResult> {
+        guard let wrappedTransaction = transaction.transaction else {
+            return Promise<TransactionSendingResult> { seal in
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Wrapped transaction was nil for \(transaction.transactionHash)"))
+            }
+        }
         transactionsToMonitor.append(transaction)
-        return w3.eth.sendRawTransactionPromise(transaction.transaction)
+        return w3.eth.sendRawTransactionPromise(wrappedTransaction)
     }
     
     /**
