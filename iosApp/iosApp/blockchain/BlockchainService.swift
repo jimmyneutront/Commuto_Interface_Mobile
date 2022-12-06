@@ -95,9 +95,9 @@ class BlockchainService {
     private(set) var newestBlockNum = UInt64()
     
     /**
-     A list of `BlockchainTransaction`s created by this interface that `BlockchainService` will monitor for confirmation, transaction dropping, transaction failure and transaction success.
+     A dictionary mapping transaction hashes to corresponding `BlockchainTransaction`s created by this interface that `BlockchainService` will monitor for confirmation, transaction dropping, transaction failure and transaction success.
      */
-    private var transactionsToMonitor: [BlockchainTransaction] = []
+    private var transactionsToMonitor: [String: BlockchainTransaction] = [:]
     
     /**
      The number of seconds that `BlockchainService` should wait after parsing a block before it begins parsing another block.
@@ -298,7 +298,7 @@ class BlockchainService {
                 seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Wrapped transaction was nil for \(transaction.transactionHash)"))
             }
         }
-        transactionsToMonitor.append(transaction)
+        transactionsToMonitor[transaction.transactionHash] = transaction
         return w3.eth.sendRawTransactionPromise(wrappedTransaction)
     }
     
