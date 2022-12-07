@@ -108,9 +108,9 @@ class Offer: ObservableObject {
      */
     var cancelingOfferError: Error? = nil
     /**
-     The hash of the transaction that has canceled this offer, if it was made and canceled by the user of this interface, or `nil` if the offer is not canceled or the user of this interface is not the offer maker. Note that the transaction with this hash may be: not yet sent to a blockchain node, pending, confirmed and successful, confirmed and failed, or dropped.
+     The `BlockchainTransaction` that has canceled this offer, if it was made and canceled by the user of this interface, or `nil` if the offer is not canceled or the user of this interface is not the offer maker. Note that this transaction may be: not yet sent to a blockchain node, pending, confirmed and successful, confirmed and failed, or dropped.
      */
-    var offerCancellationTransactionHash: String? = nil
+    var offerCancellationTransaction: BlockchainTransaction? = nil
     /**
     (This property is used only if the maker of this offer is the user of this interface.) The new `SettlementMethod`s with which the user wants to replace the offer's current settlement methods by editing the offer. If the user is not currently editing this offer, (or if the user is not the maker of this offer) this array should be empty.
      */

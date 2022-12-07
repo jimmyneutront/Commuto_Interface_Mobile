@@ -205,7 +205,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     isUserMaker: newOffer.isUserMaker,
                     state: newOffer.state.asString,
                     cancelingOfferState: newOffer.cancelingOfferState.asString,
-                    offerCancellationTransactionHash: newOffer.offerCancellationTransactionHash
+                    offerCancellationTransactionHash: newOffer.offerCancellationTransaction?.transactionHash
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
                 var settlementMethodStrings: [(String, String?)] = []
@@ -393,7 +393,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 }
             }.get(on: DispatchQueue.main) { offerCancellationTransaction, _ in
                 offer.cancelingOfferState = .sendingTransaction
-                offer.offerCancellationTransactionHash = offerCancellationTransaction.transactionHash
+                offer.offerCancellationTransaction = offerCancellationTransaction
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { offerCancellationTransaction, blockchainService -> Promise<TransactionSendingResult> in
                 self.logger.notice("cancelOffer: sending \(offerCancellationTransaction.transactionHash) for \(offer.id.uuidString)")
                 return blockchainService.sendTransaction(offerCancellationTransaction)
@@ -828,7 +828,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 isUserMaker: offer.isUserMaker,
                 state: offer.state.asString,
                 cancelingOfferState: offer.cancelingOfferState.asString,
-                offerCancellationTransactionHash: offer.offerCancellationTransactionHash
+                offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
             )
             try databaseService.storeOffer(offer: offerForDatabase)
             logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")

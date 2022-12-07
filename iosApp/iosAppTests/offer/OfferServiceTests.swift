@@ -277,7 +277,7 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: OfferState.openOfferTransactionBroadcast.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -808,7 +808,7 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -947,7 +947,7 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         let serializedSettlementMethodsAndPrivateDetails = offer.settlementMethods.compactMap { settlementMethod in
@@ -1070,7 +1070,7 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1316,7 +1316,7 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: true,
             state: "openOfferTxPublished",
             cancelingOfferState: offerInTruthSource.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offerInTruthSource.offerCancellationTransactionHash
+            offerCancellationTransactionHash: offerInTruthSource.offerCancellationTransaction?.transactionHash
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
         
@@ -1450,7 +1450,7 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1468,7 +1468,7 @@ class OfferServiceTests: XCTestCase {
         wait(for: [cancellationExpectation], timeout: 30.0)
         
         XCTAssertEqual(offerTruthSource.offers[offerID]?.cancelingOfferState, .awaitingTransactionConfirmation)
-        XCTAssertNotNil(offerTruthSource.offers[offerID]?.offerCancellationTransactionHash)
+        XCTAssertNotNil(offerTruthSource.offers[offerID]?.offerCancellationTransaction?.transactionHash)
         let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())!
         XCTAssertEqual(offerInDatabase.cancelingOfferState, "awaitingTransactionConfirmation")
         XCTAssertNotNil(offerInDatabase.offerCancellationTransactionHash)
@@ -1697,7 +1697,7 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
