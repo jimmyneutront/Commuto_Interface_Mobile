@@ -205,7 +205,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     isUserMaker: newOffer.isUserMaker,
                     state: newOffer.state.asString,
                     cancelingOfferState: newOffer.cancelingOfferState.asString,
-                    offerCancellationTransactionHash: newOffer.offerCancellationTransaction?.transactionHash
+                    offerCancellationTransactionHash: newOffer.offerCancellationTransaction?.transactionHash,
+                    offerCancellationTransactionCreationTime: nil,
+                    offerCancellationTransactionCreationBlockNumber: nil
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
                 var settlementMethodStrings: [(String, String?)] = []
@@ -380,9 +382,10 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         logger.notice("cancelOffer: signing transaction for \(offer.id.uuidString)")
                         try blockchainService.signTransaction(&offerCancellationTransaction)
                         let blockchainTransactionForOfferCancellation = try BlockchainTransaction(transaction: offerCancellationTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .cancelOffer)
-                        #warning("TODO: we should also record the current time and block hight here, store it in the offer and in persistent storage")
+                        let dateFormatter = ISO8601DateFormatter()
+                        let dateString = dateFormatter.string(from: blockchainTransactionForOfferCancellation.timeOfCreation)
                         logger.notice("cancelOffer: persistently storing tx hash \(blockchainTransactionForOfferCancellation.transactionHash) for \(offer.id.uuidString)")
-                        try databaseService.updateOfferCancellationTransactionHash(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: blockchainTransactionForOfferCancellation.transactionHash)
+                        try databaseService.updateOfferCancellationData(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: blockchainTransactionForOfferCancellation.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForOfferCancellation.latestBlockNumberAtCreation))
                         logger.notice("cancelOffer: persistently updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction")
                         try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.sendingTransaction.asString)
                         logger.notice("cancelOffer: updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(blockchainTransactionForOfferCancellation.transactionHash) in offer")
@@ -828,7 +831,9 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 isUserMaker: offer.isUserMaker,
                 state: offer.state.asString,
                 cancelingOfferState: offer.cancelingOfferState.asString,
-                offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
+                offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+                offerCancellationTransactionCreationTime: nil,
+                offerCancellationTransactionCreationBlockNumber: nil
             )
             try databaseService.storeOffer(offer: offerForDatabase)
             logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")

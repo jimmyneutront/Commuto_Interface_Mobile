@@ -42,7 +42,9 @@ class DatabaseServiceTests: XCTestCase {
             isUserMaker: false,
             state: "a_state_here",
             cancelingOfferState: "a_cancelingOfferState_here",
-            offerCancellationTransactionHash: "a_tx_hash_here"
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1
         )
         try dbService.storeOffer(offer: offerToStore)
         let anotherOfferToStore = DatabaseOffer(
@@ -63,7 +65,9 @@ class DatabaseServiceTests: XCTestCase {
             isUserMaker: false,
             state: "a_state_here",
             cancelingOfferState: "a_cancelingOfferState_here",
-            offerCancellationTransactionHash: "a_tx_hash_here"
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1
         )
         // This should do nothing and not throw
         try dbService.storeOffer(offer: anotherOfferToStore)
@@ -94,7 +98,9 @@ class DatabaseServiceTests: XCTestCase {
             isUserMaker: false,
             state: "a_state_here",
             cancelingOfferState: "a_cancelingOfferState_here",
-            offerCancellationTransactionHash: "a_tx_hash_here"
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1
         )
         try dbService.storeOffer(offer: offerToStore)
         try dbService.updateOfferHavePublicKey(offerID: "a_uuid", _chainID: "a_chain_id", _havePublicKey: true)
@@ -124,7 +130,9 @@ class DatabaseServiceTests: XCTestCase {
             isUserMaker: false,
             state: "an_outdated_state_here",
             cancelingOfferState: "a_cancelingOfferState_here",
-            offerCancellationTransactionHash: "a_tx_hash_here"
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1
         )
         try dbService.storeOffer(offer: offerToStore)
         try dbService.updateOfferState(offerID: "a_uuid", _chainID: "a_chain_id", state: "a_new_state_here")
@@ -154,7 +162,9 @@ class DatabaseServiceTests: XCTestCase {
             isUserMaker: false,
             state: "a_state_here",
             cancelingOfferState: "an_outdated_cancelingOfferState_here",
-            offerCancellationTransactionHash: "a_tx_hash_here"
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1
         )
         try dbService.storeOffer(offer: offerToStore)
         try dbService.updateCancelingOfferState(offerID: "a_uuid", _chainID: "a_chain_id", state: "a_new_cancelingOfferState_here")
@@ -165,7 +175,7 @@ class DatabaseServiceTests: XCTestCase {
     /**
      Ensures that code to update a persistently stored offer's `offerCancellationTransactionhash` property works properly.
      */
-    func testUpdateOfferCancellationTransactionHash() throws {
+    func testUpdateOfferCancellationData() throws {
         let offerToStore = DatabaseOffer(
             id: "a_uuid",
             isCreated: true,
@@ -184,14 +194,20 @@ class DatabaseServiceTests: XCTestCase {
             isUserMaker: false,
             state: "a_state_here",
             cancelingOfferState: "a_cancelingOfferState_here",
-            offerCancellationTransactionHash: nil
+            offerCancellationTransactionHash: nil,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         try dbService.storeOffer(offer: offerToStore)
         let returnedOfferBeforeUpdate = try dbService.getOffer(id: "a_uuid")
         XCTAssertNil(returnedOfferBeforeUpdate!.offerCancellationTransactionHash)
-        try dbService.updateOfferCancellationTransactionHash(offerID: "a_uuid", _chainID: "a_chain_id", transactionHash: "a_tx_hash_here")
+        XCTAssertNil(returnedOfferBeforeUpdate!.offerCancellationTransactionCreationTime)
+        XCTAssertNil(returnedOfferBeforeUpdate!.offerCancellationTransactionCreationBlockNumber)
+        try dbService.updateOfferCancellationData(offerID: "a_uuid", _chainID: "a_chain_id", transactionHash: "a_tx_hash_here", transactionCreationTime: "a_time_here", latestBlockNumberAtCreationTime: -1)
         let returnedOfferAfterUpdate = try dbService.getOffer(id: "a_uuid")
         XCTAssertEqual("a_tx_hash_here", returnedOfferAfterUpdate!.offerCancellationTransactionHash)
+        XCTAssertEqual("a_time_here", returnedOfferAfterUpdate!.offerCancellationTransactionCreationTime)
+        XCTAssertEqual(-1, returnedOfferAfterUpdate!.offerCancellationTransactionCreationBlockNumber)
     }
     
     /**

@@ -227,9 +227,17 @@ class DatabaseService {
      */
     let cancelingOfferState = Expression<String>("cancelingOfferState")
     /**
-     A database structure representing the hash of a transaction that canceled an offe
+     A database structure representing the hash of a transaction that canceled an `Offer` made by the user of this interface.
      */
     let offerCancellationTransactionHash = Expression<String?>("offerCancellationTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that canceled an `Offer` made by the user of this interface.
+     */
+    let offerCancellationTransactionCreationTime = Expression<String?>("offerCancellationTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that canceled an `Offer` made by the user of this interface.
+     */
+    let offerCancellationTransactionCreationBlockNumber = Expression<Int?>("offerCancellationTransactionCreationBlockNumber")
     /**
      A database structure representing a `Swaps`'s `state` property.
      */
@@ -266,6 +274,8 @@ class DatabaseService {
             t.column(offerState)
             t.column(cancelingOfferState)
             t.column(offerCancellationTransactionHash)
+            t.column(offerCancellationTransactionCreationTime)
+            t.column(offerCancellationTransactionCreationBlockNumber)
         })
         try connection.run(offerSettlementMethods.create { t in
             t.column(id)
@@ -355,7 +365,9 @@ class DatabaseService {
                     isUserMaker <- offer.isUserMaker,
                     offerState <- offer.state,
                     cancelingOfferState <- offer.cancelingOfferState,
-                    offerCancellationTransactionHash <- offer.offerCancellationTransactionHash
+                    offerCancellationTransactionHash <- offer.offerCancellationTransactionHash,
+                    offerCancellationTransactionCreationTime <- offer.offerCancellationTransactionCreationTime,
+                    offerCancellationTransactionCreationBlockNumber <- offer.offerCancellationTransactionCreationBlockNumber
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.id" {
@@ -411,18 +423,25 @@ class DatabaseService {
     }
     
     /**
-     Updates a persistently stored `DatabaseOffer`'s `offerCancellationTransactionHash` field.
+     Updates a persistently stored `DatabaseOffer`'s `offerCancellationTransactionHash`, `offerCancellationTransactionCreationTime`, and `offerCancellationTransactionCreationBlockNumber` fields.
      
      - Parameters:
         - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
         - chainID: The chain ID of the offer to be updated, as a `String`.
         - transactionHash: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `offerCancellationTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `offerCancellationTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `offerCancellationTransactionCreationBlockNumber` field.
      */
-    func updateOfferCancellationTransactionHash(offerID: String, _chainID: String, transactionHash: String?) throws {
+    func updateOfferCancellationData(offerID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
         _ = try databaseQueue.sync {
-            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(offerCancellationTransactionHash <- transactionHash))
+            try connection.run(offers.filter(id == offerID && chainID == _chainID)
+                .update(
+                    offerCancellationTransactionHash <- transactionHash,
+                    offerCancellationTransactionCreationTime <- transactionCreationTime,
+                    offerCancellationTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
         }
-        logger.notice("updateOfferState: set value to \(transactionHash ?? "nil") for offer with B64 ID \(offerID), if present")
+        logger.notice("updateOfferCancellationData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for offer with B64 ID \(offerID), if present")
     }
     
     /**
@@ -482,7 +501,9 @@ class DatabaseService {
                 isUserMaker: result[0][isUserMaker],
                 state: result[0][offerState],
                 cancelingOfferState: result[0][cancelingOfferState],
-                offerCancellationTransactionHash: result[0][offerCancellationTransactionHash]
+                offerCancellationTransactionHash: result[0][offerCancellationTransactionHash],
+                offerCancellationTransactionCreationTime: result[0][offerCancellationTransactionCreationTime],
+                offerCancellationTransactionCreationBlockNumber: result[0][offerCancellationTransactionCreationBlockNumber]
             )
         } else {
             logger.notice("getOffer: no offer found with B64 ID \(_id)")
