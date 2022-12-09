@@ -31,16 +31,6 @@ enum OfferState {
      */
     case taken
     
-    
-    #warning("TODO: remove canceling and cancelOfferTransactionBroadcast states once old cancelOffer code is removed")
-    /**
-     Indicates that the corresponding offer will be canceled, but [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) has not yet been called for it.
-     */
-    case canceling
-    /**
-     Indicates that the transaction to cancel the corresponding offer has been broadcast.
-     */
-    case cancelOfferTransactionBroadcast
     /**
      Indicates that the corresponding offer has been canceled on chain.
      */
@@ -62,10 +52,6 @@ enum OfferState {
             return 3
         case .taken:
             return 4
-        case .canceling:
-            return -1
-        case .cancelOfferTransactionBroadcast:
-            return -1
         case .canceled:
             return -1
         }
@@ -86,10 +72,6 @@ enum OfferState {
             return "offerOpened"
         case .taken:
             return "taken"
-        case .canceling:
-            return "canceling"
-        case .cancelOfferTransactionBroadcast:
-            return "cancelOfferTxBroadcast"
         case .canceled:
             return "canceled"
         }
@@ -115,10 +97,6 @@ enum OfferState {
             return .offerOpened
         } else if string == "taken" {
             return .taken
-        } else if string == "canceling" {
-            return .canceling
-        } else if string == "cancelOfferTxBroadcast" {
-            return .cancelOfferTransactionBroadcast
         } else if string == "canceled" {
             return .canceled
         } else {

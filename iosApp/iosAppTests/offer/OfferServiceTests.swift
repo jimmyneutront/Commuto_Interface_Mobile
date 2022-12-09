@@ -277,7 +277,9 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: OfferState.openOfferTransactionBroadcast.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -808,7 +810,9 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -947,7 +951,9 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         let serializedSettlementMethodsAndPrivateDetails = offer.settlementMethods.compactMap { settlementMethod in
@@ -1070,7 +1076,9 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1316,7 +1324,9 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: true,
             state: "openOfferTxPublished",
             cancelingOfferState: offerInTruthSource.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offerInTruthSource.offerCancellationTransaction?.transactionHash
+            offerCancellationTransactionHash: offerInTruthSource.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
         
@@ -1450,7 +1460,9 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1697,7 +1709,9 @@ class OfferServiceTests: XCTestCase {
             isUserMaker: offer.isUserMaker,
             state: offer.state.asString,
             cancelingOfferState: offer.cancelingOfferState.asString,
-            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         

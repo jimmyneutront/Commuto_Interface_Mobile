@@ -262,6 +262,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         }
     }
     
+    #warning("TODO: Delete this function once new cancelOffer code via new pipeline is fully implemented and tested")
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
@@ -287,7 +288,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     }
                     do {
                         logger.notice("cancelOffer: persistently updating offer \(offerID.uuidString) state to canceling")
-                        try databaseService.updateOfferState(offerID: offerID.asData().base64EncodedString(), _chainID: String(chainID), state: OfferState.canceling.asString)
+                        //try databaseService.updateOfferState(offerID: offerID.asData().base64EncodedString(), _chainID: String(chainID), state: OfferState.canceling.asString)
                         logger.notice("cancelOffer: updating offer \(offerID.uuidString) state to canceling")
                         seal.fulfill(())
                     } catch {
@@ -295,7 +296,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     }
                 }
             }.get(on: DispatchQueue.main) { _ in
-                self.offerTruthSource?.offers[offerID]?.state = .canceling
+                //self.offerTruthSource?.offers[offerID]?.state = .canceling
             }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ -> Promise<Void> in
                 logger.notice("cancelOffer: canceling offer \(offerID.uuidString) on chain")
                 guard let blockchainService = blockchainService else {
@@ -305,11 +306,11 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
                 logger.notice("cancelOffer: persistently updating offer \(offerID.uuidString) state to cancelOfferTxBroadcast")
                 do {
-                    try databaseService.updateOfferState(offerID: offerID.asData().base64EncodedString(), _chainID: String(chainID), state: OfferState.cancelOfferTransactionBroadcast.asString)
+                    //try databaseService.updateOfferState(offerID: offerID.asData().base64EncodedString(), _chainID: String(chainID), state: OfferState.cancelOfferTransactionBroadcast.asString)
                     logger.notice("cancelOffer: updating offer \(offerID.uuidString) state to cancelOfferTxBroadcast")
                 }
             }.get(on: DispatchQueue.main) { _ in
-                self.offerTruthSource?.offers[offerID]?.state = .cancelOfferTransactionBroadcast
+                //self.offerTruthSource?.offers[offerID]?.state = .cancelOfferTransactionBroadcast
             }.done(on: DispatchQueue.global(qos: .userInitiated)) {
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
@@ -813,6 +814,15 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             ) else {
                 throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
             }
+            var offerCancellationTransactionCreationTimeString: String? = nil
+            if let offerCancellationTransactionCreationTime = offer.offerCancellationTransaction?.timeOfCreation {
+                let dateFormatter = ISO8601DateFormatter()
+                offerCancellationTransactionCreationTimeString = dateFormatter.string(from: offerCancellationTransactionCreationTime)
+            }
+            var offerCancellationTransactionCreationBlockNumberInt: Int? = nil
+            if let offerCancellationTransactionCreationBlockNumber = offer.offerCancellationTransaction?.latestBlockNumberAtCreation {
+                offerCancellationTransactionCreationBlockNumberInt = Int(offerCancellationTransactionCreationBlockNumber)
+            }
             let offerForDatabase = DatabaseOffer(
                 id: offer.id.asData().base64EncodedString(),
                 isCreated: offer.isCreated,
@@ -832,8 +842,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 state: offer.state.asString,
                 cancelingOfferState: offer.cancelingOfferState.asString,
                 offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
-                offerCancellationTransactionCreationTime: nil,
-                offerCancellationTransactionCreationBlockNumber: nil
+                offerCancellationTransactionCreationTime: offerCancellationTransactionCreationTimeString,
+                offerCancellationTransactionCreationBlockNumber: offerCancellationTransactionCreationBlockNumberInt
             )
             try databaseService.storeOffer(offer: offerForDatabase)
             logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
