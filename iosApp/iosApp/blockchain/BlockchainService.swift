@@ -284,7 +284,7 @@ class BlockchainService {
     }
     
     /**
-     Stores `transaction` in `transactionsToMonitor`, and then sends the wrapped  `EthereumTransaction` to the blockchain node via a call to [eth_sendRawTransaction](https://ethereum.github.io/execution-apis/api-documentation/).
+     Stores `transaction` in `transactionsToMonitor`, and then sends the wrapped  `EthereumTransaction` to the blockchain node via a call to [eth_sendRawTransaction](https://ethereum.github.io/execution-apis/api-documentation/). If this call fails, then `transaction` is immediately removed from `transactionsToMonitor`.
      
      - Parameter transaction: The `BlockchainTransaction` to be monitored, wrapping an `EthereumTransaction` to be sent to the node as a raw transaction.
      
@@ -293,13 +293,19 @@ class BlockchainService {
      - Throws: A `BlockchainServiceError.unexpectedNilError` if the `BlockchainTransaction.transaction` property of `transaction` is `nil`. Because this function returns a `Promise`, error will not actually be thrown, but will be passed to `seal.reject`.
      */
     func sendTransaction(_ transaction: BlockchainTransaction) -> Promise<TransactionSendingResult> {
-        guard let wrappedTransaction = transaction.transaction else {
-            return Promise<TransactionSendingResult> { seal in
+        return Promise<TransactionSendingResult> { seal in
+            guard let wrappedTransaction = transaction.transaction else {
                 seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Wrapped transaction was nil for \(transaction.transactionHash)"))
+                return
+            }
+            transactionsToMonitor[transaction.transactionHash] = transaction
+            w3.eth.sendRawTransactionPromise(wrappedTransaction).done(on: DispatchQueue.global(qos: .userInitiated)) { transactionSendingResult in
+                seal.fulfill(transactionSendingResult)
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.transactionsToMonitor[transaction.transactionHash] = nil
+                seal.reject(error)
             }
         }
-        transactionsToMonitor[transaction.transactionHash] = transaction
-        return w3.eth.sendRawTransactionPromise(wrappedTransaction)
     }
     
     /**
