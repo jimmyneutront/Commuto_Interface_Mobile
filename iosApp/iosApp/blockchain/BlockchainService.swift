@@ -738,8 +738,11 @@ class BlockchainService {
         }
     }
     
+    #warning("TODO: Remove hacky TransactionReceipt EthereumBloomFilter decoding fix")
     /**
-     Gets the current chain ID, parses the given `Block` in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events, creates a list of all such events that it finds, and then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the currenc chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
+     Gets the current chain ID, and iterates through all transactions in `block`  in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events. If the hash of a transaction is present in `monitoredTransactions`, then we get the transaction. If it has failed, we notifiy the proper failure handler. If it has not failed, then we parse it for events and add the resulting events to a list that will contain all events emitted in this block. In either case, we then remove the transaction hash from `monitoredTransactions`. If the hash of a transaction is not present in `monitoredTransactions`, then we parse it for events and add the resulting events to the list that will contain all events emitted in this block. Then then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the current chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
+     
+     Currently, this requires a hacky web3swift fix in order to work. In [this commit](https://github.com/web3swift-team/web3swift/commit/aa076ba96bbfcac98b8821029d67d76bce67065f#), a bug was introduced that skips the decoding of log bloom filters when decoding a response from the [eth_getTransactionHash]() endpoint. This bug causes all returned `TransactionReceipt` objects to have nil `logBloom` properties, meaning that event decoding is completely broken. The hacky fix is re-adding log bloom decoding code to the `TransactionReceipt` constructor.
      
      - Note: In order to parse a block, the `EventParserProtocol`s created in this function must query a network node for full transaction receipts.
      
@@ -783,20 +786,68 @@ class BlockchainService {
         guard let sellerClosedEventParser = commutoSwap.createEventParser("SellerClosed", filter: eventFilter) else {
             throw BlockchainServiceError.unexpectedNilError(desc: "Found nil while unwrapping SellerClosed event parser")
         }
-        events.append(contentsOf: try offerOpenedEventParser.parseBlock(block))
-        events.append(contentsOf: try offerEditedEventParser.parseBlock(block))
-        events.append(contentsOf: try offerCanceledEventParser.parseBlock(block))
-        events.append(contentsOf: try offerTakenEventParser.parseBlock(block))
-        events.append(contentsOf: try serviceFeeRateChangedParser.parseBlock(block))
-        events.append(contentsOf: try swapFilledEventParser.parseBlock(block))
-        events.append(contentsOf: try paymentSentEventParser.parseBlock(block))
-        events.append(contentsOf: try paymentReceivedEventParser.parseBlock(block))
-        events.append(contentsOf: try buyerClosedEventParser.parseBlock(block))
-        events.append(contentsOf: try sellerClosedEventParser.parseBlock(block))
+        for transactionIndex in block.transactions.indices {
+            // Get the hash of this particular transaction in the block
+            let transaction = block.transactions[transactionIndex]
+            var optionalTransactionHash: Data? = nil
+            switch transaction {
+            case .hash(let data):
+                optionalTransactionHash = data
+            case .transaction(let ethereumTransaction):
+                // This case should never occur, because this function should never be passed a block containing full transactions.
+                optionalTransactionHash = ethereumTransaction.hash
+            case .null:
+                ()
+            }
+            guard let transactionHash = optionalTransactionHash else {
+                logger.warning("parseBlock: got nil transaction hash for tx \(transactionIndex) in \(block.hash.toHexString())")
+                continue
+            }
+            var transactionHashString = transactionHash.toHexString().lowercased()
+            if !transactionHashString.hasPrefix("0x") {
+                transactionHashString = "0x" + transactionHashString
+            }
+            if let monitoredTransaction = transactionsToMonitor[transactionHashString] {
+                logger.notice("parseBlock: tx \(transactionHashString) is monitored, getting receipt")
+                // This transaction is one we are monitoring, so we get the entire transaction (since we currently just have the hash)
+                let fullTransaction = try w3.eth.getTransactionReceipt(transactionHash)
+                if fullTransaction.status == .failed {
+                    logger.warning("parseBlock: monitored tx \(transactionHashString) failed, calling failure handler")
+                    switch monitoredTransaction.type {
+                    case .cancelOffer:
+                        #warning("TODO: call OfferService failure handler here")
+                    }
+                } else {
+                    logger.notice("parseBlock: parsing monitored tx \(transactionHashString) for events")
+                    // The tranaction has not failed, so we parse it for the proper event
+                    switch monitoredTransaction.type {
+                    case .cancelOffer:
+                        events.append(contentsOf: try offerCanceledEventParser.parseTransactionByHash(transactionHash))
+                    }
+                }
+                logger.notice("parseBlock: removing \(transactionHashString) from transactionsToMonitor")
+                // Remove monitored transaction now that it has been handled
+                transactionsToMonitor[transactionHashString] = nil
+            } else {
+                logger.notice("parseBlock: tx \(transactionHashString) is not monitored, parsing for events")
+                // We are not monitoring this transaction, so we parse it for all possible events.
+                events.append(contentsOf: try offerOpenedEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try offerEditedEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try offerCanceledEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try offerTakenEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try serviceFeeRateChangedParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try swapFilledEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try paymentSentEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try paymentReceivedEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try buyerClosedEventParser.parseTransactionByHash(transactionHash))
+                events.append(contentsOf: try sellerClosedEventParser.parseTransactionByHash(transactionHash))
+            }
+        }
         try handleEvents(events, chainID: chainID)
     }
     
     #warning("TODO: The logger.info calls here should be logger.notice")
+    #warning("TODO: include transaction hash string in Event structs")
     /**
      Iterates through `results` in search of relevant `EventParserResultProtocol`s, attempts to create event objects from said relevant `EventParserResultProtocol`s, and passes resulting event objects to the proper service.
      

@@ -350,7 +350,7 @@ class BlockchainServiceTest: XCTestCase {
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
         blockchainService.listen()
-        wait(for: [offerOpenedExpectation, offerCanceledExpectation], timeout: 60.0)
+        wait(for: [offerOpenedExpectation, offerCanceledExpectation], timeout: 120.0)
         XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
         XCTAssertEqual(expectedOfferId, try! offerService.offerCanceledEventPromise!.wait().id)
         XCTAssertFalse(offerService.gotOfferEditedEvent)
