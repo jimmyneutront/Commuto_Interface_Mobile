@@ -24,7 +24,7 @@ struct BlockchainTransaction {
     /**
      The date and time at which this was created.
      */
-    let timeOfCreation: Date = Date()
+    let timeOfCreation: Date
     /**
      The number of the latest block in the blockchain at the time when this transaction was created.
      */
@@ -54,6 +54,23 @@ struct BlockchainTransaction {
         }
         self.transactionHash = transactionHash
         self.transaction = transaction
+        self.timeOfCreation = Date()
+        self.latestBlockNumberAtCreation = latestBlockNumberAtCreation
+        self.type = type
+    }
+    
+    /**
+     Creates a `BlockchainTransaction` with a `nil` `BlockchainTransaction.transaction` property, with a hash equal to `transactionHash`,  which identifies an `EthereumTransaction` created at `timeOfCreation`, when the latest block had block number `latestBlockNumberAtCreation`, and is of type `type`.
+     
+     - Parameters:
+        - transactionHash: The hash of the `EthereumTransaction` that this represents.
+        - timeOfCreation: The time at which the `EthereumTransaction` that this represents was created.
+        - type: A `BlockchainTransactionType` indicating what the corresponding `EthereumTransaction` will do/has done when/if it will be/is confirmed.
+     */
+    init(transactionHash: String, timeOfCreation: Date, latestBlockNumberAtCreation: UInt64, type: BlockchainTransactionType) {
+        self.transaction = nil
+        self.transactionHash = transactionHash
+        self.timeOfCreation = timeOfCreation
         self.latestBlockNumberAtCreation = latestBlockNumberAtCreation
         self.type = type
     }

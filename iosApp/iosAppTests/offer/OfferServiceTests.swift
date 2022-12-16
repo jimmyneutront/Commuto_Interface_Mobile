@@ -17,6 +17,88 @@ import XCTest
  Tests for OfferService
  */
 class OfferServiceTests: XCTestCase {
+    
+    /**
+     Ensure `OfferService` handles failed offer cancellation transactions properly.
+     */
+    func testHandleFailedOfferCancellationTransaction() {
+        let offerID = UUID()
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let offerTruthSource = TestOfferTruthSource()
+        
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: offerID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.zero,
+            onChainSettlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: true,
+            state: .offerOpened
+        )!
+        offer.cancelingOfferState = .awaitingTransactionConfirmation
+        let offerCancellationTransaction = BlockchainTransaction(transactionHash: "a_transaction_hash_here", timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .cancelOffer)
+        offer.offerCancellationTransaction = offerCancellationTransaction
+        offerTruthSource.offers[offerID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
+        )
+        offerService.offerTruthSource = offerTruthSource
+        let failureHandledExpectation = XCTestExpectation(description: "Fulfilled when failed transaction has been handled")
+        
+        DispatchQueue.global(qos: .default).async {
+            try! offerService.handleFailedTransaction(offerCancellationTransaction, error: BlockchainTransactionError(errorDescription: "tx failed"))
+            failureHandledExpectation.fulfill()
+        }
+        
+        wait(for: [failureHandledExpectation], timeout: 30.0)
+        let offerInTruthSource = offerTruthSource.offers[offerID]
+        XCTAssertEqual(CancelingOfferState.error, offerInTruthSource?.cancelingOfferState)
+        XCTAssertNotNil(offerInTruthSource?.cancelingOfferError)
+        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())
+        XCTAssertEqual(CancelingOfferState.error.asString, offerInDatabase?.cancelingOfferState)
+        
+    }
+    
     /**
      Ensures that `OfferService` handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) events properly for offers NOT made by the interface user.
      */

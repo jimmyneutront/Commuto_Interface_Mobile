@@ -7,9 +7,17 @@
 //
 
 /**
- A protocol that a structure or class must adopt in order to be notified of offer-related blockchain events by `BlockchainService`.
+ A protocol that a structure or class must adopt in order to be notified of offer-related blockchain events and transaction failures by `BlockchainService`.
  */
 protocol OfferNotifiable {
+    /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol that a monitored offer-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
+     
+     - Parameters:
+        - transaction: The `BlockchainTransaction` wrapping the on-chain transaction that has failed.
+        - error: A `BlockchainTransactionError` describing why the on-chain transaction has failed.
+     */
+    func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws
     /**
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of an `OfferOpenedEvent`.
      

@@ -723,6 +723,39 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol that a monitored offer-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
+     
+     If `transaction` is of type `BlockchainTransactionType.cancelOffer`, then this finds the offer with the corresponding cancellation transaction hash, persistently updates its canceling offer state to `CancelingOfferState.error` and on the main Dispatch Queue sets its `Offer.cancelingOfferError` property to `error` updates its `Offer.cancelingOfferState` property to `CancelingOfferState.error`.
+     
+     - Parameters:
+        - transaction: The `BlockchainTransaction` wrapping the on-chain transaction that has failed.
+        - error: A `BlockchainTransactionError` describing why the on-chain transaction has failed.
+     */
+    func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {
+        logger.warning("handleFailedTransaction: handling \(transaction.transactionHash) with error \(error.localizedDescription)")
+        switch transaction.type {
+        case .cancelOffer:
+            logger.warning("handleFailedTransaction: \(transaction.transactionHash) is of type cancelOffer")
+            guard let offerTruthSource = offerTruthSource else {
+                throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleFailedTransaction call for \(transaction.transactionHash)")
+            }
+            guard let offer = offerTruthSource.offers.first(where: { id, offer in
+                offer.offerCancellationTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: offer with cancellation transaction \(transaction.transactionHash) not found in offerTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found offer \(offer.id.uuidString) on \(offer.chainID) with cancellation transaction \(transaction.transactionHash), updating cancelingOfferState to error in persistent storage")
+            try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.error.asString)
+            logger.warning("handleFailedTransaction: setting cancelingOfferError and updating cancelingOfferState to error for \(offer.id.uuidString)")
+            DispatchQueue.main.sync {
+                offer.cancelingOfferError = error
+                offer.cancelingOfferState = .error
+            }
+        }
+    }
+    
+    /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`.
      
      Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, and then checks if the offer has been persistently stored in `databaseService`. If it has been persistently stored and if its `isUserMaker` field is true, then the user of this interface has created this offer, and so `OfferService`updates the offer's state to `awaitingPublicKeyAnnouncement`, announces its corresponding public key by getting its key pair from `keyManagerService` and passing the key pair and the offer ID specified in `event` to `P2PService.announcePublicKey`, and then updates the offer state to `offerOpened`. If the offer has not been persistently stored or if its `isUserMaker` field is false, then `OfferService` creates a new `Offer` and list of settlement methods with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` and `state` properties accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.

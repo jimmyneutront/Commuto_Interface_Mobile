@@ -100,6 +100,19 @@ class BlockchainService {
     private var transactionsToMonitor: [String: BlockchainTransaction] = [:]
     
     /**
+     Maps the `BlockchainTransaction.transactionHash` property of `transaction` to `transaction` itself in `transactionsToMonitor`.
+     
+     - Parameter transaction: The `BlockchainTransaction` to be added to `transactionsToMonitor`.
+     */
+    func addTransactionToMonitor(transaction: BlockchainTransaction) {
+        transactionsToMonitor[transaction.transactionHash] = transaction
+    }
+    
+    func getMonitoredTransaction(transactionHash: String) -> BlockchainTransaction? {
+        return transactionsToMonitor[transactionHash]
+    }
+    
+    /**
      The number of seconds that `BlockchainService` should wait after parsing a block before it begins parsing another block.
      */
     private var listenInterval: UInt32 = 1
@@ -815,7 +828,7 @@ class BlockchainService {
                     logger.warning("parseBlock: monitored tx \(transactionHashString) failed, calling failure handler")
                     switch monitoredTransaction.type {
                     case .cancelOffer:
-                        #warning("TODO: call OfferService failure handler here")
+                        try offerService.handleFailedTransaction(monitoredTransaction, error: BlockchainTransactionError.init(errorDescription: "Transaction \(transactionHashString) is confirmed, but failed for unknown reason."))
                     }
                 } else {
                     logger.notice("parseBlock: parsing monitored tx \(transactionHashString) for events")

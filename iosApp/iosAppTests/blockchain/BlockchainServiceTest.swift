@@ -89,6 +89,7 @@ class BlockchainServiceTest: XCTestCase {
         let errorHandler = TestBlockchainErrorHandler()
         
         class TestOfferService: OfferNotifiable {
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
             func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
@@ -156,6 +157,83 @@ class BlockchainServiceTest: XCTestCase {
      */
     
     /**
+     Ensure `BlockchainService` detects and handles failed monitored transactions properly.
+     */
+    func testHandleFailedTransaction() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let transactionHash: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get new CommutoSwap contract address from testing server")
+        let testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_blockchainservice_handleFailedTransaction")!
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        let failedTransactionHash = testingServerResponse!.transactionHash
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        class TestOfferService: OfferNotifiable {
+            
+            init(_ transactionFailedExpectation: XCTestExpectation) {
+                self.transactionFailedExpectation = transactionFailedExpectation
+            }
+            let transactionFailedExpectation: XCTestExpectation
+            var failedTransaction: BlockchainTransaction? = nil
+            var transactionFailureError: BlockchainTransactionError? = nil
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {
+                failedTransaction = transaction
+                transactionFailureError = error
+                transactionFailedExpectation.fulfill()
+            }
+            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {}
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {}
+            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {}
+            func handleOfferTakenEvent(_ event: OfferTakenEvent) throws {}
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) throws {}
+        }
+        
+        let transactionFailedExpectation = XCTestExpectation(description: "handleFailedTransaction was called")
+        let offerService = TestOfferService(transactionFailedExpectation)
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            swapService: TestSwapService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        blockchainService.addTransactionToMonitor(transaction: BlockchainTransaction(transactionHash: failedTransactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .cancelOffer))
+        blockchainService.listen()
+        
+        wait(for: [transactionFailedExpectation], timeout: 120.0)
+        XCTAssertNotNil(offerService.transactionFailureError)
+        XCTAssertEqual(BlockchainTransactionType.cancelOffer,  offerService.failedTransaction?.type)
+        XCTAssertEqual(failedTransactionHash, offerService.failedTransaction?.transactionHash)
+        XCTAssertNil(blockchainService.getMonitoredTransaction(transactionHash:failedTransactionHash))
+    }
+    
+    /**
      Tests `BlockchainService` by ensuring it detects and handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events for a specific offer properly.
      */
     func testListenOfferOpenedTaken() {
@@ -197,6 +275,7 @@ class BlockchainServiceTest: XCTestCase {
         let errorHandler = TestBlockchainErrorHandler()
         
         class TestOfferService: OfferNotifiable {
+            
             init(_ oOE: XCTestExpectation,
                  _ oTE: XCTestExpectation) {
                 offerOpenedExpectation = oOE
@@ -206,9 +285,13 @@ class BlockchainServiceTest: XCTestCase {
             let offerTakenExpectation: XCTestExpectation
             var offerOpenedEventPromise: Promise<OfferOpenedEvent>? = nil
             var offerTakenEventPromise: Promise<OfferTakenEvent>? = nil
+            var gotTransactionFailedEvent = false
             var gotOfferEditedEvent = false
             var gotOfferCanceledEvent = false
             var gotServiceFeeRateChangedEvent = false
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {
+                gotTransactionFailedEvent = true
+            }
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -251,6 +334,7 @@ class BlockchainServiceTest: XCTestCase {
         wait(for: [offerOpenedExpectation, offerTakenExpectation], timeout: 60.0)
         XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
         XCTAssertEqual(expectedOfferId, try! offerService.offerTakenEventPromise!.wait().id)
+        XCTAssertFalse(offerService.gotTransactionFailedEvent)
         XCTAssertFalse(offerService.gotOfferEditedEvent)
         XCTAssertFalse(offerService.gotOfferCanceledEvent)
         XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
@@ -308,9 +392,13 @@ class BlockchainServiceTest: XCTestCase {
             let offerCanceledExpectation: XCTestExpectation
             var offerOpenedEventPromise: Promise<OfferOpenedEvent>? = nil
             var offerCanceledEventPromise: Promise<OfferCanceledEvent>? = nil
+            var gotTransactionFailedEvent = false
             var gotOfferEditedEvent = false
             var gotOfferTakenEvent = false
             var gotServiceFeeRateChangedEvent = false
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {
+                gotTransactionFailedEvent = true
+            }
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -353,6 +441,7 @@ class BlockchainServiceTest: XCTestCase {
         wait(for: [offerOpenedExpectation, offerCanceledExpectation], timeout: 120.0)
         XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
         XCTAssertEqual(expectedOfferId, try! offerService.offerCanceledEventPromise!.wait().id)
+        XCTAssertFalse(offerService.gotTransactionFailedEvent)
         XCTAssertFalse(offerService.gotOfferEditedEvent)
         XCTAssertFalse(offerService.gotOfferTakenEvent)
         XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
@@ -411,9 +500,13 @@ class BlockchainServiceTest: XCTestCase {
             let offerEditedExpectation: XCTestExpectation
             var offerOpenedEventPromise: Promise<OfferOpenedEvent>? = nil
             var offerEditedEventPromise: Promise<OfferEditedEvent>? = nil
+            var gotTransactionFailedEvent = false
             var gotOfferCanceledEvent = false
             var gotOfferTakenEvent = false
             var gotServiceFeeRateChangedEvent = false
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {
+                gotTransactionFailedEvent = true
+            }
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -456,6 +549,7 @@ class BlockchainServiceTest: XCTestCase {
         wait(for: [offerOpenedExpectation, offerEditedExpectation], timeout: 60.0)
         XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
         XCTAssertEqual(expectedOfferId, try! offerService.offerEditedEventPromise!.wait().id)
+        XCTAssertFalse(offerService.gotTransactionFailedEvent)
         XCTAssertFalse(offerService.gotOfferCanceledEvent)
         XCTAssertFalse(offerService.gotOfferTakenEvent)
         XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
@@ -895,6 +989,7 @@ class BlockchainServiceTest: XCTestCase {
         let errorHandler = TestBlockchainErrorHandler(errorExpectation)
         
         class TestOfferService: OfferNotifiable {
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
             func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
