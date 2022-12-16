@@ -388,7 +388,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService` handles [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) events properly.
+     Ensures that `OfferService` handles [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) events properly, both for offers made by the user of this interface and for offers that are not.
      */
     func testHandleOfferCanceledEvent() {
         
@@ -433,6 +433,7 @@ class OfferServiceTests: XCTestCase {
             
             var appendedEvent: Event? = nil
             var removedEvent: Event? = nil
+            let eventRemovedExpectation = XCTestExpectation(description: "Fulfilled when an event is removed")
             
             override func append(_ element: Event) {
                 super.append(element)
@@ -442,6 +443,7 @@ class OfferServiceTests: XCTestCase {
             override func remove(_ elementToRemove: Event) {
                 super.remove(elementToRemove)
                 removedEvent = elementToRemove
+                eventRemovedExpectation.fulfill()
             }
             
         }
@@ -500,6 +502,9 @@ class OfferServiceTests: XCTestCase {
         wait(for: [offerTruthSource.offerAddedExpectation], timeout: 60.0)
         let openedOffer = offerTruthSource.offers[expectedOfferID]
         
+        struct SecondTestingServerResponse: Decodable {
+            let offerCancellationTransactionHash: String
+        }
         let cancelOfferResponseExpectation = XCTestExpectation(description: "Fulfilled when testing server responds to request for offer cancellation")
         testingServerUrlComponents.queryItems = [
             URLQueryItem(name: "events", value: "offer-canceled"),
@@ -508,12 +513,14 @@ class OfferServiceTests: XCTestCase {
         var offerCancellationRequest = URLRequest(url: testingServerUrlComponents.url!)
         offerCancellationRequest.httpMethod = "GET"
         offerCancellationRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var secondTestingServerResponse: SecondTestingServerResponse? = nil
         var gotErrorForCancellationRequest = false
         let cancellationRequestTask = URLSession.shared.dataTask(with: offerCancellationRequest) { data, response, error in
             if let error = error {
                 print(error)
                 gotErrorForCancellationRequest = true
-            } else if data != nil {
+            } else if let data = data {
+                secondTestingServerResponse = try! JSONDecoder().decode(SecondTestingServerResponse.self, from: data)
                 cancelOfferResponseExpectation.fulfill()
             } else {
                 print(response!)
@@ -524,16 +531,100 @@ class OfferServiceTests: XCTestCase {
         wait(for: [cancelOfferResponseExpectation], timeout: 10.0)
         XCTAssertTrue(!gotErrorForCancellationRequest)
         
-        wait(for: [offerTruthSource.offerRemovedExpectation], timeout: 20.0)
+        wait(for: [offerTruthSource.offerRemovedExpectation, offerCanceledEventRepository.eventRemovedExpectation], timeout: 20.0)
         XCTAssertTrue(!errorHandler.gotError)
         XCTAssertTrue(offerTruthSource.offers.keys.count == 0)
         XCTAssertTrue(offerTruthSource.offers[expectedOfferID] == nil)
         XCTAssertFalse(openedOffer!.isCreated)
-        XCTAssertEqual(openedOffer?.state, .canceled)
+        XCTAssertEqual(OfferState.canceled, openedOffer?.state)
         XCTAssertEqual(offerCanceledEventRepository.appendedEvent!.id, expectedOfferID)
         XCTAssertEqual(offerCanceledEventRepository.removedEvent!.id, expectedOfferID)
         let offerInDatabase = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
         XCTAssertEqual(offerInDatabase, nil)
+        
+        // Ensure handleOfferCanceledEvent properly handles the cancellation of offers made by the user of this interface
+        blockchainService.stopListening()
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: expectedOfferID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.zero,
+            onChainSettlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: true,
+            state: .offerOpened
+        )!
+        offer.cancelingOfferState = .awaitingTransactionConfirmation
+        offer.offerCancellationTransaction = BlockchainTransaction(transactionHash: secondTestingServerResponse!.offerCancellationTransactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .cancelOffer)
+        offerTruthSource.offers[expectedOfferID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let offerCanceledEventRepositoryForMonitoredTxn = TestBlockchainEventRepository<OfferCanceledEvent>()
+        let offerServiceForMonitoredTxn = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService(),
+            offerCanceledEventRepository: offerCanceledEventRepositoryForMonitoredTxn
+        )
+        let offerTruthSourceForMonitoredTxn = TestOfferTruthSource()
+        offerTruthSourceForMonitoredTxn.offers[expectedOfferID] = offer
+        offerServiceForMonitoredTxn.offerTruthSource = offerTruthSourceForMonitoredTxn
+        let blockchainServiceForMonitoredTxn = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerServiceForMonitoredTxn,
+            swapService: TestSwapService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        blockchainServiceForMonitoredTxn.addTransactionToMonitor(transaction: offer.offerCancellationTransaction!)
+        offerServiceForMonitoredTxn.blockchainService = blockchainServiceForMonitoredTxn
+        blockchainServiceForMonitoredTxn.listen()
+        
+        wait(for: [offerCanceledEventRepositoryForMonitoredTxn.eventRemovedExpectation], timeout: 120.0)
+        XCTAssertFalse(errorHandler.gotError)
+        XCTAssertTrue(offerTruthSourceForMonitoredTxn.offers.keys.isEmpty)
+        XCTAssertNil(offerTruthSourceForMonitoredTxn.offers[expectedOfferID])
+        XCTAssertFalse(offer.isCreated)
+        XCTAssertEqual(OfferState.canceled, offer.state)
+        XCTAssertEqual(CancelingOfferState.completed, offer.cancelingOfferState)
+        XCTAssertNil(blockchainServiceForMonitoredTxn.getMonitoredTransaction(transactionHash: secondTestingServerResponse!.offerCancellationTransactionHash))
+        XCTAssertEqual(secondTestingServerResponse!.offerCancellationTransactionHash, offer.offerCancellationTransaction!.transactionHash)
+        XCTAssertEqual(offerCanceledEventRepositoryForMonitoredTxn.appendedEvent!.id, expectedOfferID)
+        XCTAssertEqual(offerCanceledEventRepositoryForMonitoredTxn.removedEvent!.id, expectedOfferID)
+        let offerInDatabaseForMonitoredTxn = try! databaseService.getOffer(id: expectedOfferID.asData().base64EncodedString())
+        XCTAssertEqual(offerInDatabaseForMonitoredTxn, nil)
+        
     }
     
     /**

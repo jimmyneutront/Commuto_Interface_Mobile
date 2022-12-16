@@ -1022,7 +1022,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
-     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` saves `event` in `offerCanceledEventsRepository`, removes the corresponding offer and its settlement methods from persistent storage, removes `event` from `offerCanceledEventsRepository`, and then checks that the chain ID of the event matches the chain ID of the `Offer` mapped to the offer ID specified in `event` in `offerTruthSource`;s `offers` dictionary on the main thread. If they do not match, this returns. If they do match, then this synchronously removes the `Offer` from said `offers` dictionary on the main thread.
+     The function called by `BlockchainService` to notify `OfferService` of an `OfferCanceledEvent`. Once notified, `OfferService` saves `event` in `offerCanceledEventRepository`, and checks for the corresponding `Offer` (with an ID and chain ID matching that specified in `event`) in `offerTruthSource`. If it finds such an `Offer`, it checks whether the offer was made by the user of this interface. If it was, this checks whether the hash of the offer's `Offer.offerCancellationTransaction` equals that of `event`. If they do not match, then this updates the `Offer`, both in `offerTruthSource` and in persistent storage, with a new `BlockchainTransaction` containing the hash specified in `event`. Then, regardless of whether the hashes match, this sets the offer's `Offer.cancelingOfferState` to `CancelingOfferState.completed` on the main Dispatch Queue. Then, regardless of whether the `Offer` was or was not made by the user of this interface, this sets the offer's `Offer.isCreated` flag to `false` and its `Offer.state` to `OfferState.canceled`, and then removes the offer from `offerTruthSource` on the main Dispatch Queue. Finally, regardless of whether an `Offer` was found in `offerTruthSource`, this removes the offer with the ID and chain ID specified in `event` (and its settlement methods) from persistent storage. Finally, this removes `event` from `offerCanceledEventRepository`
      
      - Parameter event: The `OfferCanceledEvent` of which `OfferService` is being notified.
      
@@ -1032,23 +1032,57 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         logger.notice("handleOfferCanceledEvent: handling event for offer \(event.id.uuidString)")
         let offerIdString = event.id.asData().base64EncodedString()
         offerCanceledEventRepository.append(event)
-        try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
-        logger.notice("handleOfferCanceledEvent: deleted offer \(event.id.uuidString) from persistent storage")
-        try databaseService.deleteOfferSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
-        logger.notice("handleOfferCanceledEvent: deleted settlement methods of offer \(event.id.uuidString) from persistent storage")
-        offerCanceledEventRepository.remove(event)
+        logger.notice("handleOfferCanceledEvent: persistently updating state for \(event.id.uuidString)")
+        try databaseService.updateOfferState(offerID: offerIdString, _chainID: String(event.chainID), state: OfferState.canceled.asString)
         guard var offerTruthSource = offerTruthSource else {
-            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call")
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferCanceledEvent call for \(event.id.uuidString)")
         }
-        // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
-        DispatchQueue.main.sync {
-            if offerTruthSource.offers[event.id]?.chainID == event.chainID {
-                offerTruthSource.offers[event.id]?.isCreated = false
-                offerTruthSource.offers[event.id]?.state = .canceled
+        if let offer = offerTruthSource.offers[event.id], offer.chainID == event.chainID {
+            logger.notice("handleOfferCanceledEvent: found offer \(event.id.uuidString) in offerTruthSource")
+            if offer.isUserMaker {
+                var mustUpdateOfferCancellationTransaction = false
+                logger.notice("handleOfferCanceledEvent: offer \(event.id.uuidString) made by interface user")
+                if let offerCancellationTransaction = offer.offerCancellationTransaction {
+                    if offerCancellationTransaction.transactionHash == event.transactionHash {
+                        logger.notice("handleOfferCanceledEvent: tx hash \(event.transactionHash) of event matches that for offer \(event.id.uuidString): \(offerCancellationTransaction.transactionHash)")
+                    } else {
+                        logger.warning("handleOfferCanceledEvent: tx hash \(event.transactionHash) of event does not match that for offer \(event.id.uuidString): \(offerCancellationTransaction.transactionHash), updating with new transaction hash")
+                        mustUpdateOfferCancellationTransaction = true
+                    }
+                } else {
+                    logger.warning("handleOfferCanceledEvent: offer \(event.id.uuidString) made by interface user has no offer cancellation transaction, updating with transaction hash")
+                    mustUpdateOfferCancellationTransaction = true
+                }
+                if mustUpdateOfferCancellationTransaction {
+                    let offerCancellationTransaction = BlockchainTransaction(transactionHash: event.transactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .cancelOffer)
+                    DispatchQueue.main.sync {
+                        offer.offerCancellationTransaction = offerCancellationTransaction
+                    }
+                    logger.warning("handleOfferCanceledEvent: persistently storing tx hash \(event.transactionHash) for \(event.id.uuidString)")
+                    let dateFormatter = ISO8601DateFormatter()
+                    let dateString = dateFormatter.string(from: offerCancellationTransaction.timeOfCreation)
+                    try databaseService.updateOfferCancellationData(offerID: offerIdString, _chainID: String(event.chainID), transactionHash: offerCancellationTransaction.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(offerCancellationTransaction.latestBlockNumberAtCreation))
+                }
+                logger.notice("handleOfferCanceledEvent: updating cancelingOfferState of user-as-maker offer \(event.id.uuidString) to \(CancelingOfferState.completed.asString)")
+                DispatchQueue.main.sync {
+                    offer.cancelingOfferState = .completed
+                }
+            }
+            logger.notice("handleOfferCanceledEvent: updating state of \(event.id.uuidString) to \(OfferState.canceled.asString)")
+            DispatchQueue.main.sync {
+                offer.isCreated = false
+                offer.state = .canceled
+            }
+            logger.notice("handleOfferCanceledEvent: removing \(event.id.uuidString) from offerTruthSource")
+            _ = DispatchQueue.main.sync {
                 offerTruthSource.offers.removeValue(forKey: event.id)
             }
         }
-        logger.notice("handleOfferCanceledEvent: removed offer \(event.id.uuidString) from offerTruthSource if present")
+        logger.notice("handleOfferCanceledEvent: removing \(event.id.uuidString) with chain ID \(event.chainID) from persistent storage")
+        try databaseService.deleteOffers(offerID: offerIdString, _chainID: String(event.chainID))
+        logger.notice("handleOfferCanceledEvent: removing settlement methods for \(event.id.uuidString) with chain ID \(event.chainID) from persistent storage")
+        try databaseService.deleteOfferSettlementMethods(offerID: offerIdString, _chainID: String(event.chainID))
+        offerCanceledEventRepository.remove(event)
     }
     
     /**
