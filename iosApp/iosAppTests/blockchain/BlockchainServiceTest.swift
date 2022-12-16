@@ -342,13 +342,14 @@ class BlockchainServiceTest: XCTestCase {
     }
     
     /**
-     Tests `BlockchainService` by ensuring it detects and handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events for a specific offer properly.
+     Tests `BlockchainService` by ensuring it detects and handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and [OfferCanceled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offercanceled) events for a specific offer properly. This ensures that such events emitted by transactions not made by this interface and those emitted by monitored transactions (those that are made by this interface) are detected and handled properly.
      */
     func testListenOfferOpenedCanceled() {
         
         struct TestingServerResponse: Decodable {
             let commutoSwapAddress: String
             let offerId: String
+            let offerCancellationTransactionHash: String
         }
         
         let responseExpectation = XCTestExpectation(description: "Get new CommutoSwap contract address from testing server")
@@ -377,6 +378,7 @@ class BlockchainServiceTest: XCTestCase {
         wait(for: [responseExpectation], timeout: 60.0)
         XCTAssertTrue(!gotError)
         let expectedOfferId = UUID(uuidString: testingServerResponse!.offerId)!
+        let offerCancellationTransactionHash = testingServerResponse!.offerCancellationTransactionHash
         
         let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
         
@@ -426,25 +428,48 @@ class BlockchainServiceTest: XCTestCase {
             }
         }
         
-        let offerOpenedExpectation = XCTestExpectation(description: "handleOfferOpenedEvent was called")
-        let offerCanceledExpectation = XCTestExpectation(description: "handleOfferCanceledEvent was called")
-        let offerService = TestOfferService(offerOpenedExpectation, offerCanceledExpectation)
+        let offerOpenedExpectationForNonMonitoredTx = XCTestExpectation(description: "handleOfferOpenedEvent was called for non-monitored transaction")
+        let offerCanceledExpectationForNonMonitoredTx = XCTestExpectation(description: "handleOfferCanceledEvent was called for non-monitored transaction")
+        let offerServiceForNonMonitoredTxns = TestOfferService(offerOpenedExpectationForNonMonitoredTx, offerCanceledExpectationForNonMonitoredTx)
         
-        let blockchainService = BlockchainService(
+        let blockchainServiceForNonMonitoredTxns = BlockchainService(
             errorHandler: errorHandler,
-            offerService: offerService,
+            offerService: offerServiceForNonMonitoredTxns,
             swapService: TestSwapService(),
             web3Instance: w3,
             commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
         )
-        blockchainService.listen()
-        wait(for: [offerOpenedExpectation, offerCanceledExpectation], timeout: 120.0)
-        XCTAssertEqual(expectedOfferId, try! offerService.offerOpenedEventPromise!.wait().id)
-        XCTAssertEqual(expectedOfferId, try! offerService.offerCanceledEventPromise!.wait().id)
-        XCTAssertFalse(offerService.gotTransactionFailedEvent)
-        XCTAssertFalse(offerService.gotOfferEditedEvent)
-        XCTAssertFalse(offerService.gotOfferTakenEvent)
-        XCTAssertFalse(offerService.gotServiceFeeRateChangedEvent)
+        blockchainServiceForNonMonitoredTxns.listen()
+        wait(for: [offerOpenedExpectationForNonMonitoredTx, offerCanceledExpectationForNonMonitoredTx], timeout: 120.0)
+        XCTAssertEqual(expectedOfferId, try! offerServiceForNonMonitoredTxns.offerOpenedEventPromise!.wait().id)
+        XCTAssertEqual(expectedOfferId, try! offerServiceForNonMonitoredTxns.offerCanceledEventPromise!.wait().id)
+        XCTAssertFalse(offerServiceForNonMonitoredTxns.gotTransactionFailedEvent)
+        XCTAssertFalse(offerServiceForNonMonitoredTxns.gotOfferEditedEvent)
+        XCTAssertFalse(offerServiceForNonMonitoredTxns.gotOfferTakenEvent)
+        XCTAssertFalse(offerServiceForNonMonitoredTxns.gotServiceFeeRateChangedEvent)
+        XCTAssertFalse(errorHandler.gotError)
+        blockchainServiceForNonMonitoredTxns.stopListening()
+        
+        let offerOpenedExpectationForMonitoredTx = XCTestExpectation(description: "handleOfferOpenedEvent was called for monitored transaction")
+        let offerCanceledExpectationForMonitoredTx = XCTestExpectation(description: "handleOfferCanceledEvent was called for monitored transaction")
+        let offerServiceForMonitoredTxns = TestOfferService(offerOpenedExpectationForMonitoredTx, offerCanceledExpectationForMonitoredTx)
+        
+        let blockchainServiceForMonitoredTxns = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerServiceForMonitoredTxns,
+            swapService: TestSwapService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        blockchainServiceForMonitoredTxns.addTransactionToMonitor(transaction: BlockchainTransaction(transactionHash: offerCancellationTransactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .cancelOffer))
+        blockchainServiceForMonitoredTxns.listen()
+        wait(for: [offerOpenedExpectationForMonitoredTx, offerCanceledExpectationForMonitoredTx], timeout: 120.0)
+        XCTAssertEqual(expectedOfferId, try! offerServiceForMonitoredTxns.offerOpenedEventPromise!.wait().id)
+        XCTAssertEqual(expectedOfferId, try! offerServiceForMonitoredTxns.offerCanceledEventPromise!.wait().id)
+        XCTAssertFalse(offerServiceForMonitoredTxns.gotTransactionFailedEvent)
+        XCTAssertFalse(offerServiceForMonitoredTxns.gotOfferEditedEvent)
+        XCTAssertFalse(offerServiceForMonitoredTxns.gotOfferTakenEvent)
+        XCTAssertFalse(offerServiceForMonitoredTxns.gotServiceFeeRateChangedEvent)
         XCTAssertFalse(errorHandler.gotError)
         
     }
