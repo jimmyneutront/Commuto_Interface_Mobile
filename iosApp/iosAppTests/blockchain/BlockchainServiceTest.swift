@@ -234,6 +234,83 @@ class BlockchainServiceTest: XCTestCase {
     }
     
     /**
+     Ensure `BlockchainService` detects and handles monitored transactions that have been dropped or have been pending for too long.
+     */
+    func testHandleLongPendingOrDroppedTransaction() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get new CommutoSwap contract address from testing server")
+        let testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_blockchainservice_handleLongPendingOrDroppedTransaction")!
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        class TestOfferService: OfferNotifiable {
+            
+            init(_ transactionFailedExpectation: XCTestExpectation) {
+                self.transactionFailedExpectation = transactionFailedExpectation
+            }
+            let transactionFailedExpectation: XCTestExpectation
+            var failedTransaction: BlockchainTransaction? = nil
+            var transactionFailureError: BlockchainTransactionError? = nil
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {
+                failedTransaction = transaction
+                transactionFailureError = error
+                transactionFailedExpectation.fulfill()
+            }
+            func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {}
+            func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {}
+            func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {}
+            func handleOfferTakenEvent(_ event: OfferTakenEvent) throws {}
+            func handleServiceFeeRateChangedEvent(_ event: ServiceFeeRateChangedEvent) throws {}
+        }
+        
+        let transactionFailedExpectation = XCTestExpectation(description: "handleFailedTransaction was called")
+        let offerService = TestOfferService(transactionFailedExpectation)
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            swapService: TestSwapService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        
+        blockchainService.addTransactionToMonitor(transaction: BlockchainTransaction(transactionHash: "a_nonexistent_tx_hash", timeOfCreation: Date(timeIntervalSinceNow: -86401), latestBlockNumberAtCreation: 0, type: .cancelOffer))
+        blockchainService.listen()
+        
+        wait(for: [transactionFailedExpectation], timeout: 120.0)
+        XCTAssertNotNil(offerService.transactionFailureError)
+        XCTAssertEqual(BlockchainTransactionType.cancelOffer,  offerService.failedTransaction?.type)
+        XCTAssertEqual("a_nonexistent_tx_hash", offerService.failedTransaction?.transactionHash)
+        XCTAssertNil(blockchainService.getMonitoredTransaction(transactionHash:"a_nonexistent_tx_hash"))
+        
+    }
+    
+    /**
      Tests `BlockchainService` by ensuring it detects and handles [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events for a specific offer properly.
      */
     func testListenOfferOpenedTaken() {

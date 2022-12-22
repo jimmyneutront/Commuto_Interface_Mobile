@@ -753,7 +753,7 @@ class BlockchainService {
     
     #warning("TODO: Remove hacky TransactionReceipt EthereumBloomFilter decoding fix")
     /**
-     Gets the current chain ID, and iterates through all transactions in `block`  in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events. If the hash of a transaction is present in `monitoredTransactions`, then we get the transaction. If it has failed, we notifiy the proper failure handler. If it has not failed, then we parse it for events and add the resulting events to a list that will contain all events emitted in this block. In either case, we then remove the transaction hash from `monitoredTransactions`. If the hash of a transaction is not present in `monitoredTransactions`, then we parse it for events and add the resulting events to the list that will contain all events emitted in this block. Then then calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the current chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
+     Gets the current chain ID, and iterates through all transactions in `block`  in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events. If the hash of a transaction is present in `transactionsToMonitor`, then we get the transaction. If it has failed, we notifiy the proper failure handler. If it has not failed, then we parse it for events and add the resulting events to a list that will contain all events emitted in this block. In either case, we then remove the transaction hash from `transactionsToMonitor`. If the hash of a transaction is not present in `transactionsToMonitor`, then we parse it for events and add the resulting events to the list that will contain all events emitted in this block. Then this iterates through all remaining monitored transaction. If this finds transations that have been dropped or have been pending for more than 24 hours, this removes them from `transactionsToMonitor` and calls the apropriate failure handler. Then this calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the current chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
      Currently, this requires a hacky web3swift fix in order to work. In [this commit](https://github.com/web3swift-team/web3swift/commit/aa076ba96bbfcac98b8821029d67d76bce67065f#), a bug was introduced that skips the decoding of log bloom filters when decoding a response from the [eth_getTransactionHash]() endpoint. This bug causes all returned `TransactionReceipt` objects to have nil `logBloom` properties, meaning that event decoding is completely broken. The hacky fix is re-adding log bloom decoding code to the `TransactionReceipt` constructor.
      
@@ -856,11 +856,34 @@ class BlockchainService {
                 events.append(contentsOf: try sellerClosedEventParser.parseTransactionByHash(transactionHash))
             }
         }
+        for monitoredTransaction in transactionsToMonitor.values {
+            logger.notice("parseBlock: checking if unconfirmed tx \(monitoredTransaction.transactionHash) is dropped or pending")
+            // 86400 seconds = 24 hours
+            if monitoredTransaction.timeOfCreation.distance(to: Date()) > 86400 {
+                logger.notice("parseBlock: monitored tx \(monitoredTransaction.transactionHash) is more than 24 hours old")
+                var monitoredTransactionError: BlockchainTransactionError? = nil
+                do {
+                    let monitoredTransactionReceipt = try w3.eth.getTransactionReceipt(monitoredTransaction.transactionHash)
+                    if monitoredTransactionReceipt.status == .notYetProcessed {
+                        monitoredTransactionError = BlockchainTransactionError(errorDescription: "Transaction \(monitoredTransaction.transactionHash) has been pending for more than 24 hours.")
+                    }
+                } catch Web3Error.nodeError(let desc) {
+                    monitoredTransactionError = BlockchainTransactionError(errorDescription: "Transaction \(monitoredTransaction.transactionHash) has been pending for more than 24 hours, and an attempt to get its receipt failed, with error message: \(desc)")
+                }
+                if let monitoredTransactionError = monitoredTransactionError {
+                    logger.notice("parseBlock: removing from transactionsToMonitor and handling failed monitored tx \(monitoredTransaction.transactionHash) for reason: \(monitoredTransactionError.errorDescription ?? "Unknown reason")")
+                    transactionsToMonitor[monitoredTransaction.transactionHash] = nil
+                    switch monitoredTransaction.type {
+                    case .cancelOffer:
+                        try offerService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
+                    }
+                }
+            }
+        }
         try handleEvents(events, chainID: chainID)
     }
     
     #warning("TODO: The logger.info calls here should be logger.notice")
-    #warning("TODO: include transaction hash string in Event structs")
     /**
      Iterates through `results` in search of relevant `EventParserResultProtocol`s, attempts to create event objects from said relevant `EventParserResultProtocol`s, and passes resulting event objects to the proper service.
      
