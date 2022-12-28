@@ -56,7 +56,7 @@ fun CancelOfferComposable(
 
     LaunchedEffect(true) {
         if (offer.cancelingOfferState.value == CancelingOfferState.NONE ||
-            offer.cancelingOfferState.value == CancelingOfferState.CANCELING) {
+            offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
             offerTruthSource.createCancelOfferTransaction(
                 offer = offer,
                 createdTransactionHandler = { createdTransaction ->
@@ -90,7 +90,7 @@ fun CancelOfferComposable(
                 },
                 content = {
                     Text(
-                        text = "Cancel",
+                        text = "Close",
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -139,10 +139,12 @@ fun CancelOfferComposable(
             }
             Button(
                 onClick = {
+                    // Close the sheet in which this view is presented as soon as the user begins the canceling process.
                     offerTruthSource.cancelOffer(
                         offer = offer,
                         offerCancellationTransaction = cancelOfferTransaction.value
                     )
+                    closeSheet()
                 },
                 content = {
                     Text(

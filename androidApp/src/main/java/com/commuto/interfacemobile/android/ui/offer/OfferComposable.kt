@@ -266,9 +266,12 @@ fun OfferComposable(
                             color = Color.Red
                         )
                     }
+                    val cancelOfferButtonColor = when (offer.cancelingOfferState.value) {
+                        CancelingOfferState.NONE, CancelingOfferState.EXCEPTION -> Color.Red
+                        else -> Color.Gray
+                    }
                     Button(
                         onClick = {
-                            isShowingCancelOfferSheet.value = true
                             // Don't let the user try to cancel the offer if it is already canceled or being canceled
                             if (offer.cancelingOfferState.value == CancelingOfferState.NONE  ||
                                 offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
@@ -277,15 +280,12 @@ fun OfferComposable(
                         },
                         content = {
                             val cancelOfferButtonText: String = when (offer.cancelingOfferState.value) {
-                                CancelingOfferState.NONE, CancelingOfferState.EXCEPTION -> {
-                                    "Cancel Offer"
-                                }
-                                CancelingOfferState.CANCELING -> {
-                                    "Canceling Offer"
-                                }
-                                else -> {
-                                    "Offer Canceled"
-                                }
+                                CancelingOfferState.NONE, CancelingOfferState.EXCEPTION -> "Cancel Offer"
+                                CancelingOfferState.VALIDATING -> "Validating"
+                                CancelingOfferState.SENDING_TRANSACTION -> "Sending Offer Cancellation Transaction"
+                                CancelingOfferState.AWAITING_TRANSACTION_CONFIRMATION -> "Awaiting Transaction " +
+                                        "Confirmation"
+                                else -> "Offer Canceled"
                             }
                             Text(
                                 text = cancelOfferButtonText,
@@ -294,10 +294,10 @@ fun OfferComposable(
                                 textAlign = TextAlign.Center
                             )
                         },
-                        border = BorderStroke(3.dp, Color.Red),
+                        border = BorderStroke(3.dp, cancelOfferButtonColor),
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor =  Color.Transparent,
-                            contentColor = Color.Red,
+                            contentColor = cancelOfferButtonColor,
                         ),
                         elevation = null,
                         modifier = Modifier.fillMaxWidth()
