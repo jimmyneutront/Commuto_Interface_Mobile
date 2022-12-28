@@ -52,9 +52,9 @@ dependencies {
     implementation("com.squareup.sqldelight:sqlite-driver:1.5.1")
     // Web3j
     //TODO: Update these to a version with no vulnerabilities
-    implementation("org.web3j:codegen:4.9.2")
-    implementation("org.web3j:contracts:4.9.2")
-    implementation("org.web3j:core:4.9.2")
+    implementation("org.web3j:codegen:4.9.5")
+    implementation("org.web3j:contracts:4.9.5")
+    implementation("org.web3j:core:4.9.5")
     // Kotlin Coroutines for use with CompletableFuture
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.2")
     // Kotlin tests
