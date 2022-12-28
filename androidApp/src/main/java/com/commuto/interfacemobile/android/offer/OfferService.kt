@@ -251,7 +251,7 @@ class OfferService (
                     isUserMaker = 1L,
                     state = newOffer.state.asString,
                     cancelingOfferState = newOffer.cancelingOfferState.value.asString,
-                    offerCancellationTransactionHash = newOffer.offerCancellationTransactionHash,
+                    offerCancellationTransactionHash = newOffer.offerCancellationTransaction?.transactionHash,
                 )
                 databaseService.storeOffer(offerForDatabase)
                 val settlementMethodStrings = mutableListOf<Pair<String, String?>>()
@@ -456,7 +456,7 @@ class OfferService (
                         "${blockchainTransactionForOfferCancellation.transactionHash} in offer")
                 withContext(Dispatchers.Main) {
                     offer.cancelingOfferState.value = CancelingOfferState.SENDING_TRANSACTION
-                    offer.offerCancellationTransactionHash = transactionHash
+                    offer.offerCancellationTransaction = blockchainTransactionForOfferCancellation
                 }
                 Log.i(logTag, "cancelOffer: sending $transactionHash for ${offer.id}")
                 blockchainService.sendTransactionAsync(
@@ -917,7 +917,7 @@ class OfferService (
                 isUserMaker = isUserMakerLong,
                 state = offer.state.asString,
                 cancelingOfferState = offer.cancelingOfferState.value.asString,
-                offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
+                offerCancellationTransactionHash = offer.offerCancellationTransaction?.transactionHash,
             )
             databaseService.storeOffer(offerForDatabase)
             Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")
