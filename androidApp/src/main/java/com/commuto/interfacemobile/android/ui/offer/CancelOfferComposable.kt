@@ -25,6 +25,7 @@ import com.commuto.interfacemobile.android.ui.SheetComposable
 import org.web3j.crypto.RawTransaction
 import org.web3j.crypto.transaction.type.Transaction1559
 
+// TODO: only allow canceling offer if cancellation state is none or error
 /**
  * Allows the user to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) that they
  * have made, and displays the necessary gas and gas cost before actually cancelling the Offer. This should be contained
@@ -137,7 +138,12 @@ fun CancelOfferComposable(
                 )
             }
             Button(
-                onClick = {},
+                onClick = {
+                    offerTruthSource.cancelOffer(
+                        offer = offer,
+                        offerCancellationTransaction = cancelOfferTransaction.value
+                    )
+                },
                 content = {
                     Text(
                         text = "Cancel Offer",

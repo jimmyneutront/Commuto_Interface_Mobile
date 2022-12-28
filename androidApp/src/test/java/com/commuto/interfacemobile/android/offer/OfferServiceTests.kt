@@ -7,6 +7,7 @@ import com.commuto.interfacedesktop.db.Offer as DatabaseOffer
 import com.commuto.interfacedesktop.db.Swap as DatabaseSwap
 import com.commuto.interfacemobile.android.blockchain.BlockchainEventRepository
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.CommutoWeb3j
 import com.commuto.interfacemobile.android.blockchain.TestBlockchainExceptionHandler
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.database.DatabaseService
@@ -46,7 +47,6 @@ import net.folivo.trixnity.clientserverapi.client.MatrixClientServerApiClient
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -97,7 +97,7 @@ class OfferServiceTests {
         expectedOfferIdByteBuffer.putLong(expectedOfferId.leastSignificantBits)
         val expectedOfferIdByteArray = expectedOfferIdByteBuffer.array()
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -235,7 +235,7 @@ class OfferServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         class TestBlockchainEventRepository: BlockchainEventRepository<OfferOpenedEvent>() {
             val removedEventChannel = Channel<OfferOpenedEvent>()
@@ -386,7 +386,7 @@ class OfferServiceTests {
         expectedOfferIdByteBuffer.putLong(expectedOfferId.leastSignificantBits)
         val expectedOfferIdByteArray = expectedOfferIdByteBuffer.array()
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -523,7 +523,7 @@ class OfferServiceTests {
         expectedOfferIdByteBuffer.putLong(expectedOfferId.leastSignificantBits)
         val expectedOfferIdByteArray = expectedOfferIdByteBuffer.array()
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -658,7 +658,7 @@ class OfferServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         /*
         OfferService should call the sendTakerInformation method of this class, passing a UUID equal to newOfferID
@@ -749,7 +749,7 @@ class OfferServiceTests {
         }
 
         // Set up node connection
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val offerTruthSource = TestOfferTruthSource()
 
@@ -880,7 +880,7 @@ class OfferServiceTests {
         }
         val expectedOfferId = UUID.fromString(testingServerResponse.offerId)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -1182,7 +1182,7 @@ class OfferServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -1255,7 +1255,7 @@ class OfferServiceTests {
             testingServerClient.get(testingServiceUrl).body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -1457,7 +1457,7 @@ class OfferServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -1574,7 +1574,7 @@ class OfferServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -1703,7 +1703,7 @@ class OfferServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()

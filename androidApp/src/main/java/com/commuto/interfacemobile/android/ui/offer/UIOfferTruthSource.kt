@@ -75,6 +75,8 @@ interface UIOfferTruthSource: OfferTruthSource {
         exceptionHandler: (Exception) -> Unit
     )
 
+    fun cancelOffer(offer: Offer, offerCancellationTransaction: RawTransaction?)
+
     /**
      * Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user
      * of this interface.

@@ -22,7 +22,6 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import java.math.BigInteger
 import java.net.UnknownHostException
@@ -77,7 +76,7 @@ class BlockchainServiceTest {
             testingServerClient.get(testingServiceUrl).body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val blockchainExceptionHandler = TestBlockchainExceptionHandler()
 
@@ -170,7 +169,7 @@ class BlockchainServiceTest {
         }
         val expectedOfferId = UUID.fromString(testingServerResponse.offerId)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val blockchainExceptionHandler = TestBlockchainExceptionHandler()
 
@@ -246,7 +245,7 @@ class BlockchainServiceTest {
         offerIdByteBuffer.putLong(expectedOfferId.mostSignificantBits)
         offerIdByteBuffer.putLong(expectedOfferId.leastSignificantBits)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val blockchainExceptionHandler = TestBlockchainExceptionHandler()
 
@@ -322,7 +321,7 @@ class BlockchainServiceTest {
         offerIdByteBuffer.putLong(expectedOfferId.mostSignificantBits)
         offerIdByteBuffer.putLong(expectedOfferId.leastSignificantBits)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val blockchainExceptionHandler = TestBlockchainExceptionHandler()
 
@@ -393,7 +392,7 @@ class BlockchainServiceTest {
         }
         val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val exceptionHandler = TestBlockchainExceptionHandler()
 
@@ -457,7 +456,7 @@ class BlockchainServiceTest {
         }
         val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val exceptionHandler = TestBlockchainExceptionHandler()
 
@@ -521,7 +520,7 @@ class BlockchainServiceTest {
         }
         val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val exceptionHandler = TestBlockchainExceptionHandler()
 
@@ -588,7 +587,7 @@ class BlockchainServiceTest {
         }
         val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val exceptionHandler = TestBlockchainExceptionHandler()
 
@@ -655,7 +654,7 @@ class BlockchainServiceTest {
         }
         val expectedSwapID = UUID.fromString(testingServerResponse.swapID)
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val exceptionHandler = TestBlockchainExceptionHandler()
 
@@ -697,7 +696,7 @@ class BlockchainServiceTest {
      */
     @Test
     fun testListenErrorHandling() {
-        val w3 = Web3j.build(HttpService("http://not.a.node:8546"))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("http://not.a.node:8546")))
         // We need this TestBlockchainExceptionHandler to test exception handling logic
         class TestBlockchainExceptionHandler : BlockchainExceptionNotifiable {
             val exceptionChannel = Channel<Exception>()

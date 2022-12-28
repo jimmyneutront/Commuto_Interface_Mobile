@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.CommutoWeb3j
 import com.commuto.interfacemobile.android.blockchain.TestBlockchainExceptionHandler
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacedesktop.db.Swap as DatabaseSwap
@@ -40,7 +41,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
-import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import java.math.BigInteger
 import java.util.*
@@ -235,7 +235,7 @@ class SwapServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val swapService = SwapService(
             databaseService = databaseService,
@@ -587,7 +587,7 @@ class SwapServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -823,7 +823,7 @@ class SwapServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -1063,7 +1063,7 @@ class SwapServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()
@@ -1302,7 +1302,7 @@ class SwapServiceTests {
             }.body()
         }
 
-        val w3 = Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
 
         val databaseService = DatabaseService(PreviewableDatabaseDriverFactory())
         databaseService.createTables()

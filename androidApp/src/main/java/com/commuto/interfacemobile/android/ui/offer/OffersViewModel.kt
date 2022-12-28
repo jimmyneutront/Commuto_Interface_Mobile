@@ -275,6 +275,27 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
         }
     }
 
+    override fun cancelOffer(offer: Offer, offerCancellationTransaction: RawTransaction?) {
+        viewModelScope.launch {
+            setCancelingOfferState(
+                offerID = offer.id,
+                state = CancelingOfferState.CANCELING
+            )
+            Log.i(logTag, "cancelOffer: canceling offer ${offer.id}")
+            try {
+                offerService.cancelOffer(
+                    offer = offer,
+                    offerCancellationTransaction = offerCancellationTransaction
+                )
+                Log.i(logTag, "cancelOffer: successfully broadcast transaction for ${offer.id}")
+            } catch (exception: Exception) {
+                Log.e(logTag, "cancelOffer: got exception during cancelOffer call for ${offer.id}", exception)
+                offer.cancelingOfferException = exception
+                setCancelingOfferState(offerID = offer.id, state = CancelingOfferState.EXCEPTION)
+            }
+        }
+    }
+
     /**
      * Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user
      * of this interface.
