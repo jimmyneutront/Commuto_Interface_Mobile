@@ -465,7 +465,6 @@ class SwapService @Inject constructor(
         }
         // TODO: check for taker information once SettlementMethodService is implemented
         Log.i(logTag, "handleNewSwap: persistently storing ${takenOffer.id}")
-        // TODO: get actual maker private data here
         val swapForDatabase = DatabaseSwap(
             id = encoder.encodeToString(takenOffer.id.asByteArray()),
             isCreated = if (newSwap.isCreated) 1L else 0L,
@@ -483,7 +482,7 @@ class SwapService @Inject constructor(
             serviceFeeRate = newSwap.serviceFeeRate.toString(),
             onChainDirection = newSwap.onChainDirection.toString(),
             settlementMethod = encoder.encodeToString(newSwap.onChainSettlementMethod),
-            makerPrivateData = null,
+            makerPrivateData = newSwap.makerPrivateSettlementMethodData,
             makerPrivateDataInitializationVector = null,
             takerPrivateData = null,
             takerPrivateDataInitializationVector = null,

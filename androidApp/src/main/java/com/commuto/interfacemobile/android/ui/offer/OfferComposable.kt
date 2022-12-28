@@ -57,7 +57,15 @@ fun OfferComposable(
      */
     val offer = offerTruthSource.offers[id]
 
+    /**
+     * Indicates whether we are showing the sheet that allows the user to take the offer, if they are not the maker.
+     */
     val isShowingTakeOfferSheet = remember { mutableStateOf(false) }
+
+    /**
+     * Indicates whether we are showing the sheet that allows the user to cancel the offer, if they are the maker.
+     */
+    val isShowingCancelOfferSheet = remember { mutableStateOf(false) }
 
     if (id == null) {
         Row(
@@ -139,6 +147,7 @@ fun OfferComposable(
                     }
                 )
                 if (!offer.isUserMaker) {
+                    // The user is the maker of this offer, so we display buttons for editing and canceling the offer
                     Text(
                         text = "If you take this offer, you will:",
                         style =  MaterialTheme.typography.h6,
@@ -259,11 +268,13 @@ fun OfferComposable(
                     }
                     Button(
                         onClick = {
+                            isShowingCancelOfferSheet.value = true
                             // Don't let the user try to cancel the offer if it is already canceled or being canceled
+                            /*
                             if (offer.cancelingOfferState.value == CancelingOfferState.NONE  ||
                                 offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
                                 offerTruthSource.cancelOffer(offer)
-                            }
+                            }*/
                         },
                         content = {
                             val cancelOfferButtonText: String = when (offer.cancelingOfferState.value) {
@@ -340,6 +351,16 @@ fun OfferComposable(
                     offerTruthSource = offerTruthSource,
                     id = id,
                     settlementMethodTruthSource = settlementMethodTruthSource,
+                )
+            }
+        )
+        SheetComposable(
+            isPresented = isShowingCancelOfferSheet,
+            content = { closeSheet ->
+                CancelOfferComposable(
+                    offer = offer,
+                    closeSheet = closeSheet,
+                    offerTruthSource = offerTruthSource,
                 )
             }
         )

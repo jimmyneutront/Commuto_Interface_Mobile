@@ -4,6 +4,7 @@ import android.util.Log
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.blockchain.structs.OfferStruct
 import com.commuto.interfacemobile.android.blockchain.structs.SwapStruct
+import com.commuto.interfacemobile.android.contractwrapper.CommutoFunctionEncoder
 import com.commuto.interfacemobile.android.contractwrapper.CommutoSwap
 import com.commuto.interfacemobile.android.extension.asByteArray
 import com.commuto.interfacemobile.android.offer.OfferNotifiable
@@ -14,8 +15,10 @@ import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.future.await
 import org.web3j.contracts.eip20.generated.ERC20
 import org.web3j.crypto.Credentials
+import org.web3j.crypto.RawTransaction
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
+import org.web3j.protocol.core.methods.request.Transaction
 import org.web3j.protocol.core.methods.response.*
 import org.web3j.protocol.http.HttpService
 import org.web3j.tx.ChainIdLong
@@ -25,6 +28,7 @@ import java.nio.ByteBuffer
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.floor
 
 /**
  * The main Blockchain Service. It is responsible for listening to the blockchain and detecting the
@@ -61,7 +65,7 @@ import javax.inject.Singleton
 class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifiable,
                          private val offerService: OfferNotifiable,
                          private val swapService: SwapNotifiable,
-                         private val web3: Web3j,
+                         private val web3: CommutoWeb3j,
                          commutoSwapAddress: String) {
 
     @Inject constructor(
@@ -72,7 +76,7 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
             this(errorHandler,
                 offerService,
                 swapService,
-                Web3j.build(HttpService(System.getenv("BLOCKCHAIN_NODE"))),
+                CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE"))),
                 "0x687F36336FCAB8747be1D41366A416b41E7E1a96"
             )
 
@@ -323,6 +327,74 @@ class BlockchainService (private val exceptionHandler: BlockchainExceptionNotifi
         iDByteBuffer.putLong(id.leastSignificantBits)
         val iDByteArray = iDByteBuffer.array()
         return commutoSwap.cancelOffer(iDByteArray).sendAsync().asDeferred()
+    }
+
+    /**
+     * Creates and returns an EIP1559 [RawTransaction] from the users account to call CommutoSwap's
+     * [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, with
+     * estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently
+     * known transactions, including those that are still pending.
+     *
+     * @param offerID The ID of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be
+     * canceled.
+     * @param chainID The blockchain ID on which the offer to be canceled exists.
+     *
+     * @return A [RawTransaction] as described above, that will cancel the offer specified by [offerID] on the chain
+     * specified by [chainID].
+     */
+    suspend fun createCancelOfferTransaction(offerID: UUID, chainID: BigInteger): RawTransaction {
+        val function = org.web3j.abi.datatypes.Function(
+            "cancelOffer",
+            listOf(org.web3j.abi.datatypes.generated.Bytes16(offerID.asByteArray())),
+            listOf()
+        )
+        val encodedFunction = CommutoFunctionEncoder.encode(function)
+        val transactionForGasEstimate = Transaction(
+            creds.address.toString(),
+            BigInteger.ZERO,
+            null, // No gasPrice because we are specifying maxFeePerGas
+            BigInteger.valueOf(30_000_000),
+            commutoSwap.contractAddress,
+            BigInteger.ZERO,
+            encodedFunction,
+            chainID.toLong(),
+            BigInteger.valueOf(1_000_000), // maxPriorityFeePerGas (temporary value)
+            BigInteger.valueOf(875_000_000), // maxFeePerGas (temporary value)
+        )
+        val nonce = web3.ethGetTransactionCount(
+            creds.address,
+            DefaultBlockParameter.valueOf("pending")
+        ).sendAsync().asDeferred()
+        val gasLimit = web3.ethEstimateGas(transactionForGasEstimate).sendAsync().asDeferred().await().amountUsed
+        // Get the fee history from the last 20 blocks, from the 75th to the 100th percentile.
+        val feeHistory = web3.ethFeeHistory(
+            20,
+            DefaultBlockParameter.valueOf("latest"),
+            listOf(75.0)
+        ).sendAsync().asDeferred().await().feeHistory
+        // Calculate the average of the 75th percentile reward values from the last 20 blocks and use this as the
+        // maxPriorityFeePerGas
+        val maxPriorityFeePerGas = BigInteger.ZERO.let { finalTipFee ->
+            feeHistory.reward.map { it.first() }.forEach { finalTipFee.add(it) }
+            finalTipFee.divide(BigInteger.valueOf(feeHistory.reward.count().toLong()))
+        }
+        // Calculate the 75th percentile base fee per gas value from the last 20 blocks and use this as the
+        // baseFeePerGas
+        val baseFeePerGas = BigInteger.ZERO.let {
+            val percentileIndex = floor(0.75 * feeHistory.baseFeePerGas.count()).toInt()
+            feeHistory.baseFeePerGas.sorted()[percentileIndex]
+        }
+        val maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas
+        return RawTransaction.createTransaction(
+            chainID.toLong(),
+            nonce.await().transactionCount,
+            gasLimit,
+            transactionForGasEstimate.to,
+            BigInteger.ZERO, // value
+            transactionForGasEstimate.data,
+            maxPriorityFeePerGas,
+            maxFeePerGas
+        )
     }
 
     /**

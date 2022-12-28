@@ -8,6 +8,7 @@ import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.OpeningOfferState
 import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
+import org.web3j.crypto.RawTransaction
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
@@ -68,7 +69,17 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
      * Does nothing since this class is only used for previewing user interfaces, but is required for implementing
      * [UIOfferTruthSource]
      */
+    @Deprecated("Use the new offer pipeline with improved transaction state management")
     override fun cancelOffer(offer: Offer) {}
+
+    /**
+     * Not used since this class is for previewing user interfaces, but required for adoption of [UIOfferTruthSource].
+     */
+    override fun createCancelOfferTransaction(
+        offer: Offer,
+        createdTransactionHandler: (RawTransaction) -> Unit,
+        exceptionHandler: (Exception) -> Unit
+    ) {}
 
     /**
      * Does nothing since this class is only used for previewing user interfaces, but is required for implementing

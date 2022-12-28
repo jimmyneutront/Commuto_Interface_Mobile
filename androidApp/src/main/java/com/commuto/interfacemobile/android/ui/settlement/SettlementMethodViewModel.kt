@@ -20,7 +20,7 @@ import javax.inject.Singleton
  * well as those for creating/editing/taking offers.
  *
  * @property logTag The tag passed to [Log] calls.
- * @property settlementMethods A [SnapshotStateList] containing all of the user's [SettlementMethod]s, each with
+ * @property settlementMethods A [SnapshotStateList] containing all the user's [SettlementMethod]s, each with
  * corresponding private data.
  * @property settlementMethodService A [SettlementMethodService] responsible for performing validating, adding, editing,
  * and removing operations on the user's settlement methods, both in persistent storage and in [settlementMethods].
