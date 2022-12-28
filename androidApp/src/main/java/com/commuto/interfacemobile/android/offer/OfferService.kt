@@ -248,6 +248,7 @@ class OfferService (
                     havePublicKey = 1L,
                     isUserMaker = 1L,
                     state = newOffer.state.asString,
+                    cancelingOfferState = newOffer.cancelingOfferState.value.asString,
                     offerCancellationTransactionHash = newOffer.offerCancellationTransactionHash,
                 )
                 databaseService.storeOffer(offerForDatabase)
@@ -428,14 +429,18 @@ class OfferService (
                 // TODO: we should also record the current time and block hight here, store it in the offer and in
                 //  persistent storage
                 Log.i(logTag, "cancelOffer: persistently storing tx hash $transactionHash for ${offer.id}")
-                // TODO: persistently store tx hash here
-                Log.i(logTag, "cancelOffer: persistently cancelingOfferState for ${offer.id} state to " +
-                        "SENDING_TRANSACTION")
                 val encoder = Base64.getEncoder()
                 databaseService.updateOfferCancellationTransactionHash(
                     offerID = encoder.encodeToString(offer.id.asByteArray()),
                     chainID = offer.chainID.toString(),
-                    transactionHash
+                    transactionHash = transactionHash,
+                )
+                Log.i(logTag, "cancelOffer: persistently cancelingOfferState for ${offer.id} state to " +
+                        "SENDING_TRANSACTION")
+                databaseService.updateCancelingOfferState(
+                    offerID = encoder.encodeToString(offer.id.asByteArray()),
+                    chainID = offer.chainID.toString(),
+                    state = CancelingOfferState.SENDING_TRANSACTION.asString
                 )
                 Log.i(logTag, "cancelOffer: updating cancelingOfferState for ${offer.id} state to SENDING_TRANSACTION " +
                         "and storing tx hash $transactionHash in offer")
@@ -451,7 +456,11 @@ class OfferService (
                 ).await()
                 Log.i(logTag, "cancelOffer: persistently updating cancelingOfferState of ${offer.id} to " +
                         "AWAITING_TRANSACTION_CONFIRMATION")
-                // TODO: update cancelingOfferState in persistent storage here
+                databaseService.updateCancelingOfferState(
+                    offerID = encoder.encodeToString(offer.id.asByteArray()),
+                    chainID = offer.chainID.toString(),
+                    state = CancelingOfferState.AWAITING_TRANSACTION_CONFIRMATION.asString
+                )
                 Log.i(logTag, "cancelOffer: updating cancelingOfferState for ${offer.id} to " +
                         "AWAITING_TRANSACTION_CONFIRMATION")
                 withContext(Dispatchers.Main) {
@@ -460,6 +469,12 @@ class OfferService (
             } catch (exception: Exception) {
                 Log.e(logTag, "cancelOffer: encountered exception while canceling ${offer.id}, setting " +
                         "cancelingOfferState to EXCEPTION", exception)
+                val encoder = Base64.getEncoder()
+                databaseService.updateCancelingOfferState(
+                    offerID = encoder.encodeToString(offer.id.asByteArray()),
+                    chainID = offer.chainID.toString(),
+                    state = CancelingOfferState.EXCEPTION.asString
+                )
                 offer.cancelingOfferException = exception
                 withContext(Dispatchers.Main) {
                     offer.cancelingOfferState.value = CancelingOfferState.EXCEPTION
@@ -891,7 +906,8 @@ class OfferService (
                 havePublicKey = havePublicKeyLong,
                 isUserMaker = isUserMakerLong,
                 state = offer.state.asString,
-                offerCancellationTransactionHash = offer.offerCancellationTransactionHash
+                cancelingOfferState = offer.cancelingOfferState.value.asString,
+                offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
             )
             databaseService.storeOffer(offerForDatabase)
             Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")

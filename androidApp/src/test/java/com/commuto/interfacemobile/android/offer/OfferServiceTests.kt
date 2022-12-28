@@ -326,6 +326,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         databaseService.storeOffer(offerForDatabase)
@@ -830,6 +831,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         databaseService.storeOffer(offerForDatabase)
@@ -967,6 +969,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         runBlocking {
@@ -1132,6 +1135,7 @@ class OfferServiceTests {
             havePublicKey = havePublicKey,
             isUserMaker = isUserMaker,
             state = offer.state.asString,
+            cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         runBlocking {
@@ -1387,6 +1391,7 @@ class OfferServiceTests {
                         havePublicKey = 1L,
                         isUserMaker = 1L,
                         state = "openOfferTxPublished",
+                        cancelingOfferState = addedOffer.cancelingOfferState.value.asString,
                         offerCancellationTransactionHash = addedOffer.offerCancellationTransactionHash,
                     )
                     assertEquals(expectedOfferInDatabase, offerInDatabase)
@@ -1530,6 +1535,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
 
@@ -1788,6 +1794,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         runBlocking {

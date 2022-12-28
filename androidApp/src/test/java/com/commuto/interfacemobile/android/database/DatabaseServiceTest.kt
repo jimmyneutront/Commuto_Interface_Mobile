@@ -36,6 +36,7 @@ class DatabaseServiceTest {
             0L,
             0L,
             "a_state_here",
+            "a_cancelingOfferState_here",
             "a_tx_hash_here"
         )
         databaseService.storeOffer(offerToStore)
@@ -56,6 +57,7 @@ class DatabaseServiceTest {
             0L,
             0L,
             "a_state_here",
+            "a_cancelingOfferState_here",
             "a_tx_hash_here"
         )
         // This should do nothing and not throw
@@ -87,6 +89,7 @@ class DatabaseServiceTest {
             0L,
             0L,
             "a_state_here",
+            "a_cancelingOfferState_here",
             "a_tx_hash_here"
         )
         databaseService.storeOffer(offerToStore)
@@ -117,12 +120,48 @@ class DatabaseServiceTest {
             0L,
             0L,
             "a_state_here",
+            "a_cancelingOfferState_here",
             "a_tx_hash_here"
         )
         databaseService.storeOffer(offerToStore)
         databaseService.updateOfferState("a_uuid", "a_chain_id", "a_new_state_here")
         val returnedOffer = databaseService.getOffer("a_uuid")
         assertEquals("a_new_state_here", returnedOffer!!.state)
+    }
+
+    /**
+     * Ensures that code to update a persistently stored offer's [Offer.cancelingOfferState] property works properly.
+     */
+    @Test
+    fun testUpdateCancelingOfferState() = runBlocking {
+        val offerToStore = Offer(
+            "a_uuid",
+            1L,
+            0L,
+            "maker_address",
+            "interface_id",
+            "stablecoin_address",
+            "lower_bound_amount",
+            "upper_bound_amount",
+            "security_deposit_amount",
+            "service_fee_rate",
+            "direction",
+            "some_version",
+            "a_chain_id",
+            0L,
+            0L,
+            "a_state_here",
+            "a_cancelingOfferState_here",
+            null
+        )
+        databaseService.storeOffer(offerToStore)
+        databaseService.updateCancelingOfferState(
+            offerID = "a_uuid",
+            chainID = "a_chain_id",
+            state = "a_new_cancelingOfferState_here",
+        )
+        val returnedOffer = databaseService.getOffer(id = "a_uuid")
+        assertEquals("a_new_cancelingOfferState_here", returnedOffer!!.cancelingOfferState)
     }
 
     /**
@@ -148,6 +187,7 @@ class DatabaseServiceTest {
             0L,
             0L,
             "a_state_here",
+            "a_cancelingOfferState_here",
             null
         )
         databaseService.storeOffer(offerToStore)
