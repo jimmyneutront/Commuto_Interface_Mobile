@@ -1438,7 +1438,8 @@ class OfferServiceTests {
     }
 
     /**
-     * Ensures that [OfferService.cancelOffer] and [BlockchainService.cancelOfferAsync] function properly.
+     * Ensures that [OfferService.cancelOffer], [OfferService.createCancelOfferTransaction] and
+     * [BlockchainService.sendTransactionAsync] function properly.
      */
     @Test
     fun testCancelOffer() {
@@ -1541,14 +1542,25 @@ class OfferServiceTests {
 
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
-            offerService.cancelOffer(
+
+            val offerCancellationTransaction = offerService.createCancelOfferTransaction(
                 offerID = offer.id,
                 chainID = offer.chainID
             )
-            assertEquals(OfferState.CANCEL_OFFER_TRANSACTION_BROADCAST, offerTruthSource.offers[offerID]?.state)
+
+            offerService.cancelOffer(
+                offer = offer,
+                offerCancellationTransaction = offerCancellationTransaction
+            )
+
+            assertEquals(CancelingOfferState.AWAITING_TRANSACTION_CONFIRMATION, offerTruthSource
+                .offers[offerID]?.cancelingOfferState?.value)
+            assertNotNull(offerTruthSource.offers[offerID]?.offerCancellationTransactionHash)
 
             val offerInDatabase = databaseService.getOffer(offerIDString)
-            assertEquals("cancelOfferTxBroadcast", offerInDatabase!!.state)
+            assertEquals(CancelingOfferState.AWAITING_TRANSACTION_CONFIRMATION.asString, offerInDatabase!!
+                .cancelingOfferState)
+            assertNotNull(offerInDatabase.offerCancellationTransactionHash)
 
             val offerStruct = blockchainService.getOffer(offerID)
             assertNull(offerStruct)
