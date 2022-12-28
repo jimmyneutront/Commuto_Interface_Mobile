@@ -37,7 +37,9 @@ class DatabaseServiceTest {
             0L,
             "a_state_here",
             "a_cancelingOfferState_here",
-            "a_tx_hash_here"
+            "a_tx_hash_here",
+            "a_time_here",
+            -1,
         )
         databaseService.storeOffer(offerToStore)
         val anotherOfferToStore = Offer(
@@ -58,7 +60,9 @@ class DatabaseServiceTest {
             0L,
             "a_state_here",
             "a_cancelingOfferState_here",
-            "a_tx_hash_here"
+            "a_tx_hash_here",
+            "a_time_here",
+            -1,
         )
         // This should do nothing and not throw
         databaseService.storeOffer(anotherOfferToStore)
@@ -90,7 +94,9 @@ class DatabaseServiceTest {
             0L,
             "a_state_here",
             "a_cancelingOfferState_here",
-            "a_tx_hash_here"
+            "a_tx_hash_here",
+            "a_time_here",
+            -1,
         )
         databaseService.storeOffer(offerToStore)
         databaseService.updateOfferHavePublicKey("a_uuid", "a_chain_id", true)
@@ -121,7 +127,9 @@ class DatabaseServiceTest {
             0L,
             "a_state_here",
             "a_cancelingOfferState_here",
-            "a_tx_hash_here"
+            "a_tx_hash_here",
+            "a_time_here",
+            -1,
         )
         databaseService.storeOffer(offerToStore)
         databaseService.updateOfferState("a_uuid", "a_chain_id", "a_new_state_here")
@@ -152,7 +160,9 @@ class DatabaseServiceTest {
             0L,
             "a_state_here",
             "a_cancelingOfferState_here",
-            null
+            null,
+            "a_time_here",
+            -1,
         )
         databaseService.storeOffer(offerToStore)
         databaseService.updateCancelingOfferState(
@@ -188,18 +198,26 @@ class DatabaseServiceTest {
             0L,
             "a_state_here",
             "a_cancelingOfferState_here",
-            null
+            null,
+            null,
+            null,
         )
         databaseService.storeOffer(offerToStore)
         val returnedOfferBeforeUpdate = databaseService.getOffer(id = "a_uuid")
         assertNull(returnedOfferBeforeUpdate!!.offerCancellationTransactionHash)
-        databaseService.updateOfferCancellationTransactionHash(
+        assertNull(returnedOfferBeforeUpdate.offerCancellationTransactionCreationTime)
+        assertNull(returnedOfferBeforeUpdate.offerCancellationTransactionCreationBlockNumber)
+        databaseService.updateOfferCancellationData(
             offerID = "a_uuid",
             chainID = "a_chain_id",
-            transactionHash = "a_tx_hash_here"
+            transactionHash = "a_tx_hash_here",
+            creationTime = "a_creation_time",
+            blockNumber = -1L
         )
         val returnedOfferAfterUpdate = databaseService.getOffer(id = "a_uuid")
         assertEquals("a_tx_hash_here", returnedOfferAfterUpdate!!.offerCancellationTransactionHash)
+        assertEquals("a_creation_time", returnedOfferAfterUpdate.offerCancellationTransactionCreationTime)
+        assertEquals(-1L, returnedOfferAfterUpdate.offerCancellationTransactionCreationBlockNumber)
     }
 
     /**

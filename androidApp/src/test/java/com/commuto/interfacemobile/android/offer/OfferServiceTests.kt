@@ -328,6 +328,9 @@ class OfferServiceTests {
             state = offer.state.asString,
             cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime = null,
+            offerCancellationTransactionCreationBlockNumber =
+            offer.offerCancellationTransaction?.latestBlockNumberAtCreation?.toLong(),
         )
         databaseService.storeOffer(offerForDatabase)
 
@@ -833,6 +836,9 @@ class OfferServiceTests {
             state = offer.state.asString,
             cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime = null,
+            offerCancellationTransactionCreationBlockNumber =
+            offer.offerCancellationTransaction?.latestBlockNumberAtCreation?.toLong(),
         )
         databaseService.storeOffer(offerForDatabase)
 
@@ -971,6 +977,9 @@ class OfferServiceTests {
             state = offer.state.asString,
             cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime = null,
+            offerCancellationTransactionCreationBlockNumber =
+            offer.offerCancellationTransaction?.latestBlockNumberAtCreation?.toLong(),
         )
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
@@ -1137,6 +1146,9 @@ class OfferServiceTests {
             state = offer.state.asString,
             cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime = null,
+            offerCancellationTransactionCreationBlockNumber =
+            offer.offerCancellationTransaction?.latestBlockNumberAtCreation?.toLong(),
         )
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
@@ -1393,6 +1405,9 @@ class OfferServiceTests {
                         state = "openOfferTxPublished",
                         cancelingOfferState = addedOffer.cancelingOfferState.value.asString,
                         offerCancellationTransactionHash = addedOffer.offerCancellationTransaction?.transactionHash,
+                        offerCancellationTransactionCreationTime = null,
+                        offerCancellationTransactionCreationBlockNumber =
+                        addedOffer.offerCancellationTransaction?.latestBlockNumberAtCreation?.toLong(),
                     )
                     assertEquals(expectedOfferInDatabase, offerInDatabase)
 
@@ -1538,6 +1553,9 @@ class OfferServiceTests {
             state = offer.state.asString,
             cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime = null,
+            offerCancellationTransactionCreationBlockNumber =
+            offer.offerCancellationTransaction?.latestBlockNumberAtCreation?.toLong(),
         )
 
         runBlocking {
@@ -1808,6 +1826,9 @@ class OfferServiceTests {
             state = offer.state.asString,
             cancelingOfferState = offer.cancelingOfferState.value.asString,
             offerCancellationTransactionHash = offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime = null,
+            offerCancellationTransactionCreationBlockNumber =
+            offer.offerCancellationTransaction?.latestBlockNumberAtCreation?.toLong(),
         )
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
