@@ -466,11 +466,11 @@ class OfferService (
                     offer.offerCancellationTransaction = blockchainTransactionForOfferCancellation
                 }
                 Log.i(logTag, "cancelOffer: sending $transactionHash for ${offer.id}")
-                blockchainService.sendTransactionAsync(
+                blockchainService.sendTransaction(
                     transaction = blockchainTransactionForOfferCancellation,
                     signedRawTransactionDataAsHex = signedTransactionHex,
                     chainID = offer.chainID
-                ).await()
+                )
                 Log.i(logTag, "cancelOffer: persistently updating cancelingOfferState of ${offer.id} to " +
                         "AWAITING_TRANSACTION_CONFIRMATION")
                 databaseService.updateCancelingOfferState(

@@ -1454,7 +1454,7 @@ class OfferServiceTests {
 
     /**
      * Ensures that [OfferService.cancelOffer], [OfferService.createCancelOfferTransaction] and
-     * [BlockchainService.sendTransactionAsync] function properly.
+     * [BlockchainService.sendTransaction] function properly.
      */
     @Test
     fun testCancelOffer() {
