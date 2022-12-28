@@ -1,6 +1,8 @@
 package com.commuto.interfacemobile.android.offer
 
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.BlockchainTransaction
+import com.commuto.interfacemobile.android.blockchain.BlockchainTransactionException
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 
 /**
@@ -8,6 +10,10 @@ import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
  * non-offer-related code.
  */
 class TestOfferService: OfferNotifiable {
+    override suspend fun handleFailedTransaction(
+        transaction: BlockchainTransaction,
+        exception: BlockchainTransactionException
+    ) {}
     override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {}
     override suspend fun handleOfferEditedEvent(event: OfferEditedEvent) {}
     override suspend fun handleOfferCanceledEvent(event: OfferCanceledEvent) {}

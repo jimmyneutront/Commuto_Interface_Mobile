@@ -21,6 +21,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.web3j.protocol.http.HttpService
 import java.math.BigInteger
@@ -81,6 +82,12 @@ class BlockchainServiceTest {
         val blockchainExceptionHandler = TestBlockchainExceptionHandler()
 
         class TestOfferService : OfferNotifiable {
+            override suspend fun handleFailedTransaction(
+                transaction: BlockchainTransaction,
+                exception: BlockchainTransactionException
+            ) {
+                throw IllegalStateException("Should not be called")
+            }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 throw IllegalStateException("Should not be called")
             }
@@ -140,6 +147,91 @@ class BlockchainServiceTest {
      */
 
     /**
+     * Ensure [BlockchainService] detects and handles failed monitored transactions properly.
+     */
+    @Test
+    fun testHandleFailedTransaction() {
+        @Serializable
+        data class TestingServerResponse(val commutoSwapAddress: String, val transactionHash: String)
+
+        val testingServiceUrl = "http://localhost:8546/test_blockchainservice_handleFailedTransaction"
+        val testingServerClient = HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json()
+            }
+            install(HttpTimeout) {
+                socketTimeoutMillis = 90_000
+                requestTimeoutMillis = 90_000
+            }
+        }
+        val testingServerResponse: TestingServerResponse = runBlocking {
+            testingServerClient.get(testingServiceUrl) {
+                url {
+                    parameters.append("events", "offer-opened-taken")
+                }
+            }.body()
+        }
+        val failedTransactionHash = testingServerResponse.transactionHash
+
+        val w3 = CommutoWeb3j(HttpService(System.getenv("BLOCKCHAIN_NODE")))
+
+        val blockchainExceptionHandler = TestBlockchainExceptionHandler()
+
+        class TestOfferService : OfferNotifiable {
+            val failedTransactionChannel = Channel<BlockchainTransaction>()
+            val transactionFailureExceptionChannel = Channel<BlockchainTransactionException>()
+            override suspend fun handleFailedTransaction(
+                transaction: BlockchainTransaction,
+                exception: BlockchainTransactionException
+            ) {
+                failedTransactionChannel.send(transaction)
+                transactionFailureExceptionChannel.send(exception)
+            }
+            override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleOfferEditedEvent(event: OfferEditedEvent) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleOfferCanceledEvent(event: OfferCanceledEvent) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleOfferTakenEvent(event: OfferTakenEvent) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleServiceFeeRateChangedEvent(event: ServiceFeeRateChangedEvent) {
+                throw IllegalStateException("Should not be called")
+            }
+        }
+        val offerService = TestOfferService()
+
+        val blockchainService = BlockchainService(
+            exceptionHandler = blockchainExceptionHandler,
+            offerService = offerService,
+            swapService = TestSwapService(),
+            web3 = w3,
+            commutoSwapAddress = testingServerResponse.commutoSwapAddress
+        )
+        blockchainService.addTransactionToMonitor(
+            transaction = BlockchainTransaction(
+                transactionHash = failedTransactionHash,
+                timeOfCreation = Date(),
+                latestBlockNumberAtCreation = BigInteger.ZERO,
+                type = BlockchainTransactionType.CANCEL_OFFER
+            )
+        )
+        blockchainService.listen()
+        runBlocking {
+            withTimeout(30_000) {
+                val failedTransaction = offerService.failedTransactionChannel.receive()
+                offerService.transactionFailureExceptionChannel.receive()
+                assertEquals(BlockchainTransactionType.CANCEL_OFFER, failedTransaction.type)
+                assertEquals(failedTransactionHash, failedTransaction.transactionHash)
+            }
+        }
+    }
+
+    /**
      * Tests [BlockchainService] by ensuring it detects and handles
      * [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) and
      * [OfferTaken](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offertaken) events
@@ -176,6 +268,12 @@ class BlockchainServiceTest {
         class TestOfferService : OfferNotifiable {
             val offerOpenedEventChannel = Channel<OfferOpenedEvent>()
             val offerTakenEventChannel = Channel<OfferTakenEvent>()
+            override suspend fun handleFailedTransaction(
+                transaction: BlockchainTransaction,
+                exception: BlockchainTransactionException
+            ) {
+                throw IllegalStateException("Should not be called")
+            }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 offerOpenedEventChannel.send(event)
             }
@@ -252,6 +350,12 @@ class BlockchainServiceTest {
         class TestOfferService : OfferNotifiable {
             val offerOpenedEventChannel = Channel<OfferOpenedEvent>()
             val offerCanceledEventChannel = Channel<OfferCanceledEvent>()
+            override suspend fun handleFailedTransaction(
+                transaction: BlockchainTransaction,
+                exception: BlockchainTransactionException
+            ) {
+                throw IllegalStateException("Should not be called")
+            }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 offerOpenedEventChannel.send(event)
             }
@@ -328,6 +432,12 @@ class BlockchainServiceTest {
         class TestOfferService : OfferNotifiable {
             val offerOpenedEventChannel = Channel<OfferOpenedEvent>()
             val offerEditedEventChannel = Channel<OfferEditedEvent>()
+            override suspend fun handleFailedTransaction(
+                transaction: BlockchainTransaction,
+                exception: BlockchainTransactionException
+            ) {
+                throw IllegalStateException("Should not be called")
+            }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 offerOpenedEventChannel.send(event)
             }
@@ -709,6 +819,12 @@ class BlockchainServiceTest {
         val blockchainExceptionHandler = TestBlockchainExceptionHandler()
 
         class TestOfferService : OfferNotifiable {
+            override suspend fun handleFailedTransaction(
+                transaction: BlockchainTransaction,
+                exception: BlockchainTransactionException
+            ) {
+                throw IllegalStateException("Should not be called")
+            }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 throw IllegalStateException("Should not be called")
             }
