@@ -248,6 +248,7 @@ class OfferService (
                     havePublicKey = 1L,
                     isUserMaker = 1L,
                     state = newOffer.state.asString,
+                    offerCancellationTransactionHash = newOffer.offerCancellationTransactionHash,
                 )
                 databaseService.storeOffer(offerForDatabase)
                 val settlementMethodStrings = mutableListOf<Pair<String, String?>>()
@@ -430,7 +431,12 @@ class OfferService (
                 // TODO: persistently store tx hash here
                 Log.i(logTag, "cancelOffer: persistently cancelingOfferState for ${offer.id} state to " +
                         "SENDING_TRANSACTION")
-                // TODO: update cancelingOfferState in persistent storage here
+                val encoder = Base64.getEncoder()
+                databaseService.updateOfferCancellationTransactionHash(
+                    offerID = encoder.encodeToString(offer.id.asByteArray()),
+                    chainID = offer.chainID.toString(),
+                    transactionHash
+                )
                 Log.i(logTag, "cancelOffer: updating cancelingOfferState for ${offer.id} state to SENDING_TRANSACTION " +
                         "and storing tx hash $transactionHash in offer")
                 withContext(Dispatchers.Main) {
@@ -885,6 +891,7 @@ class OfferService (
                 havePublicKey = havePublicKeyLong,
                 isUserMaker = isUserMakerLong,
                 state = offer.state.asString,
+                offerCancellationTransactionHash = offer.offerCancellationTransactionHash
             )
             databaseService.storeOffer(offerForDatabase)
             Log.i(logTag, "handleOfferOpenedEvent: persistently stored offer ${offer.id}")

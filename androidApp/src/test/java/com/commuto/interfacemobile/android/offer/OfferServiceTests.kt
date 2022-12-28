@@ -326,6 +326,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         databaseService.storeOffer(offerForDatabase)
 
@@ -829,6 +830,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         databaseService.storeOffer(offerForDatabase)
 
@@ -965,6 +967,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
@@ -1129,6 +1132,7 @@ class OfferServiceTests {
             havePublicKey = havePublicKey,
             isUserMaker = isUserMaker,
             state = offer.state.asString,
+            offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
@@ -1382,7 +1386,8 @@ class OfferServiceTests {
                         chainID = addedOffer.chainID.toString(),
                         havePublicKey = 1L,
                         isUserMaker = 1L,
-                        state = "openOfferTxPublished"
+                        state = "openOfferTxPublished",
+                        offerCancellationTransactionHash = addedOffer.offerCancellationTransactionHash,
                     )
                     assertEquals(expectedOfferInDatabase, offerInDatabase)
 
@@ -1525,6 +1530,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
 
         runBlocking {
@@ -1782,6 +1788,7 @@ class OfferServiceTests {
             havePublicKey = 1L,
             isUserMaker = 1L,
             state = offer.state.asString,
+            offerCancellationTransactionHash = offer.offerCancellationTransactionHash,
         )
         runBlocking {
             databaseService.storeOffer(offerForDatabase)
