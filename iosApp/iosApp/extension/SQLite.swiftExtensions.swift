@@ -17,6 +17,9 @@ extension QueryError: LocalizedError {
     }
 }
 
+/**
+ Make `Result` adopt `LocalizedError`.
+ */
 extension Result: LocalizedError {
     public var errorDescription: String? {
         return self.description

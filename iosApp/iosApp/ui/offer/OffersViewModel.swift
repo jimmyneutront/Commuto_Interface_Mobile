@@ -87,6 +87,7 @@ class OffersViewModel: UIOfferTruthSource {
         }
     }
     
+    #warning("TODO: Remove this once old editOffer method is removed")
     /**
      Sets the `editingOfferState` property of the `Offer` in `offers` with the specified `offerID` on the main `DispatchQueue`.
      
@@ -231,7 +232,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to create an `EthereumTransaction` to cancel `offer`, which should be made by the user of this interface.
      
-     This passes `offer`'s ID and chain ID to `offerService.cancelOffer` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     This passes `offer`'s ID and chain ID to `OfferService.createCancelOfferTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
      
      - Parameters:
         - offer: The `Offer` to be canceled.
@@ -258,7 +259,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     This clears any offer-canceling-related error of `offer`, and sets `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.validating`.
+     This clears any offer-canceling-related error of `offer`, and sets `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.validating`, and then passes all data to `offerService`'s `OfferService.cancelOffer` function.
      
      - Parameters:
         - offer: The `Offer` to be canceled.
@@ -273,8 +274,8 @@ class OffersViewModel: UIOfferTruthSource {
         offerService.cancelOffer(offer: offer, offerCancellationTransaction: offerCancellationTransaction)
             .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
                 self.logger.notice("cancelOffer: successfully broadcast transaction for \(offer.id.uuidString)")
-            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
-                logger.error("cancelOffer: got error during cancelOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("cancelOffer: got error during cancelOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
             }
     }
     
@@ -291,7 +292,7 @@ class OffersViewModel: UIOfferTruthSource {
         offer: Offer,
         newSettlementMethods: [SettlementMethod]
     ) {
-        setEditingOfferState(offerID: offer.id, state: .editing)
+        //setEditingOfferState(offerID: offer.id, state: .editing)
         Promise<Array<SettlementMethod>> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("editOffer: editing \(offer.id.uuidString)")
@@ -318,6 +319,64 @@ class OffersViewModel: UIOfferTruthSource {
             offer.editingOfferError = error
             setEditingOfferState(offerID: offer.id, state: .error)
         }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` to edit `offer` using validated `newSettlementMethods`, which should be made by the user of this interface.
+     
+     This validates `newSettlementMethods`, passes `offer`'s ID and chain ID to `OfferService.createEditOfferTransaction`, and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - offer: The `Offer` to be edited.
+        - newSettlementMethods: An array of `SettlementMethod`s with which `offer` will be edited after they are validated.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createEditOfferTransaction(
+        offer: Offer,
+        newSettlementMethods: [SettlementMethod],
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createEditOfferTransaction: creating for \(offer.id.uuidString), validating edited settlement methods")
+                do {
+                    let validatedSettlementMethods = try validateSettlementMethods(newSettlementMethods)
+                    offerService.createEditOfferTransaction(offerID: offer.id, chainID: offer.chainID, newSettlementMethods: validatedSettlementMethods).pipe(to: seal.resolve)
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
+     Attempts to edit `offer` using `offerEditingTransaction`, which should have been created using the `SettlementMethod`s in `newSettlementMethods`.
+     
+     This clears any offer-editing-related error of `offer`, and sets `offer`'s `Offer.editingOfferState` to `EditingOfferState.validating`, and then passes all data to `offerService`'s `OfferService.editOffer` function.
+     
+     - Parameters:
+        - offer: The `Offer` to be edited.
+        - newSettlementMethods: The `SettlementMethod`s with which `offerEditingTransaction` should have been created.
+        - offerEditingTransaction: An optional `EthereumTransaction` that can edit `offer` using the `SettlementMethod`s contained in `newSettlementMethods`.
+     */
+    func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod], offerEditingTransaction: EthereumTransaction?) {
+        offer.editingOfferError = nil
+        offer.editingOfferState = .validating
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("editOffer: editing offer \(offer.id.uuidString)")
+        }
+        offerService.editOffer(offer: offer, newSettlementMethods: newSettlementMethods, offerEditingTransaction: offerEditingTransaction)
+            .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                self.logger.notice("editOffer: successfully broadcast transaction for \(offer.id.uuidString)")
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("editOffer: got error during editOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+            }
     }
     
     /**

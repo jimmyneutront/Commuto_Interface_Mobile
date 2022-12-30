@@ -491,7 +491,7 @@ class BlockchainService {
     }
     
     /**
-     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the users account to call CommutoSwaps [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the users account to call CommutoSwap's [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
      
      - Parameters:
         - offerID: The ID of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be canceled.
@@ -517,6 +517,44 @@ class BlockchainService {
             let writeTransaction = self.createWriteTransaction(method: "cancelOffer", parameters: [offerID.asData()] as [AnyObject], extraData: Data(), transactionOptions: options, contract: commutoSwapEthereumContract)
             guard let writeTransaction = writeTransaction else {
                 seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating cancelOffer transaction for \(offerID.uuidString)"))
+                return
+            }
+            var writeTransactionParameters = writeTransaction.transaction.parameters
+            writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+            writeTransaction.transaction.parameters = writeTransactionParameters
+            let ethereumTransaction = try writeTransaction.assemble()
+            seal.fulfill(ethereumTransaction)
+        }
+    }
+    
+    /**
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the users account to call CommutoSwap's [editOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#edit-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     
+     - Parameters:
+        - offerID: The ID of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be edited.
+        - chainID: The blockchain ID on which the offer to be edited exists.
+        - offerStruct: An `OfferStruct` containing the new data with which the offer will be updated.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will edit the offer specified by `offerID` on the chain specified by `chainID` using certain data contained in `offerStruct`.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the user's address is nil, or if we get nil while creating the transaction. Since this function returns a `Promise`, these errors will not be thrown but rather passed to the seal rejection call.
+     */
+    func createEditOfferTransaction(offerID: UUID, chainID: BigUInt, offerStruct: OfferStruct) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            var options = TransactionOptions()
+            options.type = .eip1559
+            guard let address = ethKeyStore.getAddress() else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting user's address while creating editOffer transaction for \(offerID.uuidString)"))
+                return
+            }
+            options.from = address
+            options.maxPriorityFeePerGas = .automatic
+            options.maxFeePerGas = .automatic
+            options.nonce = .pending
+            
+            let writeTransaction = self.createWriteTransaction(method: "editOffer", parameters: [offerID.asData(), offerStruct.toOfferDataArray()] as [AnyObject], extraData: Data(), transactionOptions: options, contract: commutoSwapEthereumContract)
+            guard let writeTransaction = writeTransaction else {
+                seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating editOffer transaction for \(offerID.uuidString)"))
                 return
             }
             var writeTransactionParameters = writeTransaction.transaction.parameters
@@ -753,7 +791,7 @@ class BlockchainService {
     
     #warning("TODO: Remove hacky TransactionReceipt EthereumBloomFilter decoding fix")
     /**
-     Gets the current chain ID, and iterates through all transactions in `block`  in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events. If the hash of a transaction is present in `transactionsToMonitor`, then we get the transaction. If it has failed, we notifiy the proper failure handler. If it has not failed, then we parse it for events and add the resulting events to a list that will contain all events emitted in this block. In either case, we then remove the transaction hash from `transactionsToMonitor`. If the hash of a transaction is not present in `transactionsToMonitor`, then we parse it for events and add the resulting events to the list that will contain all events emitted in this block. Then this iterates through all remaining monitored transaction. If this finds transations that have been dropped or have been pending for more than 24 hours, this removes them from `transactionsToMonitor` and calls the apropriate failure handler. Then this calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the current chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
+     Gets the current chain ID, and iterates through all transactions in `block`  in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events. If the hash of a transaction is present in `transactionsToMonitor`, then we get the transaction. If it has failed, we notifiy the proper failure handler. If it has not failed, then we parse it for events and add the resulting events to a list that will contain all events emitted in this block. In either case, we then remove the transaction hash from `transactionsToMonitor`. If the hash of a transaction is not present in `transactionsToMonitor`, then we parse it for events and add the resulting events to the list that will contain all events emitted in this block. Then this iterates through all remaining monitored transactions. If this finds transations that have been dropped or have been pending for more than 24 hours, this removes them from `transactionsToMonitor` and calls the apropriate failure handler. Then this calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the current chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
      Currently, this requires a hacky web3swift fix in order to work. In [this commit](https://github.com/web3swift-team/web3swift/commit/aa076ba96bbfcac98b8821029d67d76bce67065f#), a bug was introduced that skips the decoding of log bloom filters when decoding a response from the [eth_getTransactionHash]() endpoint. This bug causes all returned `TransactionReceipt` objects to have nil `logBloom` properties, meaning that event decoding is completely broken. The hacky fix is re-adding log bloom decoding code to the `TransactionReceipt` constructor.
      
@@ -825,17 +863,19 @@ class BlockchainService {
                 // This transaction is one we are monitoring, so we get the entire transaction (since we currently just have the hash)
                 let fullTransaction = try w3.eth.getTransactionReceipt(transactionHash)
                 if fullTransaction.status == .failed {
-                    logger.warning("parseBlock: monitored tx \(transactionHashString) failed, calling failure handler")
+                    logger.warning("parseBlock: monitored tx \(transactionHashString) of type \(monitoredTransaction.type.asString) failed, calling failure handler")
                     switch monitoredTransaction.type {
-                    case .cancelOffer:
+                    case .cancelOffer, .editOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: BlockchainTransactionError.init(errorDescription: "Transaction \(transactionHashString) is confirmed, but failed for unknown reason."))
                     }
                 } else {
-                    logger.notice("parseBlock: parsing monitored tx \(transactionHashString) for events")
+                    logger.notice("parseBlock: parsing monitored tx \(transactionHashString) of type \(monitoredTransaction.type.asString) for events")
                     // The tranaction has not failed, so we parse it for the proper event
                     switch monitoredTransaction.type {
                     case .cancelOffer:
                         events.append(contentsOf: try offerCanceledEventParser.parseTransactionByHash(transactionHash))
+                    case .editOffer:
+                        events.append(contentsOf: try offerEditedEventParser.parseTransactionByHash(transactionHash))
                     }
                 }
                 logger.notice("parseBlock: removing \(transactionHashString) from transactionsToMonitor")
@@ -871,10 +911,10 @@ class BlockchainService {
                     monitoredTransactionError = BlockchainTransactionError(errorDescription: "Transaction \(monitoredTransaction.transactionHash) has been pending for more than 24 hours, and an attempt to get its receipt failed, with error message: \(desc)")
                 }
                 if let monitoredTransactionError = monitoredTransactionError {
-                    logger.notice("parseBlock: removing from transactionsToMonitor and handling failed monitored tx \(monitoredTransaction.transactionHash) for reason: \(monitoredTransactionError.errorDescription ?? "Unknown reason")")
+                    logger.notice("parseBlock: removing from transactionsToMonitor and handling failed monitored tx \(monitoredTransaction.transactionHash) of type \(monitoredTransaction.type.asString) for reason: \(monitoredTransactionError.errorDescription ?? "Unknown reason")")
                     transactionsToMonitor[monitoredTransaction.transactionHash] = nil
                     switch monitoredTransaction.type {
-                    case .cancelOffer:
+                    case .cancelOffer, .editOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
                     }
                 }

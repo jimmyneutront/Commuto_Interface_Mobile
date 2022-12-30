@@ -37,6 +37,7 @@
 		6D1D5D1A28B7DC6700A48282 /* MakerInformationMessageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1D5D1928B7DC6700A48282 /* MakerInformationMessageParser.swift */; };
 		6D1D5D1C28B7E49500A48282 /* MakerInformationMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1D5D1B28B7E49500A48282 /* MakerInformationMessage.swift */; };
 		6D21A3BA2871CC0C00B017BC /* ErrorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D21A3B92871CC0C00B017BC /* ErrorViewModel.swift */; };
+		6D25D051295DE79F009F6D86 /* TransactionGasDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D25D050295DE79F009F6D86 /* TransactionGasDetailsView.swift */; };
 		6D2AB727273C250D0043DEE7 /* XPlatCryptoCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */; };
 		6D2C34112856CEFC0072AD96 /* P2PErrorNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2C34102856CEFC0072AD96 /* P2PErrorNotifiable.swift */; };
 		6D2FE84A29317C3000F6A4EB /* CancelOfferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FE84929317C3000F6A4EB /* CancelOfferView.swift */; };
@@ -195,6 +196,7 @@
 		6D1D5D1928B7DC6700A48282 /* MakerInformationMessageParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakerInformationMessageParser.swift; sourceTree = "<group>"; };
 		6D1D5D1B28B7E49500A48282 /* MakerInformationMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakerInformationMessage.swift; sourceTree = "<group>"; };
 		6D21A3B92871CC0C00B017BC /* ErrorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorViewModel.swift; sourceTree = "<group>"; };
+		6D25D050295DE79F009F6D86 /* TransactionGasDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionGasDetailsView.swift; sourceTree = "<group>"; };
 		6D2AB726273C250D0043DEE7 /* XPlatCryptoCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPlatCryptoCompatibility.swift; sourceTree = "<group>"; };
 		6D2C34102856CEFC0072AD96 /* P2PErrorNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PErrorNotifiable.swift; sourceTree = "<group>"; };
 		6D2FE84929317C3000F6A4EB /* CancelOfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelOfferView.swift; sourceTree = "<group>"; };
@@ -730,6 +732,7 @@
 				6D51876728A489CF0061315A /* OfferAmountView.swift */,
 				6D51876928A48C1E0061315A /* StablecoinAmountField.swift */,
 				6D2FE84929317C3000F6A4EB /* CancelOfferView.swift */,
+				6D25D050295DE79F009F6D86 /* TransactionGasDetailsView.swift */,
 			);
 			path = offer;
 			sourceTree = "<group>";
@@ -1087,6 +1090,7 @@
 				6D0FD5C82888A9B700B2DE4B /* ServiceFeeRateChangedEvent.swift in Sources */,
 				6D56891E28656D1000BDE490 /* OfferServiceError.swift in Sources */,
 				6D6F190B287DFD7F00B9BCA1 /* PreviewableOfferTruthSource.swift in Sources */,
+				6D25D051295DE79F009F6D86 /* TransactionGasDetailsView.swift in Sources */,
 				6D1D5D1A28B7DC6700A48282 /* MakerInformationMessageParser.swift in Sources */,
 				6DC2BF42287762CF00E5C3D7 /* OfferDirection.swift in Sources */,
 				6D6CE882284478040009B815 /* Offer.swift in Sources */,

@@ -73,7 +73,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -96,6 +100,103 @@ class OfferServiceTests: XCTestCase {
         XCTAssertNotNil(offerInTruthSource?.cancelingOfferError)
         let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())
         XCTAssertEqual(CancelingOfferState.error.asString, offerInDatabase?.cancelingOfferState)
+        
+    }
+    
+    /**
+     Ensure `OfferService` handles failed offer editing transactions properly.
+     */
+    func testHandleFailedOfferEditingTransaction() {
+        let offerID = UUID()
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let offerTruthSource = TestOfferTruthSource()
+        
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: offerID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.zero,
+            onChainSettlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: true,
+            state: .offerOpened
+        )!
+        let offerEditingTransaction = BlockchainTransaction(transactionHash: "a_transaction_hash_here", timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .editOffer)
+        offer.offerEditingTransaction = offerEditingTransaction
+        offerTruthSource.offers[offerID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let pendingSettlementMethods = [
+            SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA", privateData: "some_sepa_data"),
+            SettlementMethod(currency: "BSD", price: "1.00", method: "SANDDOLLAR", privateData: "some_sanddollar_data")
+        ]
+        offer.selectedSettlementMethods = pendingSettlementMethods
+        let serializedPendingSettlementMethodsAndPrivateDetails = pendingSettlementMethods.compactMap { pendingSettlementMethod in
+            return (try! JSONEncoder().encode(pendingSettlementMethod).base64EncodedString(), pendingSettlementMethod.privateData)
+        }
+        try! databaseService.storePendingOfferSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID, pendingSettlementMethods: serializedPendingSettlementMethodsAndPrivateDetails)
+        
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService()
+        )
+        offerService.offerTruthSource = offerTruthSource
+        let failureHandledExpectation = XCTestExpectation(description: "Fulfilled when failed transaction has been handled")
+        
+        DispatchQueue.global(qos: .default).async {
+            try! offerService.handleFailedTransaction(offerEditingTransaction, error: BlockchainTransactionError(errorDescription: "tx failed"))
+            failureHandledExpectation.fulfill()
+        }
+        
+        wait(for: [failureHandledExpectation], timeout: 10.0)
+        XCTAssertEqual(EditingOfferState.error, offer.editingOfferState)
+        XCTAssertNotNil(offer.editingOfferError)
+        XCTAssertEqual(0, offer.selectedSettlementMethods.count)
+        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())
+        XCTAssertEqual(EditingOfferState.error.asString, offerInDatabase?.editingOfferState)
+        
+        let pendingSettlementMethodsInDatabase = try! databaseService.getPendingOfferSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
+        XCTAssertNil(pendingSettlementMethodsInDatabase)
         
     }
     
@@ -361,7 +462,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -586,7 +691,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -985,7 +1094,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1009,9 +1122,170 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService` handles [OfferrEdited](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeredited) events properly.
+     Ensures that `OfferService` handles [OfferrEdited](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeredited) events properly for offers made by the interface user.
      */
-    func testHandleOfferEditedEvent() {
+    func testHandleOfferEditedEventForUserIsNotMaker() {
+        
+        struct TestingServerResponse: Decodable {
+            let commutoSwapAddress: String
+            let offerId: String
+        }
+        
+        let responseExpectation = XCTestExpectation(description: "Get response from testing server")
+        var testingServerUrlComponents = URLComponents(string: "http://localhost:8546/test_offerservice_handleOfferEditedEvent")!
+        testingServerUrlComponents.queryItems = [
+            URLQueryItem(name: "events", value: "offer-opened-edited")
+        ]
+        var request = URLRequest(url: testingServerUrlComponents.url!)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var testingServerResponse: TestingServerResponse? = nil
+        var gotError = false
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print(error)
+                gotError = true
+            } else if let data = data {
+                testingServerResponse = try! JSONDecoder().decode(TestingServerResponse.self, from: data)
+                responseExpectation.fulfill()
+            } else {
+                print(response!)
+                gotError = true
+            }
+        }
+        task.resume()
+        wait(for: [responseExpectation], timeout: 60.0)
+        let expectedOfferID = UUID(uuidString: testingServerResponse!.offerId)!
+        XCTAssertTrue(!gotError)
+        
+        let w3 = web3(provider: Web3HttpProvider(URL(string: ProcessInfo.processInfo.environment["BLOCKCHAIN_NODE"]!)!)!)
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        class TestBlockchainEventRepository: BlockchainEventRepository<OfferEditedEvent> {
+            
+            var appendedEvent: OfferEditedEvent? = nil
+            var removedEvent: OfferEditedEvent? = nil
+            
+            let eventRemovedExpectation = XCTestExpectation(description: "Fulfilled when eventRemovedExpectation is called")
+            
+            override func append(_ element: OfferEditedEvent) {
+                appendedEvent = element
+                super.append(element)
+            }
+            
+            override func remove(_ elementToRemove: OfferEditedEvent) {
+                removedEvent = elementToRemove
+                eventRemovedExpectation.fulfill()
+                super.remove(elementToRemove)
+            }
+            
+        }
+        
+        let offerEditedEventRepository = TestBlockchainEventRepository()
+        
+        let offerService = OfferService<TestOfferTruthSource, TestSwapTruthSource>(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService,
+            swapService: TestSwapService(),
+            offerEditedEventRepository: offerEditedEventRepository
+        )
+        
+        let offerTruthSource = TestOfferTruthSource()
+        offerService.offerTruthSource = offerTruthSource
+        
+        let offer = Offer(
+            isCreated: true,
+            isTaken: false,
+            id: expectedOfferID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            interfaceId: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            onChainDirection: BigUInt.zero,
+            onChainSettlementMethods: [],
+            protocolVersion: BigUInt.zero,
+            chainID: BigUInt(31337),
+            havePublicKey: true,
+            isUserMaker: false,
+            state: .offerOpened
+        )!
+        offerTruthSource.offers[expectedOfferID] = offer
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
+            offerCancellationTransactionHash: nil,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: nil,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
+        )
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            swapService: TestSwapService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
+        
+        let offerEditedEvent = OfferEditedEvent(id: expectedOfferID, chainID: BigUInt(31337), transactionHash: "offer_editing_tx_hash")
+        
+        // handleOfferEditedEvent runs code synchronously on the main DispatchQueue, so we must call it like this to avoid deadlock
+        DispatchQueue.global().async {
+            try! offerService.handleOfferEditedEvent(offerEditedEvent)
+        }
+        
+        wait(for: [offerEditedEventRepository.eventRemovedExpectation], timeout: 60.0)
+        XCTAssertTrue(!errorHandler.gotError)
+        XCTAssertEqual(expectedOfferID, offerEditedEventRepository.appendedEvent!.id)
+        XCTAssertEqual(expectedOfferID, offerEditedEventRepository.removedEvent!.id)
+        
+        XCTAssertEqual(2, offer.settlementMethods.count)
+        XCTAssertEqual("EUR", offer.settlementMethods[0].currency)
+        XCTAssertEqual("0.98", offer.settlementMethods[0].price)
+        XCTAssertEqual("SEPA", offer.settlementMethods[0].method)
+        XCTAssertEqual("BSD", offer.settlementMethods[1].currency)
+        XCTAssertEqual("1.00", offer.settlementMethods[1].price)
+        XCTAssertEqual("SANDDOLLAR", offer.settlementMethods[1].method)
+        
+        let settlementMethodsInDatabase = try! databaseService.getOfferSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
+        XCTAssertEqual(settlementMethodsInDatabase!.count, 2)
+        XCTAssertEqual(settlementMethodsInDatabase![0].0, Data("{\"f\":\"EUR\",\"p\":\"0.98\",\"m\":\"SEPA\"}".utf8).base64EncodedString())
+        XCTAssertEqual(settlementMethodsInDatabase![1].0, Data("{\"f\":\"BSD\",\"p\":\"1.00\",\"m\":\"SANDDOLLAR\"}".utf8).base64EncodedString())
+        
+    }
+    
+    /**
+     Ensures that `OfferService` handles [OfferrEdited](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeredited) events properly for offers made by the interface user.
+     */
+    func testHandleOfferEditedEventForUserIsMaker() {
         
         struct TestingServerResponse: Decodable {
             let commutoSwapAddress: String
@@ -1100,11 +1374,13 @@ class OfferServiceTests: XCTestCase {
             chainID: BigUInt(31337),
             havePublicKey: true,
             isUserMaker: true,
-            state: .awaitingPublicKeyAnnouncement
+            state: .offerOpened
         )!
         try! offer.updateSettlementMethods(settlementMethods: [
             SettlementMethod(currency: "USD", price: "1.00", method: "SWIFT", privateData: "some_swift_data")
         ])
+        offer.editingOfferState = .awaitingTransactionConfirmation
+        offer.offerEditingTransaction = BlockchainTransaction(transactionHash: "offer_editing_tx_hash", timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .editOffer)
         offerTruthSource.offers[expectedOfferID] = offer
         let offerForDatabase = DatabaseOffer(
             id: offer.id.asData().base64EncodedString(),
@@ -1126,7 +1402,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         let serializedSettlementMethodsAndPrivateDetails = offer.settlementMethods.compactMap { settlementMethod in
@@ -1138,6 +1418,7 @@ class OfferServiceTests: XCTestCase {
             SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA", privateData: "some_sepa_data"),
             SettlementMethod(currency: "BSD", price: "1.00", method: "SANDDOLLAR", privateData: "some_sanddollar_data")
         ]
+        offer.selectedSettlementMethods = pendingSettlementMethods
         let serializedPendingSettlementMethodsAndPrivateDetails = pendingSettlementMethods.compactMap { pendingSettlementMethod in
             return (try! JSONEncoder().encode(pendingSettlementMethod).base64EncodedString(), pendingSettlementMethod.privateData)
         }
@@ -1154,7 +1435,7 @@ class OfferServiceTests: XCTestCase {
         )
         offerService.blockchainService = blockchainService
         
-        let offerEditedEvent = OfferEditedEvent(id: expectedOfferID, chainID: BigUInt(31337))
+        let offerEditedEvent = OfferEditedEvent(id: expectedOfferID, chainID: BigUInt(31337), transactionHash: "offer_editing_tx_hash")
         
         // handleOfferEditedEvent runs code synchronously on the main DispatchQueue, so we must call it like this to avoid deadlock
         DispatchQueue.global().async {
@@ -1163,10 +1444,15 @@ class OfferServiceTests: XCTestCase {
         
         wait(for: [offerEditedEventRepository.eventRemovedExpectation], timeout: 60.0)
         XCTAssertTrue(!errorHandler.gotError)
-        XCTAssertTrue(offerTruthSource.offers.keys.count == 1)
-        XCTAssertTrue(offerTruthSource.offers[expectedOfferID]!.id == expectedOfferID)
-        XCTAssertEqual(offerEditedEventRepository.appendedEvent!.id, expectedOfferID)
-        XCTAssertEqual(offerEditedEventRepository.removedEvent!.id, expectedOfferID)
+        XCTAssertEqual(1, offerTruthSource.offers.keys.count)
+        XCTAssertEqual(expectedOfferID, offerTruthSource.offers[expectedOfferID]!.id)
+        XCTAssertEqual(expectedOfferID, offerEditedEventRepository.appendedEvent!.id)
+        XCTAssertEqual(expectedOfferID, offerEditedEventRepository.removedEvent!.id)
+        XCTAssertEqual(.completed, offer.editingOfferState)
+        XCTAssertEqual(0, offer.selectedSettlementMethods.count)
+        
+        let offerInDatabase = try! databaseService.getOffer(id: offer.id.asData().base64EncodedString())
+        XCTAssertEqual("completed", offerInDatabase?.editingOfferState)
         
         let settlementMethodsInDatabase = try! databaseService.getOfferSettlementMethods(offerID: expectedOfferID.asData().base64EncodedString(), _chainID: offerForDatabase.chainID)
         XCTAssertEqual(settlementMethodsInDatabase!.count, 2)
@@ -1251,7 +1537,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1499,7 +1789,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offerInTruthSource.cancelingOfferState.asString,
             offerCancellationTransactionHash: offerInTruthSource.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offerInTruthSource.editingOfferState.asString,
+            offerEditingTransactionHash: offerInTruthSource.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         XCTAssertEqual(offerInDatabase, expectedOfferInDatabase)
         
@@ -1532,7 +1826,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService.cancelOffer`, `OfferService.createCancelOfferTransaction` and `BlockchainService.sendTransaction` function properly.
+     Ensures that `OfferService.createCancelOfferTransaction`, `OfferService.cancelOffer` and `BlockchainService.sendTransaction` function properly.
      */
     func testCancelOffer() {
         
@@ -1609,7 +1903,7 @@ class OfferServiceTests: XCTestCase {
             direction: .buy,
             settlementMethods: [],
             protocolVersion: BigUInt(1),
-            chainID: BigUInt(31337),
+            chainID: BigUInt(31337), // Hardhat blockchain ID
             havePublicKey: true,
             isUserMaker: true,
             state: .offerOpened
@@ -1635,7 +1929,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
@@ -1664,7 +1962,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService.editOffer` and `BlockchainService.editOffer` function properly.
+     Ensures that `OfferService.createEditOfferTransaction`, `OfferService.editOffer` and `BlockchainService.editOffer` function properly.
      */
     func testEditOffer() {
         
@@ -1714,8 +2012,18 @@ class OfferServiceTests: XCTestCase {
         )
         
         let offerTruthSource = TestOfferTruthSource()
-        offerTruthSource.serviceFeeRate = BigUInt(1)
         offerService.offerTruthSource = offerTruthSource
+        
+        let errorHandler = TestBlockchainErrorHandler()
+        
+        let blockchainService = BlockchainService(
+            errorHandler: errorHandler,
+            offerService: offerService,
+            swapService: TestSwapService(),
+            web3Instance: w3,
+            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        )
+        offerService.blockchainService = blockchainService
         
         let offer = Offer(
             isCreated: true,
@@ -1737,37 +2045,61 @@ class OfferServiceTests: XCTestCase {
             state: .offerOpened
         )
         offerTruthSource.offers[offerID] = offer
-        
-        let errorHandler = TestBlockchainErrorHandler()
-        
-        let blockchainService = BlockchainService(
-            errorHandler: errorHandler,
-            offerService: offerService,
-            swapService: TestSwapService(),
-            web3Instance: w3,
-            commutoSwapAddress: EthereumAddress(testingServerResponse!.commutoSwapAddress)!
+        let offerForDatabase = DatabaseOffer(
+            id: offer.id.asData().base64EncodedString(),
+            isCreated: offer.isCreated,
+            isTaken: offer.isTaken,
+            maker: offer.maker.addressData.toHexString(),
+            interfaceId: offer.interfaceId.base64EncodedString(),
+            stablecoin: offer.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(offer.amountLowerBound),
+            amountUpperBound: String(offer.amountUpperBound),
+            securityDepositAmount: String(offer.securityDepositAmount),
+            serviceFeeRate: String(offer.serviceFeeRate),
+            onChainDirection: String(offer.onChainDirection),
+            protocolVersion: String(offer.protocolVersion),
+            chainID: String(offer.chainID),
+            havePublicKey: offer.havePublicKey,
+            isUserMaker: offer.isUserMaker,
+            state: offer.state.asString,
+            cancelingOfferState: offer.cancelingOfferState.asString,
+            offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
+            offerCancellationTransactionCreationTime: nil,
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
-        offerService.blockchainService = blockchainService
+        try! databaseService.storeOffer(offer: offerForDatabase)
+        
+        let offerInDatabaseBeforeEditing = try! databaseService.getOffer(id: offer.id.asData().base64EncodedString())
+        XCTAssertEqual(offerForDatabase, offerInDatabaseBeforeEditing)
         
         let editingExpectation = XCTestExpectation(description: "Fulfilled when offerService.editOffer returns")
         
-        offerService.editOffer(offerID: offerID, newSettlementMethods: [
-            SettlementMethod(currency: "USD", price: "1.23", method: "a_method", privateData: "some_private_data")
-        ]).done {
+        offer.editingOfferState = .validating
+        offerService.createEditOfferTransaction(offerID: offerID, chainID: BigUInt(31337), newSettlementMethods: [SettlementMethod(currency: "USD", price: "1.23", method: "a_method", privateData: "some_private_data")]).then { transaction in
+            return offerService.editOffer(offer: offer, newSettlementMethods: [SettlementMethod(currency: "USD", price: "1.23", method: "a_method", privateData: "some_private_data")], offerEditingTransaction: transaction)
+        }.done {
             editingExpectation.fulfill()
         }.cauterize()
         
         wait(for: [editingExpectation], timeout: 30.0)
         
+        XCTAssertEqual(.awaitingTransactionConfirmation, offer.editingOfferState)
+        XCTAssertNotNil(offer.offerEditingTransaction?.transactionHash)
         let expectedSettlementMethods = [
             try! JSONEncoder().encode(SettlementMethod(currency: "USD", price: "1.23", method: "a_method"))
         ]
-        
+        let offerInDatabase = try! databaseService.getOffer(id: offerID.asData().base64EncodedString())!
+        XCTAssertEqual("awaitingTransactionConfirmation", offerInDatabase.editingOfferState)
+        XCTAssertNotNil(offerInDatabase.offerEditingTransactionHash)
         let offerStruct = try! blockchainService.getOffer(id: offerID)
         XCTAssertEqual(expectedSettlementMethods, offerStruct?.settlementMethods)
-        
         let pendingSettlementMethodsInDatabase = try! databaseService.getPendingOfferSettlementMethods(offerID: offerID.asData().base64EncodedString(), _chainID: String(BigUInt(31337)))
         XCTAssertEqual(1, pendingSettlementMethodsInDatabase!.count)
+        XCTAssertEqual(expectedSettlementMethods[0].base64EncodedString(), pendingSettlementMethodsInDatabase?[0].0)
         XCTAssertEqual("some_private_data", pendingSettlementMethodsInDatabase?[0].1)
         
     }
@@ -1884,7 +2216,11 @@ class OfferServiceTests: XCTestCase {
             cancelingOfferState: offer.cancelingOfferState.asString,
             offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
             offerCancellationTransactionCreationTime: nil,
-            offerCancellationTransactionCreationBlockNumber: nil
+            offerCancellationTransactionCreationBlockNumber: nil,
+            editingOfferState: offer.editingOfferState.asString,
+            offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+            offerEditingTransactionCreationTime: nil,
+            offerEditingTransactionCreationBlockNumber: nil
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         

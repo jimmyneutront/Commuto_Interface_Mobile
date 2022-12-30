@@ -16,7 +16,7 @@ import web3swift
  - Properties:
     - id: The ID of the canceled offer, as a `UUID`.
     - chainID: The ID of the blockchain on which this event was emitted.
-    - transactionHash: The hash of the transaction that emitted this event, as a lowercase  hex string with a "0x" prefix.
+    - transactionHash: The hash of the transaction that emitted this event, as a lowercase hex string with a "0x" prefix.
  */
 class OfferCanceledEvent: Equatable {
     let id: UUID

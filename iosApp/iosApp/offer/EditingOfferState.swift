@@ -15,15 +15,44 @@ enum EditingOfferState {
      */
     case none
     /**
-     Indicates that we are currently editing the corresponding offer.
+     Indicates that we are currently checking whether the corresponding offer can be edited.
      */
-    case editing
+    case validating
     /**
-     Indicates that we have edited the corresponding offer.
+     Indicates that we are currently sending the transaction that will edit the corresponding offer.
+     */
+    case sendingTransaction
+    /**
+     Indicates that we have sent the transaction that will edit the corresponding offer, and we are waiting for it to be confirmed.
+     */
+    case awaitingTransactionConfirmation
+    /**
+     Indicates that we have edited the corresponding offer, and the transaction that did so has been confirmed.
      */
     case completed
     /**
-     Indicates that we encountered an exception while editing the corresponding offer.
+     Indicates that we encountered an error while editing the corresponding offer.
      */
     case error
+    
+    /**
+     Returns a `String` corresponding to a particular case of `EditingOfferState`.
+     */
+    var asString: String {
+        switch self {
+        case .none:
+            return "none"
+        case .validating:
+            return "validating"
+        case .sendingTransaction:
+            return "sendingTransaction"
+        case .awaitingTransactionConfirmation:
+            return "awaitingTransactionConfirmation"
+        case .completed:
+            return "completed"
+        case .error:
+            return "error"
+        }
+    }
+    
 }

@@ -1,8 +1,8 @@
 //
-//  CancelOfferView.swift
+//  TransactionGasDetailsView.swift
 //  iosApp
 //
-//  Created by jimmyt on 11/25/22.
+//  Created by jimmyt on 12/29/22.
 //  Copyright © 2022 orgName. All rights reserved.
 //
 
@@ -10,32 +10,42 @@ import SwiftUI
 import web3swift
 
 /**
- Allows the user to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) that they have made, and displays the necessary gas and gas cost before actually cancelling the Offer. This should only be presented inside a sheet.
+ Displays gas information about `transaction` if it is not `nil`, or displays the localized description of `transactionCreationError` if it is not `nil`. When this `View` appears, it executes `onRunAppearance`, passing `transaction` and `transactionCreationError`. `onRunAppearance` should be a closure that creates a transaction and sets the result equal to the wrapped value of `transaction`, or sets the wrapped value of `transactionCreationError` to any error that occurs during the transaction creation process. If `transaction` is not `nil`, the user can press the main button in this view which will call `buttonLabel`, passing `transaction`. This should only be presented inside a sheet.
  */
-struct CancelOfferView<Offer_TruthSource>: View where Offer_TruthSource: UIOfferTruthSource {
-    
-    /**
-     The [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) that this `CancelOfferView` allows the user to cancel.
-     */
-    @ObservedObject var offer: Offer
+struct TransactionGasDetailsView: View {
     
     /**
      A binding that controls whether the sheet containing this `View` is presented.
      */
-    @Binding var isShowingCancelOfferSheet: Bool
+    @Binding var isShowingSheet: Bool
     
     /**
-     The `OffersViewModel` that acts as a single source of truth for all offer-related data.
+     The title that will be displayed at the top right of this sheet.
      */
-    @ObservedObject var offerTruthSource: Offer_TruthSource
+    let title: String
     
     /**
-     The created `EthereumTransaction` that will cancel the offer, or `nil` if no such transaction is available.
+     The label that will be displayed on the main button at the bottom of this sheet.
      */
-    @State var cancelOfferTransaction: EthereumTransaction? = nil
+    let buttonLabel: String
     
     /**
-     The `Error` that has occurred while creating the transaction for offer cancellation, or `nil` if no such error has occurred.
+     A closure accepting an optional `EthereumTransaction` that will be executed when the main button is pressed.
+     */
+    let buttonAction: (EthereumTransaction?) -> Void
+    
+    /**
+     A closure accepting an optional `EthereumTransaction` and an optional `Error` wrapped in `Binding`s, which should create a transaction for which details will be displayed.
+     */
+    let runOnAppearance: (Binding<EthereumTransaction?>, Binding<Error?>) -> Void
+    
+    /**
+     The created `EthereumTransaction` about which this displays details (and which will be passed to `buttonAction`) or `nil` if no such transaction is available.
+     */
+    @State var transaction: EthereumTransaction? = nil
+    
+    /**
+     The `Error` that occured in `runOnAppearance`, or `nil` if no such error has occured.
      */
     @State var transactionCreationError: Error? = nil
     
@@ -43,13 +53,13 @@ struct CancelOfferView<Offer_TruthSource>: View where Offer_TruthSource: UIOffer
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading) {
                 HStack() {
-                    Text("Cancel Offer")
+                    Text(title)
                         .font(.largeTitle)
                         .bold()
                     Spacer()
                     Button(
                         action: {
-                            isShowingCancelOfferSheet = false
+                            isShowingSheet = false
                         },
                         label: {
                             Text("Close")
@@ -57,7 +67,7 @@ struct CancelOfferView<Offer_TruthSource>: View where Offer_TruthSource: UIOffer
                     )
                     .accentColor(Color.primary)
                 }
-                if let transaction = cancelOfferTransaction {
+                if let transaction = transaction {
                     if let gasLimit = transaction.parameters.gasLimit, let maxFeePerGas = transaction.parameters.maxFeePerGas {
                         Text("Estimated Gas:")
                             .font(.title2)
@@ -80,12 +90,12 @@ struct CancelOfferView<Offer_TruthSource>: View where Offer_TruthSource: UIOffer
                         }
                         Button(
                             action: {
-                                // Close the sheet in which this view is presented as soon as the user begins the canceling process.
-                                offerTruthSource.cancelOffer(offer: offer, offerCancellationTransaction: cancelOfferTransaction)
-                                isShowingCancelOfferSheet = false
+                                // Close the sheet in which this view is presented as soon as the user presses this button.
+                                buttonAction(transaction)
+                                isShowingSheet = false
                             },
                             label: {
-                                Text("Cancel Offer")
+                                Text(buttonLabel)
                                     .font(.largeTitle)
                                     .bold()
                                     .padding(10)
@@ -105,40 +115,25 @@ struct CancelOfferView<Offer_TruthSource>: View where Offer_TruthSource: UIOffer
                         }
                     }
                 } else if let transactionCreationError = transactionCreationError {
-                    Text(transactionCreationError.localizedDescription)
-                        .foregroundColor(Color.red)
+                    Text(transactionCreationError.localizedDescription).foregroundColor(Color.red)
                 } else {
                     Text("Creating transaction...")
                 }
             }
             .padding()
             .onAppear {
-                if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
-                    offerTruthSource.createCancelOfferTransaction(
-                        offer: offer,
-                        createdTransactionHandler: { createdTransaction in
-                            cancelOfferTransaction = createdTransaction
-                        },
-                        errorHandler: { error in
-                            transactionCreationError = error
-                        }
-                    )
-                }
+                runOnAppearance($transaction, $transactionCreationError)
             }
         }
     }
 }
 
 /**
- Displays a preview of `CancelOfferView`.
+ Displays a preview of `TransactionGasDetailsView`
  */
-struct CancelOfferView_Previews: PreviewProvider {
-    @State static var isShowingCancelOfferSheet = true
+struct TransactionGasDetailsView_Previews: PreviewProvider {
+    @State static var isShowingSheet = false
     static var previews: some View {
-        CancelOfferView(
-            offer: Offer.sampleOffers[Offer.sampleOfferIds[2]]!,
-            isShowingCancelOfferSheet: $isShowingCancelOfferSheet,
-            offerTruthSource: PreviewableOfferTruthSource()
-        )
+        TransactionGasDetailsView(isShowingSheet: $isShowingSheet, title: "Cancel Offer", buttonLabel: "Cancel Offer", buttonAction: {_ in }, runOnAppearance: {_,_ in })
     }
 }

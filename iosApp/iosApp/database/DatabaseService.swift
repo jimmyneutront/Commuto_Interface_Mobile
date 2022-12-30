@@ -239,6 +239,22 @@ class DatabaseService {
      */
     let offerCancellationTransactionCreationBlockNumber = Expression<Int?>("offerCancellationTransactionCreationBlockNumber")
     /**
+     A database structure representing an `Offer`'s `editingOfferState` property.
+     */
+    let editingOfferState = Expression<String>("editingOfferState")
+    /**
+     A database structure representing the hash of a transaction that edited an `Offer` made by the user of this interface.
+     */
+    let offerEditingTransactionHash = Expression<String?>("offerEditingTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that edited an `Offer` made by the user of this interface.
+     */
+    let offerEditingTransactionCreationTime = Expression<String?>("offerEditingTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that edited an `Offer` made by the user of this interface.
+     */
+    let offerEditingTransactionCreationBlockNumber = Expression<Int?>("offerEditingTransactionCreationBlockNumber")
+    /**
      A database structure representing a `Swaps`'s `state` property.
      */
     let swapState = Expression<String>("state")
@@ -276,6 +292,10 @@ class DatabaseService {
             t.column(offerCancellationTransactionHash)
             t.column(offerCancellationTransactionCreationTime)
             t.column(offerCancellationTransactionCreationBlockNumber)
+            t.column(editingOfferState)
+            t.column(offerEditingTransactionHash)
+            t.column(offerEditingTransactionCreationTime)
+            t.column(offerEditingTransactionCreationBlockNumber)
         })
         try connection.run(offerSettlementMethods.create { t in
             t.column(id)
@@ -367,7 +387,11 @@ class DatabaseService {
                     cancelingOfferState <- offer.cancelingOfferState,
                     offerCancellationTransactionHash <- offer.offerCancellationTransactionHash,
                     offerCancellationTransactionCreationTime <- offer.offerCancellationTransactionCreationTime,
-                    offerCancellationTransactionCreationBlockNumber <- offer.offerCancellationTransactionCreationBlockNumber
+                    offerCancellationTransactionCreationBlockNumber <- offer.offerCancellationTransactionCreationBlockNumber,
+                    editingOfferState <- offer.editingOfferState,
+                    offerEditingTransactionHash <- offer.offerEditingTransactionHash,
+                    offerEditingTransactionCreationTime <- offer.offerEditingTransactionCreationTime,
+                    offerEditingTransactionCreationBlockNumber <- offer.offerEditingTransactionCreationBlockNumber
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.id" {
@@ -445,6 +469,43 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseOffer`'s `editingOfferState` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `editingOfferState` field.
+     */
+    func updateEditingOfferState(offerID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(editingOfferState <- state))
+        }
+        logger.notice("updateEditingOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `offerEditingTransactionHash`, `offerEditingTransactionCreationTime`, and `offerEditingTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `offerEditingTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `offerEditingTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `offerEditingTransactionCreationBlockNumber` field.
+     */
+    func updateOfferEditingData(offerID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID)
+                .update(
+                    offerEditingTransactionHash <- transactionHash,
+                    offerEditingTransactionCreationTime <- transactionCreationTime,
+                    offerEditingTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateOfferEditingData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
      Removes every `DatabaseOffer` with an offer ID equal to `offerID` and a chain ID equal to `chainID` from persistent storage.
      
      - Parameters:
@@ -503,7 +564,11 @@ class DatabaseService {
                 cancelingOfferState: result[0][cancelingOfferState],
                 offerCancellationTransactionHash: result[0][offerCancellationTransactionHash],
                 offerCancellationTransactionCreationTime: result[0][offerCancellationTransactionCreationTime],
-                offerCancellationTransactionCreationBlockNumber: result[0][offerCancellationTransactionCreationBlockNumber]
+                offerCancellationTransactionCreationBlockNumber: result[0][offerCancellationTransactionCreationBlockNumber],
+                editingOfferState: result[0][editingOfferState],
+                offerEditingTransactionHash: result[0][offerEditingTransactionHash],
+                offerEditingTransactionCreationTime: result[0][offerEditingTransactionCreationTime],
+                offerEditingTransactionCreationBlockNumber: result[0][offerEditingTransactionCreationBlockNumber]
             )
         } else {
             logger.notice("getOffer: no offer found with B64 ID \(_id)")

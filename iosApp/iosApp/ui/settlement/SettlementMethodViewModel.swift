@@ -29,7 +29,7 @@ class SettlementMethodViewModel: UISettlementMethodTruthSource {
      */
     private let logger = Logger(subsystem: "xyz.commuto.interfacemobile", category: "SettlementMethodViewModel")
     /**
-     An array containing all of the user's `SettlementMethod`s, each with corresponding private data.
+     An array containing all the user's `SettlementMethod`s, each with corresponding private data.
      */
     @Published var settlementMethods: [SettlementMethod] = SettlementMethod.sampleSettlementMethodsEmptyPrices
     /**

@@ -18,7 +18,7 @@ struct BlockchainTransaction {
      */
     let transaction: EthereumTransaction?
     /**
-     The hash of `transaction`, or `transaction` is `nil`, the hash of the transaction that this struct represents.
+     The hash of `transaction`, or if `transaction` is `nil`, the hash of the transaction that this struct represents.
      */
     let transactionHash: String
     /**
@@ -78,7 +78,7 @@ struct BlockchainTransaction {
 }
 
 /**
- An error thrown by `BlockchainTransaction` constructors.
+ An error thrown by `BlockchainTransaction`-related code.
  */
 struct BlockchainTransactionError: LocalizedError {
     /**

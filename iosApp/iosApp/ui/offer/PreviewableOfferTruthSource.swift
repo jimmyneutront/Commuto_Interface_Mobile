@@ -79,6 +79,16 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     /**
      Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
+    func createEditOfferTransaction(offer: Offer, newSettlementMethods: [SettlementMethod], createdTransactionHandler: @escaping (EthereumTransaction) -> Void, errorHandler: @escaping (Error) -> Void) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod], offerEditingTransaction: EthereumTransaction?) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
     func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod]) {}
     
     /**

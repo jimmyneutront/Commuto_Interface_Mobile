@@ -207,7 +207,11 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     cancelingOfferState: newOffer.cancelingOfferState.asString,
                     offerCancellationTransactionHash: newOffer.offerCancellationTransaction?.transactionHash,
                     offerCancellationTransactionCreationTime: nil,
-                    offerCancellationTransactionCreationBlockNumber: nil
+                    offerCancellationTransactionCreationBlockNumber: nil,
+                    editingOfferState: newOffer.editingOfferState.asString,
+                    offerEditingTransactionHash: newOffer.offerEditingTransaction?.transactionHash,
+                    offerEditingTransactionCreationTime: nil,
+                    offerEditingTransactionCreationBlockNumber: nil
                 )
                 try databaseService.storeOffer(offer: newOfferForDatabase)
                 var settlementMethodStrings: [(String, String?)] = []
@@ -331,7 +335,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      
      - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of cancelling the offer specified by `offerID` on the blockchain specified by `chainID`.
      
-     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a promise, this error will not actually be thrown, but will be passed to `seal.reject.`
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
      */
     func createCancelOfferTransaction(offerID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
         return Promise { seal in
@@ -349,7 +353,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     On the global `DispatchQueue`, this ensures that the offer is not taken or already being canceled, and that `offerCancellationTransaction` is not `nil`. Then it signs `offerCancellationTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `offer` and sets `offer`'s `Offer.cancelingOfferState` property to `CancelingOfferState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `offerCancellationTransaction` to the blockchain. Once a response is received, this persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this sets the value of `offer`'s `Offer.cancelingOfferState` to `OfferState.awaitingTransactionConfirmation`.
+     On the global `DispatchQueue`, this ensures that the offer is not taken or already being canceled, and that `offerCancellationTransaction` is not `nil`. Then it signs `offerCancellationTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `offer` and sets `offer`'s `Offer.cancelingOfferState` property to `CancelingOfferState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `offerCancellationTransaction` to the blockchain. Once a response is received, this persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this sets the value of `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.awaitingTransactionConfirmation`.
      
      - Parameters:
         - offer: The `Offer` being canceled.
@@ -364,7 +368,6 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             Promise<(BlockchainTransaction, BlockchainService)> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("cancelOffer: canceling \(offer.id.uuidString)")
-                    // If we can't find the offer in offerTruthSource, we assume it is not taken
                     guard !(offer.isTaken) else {
                         seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offer.id.uuidString) is taken and cannot be canceled."))
                         return
@@ -383,9 +386,8 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                         logger.notice("cancelOffer: signing transaction for \(offer.id.uuidString)")
                         try blockchainService.signTransaction(&offerCancellationTransaction)
                         let blockchainTransactionForOfferCancellation = try BlockchainTransaction(transaction: offerCancellationTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .cancelOffer)
-                        let dateFormatter = ISO8601DateFormatter()
-                        let dateString = dateFormatter.string(from: blockchainTransactionForOfferCancellation.timeOfCreation)
-                        logger.notice("cancelOffer: persistently storing tx hash \(blockchainTransactionForOfferCancellation.transactionHash) for \(offer.id.uuidString)")
+                        let dateString = createDateString(blockchainTransactionForOfferCancellation.timeOfCreation)
+                        logger.notice("cancelOffer: persistently storing offer cancellation data for \(offer.id.uuidString), including tx hash \(blockchainTransactionForOfferCancellation.transactionHash)")
                         try databaseService.updateOfferCancellationData(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: blockchainTransactionForOfferCancellation.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForOfferCancellation.latestBlockNumberAtCreation))
                         logger.notice("cancelOffer: persistently updating cancelingOfferState for \(offer.id.uuidString) to sendingTransaction")
                         try databaseService.updateCancelingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: CancelingOfferState.sendingTransaction.asString)
@@ -502,6 +504,187 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("editOffer: encountered error while editing \(offerID.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` that will updatel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface  with the ID specified by `offerID` and on the blockchain specified by `chainID`, using the settlement methods contained in `newSettlementMethods`.
+     
+     - Parameters:
+        - offerID: The ID of the `Offer` to be editied.
+        - chainID: The ID of the blockchain on which the `Offer` exists.
+        - newSettlementMethods: The new `SettlementMethod`s with which the offer will be updated.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of editing the offer specified by `offerID` on the blockchain specified by `chainID` using the settlement methods contained in `newSettlementMethods`.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil` or if settlement method serialization does not fail but `onChainSettlementMethods` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
+     */
+    func createEditOfferTransaction(offerID: UUID, chainID: BigUInt, newSettlementMethods: [SettlementMethod]) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createEditOfferTransaction: creating for \(offerID.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    seal.reject(OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during createEditOfferTransaction call"))
+                    return
+                }
+                var onChainSettlementMethods: [Data]? = nil
+                do {
+                    logger.notice("createEditOfferTransaction: serializing settlement methods for \(offerID.uuidString)")
+                    let serializedSettlementMethodsAndPrivateDetails = try newSettlementMethods.compactMap { settlementMethod in
+                        return (try JSONEncoder().encode(settlementMethod).base64EncodedString(), settlementMethod.privateData)
+                    }
+                    onChainSettlementMethods = serializedSettlementMethodsAndPrivateDetails.compactMap { serializedSettlementMethodWithDetails in
+                        return Data(base64Encoded: serializedSettlementMethodWithDetails.0)
+                    }
+                } catch {
+                    self.logger.error("createEditOfferTransaction: encountered error serializing settlement methods for \(offerID.uuidString): \(error.localizedDescription)")
+                    seal.reject(error)
+                }
+                guard let onChainSettlementMethods = onChainSettlementMethods else {
+                    seal.reject(OfferServiceError.unexpectedNilError(desc: "Unexpectedly got nil onChainSettlementMethods during createEditOfferTransaction call but serialization did not fail"))
+                    return
+                }
+                /*
+                 Since editOffer only uses the settlement methods of the passed Offer struct, we put meaningless values in all other properties of the passed struct.
+                 */
+                let offerStruct = OfferStruct(
+                    isCreated: false,
+                    isTaken: false,
+                    maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+                    interfaceId: Data(),
+                    stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+                    amountLowerBound: BigUInt.zero,
+                    amountUpperBound: BigUInt.zero,
+                    securityDepositAmount: BigUInt.zero,
+                    serviceFeeRate: BigUInt.zero,
+                    direction: BigUInt.zero,
+                    settlementMethods: onChainSettlementMethods,
+                    protocolVersion: BigUInt.zero,
+                    chainID: BigUInt.zero
+                )
+                logger.notice("createEditOfferTransaction: creating for \(offerID.uuidString)")
+                blockchainService.createEditOfferTransaction(offerID: offerID, chainID: chainID, offerStruct: offerStruct).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
+     Attempts to edit an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     On the global `DispatchQueue`, this ensures that the offer is not taken, canceled, or already being edited, and that `newSettlementMethods` can be serialized. Then, this creates another `EthereumTransaction` to edit `offer` using the serialized settlement method data, and then ensures that the data of this transaction matches the data of `offerEditingTransaction`. (If they do not match, then `offerEditingTransaction` was not created with the settlement methods contained in `newSettlementMethods`.) Then this signs `offerEditingTransaction` and creates a `BlockchainTransaction` to wrap it. Then this persistently stores the offer editing data for said `BlockchainTransaction`, persistently stores the pending settlement methods, and persistently updates the editing offer state of `offer` to `EditingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this updates the `Offer.editingOfferState` property of `offer` to `EditingOfferState.sendingTransaction` and sets the `Offer.offerEditingTransaction` property of `offer` to said `BlockchainTransaction`. Then, on the global `DispatchQueue`, this calls `BlockchainService.sendTransaction`, passing said `BlockchainTransaction`. When this call returns, this persistently updates the editing offer state of `offer` to `EditingOfferState.awaitingTransactionConfirmation`, then on the main `DispatchQueue` updates the `Offer.editingOfferState` property of `offer` to `EditingOfferState.awaitingTransactionConfirmation`.
+     
+     - Parameters:
+        - offer: The `Offer` being edited.
+        - newSettlementMethods: The `SettlementMethod`s with which `offerEditingTransaction` should have been made, and with which `offer` will be edited.
+        - offerEditingTransaction: An optional `EthereumTransaction` that can edit `offer` using the `SettlementMethod`s contained in `newSettlementMethods`.
+     
+     - Returns: An empty `Promise` that will be fulfilled when `offer` is edited.
+     
+     - Throws: An `OfferServiceError.offerNotAvailableError` if `offer` is already taken already canceled, or already being edited, an `OfferServiceError.unexpectedNilError` of `blockchainService` is `nil` or if `offerEditingTransaction` is `nil`, or an `OfferServiceError.nonmatchingDataError` if the data of `offerEditingTransaction` does not match that of the transaction this function creates using `newSettlementMethods`.
+     */
+    func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod], offerEditingTransaction: EthereumTransaction?) -> Promise<Void> {
+        return Promise { seal in
+            Promise<Array<(String, String?)>> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("editOffer: editing \(offer.id.uuidString)")
+                    guard !offer.isTaken else {
+                        seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offer.id.uuidString) is already taken."))
+                        return
+                    }
+                    guard offer.isCreated else {
+                        seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offer.id.uuidString) is already canceled"))
+                        return
+                    }
+                    guard (offer.editingOfferState == .validating) else {
+                        seal.reject(OfferServiceError.offerNotAvailableError(desc: "Offer \(offer.id.uuidString) is already being edited."))
+                        return
+                    }
+                    do {
+                        logger.notice("editOffer: serializing settlement methods for \(offer.id.uuidString)")
+                        let serializedSettlementmethodsAndPrivateDetails = try newSettlementMethods.compactMap { settlementMethod in
+                            return (try JSONEncoder().encode(settlementMethod).base64EncodedString(), settlementMethod.privateData)
+                        }
+                        seal.fulfill(serializedSettlementmethodsAndPrivateDetails)
+                    } catch {
+                        logger.error("editOffer: encountered error serializing settlement methods for \(offer.id.uuidString): \(error.localizedDescription)")
+                        seal.reject(error)
+                    }
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] serializedSettlementMethodsAndPrivateDetails -> Promise<(EthereumTransaction, Array<(String, String?)>)> in
+                logger.notice("editOffer: recreating EthereumTransaction to edit \(offer.id.uuidString) to ensure offerEditingTransaction was created with the contents of newSettlementMethods")
+                let onChainSettlementMethods = serializedSettlementMethodsAndPrivateDetails.compactMap { serializedSettlementMethodWithDetails in
+                    return Data(base64Encoded: serializedSettlementMethodWithDetails.0)
+                }
+                /*
+                 Since editOffer only uses the settlement methods of the passed Offer struct, we put meaningless values in all other properties of the passed struct.
+                 */
+                let offerStruct = OfferStruct(
+                    isCreated: false,
+                    isTaken: false,
+                    maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+                    interfaceId: Data(),
+                    stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+                    amountLowerBound: BigUInt.zero,
+                    amountUpperBound: BigUInt.zero,
+                    securityDepositAmount: BigUInt.zero,
+                    serviceFeeRate: BigUInt.zero,
+                    direction: BigUInt.zero,
+                    settlementMethods: onChainSettlementMethods,
+                    protocolVersion: BigUInt.zero,
+                    chainID: BigUInt.zero
+                )
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during editOffer call for \(offer.id.uuidString) during transaction recreation")
+                }
+                return blockchainService.createEditOfferTransaction(offerID: offer.id, chainID: offer.chainID, offerStruct: offerStruct).map { ($0, serializedSettlementMethodsAndPrivateDetails) }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] recreatedOfferEditingTransaction, serializedSettlementMethodsAndPrivateDetails -> Promise<(BlockchainTransaction, BlockchainService)> in
+                guard var offerEditingTransaction = offerEditingTransaction else {
+                    throw OfferServiceError.unexpectedNilError(desc: "Transaction was nil during editOffer call for \(offer.id.uuidString)")
+                }
+                guard recreatedOfferEditingTransaction.data == offerEditingTransaction.data else {
+                    throw OfferServiceError.nonmatchingDataError(desc: "Data of offerEditingTransaction did not match that of transaction created with newSettlementMethods")
+                }
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during editOffer call for \(offer.id.uuidString) during settlement method storage")
+                }
+                logger.notice("editOffer: signing transaction for \(offer.id.uuidString)")
+                try blockchainService.signTransaction(&offerEditingTransaction)
+                let blockchainTransactionForOfferEditing = try BlockchainTransaction(transaction: offerEditingTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .editOffer)
+                let dateString = createDateString(blockchainTransactionForOfferEditing.timeOfCreation)
+                logger.notice("editOffer: persistently storing offer editing data for \(offer.id.uuidString), including tx hash \(blockchainTransactionForOfferEditing.transactionHash)")
+                try databaseService.updateOfferEditingData(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: blockchainTransactionForOfferEditing.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForOfferEditing.latestBlockNumberAtCreation))
+                #warning("TODO: persistently store new settlement methods along with hash of transaction for offer editing here, rather than offer ID and chain ID")
+                try databaseService.storePendingOfferSettlementMethods(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), pendingSettlementMethods: serializedSettlementMethodsAndPrivateDetails)
+                logger.notice("editOffer: persistently updating editingOfferState for \(offer.id.uuidString) to sendingTransaction")
+                try databaseService.updateEditingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: EditingOfferState.sendingTransaction.asString)
+                logger.notice("editOffer: updating editingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(blockchainTransactionForOfferEditing.transactionHash) in offer")
+                return Promise.value((blockchainTransactionForOfferEditing, blockchainService))
+            }.get(on: DispatchQueue.main) { blockchainTransactionForOfferEditing, _ in
+                offer.editingOfferState = .sendingTransaction
+                offer.offerEditingTransaction = blockchainTransactionForOfferEditing
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { offerEditingBlockchainTransaction, blockchainService -> Promise<TransactionSendingResult> in
+                self.logger.notice("editOffer: sending \(offerEditingBlockchainTransaction.transactionHash) for \(offer.id.uuidString)")
+                return blockchainService.sendTransaction(offerEditingBlockchainTransaction)
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("editOffer: persistently updating editingOfferState of \(offer.id.uuidString) to awaitingTransactionConfirmation")
+                try databaseService.updateEditingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: EditingOfferState.awaitingTransactionConfirmation.asString)
+                logger.notice("editOffer: updating editingOfferState for \(offer.id.uuidString) to awaitingTransactionConfirmation")
+            }.get(on: DispatchQueue.main) { _ in
+                offer.editingOfferState = .awaitingTransactionConfirmation
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("editOffer: encountered error while editing \(offer.id.uuidString), setting editingOfferState to error: \(error.localizedDescription)")
+                // It's OK that we don't handle database errors here, because if such an error occurs and the editing offer state isn't updated to error, then when the app restarts, we will check the offer editing transaction, and then discover and handle the error then.
+                do {
+                    try databaseService.updateEditingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: EditingOfferState.error.asString)
+                } catch {}
+                offer.editingOfferError = error
+                DispatchQueue.main.async {
+                    offer.editingOfferState = .error
+                }
                 seal.reject(error)
             }
         }
@@ -723,22 +906,30 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
-     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol that a monitored offer-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
+     Creates a `String` representation of `Date` in the form "yyyy-MM-dd'T'HH:mm'Z'" where Z indicates that this date and time stamp is in the UTC time zone.
+     */
+    func createDateString(_ date: Date) -> String {
+        return ISO8601DateFormatter().string(from: date)
+    }
+    
+    /**
+     The function called by `BlockchainService` in order to notify `OfferService` that a monitored offer-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
      
-     If `transaction` is of type `BlockchainTransactionType.cancelOffer`, then this finds the offer with the corresponding cancellation transaction hash, persistently updates its canceling offer state to `CancelingOfferState.error` and on the main Dispatch Queue sets its `Offer.cancelingOfferError` property to `error` updates its `Offer.cancelingOfferState` property to `CancelingOfferState.error`.
+     If `transaction` is of type `BlockchainTransactionType.cancelOffer`, then this finds the offer with the corresponding cancellation transaction hash, persistently updates its canceling offer state to `CancelingOfferState.error` and on the main `DispatchQueue` sets its `Offer.cancelingOfferError` property to `error` updates its `Offer.cancelingOfferState` property to `CancelingOfferState.error`.
+     
+     If `transaction` is of type `BlockchainTransactionType.editOffer`, then this finds the offer with the corresponding editing transaction hash, persistently updates its editing offer state to `EditingOfferState.error` and on the main `DispatchQueue` clears its list of selected settlement methods, sets its `Offer.editingOfferError` property to `error`, and updates updates its `Offer.editingOfferState` property to `EditingOfferState.error`. Then this deletes the offer's pending settlement methods from persistent storage.
      
      - Parameters:
         - transaction: The `BlockchainTransaction` wrapping the on-chain transaction that has failed.
         - error: A `BlockchainTransactionError` describing why the on-chain transaction has failed.
      */
     func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {
-        logger.warning("handleFailedTransaction: handling \(transaction.transactionHash) with error \(error.localizedDescription)")
+        logger.warning("handleFailedTransaction: handling \(transaction.transactionHash) of type \(transaction.type.asString) with error \(error.localizedDescription)")
+        guard let offerTruthSource = offerTruthSource else {
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleFailedTransaction call for \(transaction.transactionHash)")
+        }
         switch transaction.type {
         case .cancelOffer:
-            logger.warning("handleFailedTransaction: \(transaction.transactionHash) is of type cancelOffer")
-            guard let offerTruthSource = offerTruthSource else {
-                throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleFailedTransaction call for \(transaction.transactionHash)")
-            }
             guard let offer = offerTruthSource.offers.first(where: { id, offer in
                 offer.offerCancellationTransaction?.transactionHash == transaction.transactionHash
             })?.value else {
@@ -752,6 +943,23 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 offer.cancelingOfferError = error
                 offer.cancelingOfferState = .error
             }
+        case .editOffer:
+            guard let offer = offerTruthSource.offers.first(where: { id, offer in
+                offer.offerEditingTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: offer with editing transaction \(transaction.transactionHash) not found in offerTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found offer \(offer.id.uuidString) on \(offer.chainID) with editing transaction \(transaction.transactionHash), updating editingOfferState to error in persistent storage")
+            try databaseService.updateEditingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: EditingOfferState.error.asString)
+            logger.warning("handleFailedTransaction: setting editingOfferError and updating editingOfferState to error for \(offer.id.uuidString) and clearing selected settlement methods")
+            DispatchQueue.main.sync {
+                offer.selectedSettlementMethods = []
+                offer.editingOfferError = error
+                offer.editingOfferState = .error
+            }
+            logger.warning("handleFailedTransaction: deleting pending settlement methods for \(offer.id.uuidString)")
+            try databaseService.deletePendingOfferSettlementMethods(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID))
         }
     }
     
@@ -849,13 +1057,21 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }
             var offerCancellationTransactionCreationTimeString: String? = nil
             if let offerCancellationTransactionCreationTime = offer.offerCancellationTransaction?.timeOfCreation {
-                let dateFormatter = ISO8601DateFormatter()
-                offerCancellationTransactionCreationTimeString = dateFormatter.string(from: offerCancellationTransactionCreationTime)
+                offerCancellationTransactionCreationTimeString = createDateString(offerCancellationTransactionCreationTime)
             }
             var offerCancellationTransactionCreationBlockNumberInt: Int? = nil
             if let offerCancellationTransactionCreationBlockNumber = offer.offerCancellationTransaction?.latestBlockNumberAtCreation {
                 offerCancellationTransactionCreationBlockNumberInt = Int(offerCancellationTransactionCreationBlockNumber)
             }
+            var offerEditingTransactionCreationTimeString: String? = nil
+            if let offerEditingTransactionCreationTime = offer.offerEditingTransaction?.timeOfCreation {
+                offerEditingTransactionCreationTimeString = createDateString(offerEditingTransactionCreationTime)
+            }
+            var offerEditingTransactionCreationBlockNumberInt: Int? = nil
+            if let offerEditingTransactionCreationBlockNumber = offer.offerEditingTransaction?.latestBlockNumberAtCreation {
+                offerEditingTransactionCreationBlockNumberInt = Int(offerEditingTransactionCreationBlockNumber)
+            }
+            
             let offerForDatabase = DatabaseOffer(
                 id: offer.id.asData().base64EncodedString(),
                 isCreated: offer.isCreated,
@@ -876,7 +1092,11 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 cancelingOfferState: offer.cancelingOfferState.asString,
                 offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
                 offerCancellationTransactionCreationTime: offerCancellationTransactionCreationTimeString,
-                offerCancellationTransactionCreationBlockNumber: offerCancellationTransactionCreationBlockNumberInt
+                offerCancellationTransactionCreationBlockNumber: offerCancellationTransactionCreationBlockNumberInt,
+                editingOfferState: offer.editingOfferState.asString,
+                offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
+                offerEditingTransactionCreationTime: offerEditingTransactionCreationTimeString,
+                offerEditingTransactionCreationBlockNumber: offerEditingTransactionCreationBlockNumberInt
             )
             try databaseService.storeOffer(offer: offerForDatabase)
             logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
@@ -902,7 +1122,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferEditedEvent`.
      
-     Once notified, `OfferService` saves `event` in `offerEditedEventRepository`, gets updated on-chain offer data by calling `BlockchainService.getOffer`, and verifies that the chain ID of the event and the offer data match. Then this checks if the user of the interface is the maker of the offer being edited. If so, then the new settlement methods for the offer and their associated private data should be stored in the pending settlement methods database table. So this gets that data from `databaseService`, and then deserializes the data to `SettlementMethod` objects and adds them to a list, logging warnings when such a `SettlementMethod` has no associated private data. Then this creates another list of `SettlementMethod` objects that it creates by deserializing the settlement method data in the new on-chain offer data. Then this iterates through the latter list of `SettlementMethod` objects, searching for matching `SettlementMethod` objects in the former list (matching meaning that price, currency, and fiat currency values are equal; obviously on-chain settlement methods will have no private data). If, for a given `SettlementMethod` in the latter list, a matching `SettlementMethod` (which definitely has associated private data) is found in the former list, the matching element in the former list is added to a third list of `SettlementMethods`. Once this iteration task is complete, this persistently stores the third list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`. If the user of this interface is not the maker of the offer being edited, this creates a new list of `SettlementMethod`s by deserializing the settlement method data in the new on-chain offer data, persistently stores the list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`.
+     Once notified, `OfferService` saves `event` in `offerEditedEventRepository`, gets updated on-chain offer data by calling `BlockchainService.getOffer`, and verifies that the chain ID of the event and the offer data match. Then this checks if the user of the interface is the maker of the offer being edited. If so, then the new settlement methods for the offer and their associated private data should be stored in the pending settlement methods database table. So this gets that data from `databaseService`, and then deserializes the data to `SettlementMethod` objects and adds them to a list, logging warnings when such a `SettlementMethod` has no associated private data. Then this creates another list of `SettlementMethod` objects that it creates by deserializing the settlement method data in the new on-chain offer data. Then this iterates through the latter list of `SettlementMethod` objects, searching for matching `SettlementMethod` objects in the former list (matching meaning that price, currency, and fiat currency values are equal; obviously on-chain settlement methods will have no private data). If, for a given `SettlementMethod` in the latter list, a matching `SettlementMethod` (which definitely has associated private data) is found in the former list, the matching element in the former list is added to a third list of `SettlementMethod`s. Once this iteration task is complete, this persistently stores the third list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`. If the user of this interface is not the maker of the offer being edited, this creates a new list of `SettlementMethod`s by deserializing the settlement method data in the new on-chain offer data, persistently stores the list of new `SettlementMethod`s as the offer's settlement methods, and sets the corresponding `Offer`'s settlement methods equal to the contents of this list on the main `DispatchQueue`.
      
      - Parameter event: The `OfferEditedEvent` of which `OfferService` is being notified.
      
@@ -932,7 +1152,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
          If we are the maker of the offer being edited, then we should have the new settlement methods and their associated private data in the pending settlement methods database table. So we get these
          */
         let offer = offerTruthSource.offers[event.id]
-        if offer?.isUserMaker ?? false {
+        if let offer = offer, offer.isUserMaker {
             logger.notice("handleOfferEditedEvent: \(event.id.uuidString) was made by interface user")
             /*
              The user of this interface is the maker of this offer, and therefore we should have pending settlement methods for this offer in persistent storage.
@@ -992,13 +1212,28 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             logger.notice("handleOfferEditedEvent: persistently stored \(newSerializedSettlementMethods.count) settlement methods for \(event.id.uuidString)")
             try databaseService.deletePendingOfferSettlementMethods(offerID: offerIDB64String, _chainID: chainIDString)
             logger.notice("handleOfferEditedEvent: removed pending settlement methods from persistent storage for \(event.id.uuidString)")
-            if let offer = offer {
-                try DispatchQueue.main.sync {
-                    try offer.updateSettlementMethods(settlementMethods: newSettlementMethods)
+            var gotExpectedOfferEditingTransaction = false
+            if let offerEditingTransaction = offer.offerEditingTransaction {
+                if offerEditingTransaction.transactionHash == event.transactionHash {
+                    logger.notice("handleOfferEditedEvent: tx hash \(event.transactionHash) of event matches that for offer \(event.id.uuidString): \(offerEditingTransaction.transactionHash)")
+                    gotExpectedOfferEditingTransaction = true
+                } else {
+                    logger.warning("handleOfferEditedEvent: tx hash \(event.transactionHash) does not match that for offer \(event.id.uuidString): \(offerEditingTransaction.transactionHash)")
                 }
-                logger.notice("handleOfferEditedEvent: updated offer \(event.id.uuidString) in offerTruthSource")
             } else {
-                logger.warning("handleOfferEditedEvent: could not find offer \(event.id.uuidString) in offerTruthSource")
+                logger.warning("handleOfferEditedEvent: offer \(event.id.uuidString) made by the interface user has no offer editing transaction")
+            }
+            if gotExpectedOfferEditingTransaction {
+                logger.notice("handleOfferEditedEvent: persistently updating editing offer state of \(event.id.uuidString) to completed")
+                try databaseService.updateEditingOfferState(offerID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: EditingOfferState.completed.asString)
+            }
+            logger.notice("updating offer \(event.id.uuidString) in offerTruthSource")
+            try DispatchQueue.main.sync {
+                if (gotExpectedOfferEditingTransaction) {
+                    offer.editingOfferState = .completed
+                    offer.selectedSettlementMethods = []
+                }
+                try offer.updateSettlementMethods(settlementMethods: newSettlementMethods)
             }
             
         } else {

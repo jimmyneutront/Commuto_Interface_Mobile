@@ -52,10 +52,17 @@ struct EditOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
     @ObservedObject var settlementMethodTruthSource: SettlementMethod_TruthSource
     
     /**
+     Indicates whether we are showing the sheet that allows the user to cancel the offer, if they are the maker.
+     */
+    @State private var isShowingEditOfferSheet = false
+    
+    /**
      The string that will be displayed in the label of the button that edits the offer.
      */
     var editOfferButtonLabel: String {
-        if offer.editingOfferState != .editing {
+        if offer.editingOfferState == .none ||
+            offer.editingOfferState == .error ||
+            offer.editingOfferState == .completed {
             return "Edit Offer"
         } else {
             return "Editing Offer"
@@ -66,7 +73,9 @@ struct EditOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
      The color of the rounded rectangle stroke surrounding the button that edits the offer.
      */
     var editOfferButtonOutlineColor: Color {
-        if offer.editingOfferState == .editing {
+        if offer.editingOfferState == .validating ||
+            offer.editingOfferState == .sendingTransaction ||
+            offer.editingOfferState == .awaitingTransactionConfirmation {
             return Color.gray
         } else {
             return Color.primary
@@ -101,11 +110,10 @@ struct EditOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                 Button(
                     action: {
                         // Don't let the user try to edit the offer if it is currently being edited
-                        if offer.editingOfferState != .editing {
-                            offerTruthSource.editOffer(
-                                offer: offer,
-                                newSettlementMethods: offer.selectedSettlementMethods
-                            )
+                        if offer.editingOfferState == .none ||
+                            offer.editingOfferState == .error ||
+                            offer.editingOfferState == .completed {
+                            isShowingEditOfferSheet = true
                         }
                     },
                     label: {
@@ -121,6 +129,34 @@ struct EditOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                     }
                 )
                 .accentColor(Color.primary)
+                .sheet(isPresented: $isShowingEditOfferSheet) {
+                    TransactionGasDetailsView(
+                        isShowingSheet: $isShowingEditOfferSheet,
+                        title: "Edit Offer",
+                        buttonLabel: "Edit Offer",
+                        buttonAction: { createdTransaction in
+                            offerTruthSource.editOffer(
+                                offer: offer,
+                                newSettlementMethods: offer.selectedSettlementMethods,
+                                offerEditingTransaction: createdTransaction
+                            )
+                        },
+                        runOnAppearance: { editingOfferTransactionBinding, transactionCreationErrorBinding in
+                            if offer.editingOfferState == .none || offer.editingOfferState == .error {
+                                offerTruthSource.createEditOfferTransaction(
+                                    offer: offer,
+                                    newSettlementMethods: offer.selectedSettlementMethods,
+                                    createdTransactionHandler: { createdTransaction in
+                                        editingOfferTransactionBinding.wrappedValue = createdTransaction
+                                    },
+                                    errorHandler: { error in
+                                        transactionCreationErrorBinding.wrappedValue = error
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
             }
             .padding([.leading, .trailing])
         }

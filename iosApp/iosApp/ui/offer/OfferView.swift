@@ -79,17 +79,22 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
      The string that will be displayed in the label of the button that edits the offer.
      */
     var editOfferButtonLabel: String {
-        if offer.editingOfferState != .editing {
+        if offer.editingOfferState == .none ||
+            offer.editingOfferState == .error ||
+            offer.editingOfferState == .completed {
             return "Edit Offer"
         } else {
             return "Editing Offer"
         }
     }
     
+    /**
+     Indicates whether we are showing the sheet that allows the user to take the offer, if they are not the maker.
+     */
     @State private var isShowingTakeOfferSheet = false
     
     /**
-     Indicates whether or not we are showing the sheet that allows the user to cancel the offer, if they are the maker.
+     Indicates whether we are showing the sheet that allows the user to cancel the offer, if they are the maker.
      */
     @State private var isShowingCancelOfferSheet = false
     

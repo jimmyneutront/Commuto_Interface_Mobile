@@ -83,11 +83,27 @@ struct DatabaseOffer: Equatable {
      */
     let offerCancellationTransactionHash: String?
     /**
-     The time at which the transaction with the hash specified by `offerCancellationTransactionHash` was created by this interface in ISO 8601 format, or `nil` if no such transaction exists.
+     The time at which the transaction with the hash specified by `offerCancellationTransactionHash` was created by this interface in ISO 8601 format in UTC, or `nil` if no such transaction exists.
      */
     let offerCancellationTransactionCreationTime: String?
     /**
      The number of the latest block at the time when the transaction with the hash specified by `offerCancellationTransactionHash` was created by this interface, or `nil` if no such transaction exists.
      */
     let offerCancellationTransactionCreationBlockNumber: Int?
+    /**
+     The `editingOfferState` property of an `Offer` as a `String`.
+     */
+    let editingOfferState: String
+    /**
+     The hash of the most recent transaction that edited  this `Offer` as a hexadecimal `String`, or `nil` if no such transaction exists.
+     */
+    let offerEditingTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `offerEditingTransactionHash` was created by this interface in ISO 8601 format in UTC, or `nil` if no such transaction exists.
+     */
+    let offerEditingTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `offerEditingTransactionHash` was created by this interface, or `nil` if no such transaction exists.
+     */
+    let offerEditingTransactionCreationBlockNumber: Int?
 }

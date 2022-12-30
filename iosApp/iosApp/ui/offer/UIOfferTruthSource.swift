@@ -94,10 +94,37 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
         - offer: The `Offer` to be edited.
         - newSettlementMethods: The new `Array` of settlement methods that the maker has selected, indicating that they are willing to use them to send/receive fiat currency for this offer.
      */
+    @available(*, deprecated, message: "Use the new offer pipeline with improved transaction state management")
     func editOffer(
         offer: Offer,
         newSettlementMethods: [SettlementMethod]
     )
+    
+    /**
+     Attempts to create an `EthereumTransaction` to edit `offer` using validated `newSettlementMethods`, which should be made by the user of this interface.
+     
+     - Parameters:
+        - offer: The `Offer` to be edited.
+        - newSettlementMethods: An array of `SettlementMethod`s with which `offer` will be edited after they are validated.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createEditOfferTransaction(
+        offer: Offer,
+        newSettlementMethods: [SettlementMethod],
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to edit `offer` using `offerEditingTransaction`, which should have been created using the `SettlementMethod`s in `newSettlementMethods`.
+     
+     - Parameters:
+        - offer: The `Offer` to be edited.
+        - newSettlementMethods: The `SettlementMethod`s with which `offerEditingTransaction` should have been created.
+        - offerEditingTransaction: An optional `EthereumTransaction` that can edit `offer` using the `SettlementMethod`s contained in `newSettlementMethods`.
+     */
+    func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod], offerEditingTransaction: EthereumTransaction?)
     
     /**
      Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
