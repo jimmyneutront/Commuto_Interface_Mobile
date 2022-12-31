@@ -239,8 +239,10 @@ fun OfferComposable(
                             )
                         },
                         content = {
-                            val editOfferButtonLabel = if (offer.editingOfferState.value != EditingOfferState.EDITING)
-                                "Edit Offer" else "Editing Offer"
+                            val editOfferButtonLabel = if (offer.editingOfferState.value == EditingOfferState.NONE ||
+                                offer.editingOfferState.value == EditingOfferState.EXCEPTION ||
+                                offer.editingOfferState.value == EditingOfferState.COMPLETED) "Edit Offer" else
+                                "Editing Offer"
                             Text(
                                 text = editOfferButtonLabel,
                                 style = MaterialTheme.typography.h4,

@@ -10,6 +10,8 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.EditingOfferState
 import com.commuto.interfacemobile.android.offer.Offer
+import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.settlement.PreviewableSettlementMethodTruthSource
 import com.commuto.interfacemobile.android.ui.settlement.UISettlementMethodTruthSource
 
@@ -41,6 +44,11 @@ fun EditOfferComposable(
     stablecoinCurrencyCode: String
 ) {
 
+    /**
+     * Indicates whether we are showing the sheet that allows the user to edit the offer, if they are the maker.
+     */
+    val isShowingEditOfferSheet = remember { mutableStateOf(false) }
+
     if (offer == null) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -59,10 +67,14 @@ fun EditOfferComposable(
                 }
             }
         }
-        val editOfferButtonLabel = if (offer.editingOfferState.value != EditingOfferState.EDITING) "Edit Offer" else
+        val editOfferButtonLabel = if (offer.editingOfferState.value == EditingOfferState.NONE ||
+            offer.editingOfferState.value == EditingOfferState.EXCEPTION ||
+            offer.editingOfferState.value == EditingOfferState.COMPLETED) "Edit Offer" else
             "Editing Offer"
-        val editOfferButtonOutlineColor = if (offer.editingOfferState.value != EditingOfferState.EDITING) Color.Black
-            else Color.Gray
+        val editOfferButtonOutlineColor = if (offer.editingOfferState.value == EditingOfferState.VALIDATING ||
+            offer.editingOfferState.value == EditingOfferState.SENDING_TRANSACTION ||
+            offer.editingOfferState.value == EditingOfferState.AWAITING_TRANSACTION_CONFIRMATION) Color.Black
+        else Color.Gray
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
@@ -97,11 +109,10 @@ fun EditOfferComposable(
             Button(
                 onClick = {
                     // Don't let the user try to edit the offer if it is currently being edited
-                    if (offer.editingOfferState.value != EditingOfferState.EDITING) {
-                        offerTruthSource.editOffer(
-                            offer = offer,
-                            newSettlementMethods = offer.selectedSettlementMethods
-                        )
+                    if (offer.editingOfferState.value == EditingOfferState.NONE ||
+                        offer.editingOfferState.value == EditingOfferState.EXCEPTION ||
+                        offer.editingOfferState.value == EditingOfferState.COMPLETED) {
+                        isShowingEditOfferSheet.value = true
                     }
                 },
                 content = {
@@ -121,6 +132,40 @@ fun EditOfferComposable(
                 modifier = Modifier.width(400.dp),
             )
         }
+
+        SheetComposable(
+            isPresented = isShowingEditOfferSheet,
+            content = { closeSheet ->
+                TransactionGasDetailsComposable(
+                    closeSheet = closeSheet,
+                    title = "Edit Offer",
+                    buttonLabel = "Edit Offer",
+                    buttonAction = { createdTransaction ->
+                        offerTruthSource.editOffer(
+                            offer = offer,
+                            newSettlementMethods = offer.selectedSettlementMethods,
+                            offerEditingTransaction = createdTransaction,
+                        )
+                    },
+                    runOnAppearance = { editingOfferTransaction, transactionCreationException ->
+                        if (offer.editingOfferState.value == EditingOfferState.NONE ||
+                            offer.editingOfferState.value == EditingOfferState.EXCEPTION) {
+                            offerTruthSource.createEditOfferTransaction(
+                                offer = offer,
+                                newSettlementMethods = offer.selectedSettlementMethods,
+                                createdTransactionHandler = { createdTransaction ->
+                                    editingOfferTransaction.value = createdTransaction
+                                },
+                                exceptionHandler = { exception ->
+                                    transactionCreationException.value = exception
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+        )
+
     }
 }
 
