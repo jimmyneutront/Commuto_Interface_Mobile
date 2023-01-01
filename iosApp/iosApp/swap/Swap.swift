@@ -132,13 +132,17 @@ class Swap: ObservableObject {
      */
     var fillingSwapError: Error? = nil
     /**
-     (This property is used only if the user of this interface is the buyer in this swap.) This indicates whether we are currently reporting that we have sent fiat payment to the seller in this swap, and if so, what part of the payment-sent-reporting process we are in.
+     (This property is used only if the user of this interface is the buyer in this swap.) This indicates whether we are currently reporting that we have sent fiat payment to the seller in this swap by calliing [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent), and if so, what part of the payment-sent-reporting process we are in.
      */
     @Published var reportingPaymentSentState = ReportingPaymentSentState.none
     /**
      (This property is used only if the user of this interface is the buyer in this swap.) The `Error` that we encountered during the reporting-payment-sent process, or `nil` if no such error has occurred.
      */
     var reportingPaymentSentError: Error? = nil
+    /**
+     The `BlockchainTransaction` that called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for this swap. If the user of this interface is not the buyer, all properties of this `BlockchainTransaction` except the transaction hash may not be accurate.
+     */
+    var reportPaymentSentTransaction: BlockchainTransaction? = nil
     /**
      (This property is used only if the user of this interface is the seller in this swap.) This indicates whether we are currently reporting that we have received fiat payment from the buyer in this swap, and if so, what part of the payment-received-reporting process we are in.
      */

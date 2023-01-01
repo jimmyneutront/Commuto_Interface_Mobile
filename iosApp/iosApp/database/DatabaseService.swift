@@ -263,6 +263,24 @@ class DatabaseService {
      */
     let swapRole = Expression<String>("role")
     /**
+     A database structure representing an `Swap`'s `reportPaymentSentState` property.
+     */
+    let reportPaymentSentState = Expression<String>("reportPaymentSentState")
+    /**
+     A database structure representing the hash of a transaction that called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a swap involving user of this interface.
+     */
+    let reportPaymentSentTransactionHash = Expression<String?>("reportPaymentSentTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a swap involving user of this interface. This may not be accurate for swaps in which the user is the seller.
+     */
+    let reportPaymentSentTransactionCreationTime = Expression<String?>("reportPaymentSentTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a swap involving user of this interface. This may not be accurate for swaps in which the user is the seller.
+     */
+    let reportPaymentSentTransactionCreationBlockNumber = Expression<Int?>("reportPaymentSentTransactionCreationBlockNumber")
+    
+    
+    /**
      A database structure representing the ID of a settlement method, as a Type 4 UUID string.
      */
     let settlementMethodID = Expression<String>("settlementMethodID")
@@ -350,6 +368,10 @@ class DatabaseService {
             t.column(chainID)
             t.column(swapState)
             t.column(swapRole)
+            t.column(reportPaymentSentState)
+            t.column(reportPaymentSentTransactionHash)
+            t.column(reportPaymentSentTransactionCreationTime)
+            t.column(reportPaymentSentTransactionCreationBlockNumber)
         })
         try connection.run(userSettlementMethods.create { t in
             t.column(settlementMethodID, unique: true)
@@ -964,7 +986,11 @@ class DatabaseService {
                     disputeRaiser <- swap.onChainDisputeRaiser,
                     chainID <- swap.chainID,
                     swapState <- swap.state,
-                    swapRole <- swap.role
+                    swapRole <- swap.role,
+                    reportPaymentSentState <- swap.reportPaymentSentState,
+                    reportPaymentSentTransactionHash <- swap.reportPaymentSentTransactionCreationTime,
+                    reportPaymentSentTransactionCreationTime <- swap.reportPaymentSentTransactionCreationTime,
+                    reportPaymentSentTransactionCreationBlockNumber <- swap.reportPaymentSentTransactionCreationBlockNumber
                 ))
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Swap.id" {
                 // A swap with the specified ID already exists in the database, so we do nothing
@@ -1092,6 +1118,43 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseSwap`'s `reportPaymentSentState` field.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `reportPaymentSentState` field.
+     */
+    func updateReportPaymentSentState(swapID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(reportPaymentSentState <- state))
+        }
+        logger.notice("updateReportPaymentSentState: set value to \(state) for swap with B64 ID \(swapID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseSwap`'s `reportPaymentSentTransactionHash`, `reportPaymentSentTransactionCreationTime`, and `reportPaymentSentTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `reportPaymentSentTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `reportPaymentSentTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `reportPaymentSentTransactionCreationBlockNumber` field.
+     */
+    func updateReportPaymentSentData(swapID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID)
+                .update(
+                    reportPaymentSentTransactionHash <- transactionHash,
+                    reportPaymentSentTransactionCreationTime <- transactionCreationTime,
+                    reportPaymentSentTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateReportPaymentSentData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for swap with B64 ID \(swapID), if present")
+    }
+    
+    /**
      Removes every `DatabaseSwap` with a swapID equal to `swapID` and a chain ID equal to `chainID` from persistent storage.
      
      - Parameters:
@@ -1161,7 +1224,11 @@ class DatabaseService {
                 onChainDisputeRaiser: result[0][disputeRaiser],
                 chainID: result[0][chainID],
                 state: result[0][swapState],
-                role: result[0][swapRole]
+                role: result[0][swapRole],
+                reportPaymentSentState: result[0][reportPaymentSentState],
+                reportPaymentSentTransactionHash: result[0][reportPaymentSentTransactionHash],
+                reportPaymentSentTransactionCreationTime: result[0][reportPaymentSentTransactionCreationTime],
+                reportPaymentSentTransactionCreationBlockNumber: result[0][reportPaymentSentTransactionCreationBlockNumber]
             )
         } else {
             logger.notice("getSwap: no swap found with B64 ID \(_id)")

@@ -21,6 +21,10 @@ class TestSwapService: SwapNotifiable {
     /**
      Does nothing, required to adopt `SwapNotifiable`. Should not be used.
      */
+    func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
+    /**
+     Does nothing, required to adopt `SwapNotifiable`. Should not be used.
+     */
     func handleNewSwap(takenOffer: Offer) throws {}
     /**
      Does nothing, required to adopt `SwapNotifiable`. Should not be used.

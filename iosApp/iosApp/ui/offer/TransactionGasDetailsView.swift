@@ -10,7 +10,7 @@ import SwiftUI
 import web3swift
 
 /**
- Displays gas information about `transaction` if it is not `nil`, or displays the localized description of `transactionCreationError` if it is not `nil`. When this `View` appears, it executes `onRunAppearance`, passing `transaction` and `transactionCreationError`. `onRunAppearance` should be a closure that creates a transaction and sets the result equal to the wrapped value of `transaction`, or sets the wrapped value of `transactionCreationError` to any error that occurs during the transaction creation process. If `transaction` is not `nil`, the user can press the main button in this view which will call `buttonLabel`, passing `transaction`. This should only be presented inside a sheet.
+ Displays gas information about `transaction` if it is not `nil`, or displays the localized description of `transactionCreationError` if it is not `nil`. When this `View` appears, it executes `onRunAppearance`, passing `transaction` and `transactionCreationError`. `runOnAppearance` should be a closure that creates a transaction and sets the result equal to the wrapped value of `transaction`, or sets the wrapped value of `transactionCreationError` to any error that occurs during the transaction creation process. If `transaction` is not `nil`, the user can press the main button in this view which will call `buttonLabel`, passing `transaction`. This should only be presented inside a sheet.
  */
 struct TransactionGasDetailsView: View {
     
@@ -45,7 +45,7 @@ struct TransactionGasDetailsView: View {
     @State var transaction: EthereumTransaction? = nil
     
     /**
-     The `Error` that occured in `runOnAppearance`, or `nil` if no such error has occured.
+     The `Error` that occurred in `runOnAppearance`, or `nil` if no such error has occurred.
      */
     @State var transactionCreationError: Error? = nil
     

@@ -69,6 +69,10 @@ struct BlockchainTransaction {
      */
     init(transactionHash: String, timeOfCreation: Date, latestBlockNumberAtCreation: UInt64, type: BlockchainTransactionType) {
         self.transaction = nil
+        var transactionHash = transactionHash
+        if !transactionHash.hasPrefix("0x") {
+            transactionHash = "0x" + transactionHash
+        }
         self.transactionHash = transactionHash
         self.timeOfCreation = timeOfCreation
         self.latestBlockNumberAtCreation = latestBlockNumberAtCreation

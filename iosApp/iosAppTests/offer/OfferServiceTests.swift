@@ -928,6 +928,7 @@ class OfferServiceTests: XCTestCase {
                     return false
                 }
             }
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             func handleNewSwap(takenOffer: Offer) throws {}
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
@@ -1017,6 +1018,7 @@ class OfferServiceTests: XCTestCase {
             var swapID: UUID? = nil
             var chainID: BigUInt? = nil
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             func handleNewSwap(takenOffer: Offer) throws {
                 self.swapID = takenOffer.id
                 self.chainID = takenOffer.chainID
@@ -1122,7 +1124,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService` handles [OfferrEdited](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeredited) events properly for offers made by the interface user.
+     Ensures that `OfferService` handles [OfferrEdited](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeredited) events properly for offers not made by the interface user.
      */
     func testHandleOfferEditedEventForUserIsNotMaker() {
         
@@ -2305,7 +2307,11 @@ class OfferServiceTests: XCTestCase {
             onChainDisputeRaiser: String(swapInTruthSource.onChainDisputeRaiser),
             chainID: String(swapInTruthSource.chainID),
             state: swapInTruthSource.state.asString,
-            role: "takerAndSeller"
+            role: "takerAndSeller",
+            reportPaymentSentState: swapInTruthSource.reportingPaymentSentState.asString,
+            reportPaymentSentTransactionHash: nil,
+            reportPaymentSentTransactionCreationTime: nil,
+            reportPaymentSentTransactionCreationBlockNumber: nil
         )
         XCTAssertEqual(expectedSwapInDatabase, swapInDatabase)
         

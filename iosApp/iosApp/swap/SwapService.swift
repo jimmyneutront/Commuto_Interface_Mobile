@@ -10,6 +10,7 @@ import Foundation
 import os
 import PromiseKit
 import BigInt
+import web3swift
 
 /**
  The main Swap Service. It is responsible for processing and organizing swap-related data that it receives from `BlockchainService`, `P2PService` and `OfferService` in order to maintain an accurate list of all swaps in a `SwapTruthSource`.
@@ -247,6 +248,116 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
     }
     
+    /**
+     Attempts to create an `EthereumTransaction` that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the buyer, with the ID specified by `offerID` and on the blockchain specified by `chainID`.
+     
+     On the global `DispatchQueue`, this calls `BlockchainService.createCancelOfferTransaction`, passing `offerID` and `chainID`, and pipes the result to the seal of the `Promise` this returns.
+     
+     - Parameters:
+        - offerID: The ID of the `Offer` to be canceled.
+        - chainID: The ID of the blockchain on which the `Offer` exists.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of cancelling the offer specified by `offerID` on the blockchain specified by `chainID`.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func createReportPaymentSentTransaction(swapID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createReportPaymentSentTransaction: creating for \(swapID.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during createReportPaymentSentTransaction call"))
+                    return
+                }
+                blockchainService.createReportPaymentSentTransaction(swapID: swapID, chainID: chainID).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
+     Attempts to call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) in which the user of this interface is the buyer.
+     
+     On the global `DispatchQueue`, this ensures that [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) is not currently being called or has not already been called by the user for `swap`, that the user of this interface is the buyer in the swap, that calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) is currently possible for `swap`, and that `reportPaymentSentTransaction` is not `nil`. Then it signs `reportPaymentSentTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction has, persistently stores the transaction hash and persistently updates the `Swap.reportingPaymentSentState` of `swap` to `ReportingPaymentSentState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.reportingPaymentSentState` property to `ReportingPaymentSentState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `reportPaymentSentTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.reportingSwapState` of `swap` to `ReportingPaymentSentState.awaitingTransactionConfirmation` and persistently updates the `Swap.swapState` of `swap` to `SwapState.reportPaymentSentTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.reportingPaymentSentState` to `ReportingPaymentSentState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.swapState` to `SwapState.reportPaymentSentTransactionBroadcast`.
+     
+     - Parameters:
+        - swap: The `Swap` for which [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
+        - reportPaymentSentTransaction: An optional `EthereumTransaction` that can call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for `swap`.
+     
+     - Returns: An empty `Promise` that will be fulfilled when `swap` is canceled.
+     
+     - Throws: A `SwapServiceError.transactionWillRevertError` if [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) is currently being called for `swap`, if the user is not the buyer, or if the state of `swap` is not `SwapState.awaitingPaymentSent`, or an `SwapServiceError.unexpectedNilError` if `reportPaymentSentTransaction` or `blockchaiNService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func reportPaymentSent(swap: Swap, reportPaymentSentTransaction: EthereumTransaction?) -> Promise<Void> {
+        return Promise { seal in
+            Promise<(BlockchainTransaction, BlockchainService)> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("reportPaymentSent: checking reporting is possible for \(swap.id.uuidString)")
+                    guard (swap.reportingPaymentSentState == .none || swap.reportingPaymentSentState == .validating || swap.reportingPaymentSentState == .error) else {
+                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Payment sending is already being reported this swap."))
+                        return
+                    }
+                    // Ensure that the user is the buyer for the swap
+                    guard swap.role == .makerAndBuyer || swap.role == .takerAndBuyer else {
+                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Only the Buyer can report sending payment"))
+                        return
+                    }
+                    // Ensure that this swap is awaiting reporting of payment sent
+                    guard swap.state == .awaitingPaymentSent else {
+                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Payment sending cannot currently be reported for this swap."))
+                        return
+                    }
+                    do {
+                        guard var reportPaymentSentTransaction = reportPaymentSentTransaction else {
+                            throw SwapServiceError.unexpectedNilError(desc: "Transaction was nil during reportPaymentSent call for \(swap.id.uuidString)")
+                        }
+                        guard let blockchainService = blockchainService else {
+                            throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during reportPaymentSent call for \(swap.id.uuidString)")
+                        }
+                        logger.notice("reportPaymentSent: signing transaction for \(swap.id.uuidString)")
+                        try blockchainService.signTransaction(&reportPaymentSentTransaction)
+                        let blockchainTransactionForReportingPaymentSent = try BlockchainTransaction(transaction: reportPaymentSentTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .reportPaymentSent)
+                        let dateString = DateFormatter.createDateString(blockchainTransactionForReportingPaymentSent.timeOfCreation)
+                        logger.notice("reportPaymentSent: persistently storing report payment sent data for \(swap.id.uuidString), including tx hash \(blockchainTransactionForReportingPaymentSent.transactionHash)")
+                        try databaseService.updateReportPaymentSentData(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), transactionHash: blockchainTransactionForReportingPaymentSent.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForReportingPaymentSent.latestBlockNumberAtCreation))
+                        logger.notice("reportPaymentSent: persistently updating reportingPaymentSentState for \(swap.id.uuidString) to sendingTransaction")
+                        try databaseService.updateReportPaymentSentState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ReportingPaymentSentState.sendingTransaction.asString)
+                        logger.notice("reportPaymentSent: updating reportingPaymentSentState for \(swap.id.uuidString) to sendingTransaction and storing tx hash \(blockchainTransactionForReportingPaymentSent.transactionHash) in swap")
+                        seal.fulfill((blockchainTransactionForReportingPaymentSent, blockchainService))
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.get(on: DispatchQueue.main) { reportPaymentSentTransaction, _ in
+                swap.reportingPaymentSentState = .sendingTransaction
+                swap.reportPaymentSentTransaction = reportPaymentSentTransaction
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { reportPaymentSentTransaction, blockchainService -> Promise<TransactionSendingResult> in
+                self.logger.notice("reportPaymentSent: sending \(reportPaymentSentTransaction.transactionHash) for \(swap.id.uuidString)")
+                return blockchainService.sendTransaction(reportPaymentSentTransaction)
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("reportPaymentSent: persistently updating reportingPaymentSentState of \(swap.id.uuidString) to awaitingTransactionConfirmation")
+                try databaseService.updateReportPaymentSentState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ReportingPaymentSentState.awaitingTransactionConfirmation.asString)
+                logger.notice("reportPaymentSent: persistently updating state of \(swap.id.uuidString) to reportPaymentSentTransactionBroadcast")
+                try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.reportPaymentSentTransactionBroadcast.asString)
+                logger.notice("reportPaymentSent: updating reportingPaymentSentState for \(swap.id.uuidString) to awaitingTransactionConfirmation and state to reportPaymentSentTransactionBroadcast")
+            }.get(on: DispatchQueue.main) { _ in
+                swap.reportingPaymentSentState = .awaitingTransactionConfirmation
+                swap.state = .reportPaymentSentTransactionBroadcast
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("reportPaymentSent: encountered error while reporting for \(swap.id.uuidString), setting reportingPaymentSentState to error: \(error.localizedDescription)")
+                // It's OK that we don't handle database errors here, because if such an error occurs and the reporting payment sent state isn't updated to error, then when the app restarts, we will check the reporting payment sent transaction, and then discover and handle the error then.
+                do {
+                    try databaseService.updateReportPaymentSentState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ReportingPaymentSentState.error.asString)
+                } catch {}
+                swap.reportingPaymentSentError = error
+                DispatchQueue.main.async {
+                    swap.reportingPaymentSentState = .error
+                }
+                seal.reject(error)
+            }
+        }
+    }
     
     /**
      Reports that payment has been received by the seller in a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) using the process described in the [interface specification](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt).
@@ -359,6 +470,45 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
+     The function called by `BlockchainService` in order to notify `SwapService` that a monitored swap-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
+     
+     If `transaction` is of type `BlockchainTransactionType.reportPaymentSent`, then this finds the swap with the corresponding reporting payment sent transaction hash, persistently updates its reporting payment sent state to `ReportingPaymentSentState.error` and its state to `SwapState.awaitingPaymentSent`, and on the main `DispatchQueue` sets its `Swap.reportingPaymentSentError` to `error`, updates its `Swap.reportingPaymentSentState` property to `ReportingPaymentSentState.error`, and updates its `Swap.state` property to `SwapState.awaitingPaymentSent`.
+     
+     - Parameters:
+        - transaction: The `BlockchainTransaction` wrapping the on-chain transaction that has failed.
+        - error: A `BlockchainTransactionError` describing why the on-chain transaction has failed.
+     
+     - Throws: A `SwapServiceError.invalidValueError` if this is passed an offer-related `BlockchainTransaction`.
+     */
+    func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {
+        logger.warning("handleFailedTransaction: handling \(transaction.transactionHash) of type \(transaction.type.asString) with error \(error.localizedDescription)")
+        guard let swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleFailedTransactionCall for \(transaction.transactionHash)")
+        }
+        switch transaction.type {
+        case .cancelOffer, .editOffer:
+            throw SwapServiceError.invalidValueError(desc: "handleFailedTransaction: received an offer-related transaction \(transaction.transactionHash)")
+        case .reportPaymentSent:
+            guard let swap = swapTruthSource.swaps.first(where: { id, swap in
+                swap.reportPaymentSentTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: swap with report payment sent transaction \(transaction.transactionHash) not found in swapTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found swap \(swap.id.uuidString) on \(swap.chainID) with report payment sent transaction \(transaction.transactionHash), updating reportingPaymentSentState to error and state to awaitingPaymentSent in persistent storage")
+            try databaseService.updateReportPaymentSentState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ReportingPaymentSentState.error.asString)
+            try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingPaymentSent.asString)
+            logger.warning("handleFailedTransaction: setting reportingPaymentSentError, updating reportingPaymentSentState to error and state to awaitingPaymentSent for \(swap.id.uuidString)")
+            DispatchQueue.main.sync {
+                swap.reportingPaymentSentError = error
+                swap.reportingPaymentSentState = .error
+                swap.state = .awaitingPaymentSent
+            }
+        }
+
+    }
+    
+    /**
      Gets the on-chain [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) corresponding to `takenOffer`, determines which one of `takenOffer`'s settlement methods the offer taker has selected, gets the user's (maker's) private settlement method data for this settlement method, and creates and persistently stores a new `Swap` with state `SwapState.awaitingTakerInformation` using the on-chain swap and the user's (maker's) private settlement method data, and maps `takenOffer`'s ID to the new `Swap` on the main `DispatchQueue`. This should only be called for swaps made by the user of this interface.
      
      - Parameter takenOffer: The `Offer` made by the user of this interface that has been taken and now corresponds to a swap.
@@ -461,7 +611,11 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             onChainDisputeRaiser: String(newSwap.onChainDisputeRaiser),
             chainID: String(newSwap.chainID),
             state: newSwap.state.asString,
-            role: newSwap.role.asString
+            role: newSwap.role.asString,
+            reportPaymentSentState: newSwap.reportingPaymentSentState.asString,
+            reportPaymentSentTransactionHash: nil,
+            reportPaymentSentTransactionCreationTime: nil,
+            reportPaymentSentTransactionCreationBlockNumber: nil
         )
         try databaseService.storeSwap(swap: newSwapForDatabase)
         // Add new Swap to swapTruthSource
@@ -653,7 +807,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      The function called by  `BlockchainService` to notify `SwapService` of a `PaymentSentEvent`.
      
-     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the chain ID of the swap and the chain ID of `event` match. Then it persistently sets the swap's `isPaymentSent` field to `true` and the state of the swap to `awaitingPaymentReceived`, and then does the same to the `Swap` object on the main `DispatchQueue`.
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a `Swap`, it ensures that the chain ID of the `Swap` and the chain ID of `event` match. Then it checks whether the user is the buyer in the `Swap`. If the user is, then this checks if the swap has a non-`nil` transaction for calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received). If it does, then this compares the hash of that transaction and the transaction hash contained in `event` If the two do not match, this sets a flag indicating that the reporting payment sent transaction must be updated. If the swap does not have such a transaction, this flag is also set. If the user is not the buyer in the `Swap`, this flag is also set. If this flag is set, then this updates the `Swap`, both in `swapTruthSource` and in persistent storage, with a new `BlockchainTransaction` containing the hash specified in `event`. Then, regardless of whether this flag is set, this persistently sets the `Swap.isPaymentSent` property of the `Swap` to `true`, persistently updates the `Swap.state` property of the `Swap` to `SwapState.awaitingPaymentReceived`, and then, on the main `DispatchQueue`, sets the `Swap.isPaymentSent` property of the `Swap` to `true` and sets the `Swap.state` property of the `Swap` to `SwapState.awaitingPaymentReceived`. Then, no longer on the main `DispatchQueue`, if the user is the buyer in this `Swap`, this updates the `Swap.reportingPaymentSentState` of the `Swap` to `ReportingPaymentSentState.completed`, both in persistent storage and in the `Swap` itself.
      
      - Parameter event: The `PaymentSentEvent` of which `SwapService` is being notified.
      
@@ -669,12 +823,49 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 throw SwapServiceError.nonmatchingChainIDError(desc: "Chain ID of PaymentSentEvent did not match chain ID of Swap in handlePaymentSentEvent call. PaymentSentEvent.chainID: \(String(event.chainID)), Swap.chainID: \(String(swap.chainID)), PaymentSentEvent.id: \(event.id.uuidString)")
             }
             // At this point, we have ensured that the chain ID of the event and the swap match, so we can proceed safely
-            let swapIDB64String = event.id.asData().base64EncodedString()
-            try databaseService.updateSwapIsPaymentSent(swapID: swapIDB64String, chainID: String(event.chainID), isPaymentSent: true)
-            try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.awaitingPaymentReceived.asString)
-            swap.isPaymentSent = true
-            DispatchQueue.main.async {
+            var mustUpdateReportPaymentSentTransaction = false
+            if swap.role == .makerAndBuyer || swap.role == .takerAndBuyer {
+                logger.notice("handlePaymentSentEvent: user is buyer for \(event.id.uuidString)")
+                if let reportPaymentSentTransaction = swap.reportPaymentSentTransaction {
+                    if reportPaymentSentTransaction.transactionHash == event.transactionHash {
+                        logger.notice("handlePaymentSentEvent: tx hash \(event.transactionHash) of event matches that for swap \(swap.id.uuidString): \(reportPaymentSentTransaction.transactionHash)")
+                    } else {
+                        logger.warning("handlePaymentSentEvent: tx hash \(event.transactionHash) of event does not match that for swap \(event.id.uuidString): \(reportPaymentSentTransaction.transactionHash), updating with new transaction hash")
+                        mustUpdateReportPaymentSentTransaction = true
+                    }
+                } else {
+                    logger.warning("handlePaymentSentEvent: swap \(event.id.uuidString) for which user is buyer has no reporting payment sent transaction, updating with transaction hash \(event.transactionHash)")
+                    mustUpdateReportPaymentSentTransaction = true
+                }
+            } else {
+                logger.info("handlePaymentSentEvent: user is seller for \(event.id.uuidString), updating with transaction hash \(event.transactionHash)")
+                mustUpdateReportPaymentSentTransaction = true
+            }
+            if mustUpdateReportPaymentSentTransaction {
+                let reportPaymentSentTransaction = BlockchainTransaction(transactionHash: event.transactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .reportPaymentSent)
+                DispatchQueue.main.sync {
+                    swap.reportPaymentSentTransaction = reportPaymentSentTransaction
+                }
+                logger.info("handlePaymentSentEvent: persistently storing tx data, including hash \(event.transactionHash) for \(event.id.uuidString)")
+                let dateString = DateFormatter.createDateString(reportPaymentSentTransaction.timeOfCreation)
+                try databaseService.updateReportPaymentSentData(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), transactionHash: reportPaymentSentTransaction.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(reportPaymentSentTransaction.latestBlockNumberAtCreation))
+            }
+            logger.notice("handlePaymentSentEvent: persistently setting isPaymentSent property of \(event.id.uuidString) to true")
+            try databaseService.updateSwapIsPaymentSent(swapID: event.id.asData().base64EncodedString(), chainID: String(event.chainID), isPaymentSent: true)
+            logger.notice("handlePaymentSentEvent: persistently updating state of \(event.id.uuidString) to \(SwapState.awaitingPaymentReceived.asString)")
+            try databaseService.updateSwapState(swapID: event.id.asData().base64EncodedString(), chainID: String(event.chainID), state: SwapState.awaitingPaymentReceived.asString)
+            logger.notice("handlePaymentSentEvent: setting isPaymentSent property of \(event.id.uuidString) to true and setting state to \(SwapState.awaitingPaymentReceived.asString)")
+            DispatchQueue.main.sync {
+                swap.isPaymentSent = true
                 swap.state = .awaitingPaymentReceived
+            }
+            if swap.role == .makerAndBuyer || swap.role == .takerAndBuyer {
+                logger.notice("handlePaymentSentEvent: user is buyer for \(event.id.uuidString) so persistently updating reportingPaymentSentState to \(ReportingPaymentSentState.completed.asString)")
+                try databaseService.updateReportPaymentSentState(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: ReportingPaymentSentState.completed.asString)
+                logger.notice("handlePaymentSentEvent: updating reportingPaymentSentState to \(ReportingPaymentSentState.completed.asString)")
+                DispatchQueue.main.sync {
+                    swap.reportingPaymentSentState = .completed
+                }
             }
         } else {
             logger.notice("handlePaymentSentEvent: got event for \(event.id.uuidString) which was not found in swapTruthSource")

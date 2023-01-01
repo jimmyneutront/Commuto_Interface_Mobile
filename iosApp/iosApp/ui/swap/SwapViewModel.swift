@@ -9,6 +9,7 @@
 import Foundation
 import os
 import PromiseKit
+import web3swift
 
 /**
  The Swap View Model, the single source of truth for all offer related data. It is observed by offer-related views.
@@ -123,9 +124,11 @@ class SwapViewModel: UISwapTruthSource {
      
      - Parameter swap: The `Swap` for which to report sending payment.
      */
+    @available(*, deprecated, message: "Use cancelOffer with new transaction pipeline")
     func reportPaymentSent(
         swap: Swap
     ) {
+        /*
         setReportingPaymentSentState(swap: swap, state: .checking)
         Promise<Void> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
@@ -142,7 +145,64 @@ class SwapViewModel: UISwapTruthSource {
             logger.error("reportPaymentSent: got error during reportPaymentSent call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
             swap.reportingPaymentSentError = error
             setReportingPaymentSentState(swap: swap, state: .error)
+        }*/
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` to call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for `swap`, for which the user of this interface should be the buyer.
+     
+     This passes `swap`'s ID and chain ID to `SwapService.createReportPaymentSentTransaction` and then passes the resulting transaction to `createdTransactionhandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - swap: The `Swap` for which [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createReportPaymentSentTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createReportPaymentSentTransaction: creating for \(swap.id.uuidString)")
+                swapService.createReportPaymentSentTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
         }
+    }
+    
+    /**
+     Attempts to call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the buyer.
+     
+     This clears the reporting-payment-sent-related `Error` of `swap` and sets `swap`'s `Swap.reportingPaymentSentState` to `ReportingPaymentSent.validating`, and then passes all data to `swapService`'s `SwapService.reportPaymentSent` function.
+     
+     - Parameters:
+        - swap: The `Swap` for which [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
+        - reportPaymentSentTransaction: An optional `EthereumTransaction` that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for `swap`.
+     */
+    func reportPaymentSent(
+        swap: Swap,
+        reportPaymentSentTransaction: EthereumTransaction?
+    ) {
+        swap.reportingPaymentSentError = nil
+        swap.reportingPaymentSentState = .validating
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("reportPaymentSent: reporting for \(swap.id.uuidString)")
+        }
+        swapService.reportPaymentSent(swap: swap, reportPaymentSentTransaction: reportPaymentSentTransaction)
+            .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                self.logger.notice("reportPaymentSent: successfully broadcast transaction for \(swap.id.uuidString)")
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("reportPaymentSent: got error during reportPaymentSent call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
+                DispatchQueue.main.sync {
+                    swap.reportingPaymentSentError = error
+                    swap.reportingPaymentSentState = .error
+                }
+            }
     }
     
     /**

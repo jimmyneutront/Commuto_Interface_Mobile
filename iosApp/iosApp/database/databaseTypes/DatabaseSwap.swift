@@ -115,4 +115,20 @@ struct DatabaseSwap: Equatable {
      The `role` property of a `Swap` as a `String`.
      */
     let role: String
+    /**
+     The `reportPaymentSentState` property of a `Swap` as a `String`.
+     */
+    let reportPaymentSentState: String
+    /**
+     The hash of the transaction that called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) `String`, or `nil` if no such transaction exists.
+     */
+    let reportPaymentSentTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `reportPaymentSentTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the buyer in this swap, this may not be accurate.
+     */
+    let reportPaymentSentTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `reportPaymentSentTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the buyer in this swap, this may not be accurate.
+     */
+    let reportPaymentSentTransactionCreationBlockNumber: Int?
 }

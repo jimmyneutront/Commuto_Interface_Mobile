@@ -707,6 +707,8 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
+            
             func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {
@@ -787,6 +789,8 @@ class BlockchainServiceTest: XCTestCase {
             var paymentSentEvent: PaymentSentEvent? = nil
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
+            
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
@@ -869,6 +873,8 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
+            
             func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
@@ -950,6 +956,8 @@ class BlockchainServiceTest: XCTestCase {
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
             
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
+            
             func handleNewSwap(takenOffer: Offer) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
@@ -1030,6 +1038,8 @@ class BlockchainServiceTest: XCTestCase {
             var sellerClosedEvent: SellerClosedEvent? = nil
             
             func sendTakerInformationMessage(swapID: UUID, chainID: BigUInt) throws -> Bool { return false }
+            
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             
             func handleNewSwap(takenOffer: Offer) throws {}
             

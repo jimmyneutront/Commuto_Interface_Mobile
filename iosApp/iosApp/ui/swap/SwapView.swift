@@ -447,6 +447,11 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
      */
     @ObservedObject var swapTruthSource: TruthSource
     
+    /**
+     Indicates whether we are showing the sheet that allows the user to report that they have sent payment, if they are the buyer.
+     */
+    @State private var isShowingReportPaymentSentSheet = false
+    
     var body: some View {
         if (swap.state == .awaitingFilling) && swap.role == .makerAndSeller {
             // If the swap state is awaitingFilling and we are the maker and seller, then we display the "Fill Swap" button
@@ -487,7 +492,7 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
             actionButtonBuilder(
                 action: {
                     if (swap.reportingPaymentSentState == .none || swap.reportingPaymentSentState == .error) {
-                        swapTruthSource.reportPaymentSent(swap: swap)
+                        isShowingReportPaymentSentSheet = true
                     }
                 },
                 labelText: {
@@ -499,7 +504,32 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
                         return "Reporting that Payment Is Sent"
                     }
                 }()
-            )
+            ).sheet(isPresented: $isShowingReportPaymentSentSheet, content: {
+                TransactionGasDetailsView(
+                    isShowingSheet: $isShowingReportPaymentSentSheet,
+                    title: "Report Payment Sent",
+                    buttonLabel: "Report Payment Sent",
+                    buttonAction: { createdTransaction in
+                        swapTruthSource.reportPaymentSent(
+                            swap: swap,
+                            reportPaymentSentTransaction: createdTransaction
+                        )
+                    },
+                    runOnAppearance: { reportPaymentSentTransactionBinding, transactionCreationErrorBinding in
+                        if swap.reportingPaymentSentState == .none || swap.reportingPaymentSentState == .error {
+                            swapTruthSource.createReportPaymentSentTransaction(
+                                swap: swap,
+                                createdTransactionHandler: { createdTransaction in
+                                    reportPaymentSentTransactionBinding.wrappedValue = createdTransaction
+                                },
+                                errorHandler: { error in
+                                    transactionCreationErrorBinding.wrappedValue = error
+                                }
+                            )
+                        }
+                    }
+                )
+            })
         } else if swap.state == .awaitingPaymentReceived && (swap.role == .makerAndSeller || swap.role == .takerAndSeller) {
             // If the swap state is awaitingPaymentReceived and we are the seller, then we display the "Confirm Payment is Received" button
             if swap.reportingPaymentReceivedState != .none && swap.reportingPaymentReceivedState != .error {

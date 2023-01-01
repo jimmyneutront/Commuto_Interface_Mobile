@@ -259,7 +259,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     This clears any offer-canceling-related error of `offer`, and sets `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.validating`, and then passes all data to `offerService`'s `OfferService.cancelOffer` function.
+     This clears the offer-canceling-related `Error` of `offer` and sets `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.validating`, and then passes all data to `offerService`'s `OfferService.cancelOffer` function.
      
      - Parameters:
         - offer: The `Offer` to be canceled.
@@ -276,6 +276,10 @@ class OffersViewModel: UIOfferTruthSource {
                 self.logger.notice("cancelOffer: successfully broadcast transaction for \(offer.id.uuidString)")
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("cancelOffer: got error during cancelOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+                DispatchQueue.main.sync {
+                    offer.cancelingOfferError = error
+                    offer.cancelingOfferState = .error
+                }
             }
     }
     
@@ -358,7 +362,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to edit `offer` using `offerEditingTransaction`, which should have been created using the `SettlementMethod`s in `newSettlementMethods`.
      
-     This clears any offer-editing-related error of `offer`, and sets `offer`'s `Offer.editingOfferState` to `EditingOfferState.validating`, and then passes all data to `offerService`'s `OfferService.editOffer` function.
+     This clears any offer-editing-related `error` of `offer`, and sets `offer`'s `Offer.editingOfferState` to `EditingOfferState.validating`, and then passes all data to `offerService`'s `OfferService.editOffer` function.
      
      - Parameters:
         - offer: The `Offer` to be edited.
@@ -376,6 +380,10 @@ class OffersViewModel: UIOfferTruthSource {
                 self.logger.notice("editOffer: successfully broadcast transaction for \(offer.id.uuidString)")
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("editOffer: got error during editOffer call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+                DispatchQueue.main.sync {
+                    offer.editingOfferError = error
+                    offer.editingOfferState = .error
+                }
             }
     }
     

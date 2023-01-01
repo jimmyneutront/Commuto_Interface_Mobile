@@ -15,21 +15,45 @@ enum ReportingPaymentSentState {
      */
     case none
     /**
-     Indicates that we are currently checking if we can report that payment is sent for the swap.
+     Indicates that we are currently checking if we can call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the swap.
      */
-    case checking
+    case validating
     /**
-     Indicates that we are currently calling CommutoSwap's [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) function for the swap.
+     Indicates that we are currently sending the transaction that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the corresponding swap.
      */
-    case reporting
+    case sendingTransaction
     /**
-     Indicates that we have reported that payment is sent for the corresponding swap.
+     Indicates that we have sent the transaction that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the corresponding swap, and we are waiting for it to be confirmed.
+     */
+    case awaitingTransactionConfirmation
+    /**
+     Indicates that we have called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the corresponding swap, and that the transaction to do so has been confirmed
      */
     case completed
     /**
-     Indicates that we encountered an error while reporting that payment is sent for the corresponding swap.
+     Indicates that we encountered an error while calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the corresponding swap.
      */
     case error
+    
+    /**
+     Returns a `String` corresponding to a particular case of `EditingOfferState`. This is primarily used for database storage.
+     */
+    var asString: String {
+        switch self {
+        case .none:
+            return "none"
+        case .validating:
+            return "validating"
+        case .sendingTransaction:
+            return "sendingTransaction"
+        case .awaitingTransactionConfirmation:
+            return "awaitingTransactionConfirmation"
+        case .completed:
+            return "completed"
+        case .error:
+            return "error"
+        }
+    }
     
     /**
      A human readable string describing the current state.
@@ -38,14 +62,17 @@ enum ReportingPaymentSentState {
         switch self {
         case .none: // Note: This should not be used.
             return "Press Report Payment Sent to report that you have sent payment"
-        case .checking:
+        case .validating:
             return "Checking that payment sending can be reported..."
-        case .reporting:
+        case .sendingTransaction:
             return "Reporting that payment is sent..."
+        case .awaitingTransactionConfirmation:
+            return "Waiting for confirmation..."
         case .completed:
             return "Successfully reported that payment is sent."
         case .error:
             return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed.
         }
     }
+    
 }

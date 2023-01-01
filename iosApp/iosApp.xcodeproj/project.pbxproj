@@ -130,6 +130,7 @@
 		6DD3042A28C38187006BB466 /* TestBlockchainErrorHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD3042928C38187006BB466 /* TestBlockchainErrorHandler.swift */; };
 		6DD3042C28C38665006BB466 /* TestP2PErrorHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD3042B28C38665006BB466 /* TestP2PErrorHandler.swift */; };
 		6DD3042E28C3882E006BB466 /* TestOfferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD3042D28C3882E006BB466 /* TestOfferService.swift */; };
+		6DD53DE02960E72A00144FE0 /* DateFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD53DDF2960E72A00144FE0 /* DateFormatter.swift */; };
 		6DD6325228CE8D46001CF4F8 /* PaymentReceivedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD6325128CE8D46001CF4F8 /* PaymentReceivedEvent.swift */; };
 		6DDE936D293C5AFB008017DF /* BlockchainTransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDE936C293C5AFB008017DF /* BlockchainTransaction.swift */; };
 		6DDE936F293C5D42008017DF /* BlockchainTransactionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDE936E293C5D42008017DF /* BlockchainTransactionType.swift */; };
@@ -304,6 +305,7 @@
 		6DD3042928C38187006BB466 /* TestBlockchainErrorHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestBlockchainErrorHandler.swift; sourceTree = "<group>"; };
 		6DD3042B28C38665006BB466 /* TestP2PErrorHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestP2PErrorHandler.swift; sourceTree = "<group>"; };
 		6DD3042D28C3882E006BB466 /* TestOfferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestOfferService.swift; sourceTree = "<group>"; };
+		6DD53DDF2960E72A00144FE0 /* DateFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateFormatter.swift; sourceTree = "<group>"; };
 		6DD6325128CE8D46001CF4F8 /* PaymentReceivedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentReceivedEvent.swift; sourceTree = "<group>"; };
 		6DDE936C293C5AFB008017DF /* BlockchainTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainTransaction.swift; sourceTree = "<group>"; };
 		6DDE936E293C5D42008017DF /* BlockchainTransactionType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockchainTransactionType.swift; sourceTree = "<group>"; };
@@ -625,6 +627,14 @@
 			path = privateData;
 			sourceTree = "<group>";
 		};
+		6DD53DDE2960E71B00144FE0 /* util */ = {
+			isa = PBXGroup;
+			children = (
+				6DD53DDF2960E72A00144FE0 /* DateFormatter.swift */,
+			);
+			path = util;
+			sourceTree = "<group>";
+		};
 		6DDFAFA2284AAC3D004BC95F /* events */ = {
 			isa = PBXGroup;
 			children = (
@@ -760,6 +770,7 @@
 		7555FF7D242A565900829871 /* iosApp */ = {
 			isa = PBXGroup;
 			children = (
+				6DD53DDE2960E71B00144FE0 /* util */,
 				6DED693C28D7DB0B00EA42C0 /* settlement */,
 				6D0940ED28A34082009168BE /* swap */,
 				6D948420289BF6BF00E2AEC8 /* extension */,
@@ -1134,6 +1145,7 @@
 				6DC800E128EA244A004528C8 /* SettlementMethodService.swift in Sources */,
 				6D70A5CE2866A64E003FEDF3 /* DatabaseServiceError.swift in Sources */,
 				6DA4633828CFF86C002ABA70 /* BuyerClosedEvent.swift in Sources */,
+				6DD53DE02960E72A00144FE0 /* DateFormatter.swift in Sources */,
 				6D51876A28A48C1E0061315A /* StablecoinAmountField.swift in Sources */,
 				6D9789D128D68ED7004ECF8A /* DatabaseKeyDeriver.swift in Sources */,
 				6D80072628A9E88000510D01 /* SwapState.swift in Sources */,

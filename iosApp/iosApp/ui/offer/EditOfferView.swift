@@ -52,7 +52,7 @@ struct EditOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
     @ObservedObject var settlementMethodTruthSource: SettlementMethod_TruthSource
     
     /**
-     Indicates whether we are showing the sheet that allows the user to cancel the offer, if they are the maker.
+     Indicates whether we are showing the sheet that allows the user to edit the offer, if they are the maker.
      */
     @State private var isShowingEditOfferSheet = false
     

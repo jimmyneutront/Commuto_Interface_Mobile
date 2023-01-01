@@ -36,6 +36,12 @@ enum OfferServiceError: LocalizedError {
      - Parameter desc: A `String` that provides information about the context in which the error was thrown.
      */
     case nonmatchingDataError(desc: String)
+    /**
+     Thrown when `OfferService` encounters an unexpected value.
+     
+     - Parameter desc: A `String` that provides information about the context in which the error was thrown.
+     */
+    case invalidValueError(desc: String)
 
     /**
      A description providing information about the context in which the error was thrown.
@@ -49,6 +55,8 @@ enum OfferServiceError: LocalizedError {
         case .offerNotAvailableError(let desc):
             return desc
         case .nonmatchingDataError(let desc):
+            return desc
+        case .invalidValueError(desc: let desc):
             return desc
         }
     }

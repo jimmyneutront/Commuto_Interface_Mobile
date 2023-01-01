@@ -14,6 +14,14 @@ import BigInt
  */
 protocol SwapNotifiable {
     /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol that a monitored swap-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
+     
+     - Parameters:
+        - transaction: The `BlockchainTransaction` wrapping the on-chain transaction that has failed.
+        - error: A `BlockchainTransactionError` describing why the on-chain transaction has failed.
+     */
+    func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws
+    /**
      The function called by `OfferService` in order to send taker information for an offer that has been taken by the user of this interface. If `swapID` and `chainID` correspond to an offer that has been taken by the user of this interface, this should send a taker information message and return true. Otherwise, it should not send a message and should return false.
      
      - Parameters:
