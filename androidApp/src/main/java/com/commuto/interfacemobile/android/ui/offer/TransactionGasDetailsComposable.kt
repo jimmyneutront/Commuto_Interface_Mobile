@@ -21,7 +21,7 @@ import org.web3j.crypto.transaction.type.Transaction1559
 
 /**
  * Displays gas information about a [RawTransaction], or displays the localized description of the exception that
- * occurred while creating said [RawTransaction]. When this [Composable] appears, it executes [onRunAppearance‘, passing
+ * occurred while creating said [RawTransaction]. When this [Composable] appears, it executes [runOnAppearance], passing
  * said [RawTransaction] wrapped in a [MutableState], and a [MutableState] wrapping an optional [Exception], the
  * localized description of the value of which will be displayed to the user. [runOnAppearance] should be a closure that
  * creates a transaction and sets the result equal to value of said [MutableState]-wrapped [RawTransaction], or sets the
@@ -46,7 +46,7 @@ fun TransactionGasDetailsComposable(
     val transaction = remember { mutableStateOf<RawTransaction?>(null) }
 
     /**
-     * The [Exception] that occurred in [runOnAppearance], or `null` if no such error has occurred.
+     * The [Exception] that occurred in [runOnAppearance], or `null` if no such exception has occurred.
      */
     val transactionCreationException = remember { mutableStateOf<Exception?>(null) }
 

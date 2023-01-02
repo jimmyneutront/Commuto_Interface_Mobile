@@ -12,6 +12,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,10 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.commuto.interfacemobile.android.offer.EditingOfferState
 import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.swap.*
+import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
+import com.commuto.interfacemobile.android.ui.offer.TransactionGasDetailsComposable
 import com.commuto.interfacemobile.android.ui.settlement.SettlementMethodPrivateDetailComposable
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -45,6 +49,9 @@ fun SwapComposable(
     stablecoinInfoRepo: StablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo,
 ) {
 
+    /**
+     * The [Swap] about which this displays information.
+     */
     val swap = swapTruthSource.swaps[id]
 
     if (id == null) {
@@ -499,6 +506,13 @@ fun ActionButton(swap: Swap, swapTruthSource: UISwapTruthSource) {
         If the swap state is awaitingPaymentSent and we are the buyer, then we display the "Confirm Payment is Sent"
         button
          */
+
+        /**
+         * Indicates whether we are showing the sheet that allows the user to report that they have sent payment, if
+         * they are the buyer.
+         */
+        val isShowingReportPaymentSentSheet = remember { mutableStateOf(false) }
+
         if (swap.reportingPaymentSentState.value != ReportingPaymentSentState.NONE &&
             swap.reportingPaymentSentState.value != ReportingPaymentSentState.EXCEPTION) {
             Text(
@@ -516,15 +530,43 @@ fun ActionButton(swap: Swap, swapTruthSource: UISwapTruthSource) {
             action = {
                 if (swap.reportingPaymentSentState.value == ReportingPaymentSentState.NONE ||
                     swap.reportingPaymentSentState.value == ReportingPaymentSentState.EXCEPTION) {
-                    swapTruthSource.reportPaymentSent(
-                        swap = swap
-                    )
+                    isShowingReportPaymentSentSheet.value = true
                 }
             },
             labelText = when (swap.reportingPaymentSentState.value) {
                 ReportingPaymentSentState.NONE, ReportingPaymentSentState.EXCEPTION -> "Report that Payment Is Sent"
                 ReportingPaymentSentState.COMPLETED -> "Reported that Payment Is Sent"
                 else -> "Reporting that Payment Is Sent"
+            }
+        )
+        SheetComposable(
+            isPresented = isShowingReportPaymentSentSheet,
+            content = { closeSheet ->
+                TransactionGasDetailsComposable(
+                    closeSheet = closeSheet,
+                    title = "Report Payment Sent",
+                    buttonLabel = "Report Payment Sent",
+                    buttonAction = { createdTransaction ->
+                        swapTruthSource.reportPaymentSent(
+                            swap = swap,
+                            reportPaymentSentTransaction = createdTransaction,
+                        )
+                    },
+                    runOnAppearance = { reportPaymentSentTransaction, transactionCreationException ->
+                        if (swap.reportingPaymentSentState.value == ReportingPaymentSentState.NONE ||
+                            swap.reportingPaymentSentState.value == ReportingPaymentSentState.EXCEPTION) {
+                            swapTruthSource.createReportPaymentSentTransaction(
+                                swap = swap,
+                                createdTransactionHandler = { createdTransaction ->
+                                    reportPaymentSentTransaction.value = createdTransaction
+                                },
+                                exceptionHandler = { exception ->
+                                    transactionCreationException.value = exception
+                                }
+                            )
+                        }
+                    }
+                )
             }
         )
     } else if (swap.state.value == SwapState.AWAITING_PAYMENT_RECEIVED && (swap.role == SwapRole.MAKER_AND_BUYER ||

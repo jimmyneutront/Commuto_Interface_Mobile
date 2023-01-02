@@ -1,7 +1,10 @@
 package com.commuto.interfacemobile.android.ui.swap
 
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.swap.Swap
+import com.commuto.interfacemobile.android.ui.offer.UIOfferTruthSource
+import org.web3j.crypto.RawTransaction
 import java.util.*
 
 /**
@@ -31,6 +34,20 @@ class PreviewableSwapTruthSource : UISwapTruthSource {
      * Not used since this class is for previewing user interfaces, but required for adoption of [UISwapTruthSource].
      */
     override fun reportPaymentSent(swap: Swap) {}
+
+    /**
+     * Not used since this class is for previewing user interfaces, but required for adoption of [UISwapTruthSource].
+     */
+    override fun createReportPaymentSentTransaction(
+        swap: Swap,
+        createdTransactionHandler: (RawTransaction) -> Unit,
+        exceptionHandler: (Exception) -> Unit
+    ) {}
+
+    /**
+     * Not used since this class is for previewing user interfaces, but required for adoption of [UISwapTruthSource].
+     */
+    override fun reportPaymentSent(swap: Swap, reportPaymentSentTransaction: RawTransaction?) {}
 
     /**
      * Not used since this class is for previewing user interfaces, but required for adoption of [UISwapTruthSource].

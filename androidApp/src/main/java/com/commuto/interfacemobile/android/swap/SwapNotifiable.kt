@@ -1,6 +1,8 @@
 package com.commuto.interfacemobile.android.swap
 
 import com.commuto.interfacemobile.android.blockchain.BlockchainService
+import com.commuto.interfacemobile.android.blockchain.BlockchainTransaction
+import com.commuto.interfacemobile.android.blockchain.BlockchainTransactionException
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
 import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.OfferService
@@ -14,6 +16,16 @@ import javax.inject.Singleton
  */
 @Singleton
 interface SwapNotifiable {
+    /**
+     * The method called by [com.commuto.interfacemobile.android.blockchain.BlockchainService] in order to notify the
+     * class implementing this interface that a monitored swap-related [BlockchainTransaction] has failed (either has
+     * been confirmed and failed, or has been dropped.)
+     *
+     * @param transaction The [BlockchainTransaction] wrapping the on-chain transaction that has failed.
+     * @param exception A [BlockchainTransactionException] describing why the on-chain transaction has failed.
+     */
+    suspend fun handleFailedTransaction(transaction: BlockchainTransaction, exception: BlockchainTransactionException)
+
     /**
      * The function called by [OfferService] in order to send a taker information message for an offer that has been
      * taken by the user of this interface. If [swapID] and [chainID] correspond to an offer that has been taken by the

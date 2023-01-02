@@ -18,6 +18,7 @@ import com.commuto.interfacemobile.android.p2p.messages.PublicKeyAnnouncement
 import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.swap.*
 import com.commuto.interfacemobile.android.ui.offer.OffersViewModel
+import com.commuto.interfacemobile.android.util.DateFormatter
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -438,7 +439,8 @@ class OfferService (
                     latestBlockNumberAtCreation = blockchainService.newestBlockNum,
                     type = BlockchainTransactionType.CANCEL_OFFER,
                 )
-                val dateString = createDateString(blockchainTransactionForOfferCancellation.timeOfCreation)
+                val dateString = DateFormatter.createDateString(blockchainTransactionForOfferCancellation
+                    .timeOfCreation)
                 Log.i(logTag, "cancelOffer: persistently storing offer cancellation data for ${offer.id}, " +
                         "including tx hash ${blockchainTransactionForOfferCancellation.transactionHash} for " +
                         offer.id)
@@ -743,7 +745,7 @@ class OfferService (
                     latestBlockNumberAtCreation = blockchainService.newestBlockNum,
                     type = BlockchainTransactionType.EDIT_OFFER,
                 )
-                val dateString = createDateString(blockchainTransactionForOfferEditing.timeOfCreation)
+                val dateString = DateFormatter.createDateString(blockchainTransactionForOfferEditing.timeOfCreation)
                 Log.i(logTag, "editOffer: persistently storing offer editing data for ${offer.id}, including tx " +
                         "hash ${blockchainTransactionForOfferEditing.transactionHash} for ${offer.id}")
                 val encoder = Base64.getEncoder()
@@ -951,7 +953,11 @@ class OfferService (
                     disputeRaiser = newSwap.onChainDisputeRaiser.toString(),
                     chainID = newSwap.chainID.toString(),
                     state = newSwap.state.value.asString,
-                    role = newSwap.role.asString
+                    role = newSwap.role.asString,
+                    reportPaymentSentState = newSwap.reportingPaymentSentState.toString(),
+                    reportPaymentSentTransactionHash = null,
+                    reportPaymentSentTransactionCreationTime = null,
+                    reportPaymentSentTransactionCreationBlockNumber = null
                 )
                 databaseService.storeSwap(swapForDatabase)
                 afterPersistentStorage?.invoke()
@@ -1036,7 +1042,7 @@ class OfferService (
      * If [transaction] is of type [BlockchainTransactionType.CANCEL_OFFER], then this finds the offer with the
      * corresponding cancellation transaction hash, persistently updates its canceling offer state to
      * [CancelingOfferState.EXCEPTION] and on the main coroutine dispatcher sets its [Offer.cancelingOfferException]
-     * property to [exception] updates its [Offer.cancelingOfferState] property to [CancelingOfferState.EXCEPTION].
+     * property to [exception], and updates its [Offer.cancelingOfferState] property to [CancelingOfferState.EXCEPTION].
      *
      * If [transaction] is of type [BlockchainTransactionType.EDIT_OFFER], then this finds the offer with the
      * corresponding editing transaction hash, persistently updates its editing offer state to
@@ -1119,6 +1125,11 @@ class OfferService (
                     Log.w(logTag, "handleFailedTransaction: offer with editing transaction ${transaction
                         .transactionHash} not found in offerTruthSource")
                 }
+            }
+            BlockchainTransactionType.REPORT_PAYMENT_SENT -> {
+                throw OfferServiceException(message = "handleFailedTransaction: received a swap-related transaction " +
+                        transaction.transactionHash
+                )
             }
         }
     }
@@ -1246,11 +1257,11 @@ class OfferService (
             val isUserMakerLong = if (offer.isUserMaker) 1L else 0L
             val offerCancellationTransactionCreationTime = offer.offerCancellationTransaction?.timeOfCreation
             val offerCancellationTransactionCreationTimeString = if (offerCancellationTransactionCreationTime != null) {
-                createDateString(offerCancellationTransactionCreationTime)
+                DateFormatter.createDateString(offerCancellationTransactionCreationTime)
             } else { null }
             val offerEditingTransactionCreationTime = offer.offerEditingTransaction?.timeOfCreation
             val offerEditingTransactionCreationTimeString = if (offerEditingTransactionCreationTime != null) {
-                createDateString(offerEditingTransactionCreationTime)
+                DateFormatter.createDateString(offerEditingTransactionCreationTime)
             } else { null }
             val offerForDatabase = DatabaseOffer(
                 isCreated = isCreated,
@@ -1563,15 +1574,14 @@ class OfferService (
                     withContext(Dispatchers.Main) {
                         offer.offerCancellationTransaction = updatedOfferCancellationTransaction
                     }
-                    Log.w(logTag, "handleOfferCanceledEvent: persistently storing tx hash ${event.transactionHash} " +
-                            "for ${event.offerID}")
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'")
-                    dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+                    Log.w(logTag, "handleOfferCanceledEvent: persistently storing tx hash " +
+                            "${event.transactionHash} for ${event.offerID}")
+                    val dateString = DateFormatter.createDateString(updatedOfferCancellationTransaction.timeOfCreation)
                     databaseService.updateOfferCancellationData(
                         offerID = offerIdString,
                         chainID = event.chainID.toString(),
                         transactionHash = updatedOfferCancellationTransaction.transactionHash,
-                        creationTime = dateFormat.format(updatedOfferCancellationTransaction.timeOfCreation),
+                        creationTime = dateString,
                         blockNumber = updatedOfferCancellationTransaction.latestBlockNumberAtCreation.toLong()
                     )
                 }
