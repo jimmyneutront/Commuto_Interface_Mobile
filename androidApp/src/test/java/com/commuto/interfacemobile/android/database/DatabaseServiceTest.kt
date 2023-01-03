@@ -474,6 +474,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         val anotherSwapToStore = Swap(
@@ -510,6 +514,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         // This should do nothing and not throw
         databaseService.storeSwap(anotherSwapToStore)
@@ -559,6 +567,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapRequiresFill("a_uuid", "a_chain_id", false)
@@ -606,6 +618,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapMakerPrivateSettlementMethodData(
@@ -657,6 +673,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapTakerPrivateSettlementMethodData(
@@ -707,6 +727,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapIsPaymentSent("a_uuid", "a_chain_id", true)
@@ -753,6 +777,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapIsPaymentReceived("a_uuid", "a_chain_id", true)
@@ -799,6 +827,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapHasBuyerClosed("a_uuid", "a_chain_id", true)
@@ -845,6 +877,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapHasSellerClosed("a_uuid", "a_chain_id", true)
@@ -891,6 +927,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateSwapState("a_uuid", "a_chain_id", "a_new_state_here")
@@ -938,6 +978,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = "a_tx_hash_here",
             reportPaymentSentTransactionCreationTime = "a_time_here",
             reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateReportPaymentSentState(
@@ -990,6 +1034,10 @@ class DatabaseServiceTest {
             reportPaymentSentTransactionHash = null,
             reportPaymentSentTransactionCreationTime = null,
             reportPaymentSentTransactionCreationBlockNumber = null,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
         )
         databaseService.storeSwap(swapToStore)
         databaseService.updateReportPaymentSentData(
@@ -1003,6 +1051,121 @@ class DatabaseServiceTest {
         assertEquals("a_tx_hash_here", returnedSwapAfterUpdate!!.reportPaymentSentTransactionHash)
         assertEquals("a_creation_time", returnedSwapAfterUpdate.reportPaymentSentTransactionCreationTime)
         assertEquals(-1L, returnedSwapAfterUpdate.reportPaymentSentTransactionCreationBlockNumber)
+    }
+
+    /**
+     * Ensures that code to update a persistently stored swap's [Swap.reportPaymentReceivedState] property works
+     * properly.
+     */
+    @Test
+    fun testUpdateReportingPaymentReceivedState() = runBlocking {
+        val swapToStore = Swap(
+            id = "a_uuid",
+            isCreated = 1L,
+            requiresFill = 0L,
+            maker = "maker_address",
+            makerInterfaceID = "maker_interface_id",
+            taker = "taker_address",
+            takerInterfaceID = "taker_interface_id",
+            stablecoin = "stablecoin_address",
+            amountLowerBound = "lower_bound_amount",
+            amountUpperBound = "upper_bound_amount",
+            securityDepositAmount = "security_deposit_amount",
+            takenSwapAmount = "taken_swap_amount",
+            serviceFeeAmount = "service_fee_amount",
+            serviceFeeRate = "service_fee_rate",
+            onChainDirection = "direction",
+            settlementMethod = "settlement_method",
+            makerPrivateData = "maker_private_data",
+            makerPrivateDataInitializationVector = "maker_init_vector",
+            takerPrivateData = "taker_private_data",
+            takerPrivateDataInitializationVector = "taker_private_data",
+            protocolVersion = "some_version",
+            isPaymentSent = 0L,
+            isPaymentReceived = 0L,
+            hasBuyerClosed = 0L,
+            hasSellerClosed = 0L,
+            disputeRaiser = "dispute_raiser",
+            chainID = "a_chain_id",
+            state = "a_state_here",
+            role = "a_role_here",
+            reportPaymentSentState = "a_reportingPaymentSentState_here",
+            reportPaymentSentTransactionHash = "a_tx_hash_here",
+            reportPaymentSentTransactionCreationTime = "a_time_here",
+            reportPaymentSentTransactionCreationBlockNumber = -1L,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime = "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber = -1L,
+        )
+        databaseService.storeSwap(swapToStore)
+        databaseService.updateReportPaymentReceivedState(
+            swapID = "a_uuid",
+            chainID = "a_chain_id",
+            state = "a_new_reportingPaymentReceivedState_here",
+        )
+        val returnedSwap = databaseService.getSwap(id = "a_uuid")
+        assertEquals("a_new_reportingPaymentReceivedState_here", returnedSwap!!.reportPaymentReceivedState)
+    }
+
+    /**
+     * Ensures that code to update a persistently stored swap's [Swap.reportPaymentReceivedTransactionHash],
+     * [Swap.reportPaymentReceivedTransactionCreationTime] and
+     * [Swap.reportPaymentReceivedTransactionCreationBlockNumber] properties work properly.
+     */
+    @Test
+    fun testUpdateReportingPaymentReceivedData() = runBlocking {
+        val swapToStore = Swap(
+            id = "a_uuid",
+            isCreated = 1L,
+            requiresFill = 0L,
+            maker = "maker_address",
+            makerInterfaceID = "maker_interface_id",
+            taker = "taker_address",
+            takerInterfaceID = "taker_interface_id",
+            stablecoin = "stablecoin_address",
+            amountLowerBound = "lower_bound_amount",
+            amountUpperBound = "upper_bound_amount",
+            securityDepositAmount = "security_deposit_amount",
+            takenSwapAmount = "taken_swap_amount",
+            serviceFeeAmount = "service_fee_amount",
+            serviceFeeRate = "service_fee_rate",
+            onChainDirection = "direction",
+            settlementMethod = "settlement_method",
+            makerPrivateData = "maker_private_data",
+            makerPrivateDataInitializationVector = "maker_init_vector",
+            takerPrivateData = "taker_private_data",
+            takerPrivateDataInitializationVector = "taker_private_data",
+            protocolVersion = "some_version",
+            isPaymentSent = 0L,
+            isPaymentReceived = 0L,
+            hasBuyerClosed = 0L,
+            hasSellerClosed = 0L,
+            disputeRaiser = "dispute_raiser",
+            chainID = "a_chain_id",
+            state = "a_state_here",
+            role = "a_role_here",
+            reportPaymentSentState = "a_reportingPaymentSentState_here",
+            reportPaymentSentTransactionHash = "a_tx_hash_here",
+            reportPaymentSentTransactionCreationTime = "a_time_here",
+            reportPaymentSentTransactionCreationBlockNumber = null,
+            reportPaymentReceivedState = "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash = null,
+            reportPaymentReceivedTransactionCreationTime = null,
+            reportPaymentReceivedTransactionCreationBlockNumber = null,
+        )
+        databaseService.storeSwap(swapToStore)
+        databaseService.updateReportPaymentReceivedData(
+            swapID = "a_uuid",
+            chainID = "a_chain_id",
+            transactionHash = "a_tx_hash_here",
+            creationTime = "a_creation_time",
+            blockNumber = -1L
+        )
+        val returnedSwapAfterUpdate = databaseService.getSwap(id = "a_uuid")
+        assertEquals("a_tx_hash_here", returnedSwapAfterUpdate!!.reportPaymentReceivedTransactionHash)
+        assertEquals("a_creation_time", returnedSwapAfterUpdate.reportPaymentReceivedTransactionCreationTime)
+        assertEquals(-1L, returnedSwapAfterUpdate.reportPaymentReceivedTransactionCreationBlockNumber)
     }
 
     /**

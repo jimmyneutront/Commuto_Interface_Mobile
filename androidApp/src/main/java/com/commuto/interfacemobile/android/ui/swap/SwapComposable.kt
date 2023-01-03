@@ -575,6 +575,13 @@ fun ActionButton(swap: Swap, swapTruthSource: UISwapTruthSource) {
         If the swap state is awaitingPaymentReceived and we are the seller, then we display the "Confirm Payment is
         Received" button
          */
+
+        /**
+         * Indicates whether we are showing the sheet that allows the user to report that they have received payment, if
+         * they are the seller.
+         */
+        val isShowingReportPaymentReceivedSheet = remember { mutableStateOf(false) }
+
         if (swap.reportingPaymentReceivedState.value != ReportingPaymentReceivedState.NONE &&
             swap.reportingPaymentReceivedState.value != ReportingPaymentReceivedState.EXCEPTION) {
             Text(
@@ -592,9 +599,7 @@ fun ActionButton(swap: Swap, swapTruthSource: UISwapTruthSource) {
             action = {
                 if (swap.reportingPaymentReceivedState.value == ReportingPaymentReceivedState.NONE ||
                     swap.reportingPaymentReceivedState.value == ReportingPaymentReceivedState.EXCEPTION) {
-                    swapTruthSource.reportPaymentReceived(
-                        swap = swap
-                    )
+                    isShowingReportPaymentReceivedSheet.value = true
                 }
             },
             labelText = when (swap.reportingPaymentReceivedState.value) {
@@ -602,6 +607,36 @@ fun ActionButton(swap: Swap, swapTruthSource: UISwapTruthSource) {
                         "Is Received"
                 ReportingPaymentReceivedState.COMPLETED -> "Reported that Payment Is Received"
                 else -> "Reporting that Payment Is Received"
+            }
+        )
+        SheetComposable(
+            isPresented = isShowingReportPaymentReceivedSheet,
+            content = { closeSheet ->
+                TransactionGasDetailsComposable(
+                    closeSheet = closeSheet,
+                    title = "Report Payment Received",
+                    buttonLabel = "Report Payment Received",
+                    buttonAction = { createdTransaction ->
+                        swapTruthSource.reportPaymentReceived(
+                            swap = swap,
+                            reportPaymentReceivedTransaction = createdTransaction,
+                        )
+                    },
+                    runOnAppearance = { reportPaymentReceivedTransaction, transactionCreationException ->
+                        if (swap.reportingPaymentReceivedState.value == ReportingPaymentReceivedState.NONE ||
+                            swap.reportingPaymentReceivedState.value == ReportingPaymentReceivedState.EXCEPTION) {
+                            swapTruthSource.createReportPaymentReceivedTransaction(
+                                swap = swap,
+                                createdTransactionHandler = { createdTransaction ->
+                                    reportPaymentReceivedTransaction.value = createdTransaction
+                                },
+                                exceptionHandler = { exception ->
+                                    transactionCreationException.value = exception
+                                }
+                            )
+                        }
+                    }
+                )
             }
         )
     } else if (swap.state.value == SwapState.AWAITING_CLOSING) {

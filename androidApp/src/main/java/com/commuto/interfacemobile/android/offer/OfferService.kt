@@ -954,10 +954,14 @@ class OfferService (
                     chainID = newSwap.chainID.toString(),
                     state = newSwap.state.value.asString,
                     role = newSwap.role.asString,
-                    reportPaymentSentState = newSwap.reportingPaymentSentState.toString(),
+                    reportPaymentSentState = newSwap.reportingPaymentSentState.value.toString(),
                     reportPaymentSentTransactionHash = null,
                     reportPaymentSentTransactionCreationTime = null,
-                    reportPaymentSentTransactionCreationBlockNumber = null
+                    reportPaymentSentTransactionCreationBlockNumber = null,
+                    reportPaymentReceivedState = newSwap.reportingPaymentReceivedState.value.toString(),
+                    reportPaymentReceivedTransactionHash = null,
+                    reportPaymentReceivedTransactionCreationTime = null,
+                    reportPaymentReceivedTransactionCreationBlockNumber = null,
                 )
                 databaseService.storeSwap(swapForDatabase)
                 afterPersistentStorage?.invoke()
@@ -1023,16 +1027,6 @@ class OfferService (
                 throw exception
             }
         }
-    }
-
-    /**
-     * Creates a [String] representation of [Date] in the form "yyyy-MM-dd'T'HH:mm'Z'" where Z indicates that this date
-     * and time stamp is in the UTC time zone.
-     */
-    private fun createDateString(date: Date): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'")
-        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-        return dateFormat.format(date)
     }
 
     /**
@@ -1126,7 +1120,7 @@ class OfferService (
                         .transactionHash} not found in offerTruthSource")
                 }
             }
-            BlockchainTransactionType.REPORT_PAYMENT_SENT -> {
+            BlockchainTransactionType.REPORT_PAYMENT_SENT, BlockchainTransactionType.REPORT_PAYMENT_RECEIVED -> {
                 throw OfferServiceException(message = "handleFailedTransaction: received a swap-related transaction " +
                         transaction.transactionHash
                 )
