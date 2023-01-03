@@ -27,7 +27,7 @@ enum ReportingPaymentSentState {
      */
     case awaitingTransactionConfirmation
     /**
-     Indicates that we have called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the corresponding swap, and that the transaction to do so has been confirmed
+     Indicates that we have called [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the corresponding swap, and that the transaction to do so has been confirmed.
      */
     case completed
     /**
@@ -36,7 +36,7 @@ enum ReportingPaymentSentState {
     case error
     
     /**
-     Returns a `String` corresponding to a particular case of `EditingOfferState`. This is primarily used for database storage.
+     Returns a `String` corresponding to a particular case of `ReportingPaymentSentState`. This is primarily used for database storage.
      */
     var asString: String {
         switch self {

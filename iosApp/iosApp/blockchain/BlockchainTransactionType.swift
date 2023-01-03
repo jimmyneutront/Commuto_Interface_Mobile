@@ -22,6 +22,10 @@ enum BlockchainTransactionType {
      Indicates that a `BlockchainTransaction` reports that payment has been sent for an offer by calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent)
      */
     case reportPaymentSent
+    /**
+     Indicates that a `BlockchainTransaction` reports that payment has been received for an offer by calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received)
+     */
+    case reportPaymentReceived
     
     /**
      A human-readable string describing an instance of this type.
@@ -34,6 +38,8 @@ enum BlockchainTransactionType {
             return "editOffer"
         case .reportPaymentSent:
             return "reportPaymentSent"
+        case .reportPaymentReceived:
+            return "reportPaymentReceived"
         }
     }
     

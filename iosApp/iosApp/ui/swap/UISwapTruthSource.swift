@@ -60,7 +60,34 @@ protocol UISwapTruthSource: SwapTruthSource, ObservableObject {
      
      - Parameter swap: The `Swap` to fill.
      */
+    @available(*, deprecated, message: "Use the new transaction pipeline with improved transaction state management")
     func reportPaymentReceived(swap: Swap)
+    
+    /**
+     Attempts to create an `EthereumTransaction` to call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for `swap`, for which the user of this interface should be the seller.
+     
+     - Parameters:
+        - swap: The `Swap` for which [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) will be called.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createReportPaymentReceivedTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the buyer.
+     
+     - Parameters:
+        - swap: The `Swap` for which [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) will be called.
+        - reportPaymentSentTransaction: An optional `EthereumTransaction` that will call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for `swap`.
+     */
+    func reportPaymentReceived(
+        swap: Swap,
+        reportPaymentReceivedTransaction: EthereumTransaction?
+    )
     
     /**
      Attempts to close a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).

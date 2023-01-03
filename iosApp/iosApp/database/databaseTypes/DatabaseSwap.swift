@@ -131,4 +131,20 @@ struct DatabaseSwap: Equatable {
      The number of the latest block at the time when the transaction with the hash specified by `reportPaymentSentTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the buyer in this swap, this may not be accurate.
      */
     let reportPaymentSentTransactionCreationBlockNumber: Int?
+    /**
+     The `reportPaymentReceivedState` property of a `Swap` as a `String`.
+     */
+    let reportPaymentReceivedState: String
+    /**
+     The hash of the transaction that called [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) `String`, or `nil` if no such transaction exists.
+     */
+    let reportPaymentReceivedTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `reportPaymentReceivedTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the seller in this swap, this may not be accurate.
+     */
+    let reportPaymentReceivedTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `reportPaymentReceivedTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the seller in this swap, this may not be accurate.
+     */
+    let reportPaymentReceivedTransactionCreationBlockNumber: Int?
 }

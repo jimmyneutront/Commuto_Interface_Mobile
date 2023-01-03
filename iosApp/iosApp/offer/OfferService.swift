@@ -850,7 +850,11 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                     reportPaymentSentState: newSwap.reportingPaymentSentState.asString,
                     reportPaymentSentTransactionHash: nil,
                     reportPaymentSentTransactionCreationTime: nil,
-                    reportPaymentSentTransactionCreationBlockNumber: nil
+                    reportPaymentSentTransactionCreationBlockNumber: nil,
+                    reportPaymentReceivedState: newSwap.reportingPaymentReceivedState.asString,
+                    reportPaymentReceivedTransactionHash: nil,
+                    reportPaymentReceivedTransactionCreationTime: nil,
+                    reportPaymentReceivedTransactionCreationBlockNumber: nil
                 )
                 try databaseService.storeSwap(swap: newSwapForDatabase)
                 if let afterPersistentStorage = afterPersistentStorage {
@@ -959,7 +963,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             }
             logger.warning("handleFailedTransaction: deleting pending settlement methods for \(offer.id.uuidString)")
             try databaseService.deletePendingOfferSettlementMethods(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID))
-        case .reportPaymentSent:
+        case .reportPaymentSent, .reportPaymentReceived:
             throw OfferServiceError.invalidValueError(desc: "handleFailedTransaction: received a swap-related transaction \(transaction.transactionHash)")
         }
     }

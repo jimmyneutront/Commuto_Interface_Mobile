@@ -452,6 +452,11 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
      */
     @State private var isShowingReportPaymentSentSheet = false
     
+    /**
+     Indicates whether we are showing the sheet that allows the user to report that they have received payment, if they are the seller.
+     */
+    @State private var isShowingReportPaymentReceivedSheet = false
+    
     var body: some View {
         if (swap.state == .awaitingFilling) && swap.role == .makerAndSeller {
             // If the swap state is awaitingFilling and we are the maker and seller, then we display the "Fill Swap" button
@@ -543,7 +548,7 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
             actionButtonBuilder(
                 action: {
                     if (swap.reportingPaymentReceivedState == .none || swap.reportingPaymentReceivedState == .error) {
-                        swapTruthSource.reportPaymentReceived(swap: swap)
+                        isShowingReportPaymentReceivedSheet = true
                     }
                 },
                 labelText: {
@@ -555,7 +560,32 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
                         return "Reporting that Payment Is Received"
                     }
                 }()
-            )
+            ).sheet(isPresented: $isShowingReportPaymentReceivedSheet, content: {
+                TransactionGasDetailsView(
+                    isShowingSheet: $isShowingReportPaymentReceivedSheet,
+                    title: "Report Payment Received",
+                    buttonLabel: "Report Payment Received",
+                    buttonAction: { createdTransaction in
+                        swapTruthSource.reportPaymentReceived(
+                            swap: swap,
+                            reportPaymentReceivedTransaction: createdTransaction
+                        )
+                    },
+                    runOnAppearance: { reportPaymentReceivedTransactionBinding, transactionCreationErrorBinding in
+                        if swap.reportingPaymentReceivedState == .none || swap.reportingPaymentReceivedState == .error {
+                            swapTruthSource.createReportPaymentReceivedTransaction(
+                                swap: swap,
+                                createdTransactionHandler: { createdTransaction in
+                                    reportPaymentReceivedTransactionBinding.wrappedValue = createdTransaction
+                                },
+                                errorHandler: { error in
+                                    transactionCreationErrorBinding.wrappedValue = error
+                                }
+                            )
+                        }
+                    }
+                )
+            })
         } else if swap.state == .awaitingClosing {
             // We can now close the swap, so we display the "Close Swap" button
             if swap.closingSwapState != .none && swap.closingSwapState != .error {
