@@ -962,6 +962,10 @@ class OfferService (
                     reportPaymentReceivedTransactionHash = null,
                     reportPaymentReceivedTransactionCreationTime = null,
                     reportPaymentReceivedTransactionCreationBlockNumber = null,
+                    closeSwapState = newSwap.closingSwapState.value.toString(),
+                    closeSwapTransactionHash = null,
+                    closeSwapTransactionCreationTime = null,
+                    closeSwapTransactionCreationBlockNumber = null,
                 )
                 databaseService.storeSwap(swapForDatabase)
                 afterPersistentStorage?.invoke()
@@ -1120,7 +1124,8 @@ class OfferService (
                         .transactionHash} not found in offerTruthSource")
                 }
             }
-            BlockchainTransactionType.REPORT_PAYMENT_SENT, BlockchainTransactionType.REPORT_PAYMENT_RECEIVED -> {
+            BlockchainTransactionType.REPORT_PAYMENT_SENT, BlockchainTransactionType.REPORT_PAYMENT_RECEIVED,
+            BlockchainTransactionType.CLOSE_SWAP -> {
                 throw OfferServiceException(message = "handleFailedTransaction: received a swap-related transaction " +
                         transaction.transactionHash
                 )

@@ -49,8 +49,8 @@ enum class ReportingPaymentReceivedState {
         get() = when (this) {
             // Note: This should not be used.
             NONE -> "Press Report Payment Received to report that you have received payment"
-            VALIDATING -> "Checking that payment sending can be reported..."
-            SENDING_TRANSACTION -> "Reporting that payment is sent..."
+            VALIDATING -> "Checking that payment receiving can be reported..."
+            SENDING_TRANSACTION -> "Reporting that payment is received..."
             AWAITING_TRANSACTION_CONFIRMATION -> "Waiting for confirmation..."
             COMPLETED -> "Successfully reported that payment is received."
             // Note: This should not be used; instead, the actual exception message should be displayed.
