@@ -466,7 +466,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         let anotherSwapToStore = DatabaseSwap(
@@ -504,7 +508,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         // This should do nothing and not throw
         try dbService.storeSwap(swap: anotherSwapToStore)
@@ -555,7 +563,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapRequiresFill(swapID: "a_uuid", chainID: "chain_id", requiresFill: false)
@@ -601,7 +613,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapMakerPrivateSettlementMethodData(swapID: "a_uuid", chainID: "chain_id", data: "new_maker_private_data")
@@ -647,7 +663,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapTakerPrivateSettlementMethodData(swapID: "a_uuid", chainID: "chain_id", data: "new_taker_private_data")
@@ -693,7 +713,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapIsPaymentSent(swapID: "a_uuid", chainID: "chain_id", isPaymentSent: true)
@@ -739,7 +763,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapIsPaymentReceived(swapID: "a_uuid", chainID: "chain_id", isPaymentReceived: true)
@@ -785,7 +813,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapHasBuyerClosed(swapID: "a_uuid", chainID: "chain_id", hasBuyerClosed: true)
@@ -831,7 +863,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapHasSellerClosed(swapID: "a_uuid", chainID: "chain_id", hasSellerClosed: true)
@@ -877,7 +913,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateSwapState(swapID: "a_uuid", chainID: "chain_id", state: "a_new_state_here")
@@ -924,7 +964,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateReportPaymentSentState(swapID: "a_uuid", _chainID: "chain_id", state: "a_new_reportingPaymentSentState_here")
@@ -971,7 +1015,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateReportPaymentSentData(swapID: "a_uuid", _chainID: "chain_id", transactionHash: "a_tx_hash_here", transactionCreationTime: "a_time_here", latestBlockNumberAtCreationTime: -1)
@@ -1020,7 +1068,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "an_outdated_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: "a_tx_hash_here",
             reportPaymentReceivedTransactionCreationTime: "a_time_here",
-            reportPaymentReceivedTransactionCreationBlockNumber: -1
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateReportPaymentReceivedState(swapID: "a_uuid", _chainID: "chain_id", state: "a_new_reportingPaymentReceivedState_here")
@@ -1067,7 +1119,11 @@ class DatabaseServiceTests: XCTestCase {
             reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
             reportPaymentReceivedTransactionHash: nil,
             reportPaymentReceivedTransactionCreationTime: nil,
-            reportPaymentReceivedTransactionCreationBlockNumber: nil
+            reportPaymentReceivedTransactionCreationBlockNumber: nil,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
         )
         try dbService.storeSwap(swap: swapToStore)
         try dbService.updateReportPaymentReceivedData(swapID: "a_uuid", _chainID: "chain_id", transactionHash: "a_tx_hash_here", transactionCreationTime: "a_time_here", latestBlockNumberAtCreationTime: -1)
@@ -1075,6 +1131,110 @@ class DatabaseServiceTests: XCTestCase {
         XCTAssertEqual("a_tx_hash_here", returnedSwapAfterUpdate!.reportPaymentReceivedTransactionHash)
         XCTAssertEqual("a_time_here", returnedSwapAfterUpdate!.reportPaymentReceivedTransactionCreationTime)
         XCTAssertEqual(-1, returnedSwapAfterUpdate!.reportPaymentReceivedTransactionCreationBlockNumber)
+    }
+    
+    /**
+     Ensures that code to update a persistently stored swap's `Swap.closeSwapState` property works properly.
+     */
+    func testUpdateCloseSwapState() throws {
+        let swapToStore = DatabaseSwap(
+            id: "a_uuid",
+            isCreated: true,
+            requiresFill: false,
+            maker: "maker_address",
+            makerInterfaceID: "maker_interface_id",
+            taker: "taker_address",
+            takerInterfaceID: "taker_interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            takenSwapAmount: "taken_swap_amount",
+            serviceFeeAmount: "service_fee_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            onChainSettlementMethod: "settlement_method",
+            makerPrivateSettlementMethodData: "maker_private_data",
+            takerPrivateSettlementMethodData: "taker_private_data",
+            protocolVersion: "some_version",
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "dispute_raiser",
+            chainID: "chain_id",
+            state: "a_state_here",
+            role: "a_role_here",
+            reportPaymentSentState: "a_reportingPaymentSentState_here",
+            reportPaymentSentTransactionHash: "a_tx_hash_here",
+            reportPaymentSentTransactionCreationTime: "a_time_here",
+            reportPaymentSentTransactionCreationBlockNumber: -1,
+            reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash: "a_tx_hash_here",
+            reportPaymentReceivedTransactionCreationTime: "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "an_outdated_closeSwapState_here",
+            closeSwapTransactionHash: "a_tx_hash_here",
+            closeSwapTransactionCreationTime: "a_time_here",
+            closeSwapTransactionCreationBlockNumber: -1
+        )
+        try dbService.storeSwap(swap: swapToStore)
+        try dbService.updateCloseSwapState(swapID: "a_uuid", _chainID: "chain_id", state: "a_new_closeSwapState_here")
+        let returnedSwap = try dbService.getSwap(id: "a_uuid")
+        XCTAssertEqual(returnedSwap!.closeSwapState, "a_new_closeSwapState_here")
+    }
+    
+    /**
+     Ensures that code to update a persistently stored swap's `Swap.closeSwapTransactionHash`, `Swap.closeSwapTransactionCreationTime` and `Swap.closeSwapTransactionCreationBlockNumber`  properties work properly.
+     */
+    func testUpdateCloseSwapData() throws {
+        let swapToStore = DatabaseSwap(
+            id: "a_uuid",
+            isCreated: true,
+            requiresFill: false,
+            maker: "maker_address",
+            makerInterfaceID: "maker_interface_id",
+            taker: "taker_address",
+            takerInterfaceID: "taker_interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            takenSwapAmount: "taken_swap_amount",
+            serviceFeeAmount: "service_fee_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            onChainSettlementMethod: "settlement_method",
+            makerPrivateSettlementMethodData: "maker_private_data",
+            takerPrivateSettlementMethodData: "taker_private_data",
+            protocolVersion: "some_version",
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: "dispute_raiser",
+            chainID: "chain_id",
+            state: "a_state_here",
+            role: "a_role_here",
+            reportPaymentSentState: "a_reportingPaymentSentState_here",
+            reportPaymentSentTransactionHash: "a_tx_hash_here",
+            reportPaymentSentTransactionCreationTime: "a_time_here",
+            reportPaymentSentTransactionCreationBlockNumber: -1,
+            reportPaymentReceivedState: "a_reportingPaymentReceivedState_here",
+            reportPaymentReceivedTransactionHash: "a_new_closeSwapState_here",
+            reportPaymentReceivedTransactionCreationTime: "a_time_here",
+            reportPaymentReceivedTransactionCreationBlockNumber: -1,
+            closeSwapState: "a_closeSwapState_here",
+            closeSwapTransactionHash: nil,
+            closeSwapTransactionCreationTime: nil,
+            closeSwapTransactionCreationBlockNumber: nil
+        )
+        try dbService.storeSwap(swap: swapToStore)
+        try dbService.updateCloseSwapData(swapID: "a_uuid", _chainID: "chain_id", transactionHash: "a_tx_hash_here", transactionCreationTime: "a_time_here", latestBlockNumberAtCreationTime: -1)
+        let returnedSwapAfterUpdate = try dbService.getSwap(id: "a_uuid")
+        XCTAssertEqual("a_tx_hash_here", returnedSwapAfterUpdate!.closeSwapTransactionHash)
+        XCTAssertEqual("a_time_here", returnedSwapAfterUpdate!.closeSwapTransactionCreationTime)
+        XCTAssertEqual(-1, returnedSwapAfterUpdate!.closeSwapTransactionCreationBlockNumber)
     }
     
     /**

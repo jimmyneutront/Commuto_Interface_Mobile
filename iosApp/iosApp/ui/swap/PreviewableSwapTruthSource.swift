@@ -48,6 +48,11 @@ class PreviewableSwapTruthSource: UISwapTruthSource {
     /**
      Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
      */
+    func reportPaymentReceived(swap: Swap) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
+     */
     func createReportPaymentReceivedTransaction(swap: Swap, createdTransactionHandler: @escaping (EthereumTransaction) -> Void, errorHandler: @escaping (Error) -> Void ) {}
 
     /**
@@ -58,10 +63,16 @@ class PreviewableSwapTruthSource: UISwapTruthSource {
     /**
      Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
      */
-    func reportPaymentReceived(swap: Swap) {}
+    func closeSwap(swap: Swap) {}
     
     /**
      Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
      */
-    func closeSwap(swap: Swap) {}
+    func createCloseSwapTransaction(swap: Swap, createdTransactionHandler: @escaping (EthereumTransaction) -> Void, errorHandler: @escaping (Error) -> Void ) {}
+
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UISwapTruthSource`.
+     */
+    func closeSwap(swap: Swap, closeSwapTransaction: EthereumTransaction?) {}
+    
 }

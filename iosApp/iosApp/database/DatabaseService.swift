@@ -294,7 +294,22 @@ class DatabaseService {
      A database structure representing the latest block number at creation time of a transaction that called [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for a swap involving user of this interface. This may not be accurate for swaps in which the user is the buyer.
      */
     let reportPaymentReceivedTransactionCreationBlockNumber = Expression<Int?>("reportPaymentReceivedTransactionCreationBlockNumber")
-    
+    /**
+     A database structure representing an `Swap`'s `closeSwapState` property.
+     */
+    let closeSwapState = Expression<String>("closeSwapState")
+    /**
+     A database structure representing the hash of the transaction (signed by the user of this interface) that called [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a swap involving user of this interface.
+     */
+    let closeSwapTransactionHash = Expression<String?>("closeSwapTransactionHash")
+    /**
+     A database structure representing the creation time of the transaction (signed by the user of this interface) that called [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a swap involving user of this interface.
+     */
+    let closeSwapTransactionCreationTime = Expression<String?>("closeSwapTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of the transaction (signed by the user of this interface) that called [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a swap involving user of this interface.
+     */
+    let closeSwapTransactionCreationBlockNumber = Expression<Int?>("closeSwapTransactionCreationBlockNumber")
     
     /**
      A database structure representing the ID of a settlement method, as a Type 4 UUID string.
@@ -392,6 +407,10 @@ class DatabaseService {
             t.column(reportPaymentReceivedTransactionHash)
             t.column(reportPaymentReceivedTransactionCreationTime)
             t.column(reportPaymentReceivedTransactionCreationBlockNumber)
+            t.column(closeSwapState)
+            t.column(closeSwapTransactionHash)
+            t.column(closeSwapTransactionCreationTime)
+            t.column(closeSwapTransactionCreationBlockNumber)
         })
         try connection.run(userSettlementMethods.create { t in
             t.column(settlementMethodID, unique: true)
@@ -1014,7 +1033,11 @@ class DatabaseService {
                     reportPaymentReceivedState <- swap.reportPaymentReceivedState,
                     reportPaymentReceivedTransactionHash <- swap.reportPaymentReceivedTransactionCreationTime,
                     reportPaymentReceivedTransactionCreationTime <- swap.reportPaymentReceivedTransactionCreationTime,
-                    reportPaymentReceivedTransactionCreationBlockNumber <- swap.reportPaymentReceivedTransactionCreationBlockNumber
+                    reportPaymentReceivedTransactionCreationBlockNumber <- swap.reportPaymentReceivedTransactionCreationBlockNumber,
+                    closeSwapState <- swap.closeSwapState,
+                    closeSwapTransactionHash <- swap.closeSwapTransactionCreationTime,
+                    closeSwapTransactionCreationTime <- swap.closeSwapTransactionCreationTime,
+                    closeSwapTransactionCreationBlockNumber <- swap.closeSwapTransactionCreationBlockNumber
                 ))
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Swap.id" {
                 // A swap with the specified ID already exists in the database, so we do nothing
@@ -1216,6 +1239,43 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseSwap`'s `closeSwapState` field.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `closeSwapState` field.
+     */
+    func updateCloseSwapState(swapID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(closeSwapState <- state))
+        }
+        logger.notice("updateCloseSwapState: set value to \(state) for swap with B64 ID \(swapID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseSwap`'s `closeSwapTransactionHash`, `closeSwapTransactionCreationTime`, and `closeSwapTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `closeSwapTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `closeSwapTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `closeSwapTransactionCreationBlockNumber` field.
+     */
+    func updateCloseSwapData(swapID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID)
+                .update(
+                    closeSwapTransactionHash <- transactionHash,
+                    closeSwapTransactionCreationTime <- transactionCreationTime,
+                    closeSwapTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateCloseSwapData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for swap with B64 ID \(swapID), if present")
+    }
+    
+    /**
      Removes every `DatabaseSwap` with a swapID equal to `swapID` and a chain ID equal to `chainID` from persistent storage.
      
      - Parameters:
@@ -1293,7 +1353,11 @@ class DatabaseService {
                 reportPaymentReceivedState: result[0][reportPaymentReceivedState],
                 reportPaymentReceivedTransactionHash: result[0][reportPaymentReceivedTransactionHash],
                 reportPaymentReceivedTransactionCreationTime: result[0][reportPaymentReceivedTransactionCreationTime],
-                reportPaymentReceivedTransactionCreationBlockNumber: result[0][reportPaymentReceivedTransactionCreationBlockNumber]
+                reportPaymentReceivedTransactionCreationBlockNumber: result[0][reportPaymentReceivedTransactionCreationBlockNumber],
+                closeSwapState: result[0][closeSwapState],
+                closeSwapTransactionHash: result[0][closeSwapTransactionHash],
+                closeSwapTransactionCreationTime: result[0][closeSwapTransactionCreationTime],
+                closeSwapTransactionCreationBlockNumber: result[0][closeSwapTransactionCreationBlockNumber]
             )
         } else {
             logger.notice("getSwap: no swap found with B64 ID \(_id)")

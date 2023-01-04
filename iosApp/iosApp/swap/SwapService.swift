@@ -581,11 +581,119 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
+     Attempts to create an `EthereumTransaction` that will call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) involving the user of this interface, with the ID specified by `swapID` and on the blockchain specified by `chainID`.
+     
+     On the global `DispatchQueue`, this calls `BlockchainService.createCloseSwapTransaction`, passing `swapID` and `chainID`, and pipes the result to the seal of the `Promise` this returns.
+     
+     - Parameters:
+        - swapID: The ID of the `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
+        - chainID: The ID of the blockchain on which the `Swap` exists.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for the swap specified by `swapID` on the blockchain specified by `chainID`.
+     
+     - Throws: An `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func createCloseSwapTransaction(swapID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createCloseSwapTransaction: creating for \(swapID.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during createCloseSwapTransaction call"))
+                    return
+                }
+                blockchainService.createCloseSwapTransaction(swapID: swapID, chainID: chainID).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
+     Attempts to call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) involving the user of this interface.
+     
+     On the global `DispatchQueue`, this ensures that [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is not currently being called or has not already been called by the user for `swap`, that calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is currently possible for `swap`, and that `closeSwapTransaction` is not `nil`. Then it signs `closeSwapTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Swap.closeSwapState` of `swap` to `CloseSwapState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.closeSwapState` property to `CloseSwapState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `closeSwapTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.closeSwapState` of `swap` to `CloseSwapState.awaitingTransactionConfirmation` and persistently updates the `Swap.state` property of `swap` to `SwapState.closeSwapTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.closeSwapState` to `CloseSwapState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.state` to `SwapState.closeSwapTransactionBroadcast`.
+     
+     - Parameters:
+        - swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
+        - reportPaymentReceivedTransaction: An optional `EthereumTransaction` that can call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for `swap`.
+     
+     - Returns: An empty `Promise` that will be fulfilled when [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is called for `swap`.
+     
+     - Throws: A `SwapServiceError.transactionWillRevertError` if [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is currently being called for `swap`, or if the state of `swap` is not `SwapState.awaitingClosing`, or an `SwapServiceError.unexpectedNilError` if `closeSwapTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func closeSwap(swap: Swap, closeSwapTransaction: EthereumTransaction?) -> Promise<Void> {
+        return Promise { seal in
+            Promise<(BlockchainTransaction, BlockchainService)> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("closeSwap: checking closing is possible for \(swap.id.uuidString)")
+                    guard (swap.closingSwapState == .none || swap.closingSwapState == .validating || swap.closingSwapState == .error) else {
+                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "This Swap is already being closed."))
+                        return
+                    }
+                    // Ensure that this swap is awaiting closing
+                    guard swap.state == .awaitingClosing else {
+                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "This Swap cannot currently be closed."))
+                        return
+                    }
+                    do {
+                        guard var closeSwapTransaction = closeSwapTransaction else {
+                            throw SwapServiceError.unexpectedNilError(desc: "Transaction was nil during closeSwap call for \(swap.id.uuidString)")
+                        }
+                        guard let blockchainService = blockchainService else {
+                            throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during closeSwap call for \(swap.id.uuidString)")
+                        }
+                        logger.notice("closeSwap: signing transaction for \(swap.id.uuidString)")
+                        try blockchainService.signTransaction(&closeSwapTransaction)
+                        let blockchainTransactionForClosingSwap = try BlockchainTransaction(transaction: closeSwapTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .closeSwap)
+                        let dateString = DateFormatter.createDateString(blockchainTransactionForClosingSwap.timeOfCreation)
+                        logger.notice("closeSwap: persistently storing close swap data for \(swap.id.uuidString), including tx hash \(blockchainTransactionForClosingSwap.transactionHash)")
+                        try databaseService.updateCloseSwapData(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), transactionHash: blockchainTransactionForClosingSwap.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForClosingSwap.latestBlockNumberAtCreation))
+                        logger.notice("closeSwap: persistently updating closeSwapState for \(swap.id.uuidString) to sendingTransaction")
+                        try databaseService.updateCloseSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ClosingSwapState.sendingTransaction.asString)
+                        logger.notice("closeSwap: updating closeSwapState for \(swap.id.uuidString) to sendingTransaction and storing tx hash \(blockchainTransactionForClosingSwap.transactionHash) in swap")
+                        seal.fulfill((blockchainTransactionForClosingSwap, blockchainService))
+                    } catch {
+                        seal.reject(error)
+                    }
+                }
+            }.get(on: DispatchQueue.main) { closeSwapTransaction, _ in
+                swap.closingSwapState = .sendingTransaction
+                swap.closeSwapTransaction = closeSwapTransaction
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { closeSwapTransaction, blockchainService -> Promise<TransactionSendingResult> in
+                self.logger.notice("closeSwap: sending \(closeSwapTransaction.transactionHash) for \(swap.id.uuidString)")
+                return blockchainService.sendTransaction(closeSwapTransaction)
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("closeSwap: persistently updating closeingSwapState of \(swap.id.uuidString) to awaitingTransactionConfirmation")
+                try databaseService.updateCloseSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ClosingSwapState.awaitingTransactionConfirmation.asString)
+                logger.notice("closeSwap: persistently updating state of \(swap.id.uuidString) to closeSwapTransactionBroadcast")
+                try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.closeSwapTransactionBroadcast.asString)
+                logger.notice("closeSwap: updating closingSwapStateState for \(swap.id.uuidString) to awaitingTransactionConfirmation and state to closeSwapTransactionBroadcast")
+            }.get(on: DispatchQueue.main) { _ in
+                swap.closingSwapState = .awaitingTransactionConfirmation
+                swap.state = .closeSwapTransactionBroadcast
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("closeSwap: encountered error while closing \(swap.id.uuidString), setting closingSwapState to error: \(error.localizedDescription)")
+                // It's OK that we don't handle database errors here, because if such an error occurs and the closing swap state isn't updated to error, then when the app restarts, we will check the closing swap transaction, and discover and handle the error then.
+                do {
+                    try databaseService.updateCloseSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ClosingSwapState.error.asString)
+                } catch {}
+                swap.closingSwapError = error
+                DispatchQueue.main.async {
+                    swap.closingSwapState = .error
+                }
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
      The function called by `BlockchainService` in order to notify `SwapService` that a monitored swap-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
      
      If `transaction` is of type `BlockchainTransactionType.reportPaymentSent`, then this finds the swap with the corresponding reporting payment sent transaction hash, persistently updates its reporting payment sent state to `ReportingPaymentSentState.error` and its state to `SwapState.awaitingPaymentSent`, and on the main `DispatchQueue` sets its `Swap.reportingPaymentSentError` to `error`, updates its `Swap.reportingPaymentSentState` property to `ReportingPaymentSentState.error`, and updates its `Swap.state` property to `SwapState.awaitingPaymentSent`.
      
      If `transaction` is of type `BlockchainTransactionType.reportPaymentReceived`, then this finds the swap with the corresponding reporting payment received transaction hash, persistently updates its reporting payment received state to `ReportingPaymentReceivedState.error` and its state to `SwapState.awaitingPaymentReceived`, and on the main `DispatchQueue` sets its `Swap.reportingPaymentReceivedError` to `error`, updates its `Swap.reportingPaymentReceivedState` property to `ReportingPaymentReceivedState.error`, and updates its `Swap.state` property to `SwapState.awaitingPaymentReceived`.
+     
+     If `transaction` is of type `BlockchainTransactionType.closeSwap`, then this finds the swap with the corresponding close swap transaction hash, persistently updates its closing swap state to `ClosingSwapState.error` and its state to `SwapState.awaitingClosing`, and on the main `DispatchQueue` sets its `Swap.closingSwapError` to `error`, updates its `Swap.closingSwapState` property to `ClosingSwapState.error`, and updates its `Swap.state` property to `SwapState.awaitingClosing`.
      
      - Parameters:
         - transaction: The `BlockchainTransaction` wrapping the on-chain transaction that has failed.
@@ -632,6 +740,22 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
                 swap.reportingPaymentReceivedError = error
                 swap.reportingPaymentReceivedState = .error
                 swap.state = .awaitingPaymentReceived
+            }
+        case .closeSwap:
+            guard let swap = swapTruthSource.swaps.first(where: { id, swap in
+                swap.closeSwapTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: swap with close swap transaction \(transaction.transactionHash) not found in swapTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found swap \(swap.id.uuidString) on \(swap.chainID) with close swap transaction \(transaction.transactionHash), updating closingSwapState to error and state to awaitingClosing in persistent storage")
+            try databaseService.updateCloseSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: ClosingSwapState.error.asString)
+            try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingClosing.asString)
+            logger.warning("handleFailedTransaction: setting closingSwapError, updating closingSwapState to error and state to awaitingClosing for \(swap.id.uuidString)")
+            DispatchQueue.main.sync {
+                swap.closingSwapError = error
+                swap.closingSwapState = .error
+                swap.state = .awaitingClosing
             }
         }
     }
@@ -747,7 +871,11 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             reportPaymentReceivedState: newSwap.reportingPaymentReceivedState.asString,
             reportPaymentReceivedTransactionHash: nil,
             reportPaymentReceivedTransactionCreationTime: nil,
-            reportPaymentReceivedTransactionCreationBlockNumber: nil
+            reportPaymentReceivedTransactionCreationBlockNumber: nil,
+            closeSwapState: newSwap.closingSwapState.asString,
+            closeSwapTransactionHash: nil,
+            closeSwapTransactionCreationTime: nil,
+            closeSwapTransactionCreationBlockNumber: nil
         )
         try databaseService.storeSwap(swap: newSwapForDatabase)
         // Add new Swap to swapTruthSource
@@ -1007,7 +1135,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      The function called by  `BlockchainService` to notify `SwapService` of a `PaymentReceivedEvent`.
      
-     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a `Swap`, it ensures that the chain ID of the `Swap` and the chain ID of `event` match. Then it checks whether the user is the seller in the `Swap`. If the user is, then this checks if the swap has a non-`nil` transaction for calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received). If it does, then this compares the hash of that transaction and the transaction hash contained in `event` If the two do not match, this sets a flag indicating that the reporting payment received transaction must be updated. If the swap does not have such a transaction, this flag is also set. If the user is not the buyer in the `Swap`, this flag is also set. If this flag is set, then this updates the `Swap`, both in `swapTruthSource` and in persistent storage, with a new `BlockchainTransaction` containing the hash specified in `event`. Then, regardless of whether this flag is set, this persistently sets the `Swap.isPaymentReceived` property of the `Swap` to `true`, persistently updates the `Swap.state` property of the `Swap` to `SwapState.awaitingPaymentReceived`, and then, on the main `DispatchQueue`, sets the `Swap.isPaymentSent` property of the `Swap` to `true` and sets the `Swap.state` property of the `Swap` to `SwapState.awaitingClosing`. Then, no longer on the main `DispatchQueue`, if the user is the buyer in this `Swap`, this updates the `Swap.reportingPaymentReceivedState` of the `Swap` to `ReportingPaymentReceivedState.completed`, both in persistent storage and in the `Swap` itself.
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a `Swap`, it ensures that the chain ID of the `Swap` and the chain ID of `event` match. Then it checks whether the user is the seller in the `Swap`. If the user is, then this checks if the swap has a non-`nil` transaction for calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received). If it does, then this compares the hash of that transaction and the transaction hash contained in `event` If the two do not match, this sets a flag indicating that the reporting payment received transaction must be updated. If the swap does not have such a transaction, this flag is also set. If the user is not the buyer in the `Swap`, this flag is also set. If this flag is set, then this updates the `Swap`, both in `swapTruthSource` and in persistent storage, with a new `BlockchainTransaction` containing the hash specified in `event`. Then, regardless of whether this flag is set, this persistently sets the `Swap.isPaymentReceived` property of the `Swap` to `true`, persistently updates the `Swap.state` property of the `Swap` to `SwapState.awaitingClosing`, and then, on the main `DispatchQueue`, sets the `Swap.isPaymentSent` property of the `Swap` to `true` and sets the `Swap.state` property of the `Swap` to `SwapState.awaitingClosing`. Then, no longer on the main `DispatchQueue`, if the user is the buyer in this `Swap`, this updates the `Swap.reportingPaymentReceivedState` of the `Swap` to `ReportingPaymentReceivedState.completed`, both in persistent storage and in the `Swap` itself.
      
      - Parameter event: The `PaymentReceivedEvent` of which `SwapService` is being notified.
      
@@ -1075,7 +1203,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      The function called by  `BlockchainService` to notify `SwapService` of a `BuyerClosedEvent`.
      
-     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the chain ID of the swap and the chain ID of `event` match. Then it persistently sets the swap's `hasBuyerClosed` field to `true` and does the same to the `Swap` object. If the user of this interface is the buyer for the swap specified by `id`, this persistently sets the swaps state to `closed`, and does the same to the `Swap` object on the main `DispatchQueue`.
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a `Swap`, it ensures that the chain ID of the `Swap` and the chain ID of `event` match. Then it checks whether the user is the buyer in the `Swap`. If the user is, then this checks if the swap has a non-`nil` transaction for calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap). If it does, then this compares the hash of that transaction and the transaction hash contained in `event` If the two do not match, this sets a flag indicating that the swap closing transaction must be updated. If the swap does not have such a transaction, this flag is also set. If this flag is set, then this updates the `Swap`, both in `swapTruthSource` and in persistent storage, with a new `BlockchainTransaction` containing the hash specified in `event`. Then, regardless of whether this flag is set, this persistently updates the `Swap.state` property of the `Swap` to `SwapState.closed`, on the main `DispatchQueue` sets the `Swap.state` property of the `Swap` to `SwapState.closed`, persistently updates the `Swap.closingSwapState` of the `Swap` to `ClosingSwapState.completed`, on the main `DispatchQueue` sets the `Swap.closingSwapState` property of the `Swap` to `ClosingSwapState.completed`. Then, regardless of whether the user of this interface is the buyer or seller, this persistently updates the `Swap.hasBuyerClosed` property of the `Swap` to `true`, and then on the main `DispatchQueue` sets the `Swap.hasBuyerClosed` property to `true`.
      
      - Parameter event: The `BuyerClosedEvent` of which `SwapService` is being notified.
      
@@ -1090,17 +1218,49 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             if swap.chainID != event.chainID {
                 throw SwapServiceError.nonmatchingChainIDError(desc: "Chain ID of BuyerClosedEvent did not match chain ID of Swap in BuyerClosedEvent call. BuyerClosedEvent.chainID: \(String(event.chainID)), Swap.chainID: \(String(swap.chainID)), BuyerClosedEvent.id: \(event.id.uuidString)")
             }
-            // At this point, we have ensured that the chain ID of the event and the swap match, so we can proceed safely
-            let swapIDB64String = event.id.asData().base64EncodedString()
-            try databaseService.updateSwapHasBuyerClosed(swapID: swapIDB64String, chainID: String(event.chainID), hasBuyerClosed: true)
-            swap.hasBuyerClosed = true
-            // If the user of this interface is the buyer, than this is their BuyerClosed event. Therefore we should update the state of the swap to show that the user has closed it.
             if swap.role == .makerAndBuyer || swap.role == .takerAndBuyer {
-                logger.notice("handleBuyerClosedEvent: setting state of \(event.id.uuidString) to closed")
-                try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.closed.asString)
-                DispatchQueue.main.async {
+                logger.notice("handleBuyerClosedEvent: user is buyer for \(event.id.uuidString)")
+                var mustUpdateCloseSwapTransaction = false
+                if let closeSwapTransaction = swap.closeSwapTransaction {
+                    if closeSwapTransaction.transactionHash == event.transactionHash {
+                        logger.notice("handleBuyerClosedEvent: tx hash \(event.transactionHash) of event matches that for swap \(swap.id.uuidString): \(closeSwapTransaction.transactionHash)")
+                    } else {
+                        logger.warning("handleBuyerClosedEvent: tx hash \(event.transactionHash) of event does not match that for swap \(event.id.uuidString): \(closeSwapTransaction.transactionHash)")
+                        mustUpdateCloseSwapTransaction = true
+                    }
+                } else {
+                    logger.warning("handleBuyerClosedEvent: swap \(event.id.uuidString) for which user is buyer has no closing swap transaction, updating with transaction hash \(event.transactionHash)")
+                    mustUpdateCloseSwapTransaction = true
+                }
+                if mustUpdateCloseSwapTransaction {
+                    let closeSwapTransaction = BlockchainTransaction(transactionHash: event.transactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .closeSwap)
+                    DispatchQueue.main.sync {
+                        swap.closeSwapTransaction = closeSwapTransaction
+                    }
+                    logger.info("handleBuyerClosedEvent: persistently storing tx data, including hash \(event.transactionHash) for \(event.id.uuidString)")
+                    let dateString = DateFormatter.createDateString(closeSwapTransaction.timeOfCreation)
+                    try databaseService.updateCloseSwapData(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), transactionHash: closeSwapTransaction.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(closeSwapTransaction.latestBlockNumberAtCreation))
+                }
+                logger.notice("handleBuyerClosedEvent: persistently updating state of \(event.id.uuidString) to \(SwapState.closed.asString)")
+                try databaseService.updateSwapState(swapID: event.id.asData().base64EncodedString(), chainID: String(event.chainID), state: SwapState.closed.asString)
+                logger.notice("handleBuyerClosedEvent: setting state of \(event.id.uuidString) to \(SwapState.closed.asString)")
+                DispatchQueue.main.sync {
                     swap.state = .closed
                 }
+                logger.notice("handleBuyerClosedEvent: user is buyer for \(event.id.uuidString) so persistently updating closingSwapState to \(ClosingSwapState.completed.asString)")
+                try databaseService.updateCloseSwapState(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: ClosingSwapState.completed.asString)
+                logger.notice("handleBuyerClosedEvent: updating closingSwapState to \(ClosingSwapState.completed.asString)")
+                DispatchQueue.main.sync {
+                    swap.closingSwapState = .completed
+                }
+            } else {
+                logger.info("handleBuyerClosedEvent: user is seller for \(event.id.uuidString)")
+            }
+            logger.notice("handleBuyerClosedEvent: persistently setting hasBuyerClosed property of \(event.id.uuidString) to true")
+            try databaseService.updateSwapHasBuyerClosed(swapID: event.id.asData().base64EncodedString(), chainID: String(event.chainID), hasBuyerClosed: true)
+            logger.notice("handleBuyerClosedEvent: setting hasBuyerClosed property of \(event.id.uuidString) to true")
+            DispatchQueue.main.sync {
+                swap.hasBuyerClosed = true
             }
         } else {
             logger.notice("handleBuyerClosedEvent: got event for \(event.id.uuidString) which was not found in swapTruthSource")
@@ -1110,7 +1270,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      The function called by  `BlockchainService` to notify `SwapService` of a `SellerClosedEvent`.
      
-     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the chain ID of the swap and the chain ID of `event` match. Then it persistently sets the swap's `hasSellerClosed` field to `true` and does the same to the `Swap` object. If the user of this interface is the seller for the swap specified by `id`, this persistently sets the swaps state to `closed`, and does the same to the `Swap` object on the main `DispatchQueue`.
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a `Swap`, it ensures that the chain ID of the `Swap` and the chain ID of `event` match. Then it checks whether the user is the seller in the `Swap`. If the user is, then this checks if the swap has a non-`nil` transaction for calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap). If it does, then this compares the hash of that transaction and the transaction hash contained in `event` If the two do not match, this sets a flag indicating that the swap closing transaction must be updated. If the swap does not have such a transaction, this flag is also set. If this flag is set, then this updates the `Swap`, both in `swapTruthSource` and in persistent storage, with a new `BlockchainTransaction` containing the hash specified in `event`. Then, regardless of whether this flag is set, this persistently updates the `Swap.state` property of the `Swap` to `SwapState.closed`, on the main `DispatchQueue` sets the `Swap.state` property of the `Swap` to `SwapState.closed`, persistently updates the `Swap.closingSwapState` of the `Swap` to `ClosingSwapState.completed`, on the main `DispatchQueue` sets the `Swap.closingSwapState` property of the `Swap` to `ClosingSwapState.completed`. Then, regardless of whether the user of this interface is the buyer or seller, this persistently updates the `Swap.hasSellerClosed` property of the `Swap` to `true`, and then on the main `DispatchQueue` sets the `Swap.hasSellerClosed` property to `true`.
      
      - Parameter event: The `SellerClosedEvent` of which `SwapService` is being notified.
      
@@ -1125,17 +1285,49 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             if swap.chainID != event.chainID {
                 throw SwapServiceError.nonmatchingChainIDError(desc: "Chain ID of SellerClosedEvent did not match chain ID of Swap in SellerClosedEvent call. SellerClosedEvent.chainID: \(String(event.chainID)), Swap.chainID: \(String(swap.chainID)), SellerClosedEvent.id: \(event.id.uuidString)")
             }
-            // At this point, we have ensured that the chain ID of the event and the swap match, so we can proceed safely
-            let swapIDB64String = event.id.asData().base64EncodedString()
-            try databaseService.updateSwapHasSellerClosed(swapID: swapIDB64String, chainID: String(event.chainID), hasSellerClosed: true)
-            swap.hasSellerClosed = true
-            // If the user of this interface is the seller, than this is their SellerClosed event. Therefore we should update the state of the swap to show that the user has closed it.
             if swap.role == .makerAndSeller || swap.role == .takerAndSeller {
-                logger.notice("handleSellerClosedEvent: setting state of \(event.id.uuidString) to closed")
-                try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.closed.asString)
-                DispatchQueue.main.async {
+                logger.notice("handleSellerClosedEvent: user is seller for \(event.id.uuidString)")
+                var mustUpdateCloseSwapTransaction = false
+                if let closeSwapTransaction = swap.closeSwapTransaction {
+                    if closeSwapTransaction.transactionHash == event.transactionHash {
+                        logger.notice("handleSellerClosedEvent: tx hash \(event.transactionHash) of event matches that for swap \(swap.id.uuidString): \(closeSwapTransaction.transactionHash)")
+                    } else {
+                        logger.warning("handleSellerClosedEvent: tx hash \(event.transactionHash) of event does not match that for swap \(event.id.uuidString): \(closeSwapTransaction.transactionHash)")
+                        mustUpdateCloseSwapTransaction = true
+                    }
+                } else {
+                    logger.warning("handleSellerClosedEvent: swap \(event.id.uuidString) for which user is seller has no closing swap transaction, updating with transaction hash \(event.transactionHash)")
+                    mustUpdateCloseSwapTransaction = true
+                }
+                if mustUpdateCloseSwapTransaction {
+                    let closeSwapTransaction = BlockchainTransaction(transactionHash: event.transactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .closeSwap)
+                    DispatchQueue.main.sync {
+                        swap.closeSwapTransaction = closeSwapTransaction
+                    }
+                    logger.info("handleSellerClosedEvent: persistently storing tx data, including hash \(event.transactionHash) for \(event.id.uuidString)")
+                    let dateString = DateFormatter.createDateString(closeSwapTransaction.timeOfCreation)
+                    try databaseService.updateCloseSwapData(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), transactionHash: closeSwapTransaction.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(closeSwapTransaction.latestBlockNumberAtCreation))
+                }
+                logger.notice("handleSellerClosedEvent: persistently updating state of \(event.id.uuidString) to \(SwapState.closed.asString)")
+                try databaseService.updateSwapState(swapID: event.id.asData().base64EncodedString(), chainID: String(event.chainID), state: SwapState.closed.asString)
+                logger.notice("handleSellerClosedEvent: setting state of \(event.id.uuidString) to \(SwapState.closed.asString)")
+                DispatchQueue.main.sync {
                     swap.state = .closed
                 }
+                logger.notice("handleSellerClosedEvent: user is seller for \(event.id.uuidString) so persistently updating closingSwapState to \(ClosingSwapState.completed.asString)")
+                try databaseService.updateCloseSwapState(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: ClosingSwapState.completed.asString)
+                logger.notice("handleSellerClosedEvent: updating closingSwapState to \(ClosingSwapState.completed.asString)")
+                DispatchQueue.main.sync {
+                    swap.closingSwapState = .completed
+                }
+            } else {
+                logger.info("handleSellerClosedEvent: user is buyer for \(event.id.uuidString)")
+            }
+            logger.notice("handleSellerClosedEvent: persistently setting hasSellerClosed property of \(event.id.uuidString) to true")
+            try databaseService.updateSwapHasSellerClosed(swapID: event.id.asData().base64EncodedString(), chainID: String(event.chainID), hasSellerClosed: true)
+            logger.notice("handleSellerClosedEvent: setting hasSellerClosed property of \(event.id.uuidString) to true")
+            DispatchQueue.main.sync {
+                swap.hasSellerClosed = true
             }
         } else {
             logger.notice("handleSellerClosedEvent: got event for \(event.id.uuidString) which was not found in swapTruthSource")

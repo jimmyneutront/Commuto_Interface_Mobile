@@ -2315,7 +2315,11 @@ class OfferServiceTests: XCTestCase {
             reportPaymentReceivedState: swapInTruthSource.reportingPaymentReceivedState.asString,
             reportPaymentReceivedTransactionHash: nil,
             reportPaymentReceivedTransactionCreationTime: nil,
-            reportPaymentReceivedTransactionCreationBlockNumber: nil
+            reportPaymentReceivedTransactionCreationBlockNumber: nil,
+            closeSwapState: swapInTruthSource.closingSwapState.asString,
+            closeSwapTransactionHash: nil,
+            closeSwapTransactionCreationTime: nil,
+            closeSwapTransactionCreationBlockNumber: nil
         )
         XCTAssertEqual(expectedSwapInDatabase, swapInDatabase)
         

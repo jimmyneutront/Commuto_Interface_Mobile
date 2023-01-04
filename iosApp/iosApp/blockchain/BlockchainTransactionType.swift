@@ -19,13 +19,17 @@ enum BlockchainTransactionType {
      */
     case editOffer
     /**
-     Indicates that a `BlockchainTransaction` reports that payment has been sent for an offer by calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent)
+     Indicates that a `BlockchainTransaction` reports that payment has been sent for a swap by calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent)
      */
     case reportPaymentSent
     /**
-     Indicates that a `BlockchainTransaction` reports that payment has been received for an offer by calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received)
+     Indicates that a `BlockchainTransaction` reports that payment has been received for a swap by calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received)
      */
     case reportPaymentReceived
+    /**
+     Indicates that a `BlockchainTransaction` closes a swap by calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap)
+     */
+    case closeSwap
     
     /**
      A human-readable string describing an instance of this type.
@@ -40,6 +44,8 @@ enum BlockchainTransactionType {
             return "reportPaymentSent"
         case .reportPaymentReceived:
             return "reportPaymentReceived"
+        case .closeSwap:
+            return "closeSwap"
         }
     }
     

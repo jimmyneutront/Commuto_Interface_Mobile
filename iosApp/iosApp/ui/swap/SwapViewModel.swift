@@ -296,9 +296,11 @@ class SwapViewModel: UISwapTruthSource {
      
      - Parameter swap: The `Swap` to close.
      */
+    @available(*, deprecated, message: "Use new transaction pipeline")
     func closeSwap(
         swap: Swap
     ) {
+        /*
         setClosingSwapState(swap: swap, state: .checking)
         Promise<Void> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
@@ -315,7 +317,64 @@ class SwapViewModel: UISwapTruthSource {
             logger.error("closeSwap: got error during closeSwap call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
             swap.closingSwapError = error
             setClosingSwapState(swap: swap, state: .error)
+        }*/
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` to call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for `swap`, for which the user of this interface should be the seller.
+     
+     This passes `swap`'s ID and chain ID to `SwapService.createCloseSwapTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createCloseSwapTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createCloseSwapTransaction: creating for \(swap.id.uuidString)")
+                swapService.createCloseSwapTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
         }
+    }
+    
+    /**
+     Attempts to call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the seller.
+     
+     This clears the swap-closing`Error` of `swap` and sets `swap`'s `Swap.closingSwapState` to `ClosingSwapState.validating`, and then passes all data to `swapService`'s `SwapService.closeSwap` function.
+     
+     - Parameters:
+        - swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
+        - closeSwapTransaction: An optional `EthereumTransaction` that will call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for `swap`.
+     */
+    func closeSwap(
+        swap: Swap,
+        closeSwapTransaction: EthereumTransaction?
+    ) {
+        swap.closingSwapError = nil
+        swap.closingSwapState = .validating
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("closeSwap: reporting for \(swap.id.uuidString)")
+        }
+        swapService.closeSwap(swap: swap, closeSwapTransaction: closeSwapTransaction)
+            .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                self.logger.notice("closeSwap: successfully broadcast transaction for \(swap.id.uuidString)")
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("closeSwap: got error during closeSwap call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
+                DispatchQueue.main.sync {
+                    swap.closingSwapError = error
+                    swap.closingSwapState = .error
+                }
+            }
     }
     
 }

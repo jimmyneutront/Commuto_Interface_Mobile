@@ -652,6 +652,49 @@ class BlockchainService {
     }
     
     /**
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the users account to call CommutoSwap's [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     
+     - Parameters:
+        - swapID: The ID of the [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) which will be closed.
+        - chainID: The blockchain ID on which the swap exists.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will close the swap specified by `swapID` on the chain specified by `chainID`.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the user's address is nil, or if we get nil while creating the transaction. Since this function returns a `Promise`, these errors will not be thrown but rather passed to the seal rejection call.
+     */
+    func createCloseSwapTransaction(swapID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                var options = TransactionOptions()
+                options.type = .eip1559
+                guard let address = ethKeyStore.getAddress() else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting user's address while creating closeSwap transaction for \(swapID.uuidString)"))
+                    return
+                }
+                options.from = address
+                options.maxPriorityFeePerGas = .automatic
+                options.maxFeePerGas = .automatic
+                options.nonce = .pending
+                
+                let writeTransaction = createWriteTransaction(method: "closeSwap", parameters: [swapID.asData()] as [AnyObject], extraData: Data(), transactionOptions: options, contract: commutoSwapEthereumContract)
+                guard let writeTransaction = writeTransaction else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating closeSwap transaction for \(swapID.uuidString)"))
+                    return
+                }
+                var writeTransactionParameters = writeTransaction.transaction.parameters
+                writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+                writeTransaction.transaction.parameters = writeTransactionParameters
+                do {
+                    let ethereumTransaction = try writeTransaction.assemble()
+                    seal.fulfill(ethereumTransaction)
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }
+    }
+    
+    /**
      A `Promise` wrapper around CommutoSwap's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function, via web3swift. Note that this temporarily uses a manual gas limit of 30,000,000 and a manual gas price of 30,000,000, and uses BlockchainService's temporary key store.
      
      - Parameters:
@@ -954,7 +997,7 @@ class BlockchainService {
                     switch monitoredTransaction.type {
                     case .cancelOffer, .editOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: error)
-                    case .reportPaymentSent, .reportPaymentReceived:
+                    case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: error)
                     }
                 } else {
@@ -969,6 +1012,9 @@ class BlockchainService {
                         events.append(contentsOf: try paymentSentEventParser.parseTransactionByHash(transactionHash))
                     case .reportPaymentReceived:
                         events.append(contentsOf: try paymentReceivedEventParser.parseTransactionByHash(transactionHash))
+                    case .closeSwap:
+                        events.append(contentsOf: try buyerClosedEventParser.parseTransactionByHash(transactionHash))
+                        events.append(contentsOf: try sellerClosedEventParser.parseTransactionByHash(transactionHash))
                     }
                 }
                 logger.notice("parseBlock: removing \(transactionHashString) from transactionsToMonitor")
@@ -1009,7 +1055,7 @@ class BlockchainService {
                     switch monitoredTransaction.type {
                     case .cancelOffer, .editOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
-                    case .reportPaymentSent, .reportPaymentReceived:
+                    case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
                     }
                 }

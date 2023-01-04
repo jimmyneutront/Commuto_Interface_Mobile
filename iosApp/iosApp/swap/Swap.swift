@@ -156,13 +156,17 @@ class Swap: ObservableObject {
      */
     var reportPaymentReceivedTransaction: BlockchainTransaction? = nil
     /**
-     This indicates whether we are currently closing this swap, and if so, what part of the swap-closing process we are in.
+     This indicates whether we are currently closing this swap by calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap), and if so, what part of the swap-closing process we are in.
      */
     @Published var closingSwapState = ClosingSwapState.none
     /**
      The `Error` that we encountered during the swap closing process, or `nil` if no such error has occured.
      */
     var closingSwapError: Error? = nil
+    /**
+     The `BlockchainTransaction` (signed by the user of this interface) that called [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for this swap.
+     */
+    var closeSwapTransaction: BlockchainTransaction? = nil
     /**
      The private settlement method data belonging to the maker of this swap for this swap's settlement method, or `nil` if such data does not exist.
      */

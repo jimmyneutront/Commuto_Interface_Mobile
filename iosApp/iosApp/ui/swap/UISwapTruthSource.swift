@@ -94,5 +94,33 @@ protocol UISwapTruthSource: SwapTruthSource, ObservableObject {
      
      - Parameter swap: The `Swap` to close.
      */
+    @available(*, deprecated, message: "Use the new transaction pipeline with improved transaction state management")
     func closeSwap(swap: Swap)
+    
+    /**
+     Attempts to create an `EthereumTransaction` to call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for `swap`, for which the user of this interface should be the seller.
+     
+     - Parameters:
+        - swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createCloseSwapTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the seller.
+     
+     - Parameters:
+        - swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
+        - closeSwapTransaction: An optional `EthereumTransaction` that will call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for `swap`.
+     */
+    func closeSwap(
+        swap: Swap,
+        closeSwapTransaction: EthereumTransaction?
+    )
+    
 }

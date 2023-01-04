@@ -457,6 +457,11 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
      */
     @State private var isShowingReportPaymentReceivedSheet = false
     
+    /**
+     Indicates whether we are showing the sheet that allows the user to close the swap.
+     */
+    @State private var isShowingCloseSwapSheet = false
+    
     var body: some View {
         if (swap.state == .awaitingFilling) && swap.role == .makerAndSeller {
             // If the swap state is awaitingFilling and we are the maker and seller, then we display the "Fill Swap" button
@@ -599,7 +604,7 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
             actionButtonBuilder(
                 action: {
                     if (swap.closingSwapState == .none || swap.closingSwapState == .error) {
-                        swapTruthSource.closeSwap(swap: swap)
+                        isShowingCloseSwapSheet = true
                     }
                 },
                 labelText: {
@@ -611,7 +616,32 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
                         return "Closing Swap"
                     }
                 }()
-            )
+            ).sheet(isPresented: $isShowingCloseSwapSheet, content: {
+                TransactionGasDetailsView(
+                    isShowingSheet: $isShowingCloseSwapSheet,
+                    title: "Close Swap",
+                    buttonLabel: "Close Swap",
+                    buttonAction: { createdTransaction in
+                        swapTruthSource.closeSwap(
+                            swap: swap,
+                            closeSwapTransaction: createdTransaction
+                        )
+                    },
+                    runOnAppearance: { closeSwapTransactionBinding, transactionCreationErrorBinding in
+                        if swap.closingSwapState == .none || swap.closingSwapState == .error {
+                            swapTruthSource.createCloseSwapTransaction(
+                                swap: swap,
+                                createdTransactionHandler: { createdTransaction in
+                                    closeSwapTransactionBinding.wrappedValue = createdTransaction
+                                },
+                                errorHandler: { error in
+                                    transactionCreationErrorBinding.wrappedValue = error
+                                }
+                            )
+                        }
+                    }
+                )
+            })
         }
     }
     
