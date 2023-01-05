@@ -179,8 +179,8 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
      * [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for
      * [swap], for which the user of this interface should be the buyer.
      *
-     * This passes [swap]'s ID and chain ID to [SwapService.createReportPaymentSentTransaction] and then passes the
-     * resulting transaction to [createdTransactionHandler] or [Exception] to [exceptionHandler].
+     * This passes [swap] to [SwapService.createReportPaymentSentTransaction] and then passes the resulting transaction
+     * to [createdTransactionHandler] or [Exception] to [exceptionHandler].
      *
      * @param swap The [Swap] for which
      * [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be
@@ -198,8 +198,7 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
             logger.info("createReportPaymentSentTransaction: creating for ${swap.id}")
             try {
                 val createdTransaction = swapService.createReportPaymentSentTransaction(
-                    swapID = swap.id,
-                    chainID = swap.chainID
+                    swap = swap,
                 )
                 createdTransactionHandler(createdTransaction)
             } catch (exception: Exception) {
@@ -293,8 +292,8 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
      * [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received)
      * for [swap], for which the user of this interface should be the seller.
      *
-     * This passes [swap]'s ID and chain ID to [SwapService.createReportPaymentReceivedTransaction] and then passes the
-     * resulting transaction to [createdTransactionHandler] or [Exception] to [exceptionHandler].
+     * This passes [swap] to [SwapService.createReportPaymentReceivedTransaction] and then passes the resulting
+     * transaction to [createdTransactionHandler] or [Exception] to [exceptionHandler].
      *
      * @param swap The [Swap] for which
      * [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received)
@@ -312,8 +311,7 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
             logger.info("createReportPaymentReceivedTransaction: creating for ${swap.id}")
             try {
                 val createdTransaction = swapService.createReportPaymentReceivedTransaction(
-                    swapID = swap.id,
-                    chainID = swap.chainID
+                    swap = swap,
                 )
                 createdTransactionHandler(createdTransaction)
             } catch (exception: Exception) {
@@ -405,8 +403,8 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
      * [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap)
      * for [swap].
      *
-     * This passes [swap]'s ID and chain ID to [SwapService.createCloseSwapTransaction] and then passes the resulting
-     * transaction to [createdTransactionHandler] or [Exception] to [exceptionHandler].
+     * This passes [swap] to [SwapService.createCloseSwapTransaction] and then passes the resulting transaction to
+     * [createdTransactionHandler] or [Exception] to [exceptionHandler].
      *
      * @param swap The [Swap] for which
      * [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
@@ -423,8 +421,7 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
             logger.info("createCloseSwapTransaction: creating for ${swap.id}")
             try {
                 val createdTransaction = swapService.createCloseSwapTransaction(
-                    swapID = swap.id,
-                    chainID = swap.chainID
+                    swap = swap
                 )
                 createdTransactionHandler(createdTransaction)
             } catch (exception: Exception) {
