@@ -151,7 +151,7 @@ class SwapViewModel: UISwapTruthSource {
     /**
      Attempts to create an `EthereumTransaction` to call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for `swap`, for which the user of this interface should be the buyer.
      
-     This passes `swap`'s ID and chain ID to `SwapService.createReportPaymentSentTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     This passes `swap` to `SwapService.createReportPaymentSentTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
      
      - Parameters:
         - swap: The `Swap` for which [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
@@ -166,7 +166,7 @@ class SwapViewModel: UISwapTruthSource {
         Promise<EthereumTransaction> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("createReportPaymentSentTransaction: creating for \(swap.id.uuidString)")
-                swapService.createReportPaymentSentTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
+                swapService.createReportPaymentSentTransaction(swap: swap).pipe(to: seal.resolve)
             }
         }.done(on: DispatchQueue.main) { createdTransaction in
             createdTransactionHandler(createdTransaction)
@@ -237,7 +237,7 @@ class SwapViewModel: UISwapTruthSource {
     /**
      Attempts to create an `EthereumTransaction` to call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for `swap`, for which the user of this interface should be the seller.
      
-     This passes `swap`'s ID and chain ID to `SwapService.createReportPaymentReceivedTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     This passes `swap` to `SwapService.createReportPaymentReceivedTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
      
      - Parameters:
         - swap: The `Swap` for which [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) will be called.
@@ -252,7 +252,7 @@ class SwapViewModel: UISwapTruthSource {
         Promise<EthereumTransaction> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("createReportPaymentReceivedTransaction: creating for \(swap.id.uuidString)")
-                swapService.createReportPaymentReceivedTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
+                swapService.createReportPaymentReceivedTransaction(swap: swap).pipe(to: seal.resolve)
             }
         }.done(on: DispatchQueue.main) { createdTransaction in
             createdTransactionHandler(createdTransaction)
@@ -323,7 +323,7 @@ class SwapViewModel: UISwapTruthSource {
     /**
      Attempts to create an `EthereumTransaction` to call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for `swap`, for which the user of this interface should be the seller.
      
-     This passes `swap`'s ID and chain ID to `SwapService.createCloseSwapTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     This passes `swap` to `SwapService.createCloseSwapTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
      
      - Parameters:
         - swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
@@ -338,7 +338,7 @@ class SwapViewModel: UISwapTruthSource {
         Promise<EthereumTransaction> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("createCloseSwapTransaction: creating for \(swap.id.uuidString)")
-                swapService.createCloseSwapTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
+                swapService.createCloseSwapTransaction(swap: swap).pipe(to: seal.resolve)
             }
         }.done(on: DispatchQueue.main) { createdTransaction in
             createdTransactionHandler(createdTransaction)

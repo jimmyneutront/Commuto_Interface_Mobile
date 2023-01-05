@@ -1332,7 +1332,7 @@ class SwapServiceTests: XCTestCase {
         
         let expectation = XCTestExpectation(description: "Fulfilled after reportPaymentSent is executed")
         
-        swapService.createReportPaymentSentTransaction(swapID: swapID, chainID: BigUInt(31337))
+        swapService.createReportPaymentSentTransaction(swap: swap)
             .then { transaction in
                 return swapService.reportPaymentSent(swap: swap, reportPaymentSentTransaction: transaction)
             }.done{
@@ -1750,7 +1750,7 @@ class SwapServiceTests: XCTestCase {
         
         let expectation = XCTestExpectation(description: "Fulfilled after reportPaymentReceived is executed")
         
-        swapService.createReportPaymentReceivedTransaction(swapID: swapID, chainID: BigUInt(31337))
+        swapService.createReportPaymentReceivedTransaction(swap: swap)
             .then { transaction in
                 return swapService.reportPaymentReceived(swap: swap, reportPaymentReceivedTransaction: transaction)
             }.done {
@@ -2168,7 +2168,7 @@ class SwapServiceTests: XCTestCase {
         
         let expectation = XCTestExpectation(description: "Fulfilled after reportPaymentReceived is executed")
         
-        swapService.createCloseSwapTransaction(swapID: swapID, chainID: BigUInt(31337))
+        swapService.createCloseSwapTransaction(swap: swap)
             .then { transaction in
                 return swapService.closeSwap(swap: swap, closeSwapTransaction: transaction)
             }.done {

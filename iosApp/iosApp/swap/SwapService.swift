@@ -249,27 +249,30 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
-     Attempts to create an `EthereumTransaction` that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the buyer, with the ID specified by `swapID` and on the blockchain specified by `chainID`.
+     Attempts to create an `EthereumTransaction` that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
      
-     On the global `DispatchQueue`, this calls `BlockchainService.createReportPaymentSentTransaction`, passing `swapID` and `chainID`, and pipes the result to the seal of the `Promise` this returns.
+     On the global `DispatchQueue`, this calls `validateSwapForReportingPaymentSent`, and then `BlockchainService.createReportPaymentSentTransaction`, passing the `Swap.id` and `Swap.chainID` properties of `swap`, and pipes the result to the seal of the `Promise` this returns.
      
-     - Parameters:
-        - swapID: The ID of the `Swap` for which [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
-        - chainID: The ID of the blockchain on which the `Swap` exists.
+     - Parameter swap: The `Swap` for which [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
      
-     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for the swap specified by `swapID` on the blockchain specified by `chainID`.
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for `swap`.
      
      - Throws: An `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
      */
-    func createReportPaymentSentTransaction(swapID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+    func createReportPaymentSentTransaction(swap: Swap) -> Promise<EthereumTransaction> {
         return Promise { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
-                logger.notice("createReportPaymentSentTransaction: creating for \(swapID.uuidString)")
+                logger.notice("createReportPaymentSentTransaction: creating for \(swap.id.uuidString)")
+                do {
+                    try validateSwapForReportingPaymentSent(swap: swap)
+                } catch {
+                    seal.reject(error)
+                }
                 guard let blockchainService = blockchainService else {
                     seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during createReportPaymentSentTransaction call"))
                     return
                 }
-                blockchainService.createReportPaymentSentTransaction(swapID: swapID, chainID: chainID).pipe(to: seal.resolve)
+                blockchainService.createReportPaymentSentTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
             }
         }
     }
@@ -277,7 +280,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      Attempts to call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) in which the user of this interface is the buyer.
      
-     On the global `DispatchQueue`, this ensures that [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) is not currently being called or has not already been called by the user for `swap`, that the user of this interface is the buyer in the swap, that calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) is currently possible for `swap`, and that `reportPaymentSentTransaction` is not `nil`. Then it signs `reportPaymentSentTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Swap.reportingPaymentSentState` of `swap` to `ReportingPaymentSentState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.reportingPaymentSentState` property to `ReportingPaymentSentState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `reportPaymentSentTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.reportingPaymentSentState` of `swap` to `ReportingPaymentSentState.awaitingTransactionConfirmation` and persistently updates the `Swap.state` property of `swap` to `SwapState.reportPaymentSentTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.reportingPaymentSentState` to `ReportingPaymentSentState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.state` to `SwapState.reportPaymentSentTransactionBroadcast`.
+     On the global `DispatchQueue`, this calls `validateSwapForReportingPaymentSent`, and ensures that `reportPaymentSentTransaction` is not `nil`. Then it signs `reportPaymentSentTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Swap.reportingPaymentSentState` of `swap` to `ReportingPaymentSentState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.reportingPaymentSentState` property to `ReportingPaymentSentState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `reportPaymentSentTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.reportingPaymentSentState` of `swap` to `ReportingPaymentSentState.awaitingTransactionConfirmation` and persistently updates the `Swap.state` property of `swap` to `SwapState.reportPaymentSentTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.reportingPaymentSentState` to `ReportingPaymentSentState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.state` to `SwapState.reportPaymentSentTransactionBroadcast`.
      
      - Parameters:
         - swap: The `Swap` for which [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
@@ -285,26 +288,17 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      
      - Returns: An empty `Promise` that will be fulfilled when [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) is called for `swap`.
      
-     - Throws: A `SwapServiceError.transactionWillRevertError` if [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) is currently being called for `swap`, if the user is not the buyer, or if the state of `swap` is not `SwapState.awaitingPaymentSent`, or an `SwapServiceError.unexpectedNilError` if `reportPaymentSentTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: A `SwapServiceError.unexpectedNilError` if `reportPaymentSentTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func reportPaymentSent(swap: Swap, reportPaymentSentTransaction: EthereumTransaction?) -> Promise<Void> {
         return Promise { seal in
             Promise<(BlockchainTransaction, BlockchainService)> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("reportPaymentSent: checking reporting is possible for \(swap.id.uuidString)")
-                    guard (swap.reportingPaymentSentState == .none || swap.reportingPaymentSentState == .validating || swap.reportingPaymentSentState == .error) else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Payment sending is already being reported this swap."))
-                        return
-                    }
-                    // Ensure that the user is the buyer for the swap
-                    guard swap.role == .makerAndBuyer || swap.role == .takerAndBuyer else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Only the Buyer can report sending payment"))
-                        return
-                    }
-                    // Ensure that this swap is awaiting reporting of payment sent
-                    guard swap.state == .awaitingPaymentSent else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Payment sending cannot currently be reported for this swap."))
-                        return
+                    do {
+                        try validateSwapForReportingPaymentSent(swap: swap)
+                    } catch {
+                        seal.reject(error)
                     }
                     do {
                         guard var reportPaymentSentTransaction = reportPaymentSentTransaction else {
@@ -417,35 +411,38 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
-     Attempts to create an `EthereumTransaction` that will call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the seller, with the ID specified by `swapID` and on the blockchain specified by `chainID`.
+     Attempts to create an `EthereumTransaction` that will call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
      
-     On the global `DispatchQueue`, this calls `BlockchainService.createReportPaymentReceivedTransaction`, passing `swapID` and `chainID`, and pipes the result to the seal of the `Promise` this returns.
+     On the global `DispatchQueue`, this calls `validateSwapForReportingPaymentReceived`, and then `BlockchainService.createReportPaymentReceivedTransaction`, passing the `Swap.id` and `Swap.chainID` properties of `swap`, and pipes the result to the seal of the `Promise` this returns.
      
-     - Parameters:
-        - swapID: The ID of the `Swap` for which [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) will be called.
-        - chainID: The ID of the blockchain on which the `Swap` exists.
+     - Parameter swap: The `Swap` for which [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) will be called.
      
-     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for the swap specified by `swapID` on the blockchain specified by `chainID`.
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) for `swap`.
      
      - Throws: An `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
      */
-    func createReportPaymentReceivedTransaction(swapID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+    func createReportPaymentReceivedTransaction(swap: Swap) -> Promise<EthereumTransaction> {
         return Promise { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
-                logger.notice("createReportPaymentReceivedTransaction: creating for \(swapID.uuidString)")
+                logger.notice("createReportPaymentReceivedTransaction: creating for \(swap.id.uuidString)")
+                do {
+                    try validateSwapForReportingPaymentReceived(swap: swap)
+                } catch {
+                    seal.reject(error)
+                }
                 guard let blockchainService = blockchainService else {
                     seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during createReportPaymentReceivedTransaction call"))
                     return
                 }
-                blockchainService.createReportPaymentReceivedTransaction(swapID: swapID, chainID: chainID).pipe(to: seal.resolve)
+                blockchainService.createReportPaymentReceivedTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
             }
         }
     }
     
     /**
-     Attempts to call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) in which the user of this interface is the buyer.
+     Attempts to call [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) in which the user of this interface is the seller.
      
-     On the global `DispatchQueue`, this ensures that [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) is not currently being called or has not already been called by the user for `swap`, that the user of this interface is the seller in the swap, that calling [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) is currently possible for `swap`, and that `reportPaymentReceivedTransaction` is not `nil`. Then it signs `reportPaymentReceivedTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Swap.reportingPaymentReceivedState` of `swap` to `ReportingPaymenReceivedState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.reportingPaymentReceivedState` property to `ReportingPaymentReceivedState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `reportPaymentReceivedTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.reportingPaymentReceivedState` of `swap` to `ReportingPaymentReceivedState.awaitingTransactionConfirmation` and persistently updates the `Swap.state` property of `swap` to `SwapState.reportPaymentReceivedTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.reportingPaymentReceivedState` to `ReportingPaymentReceivedState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.state` to `SwapState.reportPaymentReceivedTransactionBroadcast`.
+     On the global `DispatchQueue`, this calls `validateSwapForReportingPaymentReceived`, and ensures that `reportPaymentReceivedTransaction` is not `nil`. Then it signs `reportPaymentReceivedTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Swap.reportingPaymentReceivedState` of `swap` to `ReportingPaymenReceivedState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.reportingPaymentReceivedState` property to `ReportingPaymentReceivedState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `reportPaymentReceivedTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.reportingPaymentReceivedState` of `swap` to `ReportingPaymentReceivedState.awaitingTransactionConfirmation` and persistently updates the `Swap.state` property of `swap` to `SwapState.reportPaymentReceivedTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.reportingPaymentReceivedState` to `ReportingPaymentReceivedState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.state` to `SwapState.reportPaymentReceivedTransactionBroadcast`.
      
      - Parameters:
         - swap: The `Swap` for which [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) will be called.
@@ -453,26 +450,17 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      
      - Returns: An empty `Promise` that will be fulfilled when [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) is called for `swap`.
      
-     - Throws: A `SwapServiceError.transactionWillRevertError` if [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received) is currently being called for `swap`, if the user is not the seller, or if the state of `swap` is not `SwapState.awaitingPaymentReceived`, or an `SwapServiceError.unexpectedNilError` if `reportPaymenReceivedTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: A `SwapServiceError.unexpectedNilError` if `reportPaymenReceivedTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func reportPaymentReceived(swap: Swap, reportPaymentReceivedTransaction: EthereumTransaction?) -> Promise<Void> {
         return Promise { seal in
             Promise<(BlockchainTransaction, BlockchainService)> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("reportPaymentReceived: checking reporting is possible for \(swap.id.uuidString)")
-                    guard (swap.reportingPaymentReceivedState == .none || swap.reportingPaymentReceivedState == .validating || swap.reportingPaymentReceivedState == .error) else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Payment receiving is already being reported this swap."))
-                        return
-                    }
-                    // Ensure that the user is the seller for the swap
-                    guard swap.role == .makerAndSeller || swap.role == .takerAndSeller else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Only the Seller can report receiving payment"))
-                        return
-                    }
-                    // Ensure that this swap is awaiting reporting of payment received
-                    guard swap.state == .awaitingPaymentReceived else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "Payment receiving cannot currently be reported for this swap."))
-                        return
+                    do {
+                        try validateSwapForReportingPaymentReceived(swap: swap)
+                    } catch {
+                        seal.reject(error)
                     }
                     do {
                         guard var reportPaymentReceivedTransaction = reportPaymentReceivedTransaction else {
@@ -581,27 +569,30 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
-     Attempts to create an `EthereumTransaction` that will call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) involving the user of this interface, with the ID specified by `swapID` and on the blockchain specified by `chainID`.
+     Attempts to create an `EthereumTransaction` that will call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) involving the user of this interface.
      
-     On the global `DispatchQueue`, this calls `BlockchainService.createCloseSwapTransaction`, passing `swapID` and `chainID`, and pipes the result to the seal of the `Promise` this returns.
+     On the global `DispatchQueue`, this calls `validateSwapForClosing`, and then this calls `BlockchainService.createCloseSwapTransaction`, passing the `Swap.id` and `Swap.chainID` properties of `swap`, and pipes the result to the seal of the `Promise` this returns.
      
-     - Parameters:
-        - swapID: The ID of the `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
-        - chainID: The ID of the blockchain on which the `Swap` exists.
+     - Parameter swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) will be called.
      
-     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for the swap specified by `swapID` on the blockchain specified by `chainID`.
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for `swap`.
      
      - Throws: An `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
      */
-    func createCloseSwapTransaction(swapID: UUID, chainID: BigUInt) -> Promise<EthereumTransaction> {
+    func createCloseSwapTransaction(swap: Swap) -> Promise<EthereumTransaction> {
         return Promise { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
-                logger.notice("createCloseSwapTransaction: creating for \(swapID.uuidString)")
+                logger.notice("createCloseSwapTransaction: creating for \(swap.id.uuidString)")
+                do {
+                    try validateSwapForClosing(swap: swap)
+                } catch {
+                    seal.reject(error)
+                }
                 guard let blockchainService = blockchainService else {
                     seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during createCloseSwapTransaction call"))
                     return
                 }
-                blockchainService.createCloseSwapTransaction(swapID: swapID, chainID: chainID).pipe(to: seal.resolve)
+                blockchainService.createCloseSwapTransaction(swapID: swap.id, chainID: swap.chainID).pipe(to: seal.resolve)
             }
         }
     }
@@ -609,7 +600,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      Attempts to call [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) involving the user of this interface.
      
-     On the global `DispatchQueue`, this ensures that [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is not currently being called or has not already been called by the user for `swap`, that calling [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is currently possible for `swap`, and that `closeSwapTransaction` is not `nil`. Then it signs `closeSwapTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Swap.closeSwapState` of `swap` to `CloseSwapState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.closeSwapState` property to `CloseSwapState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `closeSwapTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.closeSwapState` of `swap` to `CloseSwapState.awaitingTransactionConfirmation` and persistently updates the `Swap.state` property of `swap` to `SwapState.closeSwapTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.closeSwapState` to `CloseSwapState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.state` to `SwapState.closeSwapTransactionBroadcast`.
+     On the global `DispatchQueue`, this calls `validateSwapForClosing`, and ensures that `closeSwapTransaction` is not `nil`. Then it signs `closeSwapTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Swap.closingSwapState` of `swap` to `ClosingSwapState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `swap` and sets `swap`'s `Swap.closingSwapState` property to `ClosingSwapState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `closingSwapTransaction` to the blockchain. Once a response is received, this persistently updates the `Swap.closingSwapState` of `swap` to `ClosingSwapState.awaitingTransactionConfirmation` and persistently updates the `Swap.state` property of `swap` to `SwapState.closeSwapTransactionBroadcast`. Then, on the main `DispatchQueue`, this sets the value of `swap`'s `Swap.closingSwapState` to `ClosingSwapState.awaitingTransactionConfirmation` and the value of `swap`'s `Swap.state` to `SwapState.closeSwapTransactionBroadcast`.
      
      - Parameters:
         - swap: The `Swap` for which [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) will be called.
@@ -617,21 +608,17 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
      
      - Returns: An empty `Promise` that will be fulfilled when [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is called for `swap`.
      
-     - Throws: A `SwapServiceError.transactionWillRevertError` if [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) is currently being called for `swap`, or if the state of `swap` is not `SwapState.awaitingClosing`, or an `SwapServiceError.unexpectedNilError` if `closeSwapTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
+     - Throws: A `SwapServiceError.unexpectedNilError` if `closeSwapTransaction` or `blockchainService` are `nil`. Because this function returns a `Promise`, these errors will not actually be thrown, but will be passed to `seal.reject`.
      */
     func closeSwap(swap: Swap, closeSwapTransaction: EthereumTransaction?) -> Promise<Void> {
         return Promise { seal in
             Promise<(BlockchainTransaction, BlockchainService)> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("closeSwap: checking closing is possible for \(swap.id.uuidString)")
-                    guard (swap.closingSwapState == .none || swap.closingSwapState == .validating || swap.closingSwapState == .error) else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "This Swap is already being closed."))
-                        return
-                    }
-                    // Ensure that this swap is awaiting closing
-                    guard swap.state == .awaitingClosing else {
-                        seal.reject(SwapServiceError.transactionWillRevertError(desc: "This Swap cannot currently be closed."))
-                        return
+                    do {
+                        try validateSwapForClosing(swap: swap)
+                    } catch {
+                        seal.reject(error)
                     }
                     do {
                         guard var closeSwapTransaction = closeSwapTransaction else {

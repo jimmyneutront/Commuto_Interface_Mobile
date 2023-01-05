@@ -148,7 +148,7 @@ class OffersViewModel: UIOfferTruthSource {
         - direction: The direction of the new offer.
         - settlementMethods: The settlement methods of the new offer.
      
-     - Throws: A `NewOfferDataValidationError` if this is unable to get the current service fee rate. Note that this offer aren't thrown, but is instead passed to  `seal.reject`.
+     - Throws: An `OfferDataValidationError` if this is unable to get the current service fee rate. Note that this offer aren't thrown, but is instead passed to  `seal.reject`.
      */
     func openOffer(
         chainID: BigUInt,
@@ -165,7 +165,7 @@ class OffersViewModel: UIOfferTruthSource {
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("openOffer: validating new offer data")
                 guard let serviceFeeRateForOffer = serviceFeeRate else {
-                    seal.reject(NewOfferDataValidationError(desc: "Unable to determine service fee rate"))
+                    seal.reject(OfferDataValidationError(desc: "Unable to determine service fee rate"))
                     return
                 }
                 do {
@@ -232,7 +232,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to create an `EthereumTransaction` to cancel `offer`, which should be made by the user of this interface.
      
-     This passes `offer`'s ID and chain ID to `OfferService.createCancelOfferTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     This passes `offer` to `OfferService.createCancelOfferTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
      
      - Parameters:
         - offer: The `Offer` to be canceled.
@@ -247,7 +247,7 @@ class OffersViewModel: UIOfferTruthSource {
         Promise<EthereumTransaction> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("createCancelOfferTransaction: creating for \(offer.id.uuidString)")
-                offerService.createCancelOfferTransaction(offerID: offer.id, chainID: offer.chainID).pipe(to: seal.resolve)
+                offerService.createCancelOfferTransaction(offer: offer).pipe(to: seal.resolve)
             }
         }.done(on: DispatchQueue.main) { createdTransaction in
             createdTransactionHandler(createdTransaction)
@@ -328,7 +328,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to create an `EthereumTransaction` to edit `offer` using validated `newSettlementMethods`, which should be made by the user of this interface.
      
-     This validates `newSettlementMethods`, passes `offer`'s ID and chain ID to `OfferService.createEditOfferTransaction`, and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     This validates `newSettlementMethods`, passes `offer` and `newSettlementMethods` `OfferService.createEditOfferTransaction`, and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
      
      - Parameters:
         - offer: The `Offer` to be edited.
@@ -347,7 +347,7 @@ class OffersViewModel: UIOfferTruthSource {
                 logger.notice("createEditOfferTransaction: creating for \(offer.id.uuidString), validating edited settlement methods")
                 do {
                     let validatedSettlementMethods = try validateSettlementMethods(newSettlementMethods)
-                    offerService.createEditOfferTransaction(offerID: offer.id, chainID: offer.chainID, newSettlementMethods: validatedSettlementMethods).pipe(to: seal.resolve)
+                    offerService.createEditOfferTransaction(offer: offer, newSettlementMethods: validatedSettlementMethods).pipe(to: seal.resolve)
                 } catch {
                     seal.reject(error)
                 }

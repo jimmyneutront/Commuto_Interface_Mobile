@@ -1944,7 +1944,7 @@ class OfferServiceTests: XCTestCase {
         
         let cancellationExpectation = XCTestExpectation(description: "Fulfilled when offerService.cancelOffer returns")
         
-        offerService.createCancelOfferTransaction(offerID: offerID, chainID: BigUInt(31337)).then { transaction in
+        offerService.createCancelOfferTransaction(offer: offer).then { transaction in
             return offerService.cancelOffer(offer: offer, offerCancellationTransaction: transaction)
         }.done {
             cancellationExpectation.fulfill()
@@ -2043,7 +2043,7 @@ class OfferServiceTests: XCTestCase {
             protocolVersion: BigUInt(1),
             chainID: BigUInt(31337), // Hardhat blockchain ID,
             havePublicKey: true,
-            isUserMaker: false,
+            isUserMaker: true,
             state: .offerOpened
         )
         offerTruthSource.offers[offerID] = offer
@@ -2081,7 +2081,7 @@ class OfferServiceTests: XCTestCase {
         let editingExpectation = XCTestExpectation(description: "Fulfilled when offerService.editOffer returns")
         
         offer.editingOfferState = .validating
-        offerService.createEditOfferTransaction(offerID: offerID, chainID: BigUInt(31337), newSettlementMethods: [SettlementMethod(currency: "USD", price: "1.23", method: "a_method", privateData: "some_private_data")]).then { transaction in
+        offerService.createEditOfferTransaction(offer: offer, newSettlementMethods: [SettlementMethod(currency: "USD", price: "1.23", method: "a_method", privateData: "some_private_data")]).then { transaction in
             return offerService.editOffer(offer: offer, newSettlementMethods: [SettlementMethod(currency: "USD", price: "1.23", method: "a_method", privateData: "some_private_data")], offerEditingTransaction: transaction)
         }.done {
             editingExpectation.fulfill()

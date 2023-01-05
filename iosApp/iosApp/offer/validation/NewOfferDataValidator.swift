@@ -34,7 +34,7 @@ import web3swift
  
  - Returns: A `ValidatedNewOfferData` derived from the inputs to this function.
  
- - Throws: A `NewOfferDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
+ - Throws: An `OfferDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
  */
 func validateNewOfferData(
     chainID: BigUInt,
@@ -48,23 +48,23 @@ func validateNewOfferData(
     settlementMethods: [SettlementMethod]
 ) throws -> ValidatedNewOfferData {
     guard stablecoin != nil && stablecoinInformation != nil else {
-        throw NewOfferDataValidationError(desc: "You must select a valid stablecoin.")
+        throw OfferDataValidationError(desc: "You must select a valid stablecoin.")
     }
     let minimumAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: minimumAmount, stablecoinInformation: stablecoinInformation!)
     guard minimumAmountBaseUnits > BigUInt.zero else {
-        throw NewOfferDataValidationError(desc: "Minimum amount must be greater than zero.")
+        throw OfferDataValidationError(desc: "Minimum amount must be greater than zero.")
     }
     let maximumAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: maximumAmount, stablecoinInformation: stablecoinInformation!)
     guard maximumAmountBaseUnits >= minimumAmountBaseUnits else {
-        throw NewOfferDataValidationError(desc: "Maximum amount must not be less than the minimum amount.")
+        throw OfferDataValidationError(desc: "Maximum amount must not be less than the minimum amount.")
     }
     let securityDepositAmountBaseUnits = try stablecoinAmountToBaseUnits(amount: securityDepositAmount, stablecoinInformation: stablecoinInformation!)
     guard securityDepositAmountBaseUnits * BigUInt(10) >= maximumAmountBaseUnits else {
-        throw NewOfferDataValidationError(desc: "The security deposit amount must be at least 10% of the maximum amount.")
+        throw OfferDataValidationError(desc: "The security deposit amount must be at least 10% of the maximum amount.")
     }
     let serviceFeeAmountLowerBound = serviceFeeRate * (minimumAmountBaseUnits / BigUInt(10_000))
     guard serviceFeeAmountLowerBound > BigUInt.zero || serviceFeeRate == BigUInt.zero else {
-        throw NewOfferDataValidationError(desc: "The minimum service fee amount must be greater than zero.")
+        throw OfferDataValidationError(desc: "The minimum service fee amount must be greater than zero.")
     }
     let serviceFeeRateUpperBound = serviceFeeRate * (maximumAmountBaseUnits / BigUInt(10_000))
     let validatedSettlementMethods = try validateSettlementMethods(settlementMethods)
@@ -119,10 +119,10 @@ func validateNewOfferData(
 func stablecoinAmountToBaseUnits(amount: Decimal, stablecoinInformation: StablecoinInformation) throws -> BigUInt {
     let roundingHandler = NSDecimalNumberHandler(roundingMode: NSDecimalNumber.RoundingMode.up, scale: 0, raiseOnExactness: true, raiseOnOverflow: true, raiseOnUnderflow: true, raiseOnDivideByZero: true)
     guard amount > Decimal.zero else {
-        throw NewOfferDataValidationError(desc: "Stablecoin amount must be positive.")
+        throw OfferDataValidationError(desc: "Stablecoin amount must be positive.")
     }
     guard amount.exponent >= -6 else {
-        throw NewOfferDataValidationError(desc: "Stablecoin amount must have no more than six decimal places.")
+        throw OfferDataValidationError(desc: "Stablecoin amount must have no more than six decimal places.")
     }
     let amountIntermediateUnits = BigUInt(NSDecimalNumber(decimal: amount.significand).rounding(accordingToBehavior: roundingHandler).intValue)
     let intermediateUnitsAmountExponent = stablecoinInformation.decimal + amount.exponent

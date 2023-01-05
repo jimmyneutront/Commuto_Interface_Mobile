@@ -23,6 +23,7 @@
 		6D127B7628F8C65A00ED9AE8 /* PrivateDataStructCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D127B7528F8C65A00ED9AE8 /* PrivateDataStructCreator.swift */; };
 		6D16AF22289AFD570016EDDB /* ServiceFeeAmountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D16AF21289AFD570016EDDB /* ServiceFeeAmountView.swift */; };
 		6D174E2D27AD7DB800E208F7 /* CINMessageParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */; };
+		6D17513B29663DED00A4B77E /* CancelOfferValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D17513A29663DED00A4B77E /* CancelOfferValidator.swift */; };
 		6D18F1B5289ECCFB002B667C /* EditOfferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1B4289ECCFB002B667C /* EditOfferView.swift */; };
 		6D18F1B7289ECF26002B667C /* SettlementMethodSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1B6289ECF25002B667C /* SettlementMethodSelector.swift */; };
 		6D18F1BC289EECD8002B667C /* SettlementMethodValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BB289EECD8002B667C /* SettlementMethodValidator.swift */; };
@@ -92,6 +93,11 @@
 		6D91C988275432E300D85654 /* PublicKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D91C987275432E300D85654 /* PublicKey.swift */; };
 		6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9291C9284BA082002B9E43 /* P2PService.swift */; };
 		6D9291CD284BC690002B9E43 /* P2PServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9291CC284BC690002B9E43 /* P2PServiceTest.swift */; };
+		6D93D76B29666E4C002697D5 /* EditOfferValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D93D76A29666E4C002697D5 /* EditOfferValidator.swift */; };
+		6D93D76E296672D5002697D5 /* ReportPaymentSentValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D93D76D296672D5002697D5 /* ReportPaymentSentValidator.swift */; };
+		6D93D77029667426002697D5 /* SwapDataValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D93D76F29667426002697D5 /* SwapDataValidationError.swift */; };
+		6D93D77229667732002697D5 /* ReportPaymentReceivedValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D93D77129667732002697D5 /* ReportPaymentReceivedValidationError.swift */; };
+		6D93D77429667A3D002697D5 /* CloseSwapValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D93D77329667A3D002697D5 /* CloseSwapValidator.swift */; };
 		6D948424289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */; };
 		6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */; };
 		6D9789D128D68ED7004ECF8A /* DatabaseKeyDeriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9789D028D68ED7004ECF8A /* DatabaseKeyDeriver.swift */; };
@@ -143,7 +149,7 @@
 		6DE880A128CBD40F00E6AAEC /* PaymentSentEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE880A028CBD40F00E6AAEC /* PaymentSentEvent.swift */; };
 		6DEE9AE0288AE20D00EF07D8 /* NewOfferDataValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEE9ADF288AE20D00EF07D8 /* NewOfferDataValidator.swift */; };
 		6DEE9AE2288AE39E00EF07D8 /* ValidatedNewOfferData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEE9AE1288AE39E00EF07D8 /* ValidatedNewOfferData.swift */; };
-		6DEE9AE4288AFC6200EF07D8 /* NewOfferDataValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEE9AE3288AFC6200EF07D8 /* NewOfferDataValidationError.swift */; };
+		6DEE9AE4288AFC6200EF07D8 /* OfferDataValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEE9AE3288AFC6200EF07D8 /* OfferDataValidationError.swift */; };
 		6DEE9AE6288AFE0000EF07D8 /* NewOfferDataValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEE9AE5288AFE0000EF07D8 /* NewOfferDataValidatorTests.swift */; };
 		6DEE9AE9288B46FE00EF07D8 /* UIOfferTruthSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEE9AE8288B46FE00EF07D8 /* UIOfferTruthSource.swift */; };
 		6DF04AB6288DAA800021C84A /* OpeningOfferState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF04AB5288DAA800021C84A /* OpeningOfferState.swift */; };
@@ -183,6 +189,7 @@
 		6D127B7528F8C65A00ED9AE8 /* PrivateDataStructCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateDataStructCreator.swift; sourceTree = "<group>"; };
 		6D16AF21289AFD570016EDDB /* ServiceFeeAmountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceFeeAmountView.swift; sourceTree = "<group>"; };
 		6D174E2C27AD7DB800E208F7 /* CINMessageParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CINMessageParsers.swift; sourceTree = "<group>"; };
+		6D17513A29663DED00A4B77E /* CancelOfferValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelOfferValidator.swift; sourceTree = "<group>"; };
 		6D18F1B4289ECCFB002B667C /* EditOfferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditOfferView.swift; sourceTree = "<group>"; };
 		6D18F1B6289ECF25002B667C /* SettlementMethodSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethodSelector.swift; sourceTree = "<group>"; };
 		6D18F1BB289EECD8002B667C /* SettlementMethodValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethodValidator.swift; sourceTree = "<group>"; };
@@ -253,6 +260,11 @@
 		6D91C987275432E300D85654 /* PublicKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKey.swift; sourceTree = "<group>"; };
 		6D9291C9284BA082002B9E43 /* P2PService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PService.swift; sourceTree = "<group>"; };
 		6D9291CC284BC690002B9E43 /* P2PServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PServiceTest.swift; sourceTree = "<group>"; };
+		6D93D76A29666E4C002697D5 /* EditOfferValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditOfferValidator.swift; sourceTree = "<group>"; };
+		6D93D76D296672D5002697D5 /* ReportPaymentSentValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportPaymentSentValidator.swift; sourceTree = "<group>"; };
+		6D93D76F29667426002697D5 /* SwapDataValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapDataValidationError.swift; sourceTree = "<group>"; };
+		6D93D77129667732002697D5 /* ReportPaymentReceivedValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportPaymentReceivedValidationError.swift; sourceTree = "<group>"; };
+		6D93D77329667A3D002697D5 /* CloseSwapValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloseSwapValidator.swift; sourceTree = "<group>"; };
 		6D948423289BFA2A00E2AEC8 /* SQLite.swiftExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLite.swiftExtensions.swift; sourceTree = "<group>"; };
 		6D955394284AC41E00D96E97 /* OfferTakenEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferTakenEvent.swift; sourceTree = "<group>"; };
 		6D9789D028D68ED7004ECF8A /* DatabaseKeyDeriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseKeyDeriver.swift; sourceTree = "<group>"; };
@@ -318,7 +330,7 @@
 		6DE880A028CBD40F00E6AAEC /* PaymentSentEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentSentEvent.swift; sourceTree = "<group>"; };
 		6DEE9ADF288AE20D00EF07D8 /* NewOfferDataValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewOfferDataValidator.swift; sourceTree = "<group>"; };
 		6DEE9AE1288AE39E00EF07D8 /* ValidatedNewOfferData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidatedNewOfferData.swift; sourceTree = "<group>"; };
-		6DEE9AE3288AFC6200EF07D8 /* NewOfferDataValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewOfferDataValidationError.swift; sourceTree = "<group>"; };
+		6DEE9AE3288AFC6200EF07D8 /* OfferDataValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferDataValidationError.swift; sourceTree = "<group>"; };
 		6DEE9AE5288AFE0000EF07D8 /* NewOfferDataValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewOfferDataValidatorTests.swift; sourceTree = "<group>"; };
 		6DEE9AE8288B46FE00EF07D8 /* UIOfferTruthSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIOfferTruthSource.swift; sourceTree = "<group>"; };
 		6DF04AB5288DAA800021C84A /* OpeningOfferState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningOfferState.swift; sourceTree = "<group>"; };
@@ -375,6 +387,7 @@
 		6D0940ED28A34082009168BE /* swap */ = {
 			isa = PBXGroup;
 			children = (
+				6D93D76C2966717E002697D5 /* validation */,
 				6D0940EE28A340A0009168BE /* Swap.swift */,
 				6D80072528A9E88000510D01 /* SwapState.swift */,
 				6D80072728AA7C6700510D01 /* SwapTruthSource.swift */,
@@ -535,6 +548,17 @@
 			path = p2p;
 			sourceTree = "<group>";
 		};
+		6D93D76C2966717E002697D5 /* validation */ = {
+			isa = PBXGroup;
+			children = (
+				6D93D76D296672D5002697D5 /* ReportPaymentSentValidator.swift */,
+				6D93D76F29667426002697D5 /* SwapDataValidationError.swift */,
+				6D93D77129667732002697D5 /* ReportPaymentReceivedValidationError.swift */,
+				6D93D77329667A3D002697D5 /* CloseSwapValidator.swift */,
+			);
+			path = validation;
+			sourceTree = "<group>";
+		};
 		6D948420289BF6BF00E2AEC8 /* extension */ = {
 			isa = PBXGroup;
 			children = (
@@ -693,12 +717,14 @@
 			children = (
 				6DEE9ADF288AE20D00EF07D8 /* NewOfferDataValidator.swift */,
 				6DEE9AE1288AE39E00EF07D8 /* ValidatedNewOfferData.swift */,
-				6DEE9AE3288AFC6200EF07D8 /* NewOfferDataValidationError.swift */,
+				6DEE9AE3288AFC6200EF07D8 /* OfferDataValidationError.swift */,
 				6D18F1BB289EECD8002B667C /* SettlementMethodValidator.swift */,
 				6D18F1BD289EEDF1002B667C /* SettlementMethodValidationError.swift */,
 				6DB0907628A5E0940005A702 /* ValidatedNewSwapData.swift */,
 				6DB0907928A5E71F0005A702 /* NewSwapDataValidator.swift */,
 				6DB0907B28A5EFA90005A702 /* NewSwapDataValidationError.swift */,
+				6D17513A29663DED00A4B77E /* CancelOfferValidator.swift */,
+				6D93D76A29666E4C002697D5 /* EditOfferValidator.swift */,
 			);
 			path = validation;
 			sourceTree = "<group>";
@@ -1040,7 +1066,8 @@
 				6D9AAC7828B2F7C1000E7640 /* SwapService.swift in Sources */,
 				6D1272D128942B7C00393128 /* PublicKeyAnnouncementCreator.swift in Sources */,
 				6DF801D328A2D18800DB6227 /* CurrentTab.swift in Sources */,
-				6DEE9AE4288AFC6200EF07D8 /* NewOfferDataValidationError.swift in Sources */,
+				6D17513B29663DED00A4B77E /* CancelOfferValidator.swift in Sources */,
+				6DEE9AE4288AFC6200EF07D8 /* OfferDataValidationError.swift in Sources */,
 				6DDEC04C28EE4D2100CA3200 /* EditingSettlementMethodState.swift in Sources */,
 				6D6B0FC228504926003A24B3 /* BlockchainServiceError.swift in Sources */,
 				6D38E9DF2847DDEF005C1285 /* OfferService.swift in Sources */,
@@ -1051,6 +1078,7 @@
 				6D9AAC7A28B2FF49000E7640 /* SwapServiceError.swift in Sources */,
 				6DB8AA8828A40EE600033043 /* TakeOfferView.swift in Sources */,
 				6D53F19328E9CDBE00353068 /* UISettlementMethodTruthSource.swift in Sources */,
+				6D93D77029667426002697D5 /* SwapDataValidationError.swift in Sources */,
 				6DE0B16528C6349D0075770E /* SwapFilledEvent.swift in Sources */,
 				6D0940EF28A340A0009168BE /* Swap.swift in Sources */,
 				6D2C34112856CEFC0072AD96 /* P2PErrorNotifiable.swift in Sources */,
@@ -1089,6 +1117,7 @@
 				6D16AF22289AFD570016EDDB /* ServiceFeeAmountView.swift in Sources */,
 				6D9AAC8528B3FF76000E7640 /* TakerInformationMessage.swift in Sources */,
 				6D80072E28AB26E700510D01 /* UISwapTruthSource.swift in Sources */,
+				6D93D77429667A3D002697D5 /* CloseSwapValidator.swift in Sources */,
 				6D9ABCBD2736399F0034AE01 /* KeyManagerService.swift in Sources */,
 				6D127B7628F8C65A00ED9AE8 /* PrivateDataStructCreator.swift in Sources */,
 				6D0F4D9F2853C5A10089EE9E /* PublicKeyAnnouncement.swift in Sources */,
@@ -1096,6 +1125,7 @@
 				6D6B0FC028504603003A24B3 /* BlockchainErrorNotifiable.swift in Sources */,
 				6D0886ED28595E2E009B6CF7 /* OfferCanceledEvent.swift in Sources */,
 				6DEE9AE9288B46FE00EF07D8 /* UIOfferTruthSource.swift in Sources */,
+				6D93D77229667732002697D5 /* ReportPaymentReceivedValidationError.swift in Sources */,
 				6DCBB34228E5493B00155A56 /* PrivateSEPAData.swift in Sources */,
 				6D7D3CE128847D9A0004F7F2 /* EthereumAddressExtensions.swift in Sources */,
 				6D0FD5C82888A9B700B2DE4B /* ServiceFeeRateChangedEvent.swift in Sources */,
@@ -1119,12 +1149,14 @@
 				6DA4633A28D0030A002ABA70 /* SellerClosedEvent.swift in Sources */,
 				6D18F1B7289ECF26002B667C /* SettlementMethodSelector.swift in Sources */,
 				6D79D918287B7C4F00CB544A /* StablecoinInformationRepository.swift in Sources */,
+				6D93D76B29666E4C002697D5 /* EditOfferValidator.swift in Sources */,
 				6D70A5CA28665E50003FEDF3 /* OfferTruthSource.swift in Sources */,
 				6DDFAFA5284AAC52004BC95F /* OfferOpenedEvent.swift in Sources */,
 				6D91C988275432E300D85654 /* PublicKey.swift in Sources */,
 				6D9A7282286FD63100458353 /* OfferEditedEvent.swift in Sources */,
 				6D1D5D1628B706CC00A48282 /* TakerInformationMessageCreator.swift in Sources */,
 				6D80072C28AAA82700510D01 /* SwapViewModel.swift in Sources */,
+				6D93D76E296672D5002697D5 /* ReportPaymentSentValidator.swift in Sources */,
 				6D51876828A489CF0061315A /* OfferAmountView.swift in Sources */,
 				6D80073028AB295C00510D01 /* PreviewableSwapTruthSource.swift in Sources */,
 				6D6CE885284479490009B815 /* OfferCardView.swift in Sources */,

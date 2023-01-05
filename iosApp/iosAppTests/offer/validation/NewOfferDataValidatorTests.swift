@@ -99,7 +99,7 @@ class NewOfferDataValidatorTests: XCTestCase {
                 stablecoinInformation: StablecoinInformation(currencyCode: "a_currency_code", name: "a_name", decimal: 0)
             )
             XCTFail("The call above should have thrown a NewOfferDataValidationError")
-        } catch let error as NewOfferDataValidationError {
+        } catch let error as OfferDataValidationError {
             XCTAssertEqual(error.errorDescription, "Stablecoin amount must be positive.")
         } catch {
             throw error
@@ -111,7 +111,7 @@ class NewOfferDataValidatorTests: XCTestCase {
                 stablecoinInformation: StablecoinInformation(currencyCode: "a_currency_code", name: "a_name", decimal: 0)
             )
             XCTFail("The call above should have thrown a NewOfferDataValidationError")
-        } catch let error as NewOfferDataValidationError {
+        } catch let error as OfferDataValidationError {
             XCTAssertEqual(error.errorDescription, "Stablecoin amount must be positive.")
         } catch {
             throw error
@@ -123,7 +123,7 @@ class NewOfferDataValidatorTests: XCTestCase {
                 stablecoinInformation: StablecoinInformation(currencyCode: "a_currency_code", name: "a_name", decimal: 0)
             )
             XCTFail("The call above should have thrown a NewOfferDataValidationError")
-        } catch let error as NewOfferDataValidationError {
+        } catch let error as OfferDataValidationError {
             XCTAssertEqual(error.errorDescription, "Stablecoin amount must have no more than six decimal places.")
         } catch {
             throw error
