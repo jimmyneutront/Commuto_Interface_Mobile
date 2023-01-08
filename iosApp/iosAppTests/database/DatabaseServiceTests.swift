@@ -41,6 +41,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "a_cancelingOfferState_here",
             offerCancellationTransactionHash: "a_tx_hash_here",
             offerCancellationTransactionCreationTime: "a_time_here",
@@ -68,6 +76,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "a_cancelingOfferState_here",
             offerCancellationTransactionHash: "a_tx_hash_here",
             offerCancellationTransactionCreationTime: "a_time_here",
@@ -105,6 +121,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "a_cancelingOfferState_here",
             offerCancellationTransactionHash: "a_tx_hash_here",
             offerCancellationTransactionCreationTime: "a_time_here",
@@ -141,6 +165,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "an_outdated_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "a_cancelingOfferState_here",
             offerCancellationTransactionHash: "a_tx_hash_here",
             offerCancellationTransactionCreationTime: "a_time_here",
@@ -154,6 +186,194 @@ class DatabaseServiceTests: XCTestCase {
         try dbService.updateOfferState(offerID: "a_uuid", _chainID: "a_chain_id", state: "a_new_state_here")
         let returnedOffer = try dbService.getOffer(id: "a_uuid")
         XCTAssertEqual(returnedOffer!.state, "a_new_state_here")
+    }
+    
+    /**
+     Ensures that code to update a persistently stored offer's `Offer.approveToOpenState` property works properly.
+     */
+    func testUpdateApproveToOpenState() throws {
+        let offerToStore = DatabaseOffer(
+            id: "a_uuid",
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: "interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            protocolVersion: "some_version",
+            chainID: "a_chain_id",
+            havePublicKey: false,
+            isUserMaker: false,
+            state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
+            cancelingOfferState: "an_outdated_cancelingOfferState_here",
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1,
+            editingOfferState: "an_editingOfferState_here",
+            offerEditingTransactionHash: "a_tx_hash_here",
+            offerEditingTransactionCreationTime: "a_time_here",
+            offerEditingTransactionCreationBlockNumber: -1
+        )
+        try dbService.storeOffer(offer: offerToStore)
+        try dbService.updateOfferApproveToOpenState(offerID: "a_uuid", _chainID: "a_chain_id", state: "a_new_tokenTransferApprovalState_here")
+        let returnedOffer = try dbService.getOffer(id: "a_uuid")
+        XCTAssertEqual(returnedOffer!.approveToOpenState, "a_new_tokenTransferApprovalState_here")
+    }
+    
+    /**
+     Ensures that code to update a persistently stored offer's `Offer.approveToOpenTransactionHash` and related properties works properly.
+     */
+    func testUpdateApproveToOpenData() throws {
+        let offerToStore = DatabaseOffer(
+            id: "a_uuid",
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: "interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            protocolVersion: "some_version",
+            chainID: "a_chain_id",
+            havePublicKey: false,
+            isUserMaker: false,
+            state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: nil,
+            approveToOpenTransactionCreationTime: nil,
+            approveToOpenTransactionCreationBlockNumber: nil,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
+            cancelingOfferState: "a_cancelingOfferState_here",
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1,
+            editingOfferState: "an_editingOfferState_here",
+            offerEditingTransactionHash: "a_tx_hash_here",
+            offerEditingTransactionCreationTime: "a_time_here",
+            offerEditingTransactionCreationBlockNumber: -1
+        )
+        try dbService.storeOffer(offer: offerToStore)
+        let returnedOfferBeforeUpdate = try dbService.getOffer(id: "a_uuid")
+        XCTAssertNil(returnedOfferBeforeUpdate!.approveToOpenTransactionHash)
+        XCTAssertNil(returnedOfferBeforeUpdate!.approveToOpenTransactionCreationTime)
+        XCTAssertNil(returnedOfferBeforeUpdate!.approveToOpenTransactionCreationBlockNumber)
+        try dbService.updateOfferApproveToOpenData(offerID: "a_uuid", _chainID: "a_chain_id", transactionHash: "a_tx_hash_here", transactionCreationTime: "a_time_here", latestBlockNumberAtCreationTime: -1)
+        let returnedOfferAfterUpdate = try dbService.getOffer(id: "a_uuid")
+        XCTAssertEqual("a_tx_hash_here", returnedOfferAfterUpdate!.approveToOpenTransactionHash)
+        XCTAssertEqual("a_time_here", returnedOfferAfterUpdate!.approveToOpenTransactionCreationTime)
+        XCTAssertEqual(-1, returnedOfferAfterUpdate!.approveToOpenTransactionCreationBlockNumber)
+    }
+    
+    /**
+     Ensures that code to update a persistently stored offer's `Offer.openingOfferState` property works properly.
+     */
+    func testUpdateOpeningOfferState() throws {
+        let offerToStore = DatabaseOffer(
+            id: "a_uuid",
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: "interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            protocolVersion: "some_version",
+            chainID: "a_chain_id",
+            havePublicKey: false,
+            isUserMaker: false,
+            state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
+            cancelingOfferState: "a_cancelingOfferState_here",
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1,
+            editingOfferState: "an_editingOfferState_here",
+            offerEditingTransactionHash: "a_tx_hash_here",
+            offerEditingTransactionCreationTime: "a_time_here",
+            offerEditingTransactionCreationBlockNumber: -1
+        )
+        try dbService.storeOffer(offer: offerToStore)
+        try dbService.updateOpeningOfferState(offerID: "a_uuid", _chainID: "a_chain_id", state: "a_new_openingOfferState_here")
+        let returnedOffer = try dbService.getOffer(id: "a_uuid")
+        XCTAssertEqual(returnedOffer!.openingOfferState, "a_new_openingOfferState_here")
+    }
+    
+    /**
+     Ensures that code to update a persistently stored offer's `Offer.approveToOpenTransactionHash` and related properties works properly.
+     */
+    func testUpdateOfferOpeningData() throws {
+        let offerToStore = DatabaseOffer(
+            id: "a_uuid",
+            isCreated: true,
+            isTaken: false,
+            maker: "maker_address",
+            interfaceId: "interface_id",
+            stablecoin: "stablecoin_address",
+            amountLowerBound: "lower_bound_amount",
+            amountUpperBound: "upper_bound_amount",
+            securityDepositAmount: "security_deposit_amount",
+            serviceFeeRate: "service_fee_rate",
+            onChainDirection: "direction",
+            protocolVersion: "some_version",
+            chainID: "a_chain_id",
+            havePublicKey: false,
+            isUserMaker: false,
+            state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: nil,
+            openingOfferTransactionCreationTime: nil,
+            openingOfferTransactionCreationBlockNumber: nil,
+            cancelingOfferState: "a_cancelingOfferState_here",
+            offerCancellationTransactionHash: "a_tx_hash_here",
+            offerCancellationTransactionCreationTime: "a_time_here",
+            offerCancellationTransactionCreationBlockNumber: -1,
+            editingOfferState: "an_editingOfferState_here",
+            offerEditingTransactionHash: "a_tx_hash_here",
+            offerEditingTransactionCreationTime: "a_time_here",
+            offerEditingTransactionCreationBlockNumber: -1
+        )
+        try dbService.storeOffer(offer: offerToStore)
+        let returnedOfferBeforeUpdate = try dbService.getOffer(id: "a_uuid")
+        XCTAssertNil(returnedOfferBeforeUpdate!.openingOfferTransactionHash)
+        XCTAssertNil(returnedOfferBeforeUpdate!.openingOfferTransactionCreationTime)
+        XCTAssertNil(returnedOfferBeforeUpdate!.openingOfferTransactionCreationBlockNumber)
+        try dbService.updateOpeningOfferData(offerID: "a_uuid", _chainID: "a_chain_id", transactionHash: "a_tx_hash_here", transactionCreationTime: "a_time_here", latestBlockNumberAtCreationTime: -1)
+        let returnedOfferAfterUpdate = try dbService.getOffer(id: "a_uuid")
+        XCTAssertEqual("a_tx_hash_here", returnedOfferAfterUpdate!.openingOfferTransactionHash)
+        XCTAssertEqual("a_time_here", returnedOfferAfterUpdate!.openingOfferTransactionCreationTime)
+        XCTAssertEqual(-1, returnedOfferAfterUpdate!.openingOfferTransactionCreationBlockNumber)
     }
     
     /**
@@ -177,6 +397,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "an_outdated_cancelingOfferState_here",
             offerCancellationTransactionHash: "a_tx_hash_here",
             offerCancellationTransactionCreationTime: "a_time_here",
@@ -213,6 +441,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "a_cancelingOfferState_here",
             offerCancellationTransactionHash: nil,
             offerCancellationTransactionCreationTime: nil,
@@ -255,6 +491,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "a_cancelingOfferState_here",
             offerCancellationTransactionHash: "a_tx_hash_here",
             offerCancellationTransactionCreationTime: "a_time_here",
@@ -291,6 +535,14 @@ class DatabaseServiceTests: XCTestCase {
             havePublicKey: false,
             isUserMaker: false,
             state: "a_state_here",
+            approveToOpenState: "a_tokenTransferApprovalState_here",
+            approveToOpenTransactionHash: "a_tx_hash_here",
+            approveToOpenTransactionCreationTime: "a_time_here",
+            approveToOpenTransactionCreationBlockNumber: -1,
+            openingOfferState: "an_openingOfferState_here",
+            openingOfferTransactionHash: "a_tx_hash_here",
+            openingOfferTransactionCreationTime: "a_time_here",
+            openingOfferTransactionCreationBlockNumber: -1,
             cancelingOfferState: "a_cancelingOfferState_here",
             offerCancellationTransactionHash: "a_tx_hash_here",
             offerCancellationTransactionCreationTime: "a_time_here",

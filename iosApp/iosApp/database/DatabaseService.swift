@@ -223,6 +223,38 @@ class DatabaseService {
      */
     let offerState = Expression<String>("state")
     /**
+     A database structure representing an `Offer`'s `approveToOpenState` property.
+     */
+    let approveToOpenState = Expression<String>("approveToOpenState")
+    /**
+     A database structure representing the hash of a transaction that approved a token transfer allowance in order to open an `Offer` made by the user of this interface.
+     */
+    let approveToOpenTransactionHash = Expression<String?>("approveToOpenTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that approved a token transfer allowance in order to open an `Offer` made by the user of this interface.
+     */
+    let approveToOpenTransactionCreationTime = Expression<String?>("approveToOpenTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that approved a token transfer allowance in order to open an `Offer` made by the user of this interface.
+     */
+    let approveToOpenTransactionCreationBlockNumber = Expression<Int?>("approveToOpenTransactionCreationBlockNumber")
+    /**
+     A database structure representing an `Offer`'s `openingOfferState` property.
+     */
+    let openingOfferState = Expression<String>("openingOfferState")
+    /**
+     A database structure representing the hash of a transaction that opened an `Offer` made by the user of this interface.
+     */
+    let openingOfferTransactionHash = Expression<String?>("openingOfferTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that opened an `Offer` made by the user of this interface.
+     */
+    let openingOfferTransactionCreationTime = Expression<String?>("openingOfferTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that opened an `Offer` made by the user of this interface.
+     */
+    let openingOfferTransactionCreationBlockNumber = Expression<Int?>("openingOfferTransactionCreationBlockNumber")
+    /**
      A database structure representing an `Offer`'s `cancelingOfferState` property.
      */
     let cancelingOfferState = Expression<String>("cancelingOfferState")
@@ -337,6 +369,14 @@ class DatabaseService {
             t.column(havePublicKey)
             t.column(isUserMaker)
             t.column(offerState)
+            t.column(approveToOpenState)
+            t.column(approveToOpenTransactionHash)
+            t.column(approveToOpenTransactionCreationTime)
+            t.column(approveToOpenTransactionCreationBlockNumber)
+            t.column(openingOfferState)
+            t.column(openingOfferTransactionHash)
+            t.column(openingOfferTransactionCreationTime)
+            t.column(openingOfferTransactionCreationBlockNumber)
             t.column(cancelingOfferState)
             t.column(offerCancellationTransactionHash)
             t.column(offerCancellationTransactionCreationTime)
@@ -445,6 +485,14 @@ class DatabaseService {
                     havePublicKey <- offer.havePublicKey,
                     isUserMaker <- offer.isUserMaker,
                     offerState <- offer.state,
+                    approveToOpenState <- offer.approveToOpenState,
+                    approveToOpenTransactionHash <- offer.approveToOpenTransactionHash,
+                    approveToOpenTransactionCreationTime <- offer.approveToOpenTransactionCreationTime,
+                    approveToOpenTransactionCreationBlockNumber <- offer.approveToOpenTransactionCreationBlockNumber,
+                    openingOfferState <- offer.openingOfferState,
+                    openingOfferTransactionHash <- offer.openingOfferTransactionHash,
+                    openingOfferTransactionCreationTime <- offer.openingOfferTransactionCreationTime,
+                    openingOfferTransactionCreationBlockNumber <- offer.openingOfferTransactionCreationBlockNumber,
                     cancelingOfferState <- offer.cancelingOfferState,
                     offerCancellationTransactionHash <- offer.offerCancellationTransactionHash,
                     offerCancellationTransactionCreationTime <- offer.offerCancellationTransactionCreationTime,
@@ -490,6 +538,80 @@ class DatabaseService {
             try connection.run(offers.filter(id == offerID && chainID == _chainID).update(offerState <- state))
         }
         logger.notice("updateOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `approveToOpenState` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToOpenState` field.
+     */
+    func updateOfferApproveToOpenState(offerID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(approveToOpenState <- state))
+        }
+        logger.notice("updateOfferApproveToOpenState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `approveToOpenTransactionHash`, `approveToOpenTransactionCreationTime`, and `approveToOpenTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToOpenTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToOpenTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToOpenTransactionCreationBlockNumber` field.
+     */
+    func updateOfferApproveToOpenData(offerID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID)
+                .update(
+                    approveToOpenTransactionHash <- transactionHash,
+                    approveToOpenTransactionCreationTime <- transactionCreationTime,
+                    approveToOpenTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateOfferApproveToOpenData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `openingOfferState` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `openingOfferState` field.
+     */
+    func updateOpeningOfferState(offerID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(openingOfferState <- state))
+        }
+        logger.notice("updateOpeningOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `openingOfferTransactionHash`, `openingOfferTransactionCreationTime`, and `openingOfferTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `openingOfferTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `openingOfferTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `openingOfferTransactionCreationBlockNumber` field.
+     */
+    func updateOpeningOfferData(offerID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID)
+                .update(
+                    openingOfferTransactionHash <- transactionHash,
+                    openingOfferTransactionCreationTime <- transactionCreationTime,
+                    openingOfferTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateOpeningOfferData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for offer with B64 ID \(offerID), if present")
     }
     
     /**
@@ -622,6 +744,14 @@ class DatabaseService {
                 havePublicKey: result[0][havePublicKey],
                 isUserMaker: result[0][isUserMaker],
                 state: result[0][offerState],
+                approveToOpenState: result[0][approveToOpenState],
+                approveToOpenTransactionHash: result[0][approveToOpenTransactionHash],
+                approveToOpenTransactionCreationTime: result[0][approveToOpenTransactionCreationTime],
+                approveToOpenTransactionCreationBlockNumber: result[0][approveToOpenTransactionCreationBlockNumber],
+                openingOfferState: result[0][openingOfferState],
+                openingOfferTransactionHash: result[0][openingOfferTransactionHash],
+                openingOfferTransactionCreationTime: result[0][openingOfferTransactionCreationTime],
+                openingOfferTransactionCreationBlockNumber: result[0][openingOfferTransactionCreationBlockNumber],
                 cancelingOfferState: result[0][cancelingOfferState],
                 offerCancellationTransactionHash: result[0][offerCancellationTransactionHash],
                 offerCancellationTransactionCreationTime: result[0][offerCancellationTransactionCreationTime],

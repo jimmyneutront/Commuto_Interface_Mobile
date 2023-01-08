@@ -11,6 +11,14 @@
  */
 enum BlockchainTransactionType {
     /**
+     Indicates that a `BlockchainTransaction` approves a token transfer by calling [approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) in order to open an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)
+     */
+    case approveTokenTransferToOpenOffer
+    /**
+     Indicates that a `BlockchainTransaction` opens an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) by calling [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer)
+     */
+    case openOffer
+    /**
      Indicates that a `BlockchainTransaction` cancels an open [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      */
     case cancelOffer
@@ -36,6 +44,10 @@ enum BlockchainTransactionType {
      */
     var asString: String {
         switch self {
+        case .approveTokenTransferToOpenOffer:
+            return "approveTokenTransferToOpenOffer"
+        case .openOffer:
+            return "openOffer"
         case .cancelOffer:
             return "cancelOffer"
         case .editOffer:

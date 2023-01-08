@@ -90,6 +90,7 @@ class BlockchainServiceTest: XCTestCase {
         
         class TestOfferService: OfferNotifiable {
             func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {}
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
             func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}
@@ -207,6 +208,7 @@ class BlockchainServiceTest: XCTestCase {
                 transactionFailureError = error
                 transactionFailedExpectation.fulfill()
             }
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {}
             func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {}
@@ -282,6 +284,7 @@ class BlockchainServiceTest: XCTestCase {
                 transactionFailureError = error
                 transactionFailedExpectation.fulfill()
             }
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {}
             func handleOfferEditedEvent(_ event: OfferEditedEvent) throws {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) throws {}
@@ -369,6 +372,7 @@ class BlockchainServiceTest: XCTestCase {
             func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {
                 gotTransactionFailedEvent = true
             }
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -478,6 +482,7 @@ class BlockchainServiceTest: XCTestCase {
             func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {
                 gotTransactionFailedEvent = true
             }
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -609,6 +614,7 @@ class BlockchainServiceTest: XCTestCase {
             func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {
                 gotTransactionFailedEvent = true
             }
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {
                 offerOpenedEventPromise = Promise { seal in
                     seal.fulfill(event)
@@ -1101,7 +1107,8 @@ class BlockchainServiceTest: XCTestCase {
         let errorHandler = TestBlockchainErrorHandler(errorExpectation)
         
         class TestOfferService: OfferNotifiable {
-            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
+            func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {}
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
             func handleOfferOpenedEvent(_ event: OfferOpenedEvent) {}
             func handleOfferEditedEvent(_ event: OfferEditedEvent) {}
             func handleOfferCanceledEvent(_ event: OfferCanceledEvent) {}

@@ -89,23 +89,28 @@ struct OpenOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
     @State private var selectedSettlementMethods: [SettlementMethod] = []
     
     /**
+     Indicates whether this is showing the sheet that allows the user to approve the token transfer in order to open the offer.
+     */
+    @State private var isShowingApproveTransferSheet = false
+    
+    /**
      The string that will be displayed in the label of the button that opens the offer.
      */
-    var openOfferButtonLabel: String {
-        if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
-            return "Open Offer"
-        } else if offerTruthSource.openingOfferState == .completed {
-            return "Offer Opened"
+    var approveTransferButtonLabel: String {
+        if offerTruthSource.approvingTransferToOpenOfferState == .none || offerTruthSource.approvingTransferToOpenOfferState == .error {
+            return "Approve Transfer to Open Offer"
+        } else if offerTruthSource.approvingTransferToOpenOfferState == .awaitingTransactionConfirmation {
+            return "Awaiting Confirmation of Transfer Approval"
         } else {
-            return "Opening Offer"
+            return "Approving Transfer"
         }
     }
     
     /**
      The color of the outline around the button that opens the offer.
      */
-    var openOfferButtonOutlineColor: Color {
-        if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
+    var approveTransferButtonOutlineColor: Color {
+        if offerTruthSource.approvingTransferToOpenOfferState == .none || offerTruthSource.approvingTransferToOpenOfferState == .error {
             return Color.primary
         } else {
             return Color.gray
@@ -265,16 +270,21 @@ struct OpenOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                 /*
                  We don't want to display a description of the offer opening process state if an offer isn't being opened. We also don't want to do this if we encounter an error; we should display the actual error message instead.
                  */
-                if (offerTruthSource.openingOfferState != .none && offerTruthSource.openingOfferState != .error) {
+                if (offerTruthSource.approvingTransferToOpenOfferState == .validating || offerTruthSource.approvingTransferToOpenOfferState == .sendingTransaction) {
                     HStack {
-                        Text(offerTruthSource.openingOfferState.description)
+                        Text("Approving \(currencyCode ?? "Stablecoin") Transfer in Order to Open Offer")
                             .font(.title2)
                         Spacer()
                     }
-                }
-                if (offerTruthSource.openingOfferState == .error) {
+                } else if offerTruthSource.approvingTransferToOpenOfferState == .awaitingTransactionConfirmation {
                     HStack {
-                        Text(offerTruthSource.openingOfferError?.localizedDescription ?? "An unknown error occurred")
+                        Text("Awaiting Confirmation of Transfer Approval. Please Find Your New Offer in the Offers List.")
+                            .font(.title2)
+                        Spacer()
+                    }
+                } else if offerTruthSource.approvingTransferToOpenOfferState == .error {
+                    HStack {
+                        Text(offerTruthSource.approvingTransferToOpenOfferError?.localizedDescription ?? "An unknown error occurred")
                             .foregroundColor(Color.red)
                         Spacer()
                     }
@@ -282,8 +292,46 @@ struct OpenOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                 Button(
                     action: {
                         // Don't let the user open a new offer if one is currently being opened, or if the user has just opened one
-                        if offerTruthSource.openingOfferState == .none || offerTruthSource.openingOfferState == .error {
-                            offerTruthSource.openOffer(
+                        if offerTruthSource.approvingTransferToOpenOfferState == .none || offerTruthSource.approvingTransferToOpenOfferState == .error {
+                            isShowingApproveTransferSheet = true
+                        }
+                    },
+                    label: {
+                        Text(approveTransferButtonLabel)
+                            .font(.largeTitle)
+                            .bold()
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(approveTransferButtonOutlineColor, lineWidth: 3)
+                            )
+                    }
+                )
+                .accentColor(Color.primary)
+            }
+            .padding([.leading, .trailing, .bottom])
+            .sheet(isPresented: $isShowingApproveTransferSheet) {
+                TransactionGasDetailsView(
+                    isShowingSheet: $isShowingApproveTransferSheet,
+                    title: "Approve Token Transfer",
+                    buttonLabel: "Approve Token Transfer",
+                    buttonAction: { createdTransaction in
+                        offerTruthSource.approveTokenTransferToOpenOffer(
+                            chainID: chainID,
+                            stablecoin: selectedStablecoin,
+                            stablecoinInformation: stablecoins.getStablecoinInformation(chainID: chainID, contractAddress: selectedStablecoin),
+                            minimumAmount: Decimal(minimumAmount),
+                            maximumAmount: Decimal(maximumAmount),
+                            securityDepositAmount: Decimal(securityDepositAmount),
+                            direction: selectedDirection,
+                            settlementMethods: selectedSettlementMethods,
+                            approveTokenTransferToOpenOfferTransaction: createdTransaction
+                        )
+                    },
+                    runOnAppearance: { approveTransferTransactionBinding, transactionCreationErrorBinding in
+                        if offerTruthSource.approvingTransferToOpenOfferState == .none || offerTruthSource.approvingTransferToOpenOfferState == .error {
+                            offerTruthSource.createApproveTokenTransferToOpenOfferTransaction(
                                 chainID: chainID,
                                 stablecoin: selectedStablecoin,
                                 stablecoinInformation: stablecoins.getStablecoinInformation(chainID: chainID, contractAddress: selectedStablecoin),
@@ -291,25 +339,19 @@ struct OpenOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                                 maximumAmount: Decimal(maximumAmount),
                                 securityDepositAmount: Decimal(securityDepositAmount),
                                 direction: selectedDirection,
-                                settlementMethods: selectedSettlementMethods
+                                settlementMethods: selectedSettlementMethods,
+                                createdTransactionHandler: { createdTransaction in
+                                    approveTransferTransactionBinding.wrappedValue = createdTransaction
+                                },
+                                errorHandler: { error in
+                                    transactionCreationErrorBinding.wrappedValue = error
+                                }
                             )
                         }
-                    },
-                    label: {
-                        Text(openOfferButtonLabel)
-                            .font(.largeTitle)
-                            .bold()
-                            .padding(10)
-                            .frame(maxWidth: .infinity)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(openOfferButtonOutlineColor, lineWidth: 3)
-                            )
+                        
                     }
                 )
-                .accentColor(Color.primary)
             }
-            .padding([.leading, .trailing, .bottom])
         }
         .navigationBarTitle(Text("Open Offer"))
 

@@ -146,6 +146,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         afterOpen: (() -> Void)? = nil
     ) -> Promise<Void> {
         return Promise { seal in
+            /*
             Promise<Offer> { seal in
                 DispatchQueue.global(qos: .userInitiated).async { [self] in
                     logger.notice("openOffer: creating new ID, Offer object and creating and persistently storing new key pair for new offer")
@@ -262,7 +263,353 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 self.logger.error("openOffer: encountered error: \(error.localizedDescription)")
                 seal.reject(error)
             }
-            
+            */
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` that will call [approve](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) on an ERC20 contract in order to open an offer.
+     
+     This calls `getServiceFeeRate` and then, on the global `DispatchQueue`, this calls `validateNewOfferData`, and uses the resulting `ValidatedOfferData` to calculate the transfer amount that must be approved. Then it calls `BlockchainService.createApproveTransferTransaction`, passing the stablecoin contract addess, the address of the CommutoSwap contract, and the calculated transfer amount, and pipes the result to the seal of the `Promise` this returns.
+     
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the token transfer allowance will be created.
+        - stablecoin: The contract address of the stablecoin for which the token transfer allowance will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which token transfer allowance will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - maximumAmount: The maximum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer, for which the token transfer allowance will be created.
+        - direction: The direction of the new offer, for which the token transfer allowance will be created.
+        - settlementMethods: The settlement methods of the new offer, for which the token transfer allowance will be created.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of approving a token transfer of the proper amount.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func createApproveTokenTransferToOpenOfferTransaction(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod]
+    ) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            self.getServiceFeeRate()
+                .done(on: DispatchQueue.global(qos: .userInitiated)) { [self] serviceFeeRate in
+                    logger.notice("createApproveTokenTransferToOpenOfferTransaction: validating new offer data")
+                    let validatedOfferData = try validateNewOfferData(
+                        chainID: chainID,
+                        stablecoin: stablecoin,
+                        stablecoinInformation: stablecoinInformation,
+                        minimumAmount: minimumAmount,
+                        maximumAmount: maximumAmount,
+                        securityDepositAmount: securityDepositAmount,
+                        serviceFeeRate: serviceFeeRate,
+                        direction: direction,
+                        settlementMethods: settlementMethods
+                    )
+                    let tokenAmountForOpeningOffer = validatedOfferData.securityDepositAmount + validatedOfferData.serviceFeeAmountUpperBound
+                    logger.notice("createApproveTokenTransferToOpenOfferTransaction: creating for amount \(String(tokenAmountForOpeningOffer))")
+                    guard let blockchainService = blockchainService else {
+                        throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during createOpenOfferAllowanceTransaction call")
+                    }
+                    blockchainService.createApproveTransferTransaction(tokenAddress: validatedOfferData.stablecoin, spender: blockchainService.commutoSwapAddress, amount: tokenAmountForOpeningOffer).pipe(to: seal.resolve)
+                }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                    self.logger.error("createApproveTokenTransferToOpenOfferTransaction: encountered error: \(error.localizedDescription)")
+                    seal.reject(error)
+                }
+        }
+    }
+    
+    /**
+     Attempts to call [approve](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) on an ERC20 contract in order to open an offer.
+     
+     On the global `DispatchQueue`, this calls `validateNewOfferData` and uses the resulting `ValidatedNewOfferData` to determine the proper transfer amount to approve. Then, this creates another `EthereumTransaction` to approve such a transfer using this data, and then ensures that the data of this transaction matches the data of `approveTokenTransferToOpenOfferTransaction`. (If they do not match, then `approveTokenTransferToOpenOfferTransaction` was not created with the data supplied to this function.) Then, this generates and persistently a new `KeyPair` for this offer, creates a new offer ID and `Offer` object from the created `ValidatedNewOfferData` with state `OfferState.approvingTransfer`, and persistently stores this new `Offer`. Then this serializes and persistently stores the new settlement methods. Then this signs `approveTokenTransferToOpenOfferTransaction` and creates a `BlockchainTransaction` to wrap it. Then this persistently stores the token transfer approval data for said `BlockchainTransaction`, and persistently updates the token transfer approval state of the `Offer` to `TokenTransferApprovalState.sendingTransaction`. Then, on the main `DispatchQueue`, this updates the `Offer.approvingToOpenState` property of the `Offer` to `TokenTransferApprovalState.sendingTransaction`,  sets the `Offer.approvingToOpenTransaction` property of the `Offer` to said `BlockchainTransaction`, and adds the `Offer` to `offerTruthSource`. Then, on the global `DispatchQueue`, this calls `BlockchainService.sendTransaction`, passing said `BlockchainTransaction`. When this call returns, this persistently updates the approving to open state of the `Offer` to `TokenTransferApprovalState.awaitingTransactionConfirmation` and the state of the `Offer` to `OfferState.approveTransferTransactionSent`. Then, on the main `DispatchQueue`, this updates the `Offer.approvingToOpenState` property of the `Offer` to `TokenTransferApprovalState.awaitingTransactionConfirmation` and the `Offer.state` property of the `Offer` to `OfferState.approveTransferTransactionSent`.
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the token transfer allowance will be created.
+        - stablecoin: The contract address of the stablecoin for which the token transfer allowance will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which token transfer allowance will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - maximumAmount: The maximum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer, for which the token transfer allowance will be created.
+        - direction: The direction of the new offer, for which the token transfer allowance will be created.
+        - settlementMethods: The settlement methods of the new offer, for which the token transfer allowance will be created.
+        - approveTokenTransferToOpenOfferTransaction: An optional `EthereumTransaction` that can approve a token transfer for the proper amount.
+     
+     - Returns: An empty `Promise` that will be fulfilled when the token transfer is approved.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`, if `approveTokenTransferToOpenOfferTransaction` is `nil` or if `offerTruthSource` is `nil`, or an `OfferServiceError.nonmatchingDataError` if the data of `approveTokenTransferToOpenOfferTransaction` does not match that of the transaction this function creates using the supplied arguments. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
+     */
+    func approveTokenTransferToOpenOffer(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod],
+        approveTokenTransferToOpenOfferTransaction: EthereumTransaction?
+    ) -> Promise<Void> {
+        return Promise { seal in
+            self.getServiceFeeRate()
+                .then(on: DispatchQueue.global(qos: .userInitiated)) { [self] serviceFeeRate -> Promise<(EthereumTransaction, ValidatedNewOfferData)> in
+                    logger.notice("approveTokenTransferToOpenOffer: validating new offer data")
+                    let validatedOfferData = try validateNewOfferData(
+                        chainID: chainID,
+                        stablecoin: stablecoin,
+                        stablecoinInformation: stablecoinInformation,
+                        minimumAmount: minimumAmount,
+                        maximumAmount: maximumAmount,
+                        securityDepositAmount: securityDepositAmount,
+                        serviceFeeRate: serviceFeeRate,
+                        direction: direction,
+                        settlementMethods: settlementMethods
+                    )
+                    let tokenAmountForOpeningOffer = validatedOfferData.securityDepositAmount + validatedOfferData.serviceFeeAmountUpperBound
+                    logger.notice("approveTokenTransferToOpenOffer: creating EthereumTransaction to approve transfer of \(String(tokenAmountForOpeningOffer)) tokens at contract \(validatedOfferData.stablecoin.address)")
+                    guard let blockchainService = blockchainService else {
+                        throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during approveTokenTransferToOpenOffer call")
+                    }
+                    return blockchainService.createApproveTransferTransaction(tokenAddress: validatedOfferData.stablecoin, spender: blockchainService.commutoSwapAddress, amount: tokenAmountForOpeningOffer).map { ($0, validatedOfferData) }
+                }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] recreatedTransaction, validatedOfferData -> Promise<(Offer, BlockchainTransaction)> in
+                    guard let blockchainService = blockchainService else {
+                        throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during approveTokenTransferToOpenOffer call")
+                    }
+                    guard var approveTokenTransferToOpenOfferTransaction = approveTokenTransferToOpenOfferTransaction else {
+                        throw OfferServiceError.unexpectedNilError(desc: "Transaction was nil during approveTokenTransferToOpenOffer call")
+                    }
+                    guard recreatedTransaction.data == approveTokenTransferToOpenOfferTransaction.data else {
+                        throw OfferServiceError.nonmatchingDataError(desc: "Data of approveTokenTransferToOpenOfferTransaction did not match that of transaction created with supplied data")
+                    }
+                    logger.notice("approveTokenTransferToOpenOffer: creating new ID, Offer object and creating and persistently storing new key pair for new offer")
+                    // Generate a new 2056 bit RSA key pair for the new offer
+                    let newKeyPairForOffer = try keyManagerService.generateKeyPair(storeResult: true)
+                    // Generate the a new ID for the offer
+                    let newOfferID = UUID()
+                    logger.notice("approveTokenTransferToOpenOffer: created ID \(newOfferID.uuidString) for new offer")
+                    // Create a new Offer
+                    #warning("TODO: get proper chain ID here and maker address")
+                    let newOffer = Offer(
+                        isCreated: true,
+                        isTaken: false,
+                        id: newOfferID,
+                        maker: EthereumAddress("0x0000000000000000000000000000000000000000")!, // It is safe to use the zero address here, because the maker address will be automatically set to that of the function caller by CommutoSwap
+                        interfaceID: newKeyPairForOffer.interfaceId,
+                        stablecoin: validatedOfferData.stablecoin,
+                        amountLowerBound: validatedOfferData.minimumAmount,
+                        amountUpperBound: validatedOfferData.maximumAmount,
+                        securityDepositAmount: validatedOfferData.securityDepositAmount,
+                        serviceFeeRate: validatedOfferData.serviceFeeRate,
+                        direction: validatedOfferData.direction,
+                        settlementMethods: validatedOfferData.settlementMethods,
+                        protocolVersion: BigUInt.zero,
+                        chainID: BigUInt(31337),
+                        havePublicKey: true,
+                        isUserMaker: true,
+                        state: .approvingTransfer
+                    )
+                    logger.notice("approveTokenTransferToOpenOffer: persistently storing \(newOffer.id.uuidString)")
+                    // Persistently store the new offer
+                    let newOfferForDatabase = DatabaseOffer(
+                        id: newOffer.id.asData().base64EncodedString(),
+                        isCreated: newOffer.isCreated,
+                        isTaken: newOffer.isTaken,
+                        maker: newOffer.maker.addressData.toHexString(),
+                        interfaceId: newOffer.interfaceId.base64EncodedString(),
+                        stablecoin: newOffer.stablecoin.addressData.toHexString(),
+                        amountLowerBound: String(newOffer.amountLowerBound),
+                        amountUpperBound: String(newOffer.amountUpperBound),
+                        securityDepositAmount: String(newOffer.securityDepositAmount),
+                        serviceFeeRate: String(newOffer.serviceFeeRate),
+                        onChainDirection: String(newOffer.onChainDirection),
+                        protocolVersion: String(newOffer.protocolVersion),
+                        chainID: String(newOffer.chainID),
+                        havePublicKey: newOffer.havePublicKey,
+                        isUserMaker: newOffer.isUserMaker,
+                        state: newOffer.state.asString,
+                        approveToOpenState: newOffer.approvingToOpenState.asString,
+                        approveToOpenTransactionHash: newOffer.approvingToOpenTransaction?.transactionHash,
+                        approveToOpenTransactionCreationTime: nil,
+                        approveToOpenTransactionCreationBlockNumber: nil,
+                        openingOfferState: newOffer.approvingToOpenState.asString,
+                        openingOfferTransactionHash: newOffer.offerOpeningTransaction?.transactionHash,
+                        openingOfferTransactionCreationTime: nil,
+                        openingOfferTransactionCreationBlockNumber: nil,
+                        cancelingOfferState: newOffer.cancelingOfferState.asString,
+                        offerCancellationTransactionHash: newOffer.offerCancellationTransaction?.transactionHash,
+                        offerCancellationTransactionCreationTime: nil,
+                        offerCancellationTransactionCreationBlockNumber: nil,
+                        editingOfferState: newOffer.editingOfferState.asString,
+                        offerEditingTransactionHash: newOffer.offerEditingTransaction?.transactionHash,
+                        offerEditingTransactionCreationTime: nil,
+                        offerEditingTransactionCreationBlockNumber: nil
+                    )
+                    logger.notice("approveTokenTransferToOpenOffer: serializing and persistently storing settlement methods for \(newOffer.id.uuidString)")
+                    try databaseService.storeOffer(offer: newOfferForDatabase)
+                    var settlementMethodStrings: [(String, String?)] = []
+                    for settlementMethod in newOffer.settlementMethods {
+                        settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), settlementMethod.privateData))
+                    }
+                    logger.notice("approveTokenTransferToOpenOffer: persistently storing \(settlementMethodStrings.count) settlement methods for offer \(newOffer.id.uuidString)")
+                    try databaseService.storeOfferSettlementMethods(offerID: newOfferForDatabase.id, _chainID: newOfferForDatabase.chainID, settlementMethods: settlementMethodStrings)
+                    logger.notice("approveTokenTransferToOpenOffer: signing transaction for \(newOffer.id.uuidString)")
+                    try blockchainService.signTransaction(&approveTokenTransferToOpenOfferTransaction)
+                    let blockchainTransactionForApprovingTransfer = try BlockchainTransaction(transaction: approveTokenTransferToOpenOfferTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .approveTokenTransferToOpenOffer)
+                    let dateString = DateFormatter.createDateString(blockchainTransactionForApprovingTransfer.timeOfCreation)
+                    logger.notice("approveTokenTransferToOpenOffer: persistently storing approve transfer data for \(newOffer.id.uuidString), including tx hash \(blockchainTransactionForApprovingTransfer.transactionHash)")
+                    try databaseService.updateOfferApproveToOpenData(offerID: newOffer.id.asData().base64EncodedString(), _chainID: String(newOffer.chainID), transactionHash: blockchainTransactionForApprovingTransfer.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForApprovingTransfer.latestBlockNumberAtCreation))
+                    logger.notice("approveTokenTransferToOpenOffer: persistently updating approvingToOpenState for \(newOffer.id.uuidString) to sendingTransaction")
+                    try databaseService.updateOfferApproveToOpenState(offerID: newOffer.id.asData().base64EncodedString(), _chainID: String(newOffer.chainID), state: TokenTransferApprovalState.sendingTransaction.asString)
+                    logger.notice("approveTokenTransferToOpenOffer: updating approvingToOpenState for \(newOffer.id.uuidString) to sendingTransaction and storing tx \(blockchainTransactionForApprovingTransfer.transactionHash) in offer, then adding to offerTruthSource")
+                    return Promise.value((newOffer, blockchainTransactionForApprovingTransfer))
+                }.get(on: DispatchQueue.main) { offer, blockchainTransactionForApprovingTransfer in
+                    offer.approvingToOpenState = .sendingTransaction
+                    offer.approvingToOpenTransaction = blockchainTransactionForApprovingTransfer
+                    guard var offerTruthSource = self.offerTruthSource else {
+                        throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during approveTokenTransferToOpenOffer call")
+                    }
+                    offerTruthSource.offers[offer.id] = offer
+                }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] offer, blockchainTransactionForApprovingTransfer -> Promise<(TransactionSendingResult, Offer)> in
+                    guard let blockchainService = blockchainService else {
+                        throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during approveTokenTransferToOpenOffer call")
+                    }
+                    logger.notice("approveTokenTransferToOpenOffer: sending \(blockchainTransactionForApprovingTransfer.transactionHash) for \(offer.id.uuidString)")
+                    return blockchainService.sendTransaction(blockchainTransactionForApprovingTransfer).map { ($0, offer) }
+                }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, offer in
+                    logger.notice("approveTokenTransferToOpenOffer: persistently updating approvingToOpenState of \(offer.id.uuidString) to awaitingTransactionConfirmation")
+                    try databaseService.updateOfferApproveToOpenState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: TokenTransferApprovalState.awaitingTransactionConfirmation.asString)
+                    logger.notice("approveTokenTransferToOpenOffer: persistently updating state of \(offer.id.uuidString) to approveTransferTransactionSent")
+                    try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.approveTransferTransactionSent.asString)
+                    logger.notice("approveTokenTransferToOpenOffer: updating state to approveTransferTransactionSent and approvingToOpenState to awaitingTransactionConfirmation for \(offer.id.uuidString)")
+                }.get(on: DispatchQueue.main) { _, offer in
+                    offer.state = .approveTransferTransactionSent
+                    offer.approvingToOpenState = .awaitingTransactionConfirmation
+                }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                    seal.fulfill(())
+                }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                    logger.error("approveTokenTransferToOpenOffer: encountered error: \(error.localizedDescription)")
+                    seal.reject(error)
+                }
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` that will open an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     This calls `validateOfferForOpening`creates an `OfferStruct` from `offer` and then calls `BlockchainService.createOpenOfferTransaction`, passing the `Offer.id` property of `offer` and the created `OfferStruct`.
+     
+     - Parameter offer: The `Offer` to be opened.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of opening `offer`.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
+     */
+    func createOpenOfferTransaction(offer: Offer) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createOpenOfferTransaction: creating for \(offer.id.uuidString)")
+                do {
+                    try validateOfferForOpening(offer: offer)
+                } catch {
+                    seal.reject(error)
+                }
+                guard let blockchainService = blockchainService else {
+                    seal.reject(OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during createOpenOfferTransaction call"))
+                    return
+                }
+                let offerStruct = offer.toOfferStruct()
+                blockchainService.createOpenOfferTransaction(offerID: offer.id, offerStruct: offerStruct).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
+     Attempts to open an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
+     
+     On the global `DispatchQueue`, this calls `validateOfferForOpening`, and then creates another `EthereumTransaction` to open `offer` and ensures that the data of this transaction matches the data of `offerOpeningTransaction`. (If they do not match, then `offerOpeningTransaction` was not created with the data contained in `offer`.) Then this signs `offerOpeningTransaction` and creates a `BlockchainTransaction` to wrap it. Then this persistently stores the offer opening data for said `BlockchainTransaction`, and persistently updates the offer opening state of `offer` to `OpeningOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this updates the `Offer.offerOpeningState` property of `offer` to `OpeningOfferState.sendingTransaction` and sets the `Offer.offerOpeningTransaction` property of `offer` to said `BlockchainTransaction`. Then, on the global `DispatchQueue`, this calls `BlockchainService.sendTransaction`, passing said `BlockchainTransaction`. When this call returns, this persistently updates the state of `offer` to `OfferState.openOfferTransactionSent` and the offer opening state of `Offer` to `OpeningOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this updates the `Offer.state` property of `offer` to `OfferState.openOfferTransactionSent`and the `Offer.openingOfferState` property of `offer` to `OpeningOfferState.awaitingTransactionConfirmation`.
+     
+     If this catches an error, it persistently updates the opening offer state of `offer` to `OpeningOfferState.error`, sets the `Offer.openingOfferError` property of `offer` to the caucht offer, and then, on the main `DispatchQueue`, sets the `Offer.openingOfferState` property of `offer` to `OpeningOfferState.error`.
+     
+     - Parameters:
+        - offer: The `Offer` to open.
+        - offerOpeningTransaction: An optional `EthereumTransaction` that can open `offer`.
+     
+     - Returns: An empty `Promise` that will be fulfilled when `offer` is opened.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil` or if `offerOpeningTransaction` is `nil`, or an `OfferServiceError.nonmatchingDataError` if the data of `offerOpeningTransaction` does not match that of the transaction this function creates using `offer`. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
+     */
+    func openOffer(offer: Offer, offerOpeningTransaction: EthereumTransaction?) -> Promise<Void> {
+        return Promise { seal in
+            Promise<EthereumTransaction> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("openOffer: opening \(offer.id.uuidString)")
+                    do {
+                        try validateOfferForOpening(offer: offer)
+                    } catch {
+                        seal.reject(error)
+                    }
+                    logger.notice("openOffer: recreating EthereumTransaction to open \(offer.id.uuidString) to ensure offerOpeningTransaction was created with the contents of offer")
+                    guard let blockchainService = blockchainService else {
+                        seal.reject(OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call"))
+                        return
+                    }
+                    blockchainService.createOpenOfferTransaction(offerID: offer.id, offerStruct: offer.toOfferStruct()).pipe(to: seal.resolve)
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] recreatedTransaction -> Promise<(BlockchainTransaction, BlockchainService)> in
+                guard var offerOpeningTransaction = offerOpeningTransaction else {
+                    throw OfferServiceError.unexpectedNilError(desc: "Transaction was nil during openOffer call for \(offer.id.uuidString)")
+                }
+                guard recreatedTransaction.data == offerOpeningTransaction.data else {
+                    throw OfferServiceError.nonmatchingDataError(desc: "Transaction was nil during openOffer call for \(offer.id.uuidString)")
+                }
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during openOffer call")
+                }
+                logger.notice("openOffer: signing transaction for \(offer.id.uuidString)")
+                try blockchainService.signTransaction(&offerOpeningTransaction)
+                let blockchainTransactionForOfferOpening = try BlockchainTransaction(transaction: offerOpeningTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .openOffer)
+                let dateString = DateFormatter.createDateString(blockchainTransactionForOfferOpening.timeOfCreation)
+                logger.notice("openOffer: persistently storing offer opening data for \(offer.id.uuidString), including tx hash \(blockchainTransactionForOfferOpening.transactionHash)")
+                try databaseService.updateOpeningOfferData(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), transactionHash: blockchainTransactionForOfferOpening.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForOfferOpening.latestBlockNumberAtCreation))
+                logger.notice("openOffer: persistently updating openingOfferState for \(offer.id.uuidString) to \(OpeningOfferState.sendingTransaction.asString)")
+                try databaseService.updateOpeningOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OpeningOfferState.sendingTransaction.asString)
+                logger.notice("openOffer: updating openingOfferState to sendingTransaction and storing tx \(blockchainTransactionForOfferOpening.transactionHash) in \(offer.id.uuidString)")
+                return Promise.value((blockchainTransactionForOfferOpening, blockchainService))
+            }.get(on: DispatchQueue.main) { blockchainTransactionForOfferOpening, _ in
+                offer.offerOpeningTransaction = blockchainTransactionForOfferOpening
+                offer.openingOfferState = .sendingTransaction
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { offerOpeningBlockchainTransaction, blockchainService -> Promise<TransactionSendingResult> in
+                self.logger.notice("openOffer: sending \(offerOpeningBlockchainTransaction.transactionHash) for \(offer.id.uuidString)")
+                return blockchainService.sendTransaction(offerOpeningBlockchainTransaction)
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("openOffer: persistently updating state of \(offer.id.uuidString) to \(OfferState.openOfferTransactionSent.asString)")
+                try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.openOfferTransactionSent.asString)
+                logger.notice("openOffer: persistently updating openingOfferState of \(offer.id.uuidString) to awaitingTransactionConfirmation")
+                try databaseService.updateOpeningOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OpeningOfferState.awaitingTransactionConfirmation.asString)
+                logger.notice("openOffer: updating state to \(OfferState.openOfferTransactionSent.asString) and openingOfferState to awaitingTransactionConfirmation for offer \(offer.id.uuidString)")
+            }.get(on: DispatchQueue.main) { _ in
+                offer.state = OfferState.openOfferTransactionSent
+                offer.openingOfferState = .awaitingTransactionConfirmation
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("openOffer: encountered error while opening \(offer.id.uuidString), setting openingOfferState to error: \(error.localizedDescription)")
+                // It's OK that we don't handle database errors here, because if such an error occurs and the opening offer state isn't updated to error, then when the app restarts, we will check the offer opening transaction, and then discover and handle the error then.
+                do {
+                    try databaseService.updateOpeningOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OpeningOfferState.error.asString)
+                } catch {}
+                offer.openingOfferError = error
+                DispatchQueue.main.async {
+                    offer.openingOfferState = .error
+                }
+                seal.reject(error)
+            }
         }
     }
     
@@ -325,7 +672,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
-     Attempts to create an `EthereumTransaction` that will cancel `an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)` made by the user of this interface.
+     Attempts to create an `EthereumTransaction` that will cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
      On the global `DispatchQueue`, this calls `validateOfferForCancellation`, and then calls `BlockchainService.createCancelOfferTransaction`, passing the `Offer.id` and `Offer.chainID` properties of `offer`, and pipes the result to the seal of the `Promise` this returns.
      
@@ -356,7 +703,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      Attempts to cancel an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) made by the user of this interface.
      
-     On the global `DispatchQueue`, this calls `validateOfferForCancellation`. Then it signs `offerCancellationTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `offer` and sets `offer`'s `Offer.cancelingOfferState` property to `CancelingOfferState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `offerCancellationTransaction` to the blockchain. Once a response is received, this persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this sets the value of `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.awaitingTransactionConfirmation`.
+     On the global `DispatchQueue`, this calls `validateOfferForCancellation` and ensures that `offerCancellationTransaction` is not `nil`. Then it signs `offerCancellationTransaction`, creates a `BlockchainTransaction` to wrap it, determines the transaction hash, persistently stores the transaction hash and persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.sendingTransaction`. Then, on the main `DispatchQueue`, this stores the transaction hash in `offer` and sets `offer`'s `Offer.cancelingOfferState` property to `CancelingOfferState.sendingTransaction`. Then, on the global `DispatchQueue` it sends the `BlockchainTransaction`-wrapped `offerCancellationTransaction` to the blockchain. Once a response is received, this persistently updates the `Offer.cancelingOfferState` of the offer being canceled to `CancelingOfferState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this sets the value of `offer`'s `Offer.cancelingOfferState` to `CancelingOfferState.awaitingTransactionConfirmation`.
      
      - Parameters:
         - offer: The `Offer` being canceled.
@@ -588,7 +935,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
      
      - Returns: An empty `Promise` that will be fulfilled when `offer` is edited.
      
-     - Throws: An `OfferServiceError.unexpectedNilError` of `blockchainService` is `nil` or if `offerEditingTransaction` is `nil`, or an `OfferServiceError.nonmatchingDataError` if the data of `offerEditingTransaction` does not match that of the transaction this function creates using `newSettlementMethods`.
+     - Throws: An `OfferServiceError.unexpectedNilError` if `blockchainService` is `nil` or if `offerEditingTransaction` is `nil`, or an `OfferServiceError.nonmatchingDataError` if the data of `offerEditingTransaction` does not match that of the transaction this function creates using `newSettlementMethods`. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
      */
     func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod], offerEditingTransaction: EthereumTransaction?) -> Promise<Void> {
         return Promise { seal in
@@ -658,7 +1005,7 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 try databaseService.storePendingOfferSettlementMethods(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), pendingSettlementMethods: serializedSettlementMethodsAndPrivateDetails)
                 logger.notice("editOffer: persistently updating editingOfferState for \(offer.id.uuidString) to sendingTransaction")
                 try databaseService.updateEditingOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: EditingOfferState.sendingTransaction.asString)
-                logger.notice("editOffer: updating editingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx hash \(blockchainTransactionForOfferEditing.transactionHash) in offer")
+                logger.notice("editOffer: updating editingOfferState for \(offer.id.uuidString) to sendingTransaction and storing tx \(blockchainTransactionForOfferEditing.transactionHash) in offer")
                 return Promise.value((blockchainTransactionForOfferEditing, blockchainService))
             }.get(on: DispatchQueue.main) { blockchainTransactionForOfferEditing, _ in
                 offer.editingOfferState = .sendingTransaction
@@ -919,6 +1266,10 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     /**
      The function called by `BlockchainService` in order to notify `OfferService` that a monitored offer-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
      
+     If `transaction` is of type `BlockchainTransactionType.approveTokenTransferToOpenOffer`, then this finds the offer with the corresponding approving to open transaction hash, persistently updates the state of the offer to `OfferState.transferApprovalFailed`, persistently updates the offer's approve to open state to `TokenTransferApprovalState.error` and on the main `DispatchQueue` sets the `Offer.state` property to `OfferState.transferApprovalFailed`, the `Offer.approvingToOpenError` property to `error`, and the `Offer.approvingToOpenState` to `TokenTransferApprovalState.error`.
+     
+     If `transaction` is of type `BlockchainTransactionType.openOffer`, then this finds the offer with the corresponding offer opening transaction hash, persistently updates its state to `OfferState.awaitingOpening`, persistently updates its opening offer state to `OpeningOfferState.error` and on the main `DispatchQueue` sets the `Offer.state` property to `OfferState.awaitingOpening`, the `Offer.openingOfferError` property to `error`, and the `Offer.openingOfferState` to `OpeningOfferState.error`.
+     
      If `transaction` is of type `BlockchainTransactionType.cancelOffer`, then this finds the offer with the corresponding cancellation transaction hash, persistently updates its canceling offer state to `CancelingOfferState.error` and on the main `DispatchQueue` sets its `Offer.cancelingOfferError` property to `error` and updates its `Offer.cancelingOfferState` property to `CancelingOfferState.error`.
      
      If `transaction` is of type `BlockchainTransactionType.editOffer`, then this finds the offer with the corresponding editing transaction hash, persistently updates its editing offer state to `EditingOfferState.error` and on the main `DispatchQueue` clears its list of selected settlement methods, sets its `Offer.editingOfferError` property to `error`, and updates its `Offer.editingOfferState` property to `EditingOfferState.error`. Then this deletes the offer's pending settlement methods from persistent storage.
@@ -933,6 +1284,38 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
             throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleFailedTransaction call for \(transaction.transactionHash)")
         }
         switch transaction.type {
+        case .approveTokenTransferToOpenOffer:
+            guard let offer = offerTruthSource.offers.first(where: { id, offer in
+                offer.approvingToOpenTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: offer with approving to open transaction \(transaction.transactionHash) not found in offerTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found offer \(offer.id.uuidString) on \(offer.chainID) with approving to open transaction \(transaction.transactionHash), updating state to \(OfferState.transferApprovalFailed.asString) and approvingToOpenState to \(TokenTransferApprovalState.error.asString) in persistent storage")
+            try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.transferApprovalFailed.asString)
+            try databaseService.updateOfferApproveToOpenState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: TokenTransferApprovalState.error.asString)
+            logger.warning("handleFailedTransaction: setting state to \(OfferState.transferApprovalFailed.asString), setting approvingToOpenError and updating approvingToOpenState to \(TokenTransferApprovalState.error.asString) for \(offer.id.uuidString)")
+            DispatchQueue.main.sync {
+                offer.state = OfferState.transferApprovalFailed
+                offer.approvingToOpenError = error
+                offer.approvingToOpenState = TokenTransferApprovalState.error
+            }
+        case .openOffer:
+            guard let offer = offerTruthSource.offers.first(where: { id, offer in
+                offer.offerOpeningTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: offer with offer opening transaction \(transaction.transactionHash) not found in offerTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found offer \(offer.id.uuidString) on \(offer.chainID) with offer opening transaction \(transaction.transactionHash), updating state to \(OfferState.awaitingOpening.asString) and openingOfferState to \(OpeningOfferState.error.asString) in persistent storage")
+            try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OfferState.awaitingOpening.asString)
+            try databaseService.updateOpeningOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(offer.chainID), state: OpeningOfferState.error.asString)
+            logger.warning("handleFailedTransactionL setting state to \(OfferState.awaitingOpening.asString), setting openingOfferError and updating openingOfferState to \(OpeningOfferState.error.asString) for \(offer.id.uuidString)")
+            DispatchQueue.main.sync {
+                offer.state = OfferState.awaitingOpening
+                offer.openingOfferError = error
+                offer.openingOfferState = OpeningOfferState.error
+            }
         case .cancelOffer:
             guard let offer = offerTruthSource.offers.first(where: { id, offer in
                 offer.offerCancellationTransaction?.transactionHash == transaction.transactionHash
@@ -970,22 +1353,56 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
     }
     
     /**
+     The function called by `BlockchainService` to notify `OfferService` of an `ApprovalEvent`.
+     
+     If the purpose of `ApprovalEvent` is `TokenTransferApprovalPurpose.openOffer`, this gets the offer with the corresponding approving to open transaction hash, persistently updates its state to `OfferState.awaitingOpening`, persistently updates its approving to open state to `TokenTransferApprovalState.completed`, and then on the main `DispatchQueue` sets its `Offer.state` property to `OfferState.awaitingOpening` and its `Offer.approvingToOpenState` to `OfferState.completed`.
+     
+     - Parameter event: The `ApprovalEvent` of which `OfferService` is being notified.
+     
+     - THrows: `OfferServiceError.unexpectedNilError` if `offerTruthSource` is `nil`.
+     */
+    func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {
+        logger.notice("handleTokenTransferApprovalEvent: handling event with tx hash \(event.transactionHash) and purpose \(event.purpose.asString)")
+        switch event.purpose {
+        case .openOffer:
+            guard let offerTruthSource = offerTruthSource else {
+                throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleTokenTransferApprovalEvent call")
+            }
+            guard let offer = offerTruthSource.offers.first(where: { id, offer in
+                offer.approvingToOpenTransaction?.transactionHash == event.transactionHash
+            })?.value else {
+                logger.warning("handleTokenTransferApprovalEvent: offer with approving to open transaction \(event.transactionHash) not found in offerTruthSource")
+                return
+            }
+            logger.notice("handleTokenTransferApprovalEvent: found offer \(offer.id.uuidString) with approvingToOpen tx hash \(event.transactionHash), persistenly updating state to \(OfferState.awaitingOpening.asString) and approvingToOpenState to \(TokenTransferApprovalState.completed.asString)")
+            try databaseService.updateOfferState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: OfferState.awaitingOpening.asString)
+            try databaseService.updateOfferApproveToOpenState(offerID: offer.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: TokenTransferApprovalState.completed.asString)
+            logger.notice("handleTokenTransferApprovalEvent: updating state to \(OfferState.awaitingOpening.asString) and approvingToOpenState to \(TokenTransferApprovalState.completed.asString) for \(offer.id.uuidString)")
+            DispatchQueue.main.sync {
+                offer.state = .awaitingOpening
+                offer.approvingToOpenState = .completed
+            }
+        }
+    }
+    
+    /**
      The function called by `BlockchainService` to notify `OfferService` of an `OfferOpenedEvent`.
      
-     Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, and then checks if the offer has been persistently stored in `databaseService`. If it has been persistently stored and if its `isUserMaker` field is true, then the user of this interface has created this offer, and so `OfferService`updates the offer's state to `awaitingPublicKeyAnnouncement`, announces its corresponding public key by getting its key pair from `keyManagerService` and passing the key pair and the offer ID specified in `event` to `P2PService.announcePublicKey`, and then updates the offer state to `offerOpened`. If the offer has not been persistently stored or if its `isUserMaker` field is false, then `OfferService` creates a new `Offer` and list of settlement methods with the results, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` and `state` properties accordingly, persistently stores the new offer and its settlement methods, removes `event` from `offerOpenedEventsRepository`, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread.
+     Once notified, `OfferService` saves `event` in `offerOpenedEventsRepository`, gets all on-chain offer data by calling `blockchainServices's` `getOffer` method, verifies that the chain ID of the event and the offer data match, and then checks if the offer with the ID and chain ID specified in `event` exists in `offerTruthSource`. If it does and if the user is the maker of said offer, than this gets retrieves the user's/maker's key pair, persistently updates the offer's state to `OfferState.awaitingPublicKeyAnnouncement`, and persistently updates the offer's opening offer state to `OpeningOfferState.completed`. Then, on the main `DispatchQueue`, this sets the `Offer.state` property of the offer to `OfferState.awaitingPublicKeyAnnouncement` and the `Offer.openingOfferState` property to `OpeningOfferState.completed`. Then this announces the user's/maker's public key. Finally, this updates the offer's `Offer.state` to `OfferState.offerOpened`, both persistently and in the `Offer` object. If such an offer does not exist or the user is not the maker, then `OfferService` creates a new `Offer` and list of settlement methods using the on-chain `OfferStruct`, checks if `keyManagerService` has the maker's public key and updates the `Offer`'s `havePublicKey` and `state` properties accordingly, persistently stores the new offer and its settlement methods, and then synchronously maps the offer's ID to the new `Offer` in `offerTruthSource`'s `offers` dictionary on the main thread. Finally, regardless of whether the `Offer` exists in `offerTruthSource` and whether the user is the maker of such an offer, this removes `event` from `offerOpenedEventsRepository`.
      
      - Parameter event: The `OfferOpenedEvent` of which `OfferService` is being notified.
      
-     - Throws: `OfferServiceError.unexpectedNilError` or `OfferServiceError.nonmatchingChainIDError`.
+     - Throws: An `OfferServiceError.unexpectedNilError`if `blockchainService` is `nil`, if `offerTruthSource` is `nil`, if the user is the maker of the offer specified by `event` but the user's/maker's key pair is not found or `p2pService` is `nil`, or an `OfferServiceError.nonmatchingChainIDError` if the chain ID specified in event doesn't match that of the corresponding `OfferStruct` found on-chain
+     
+     or `OfferServiceError.nonmatchingChainIDError`.
      */
     func handleOfferOpenedEvent(_ event: OfferOpenedEvent) throws {
         logger.notice("handleOfferOpenedEvent: handling event for offer \(event.id.uuidString)")
         offerOpenedEventRepository.append(event)
-        guard blockchainService != nil else {
+        guard let blockchainService = blockchainService else {
             throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during handleOfferOpenedEvent call")
         }
-        // Force unwrapping blockchainService is safe from here forward because we ensured that it is not nil
-        guard let offerStruct = try blockchainService!.getOffer(id: event.id) else {
+        guard let offerStruct = try blockchainService.getOffer(id: event.id) else {
             logger.notice("handleOfferOpenedEvent: no on-chain offer was found with ID specified in OfferOpenedEvent in handleOfferOpenedEvent call. OfferOpenedEvent.id: \(event.id.uuidString)")
             return
         }
@@ -993,41 +1410,35 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
         guard event.chainID == offerStruct.chainID else {
             throw OfferServiceError.nonmatchingChainIDError(desc: "Chain ID of OfferOpenedEvent did not match chain ID of OfferStruct in handleOfferOpenedEvent call. OfferOpenedEvent.chainID: " + String(event.chainID) + ", OfferStruct.chainID: " + String(offerStruct.chainID) + ", OfferOpenedEvent.id: " + event.id.uuidString)
         }
-        // Check if the offer is already in the database, and if it is, whether the user of this interface is the maker of the offer.
-        let offerInDatabase = try databaseService.getOffer(id: event.id.asData().base64EncodedString())
-        var isUserMaker = false
-        if let offerInDatabase = offerInDatabase {
-            isUserMaker = offerInDatabase.isUserMaker
+        guard var offerTruthSource = offerTruthSource else {
+            throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
         }
-        if isUserMaker {
+        if let offer = offerTruthSource.offers[event.id], offer.chainID == event.chainID, offer.isUserMaker {
             logger.notice("handleOfferOpenedEvent: offer \(event.id.uuidString) made by the user")
             // The user of this interface is the maker of this offer, so we must announce the public key.
-            guard let keyPair = try keyManagerService.getKeyPair(interfaceId: offerStruct.interfaceId) else {
-                throw OfferServiceError.unexpectedNilError(desc: "handleOfferOpenedEvent: got nil while getting key pair with interface ID \(offerStruct.interfaceId.base64EncodedString()) for offer \(event.id.uuidString), which was made by the user")
+            guard let keyPair = try keyManagerService.getKeyPair(interfaceId: offer.interfaceId) else {
+                throw OfferServiceError.unexpectedNilError(desc: "handleOfferOpenedEvent: got nil while getting key pair with interface ID \(offer.interfaceId.base64EncodedString()) for offer \(event.id.uuidString), which was made by the user")
             }
             guard let p2pService = p2pService else {
                 throw OfferServiceError.unexpectedNilError(desc: "handleOfferOpenedEvent: p2pService was nil during handleOfferOpenedEvent call")
             }
-            /*
-             We do update the state of the persistently stored offer here but not the state of the corresponding Offer in offerTruthSource, since the offer should only remain in the awaitingPublicKeyAnnouncement state for a few moments.
-             */
+            logger.notice("handleOfferOpenedEvent: persistently updating state of \(offer.id.uuidString) to \(OfferState.awaitingPublicKeyAnnouncement.asString) and updating openingOfferState to \(OpeningOfferState.completed.asString)")
             try databaseService.updateOfferState(offerID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: OfferState.awaitingPublicKeyAnnouncement.asString)
+            try databaseService.updateOpeningOfferState(offerID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: OpeningOfferState.completed.asString)
+            logger.notice("handleOfferOpenedEvent: updating state of \(offer.id.uuidString) to \(OfferState.awaitingPublicKeyAnnouncement.asString) and openingOfferState to \(OpeningOfferState.completed.asString)")
+            DispatchQueue.main.sync {
+                offer.state = .awaitingPublicKeyAnnouncement
+                offer.openingOfferState = OpeningOfferState.completed
+            }
             logger.notice("handleOfferOpenedEvent: announcing public key for \(event.id.uuidString)")
             try p2pService.announcePublicKey(offerID: event.id, keyPair: keyPair)
             logger.notice("handleOfferOpenedEvent: announced public key for \(event.id.uuidString)")
+            logger.notice("handleOfferOpenedEvent: persistently updating state of \(offer.id.uuidString) to \(OfferState.offerOpened.asString)")
             try databaseService.updateOfferState(offerID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: OfferState.offerOpened.asString)
-            guard let offerTruthSource = offerTruthSource else {
-                throw OfferServiceError.unexpectedNilError(desc: "handleOfferOpenedEvent: offerTruthSource was nil during handleOfferOpenedEvent call")
-            }
-            guard offerTruthSource.offers[event.id] != nil else {
-                logger.warning("handleOfferOpenedEvent: offer \(event.id.uuidString) (made by interface user) not found in offerTruthSource during handleOfferOpenedEvent call")
-                offerOpenedEventRepository.remove(event)
-                return
-            }
+            logger.notice("updating state of \(offer.id.uuidString) to \(OfferState.offerOpened.asString)")
             DispatchQueue.main.sync {
-                offerTruthSource.offers[event.id]?.state = .offerOpened
+                offer.state = .offerOpened
             }
-            offerOpenedEventRepository.remove(event)
         } else {
             logger.notice("handleOfferOpenedEvent: offer \(event.id.uuidString) not made by the user")
             // The user of this interface is not the maker of this offer, so we treat it as a new offer.
@@ -1059,25 +1470,10 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 isUserMaker: false,
                 state: offerState
             ) else {
-                throw OfferServiceError.unexpectedNilError(desc: "Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: " + event.id.uuidString)
+                logger.warning("Got nil while creating Offer from OfferStruct data during handleOfferOpenedEvent call. OfferOpenedEvent.id: \(event.id.uuidString)")
+                offerOpenedEventRepository.remove(event)
+                return
             }
-            var offerCancellationTransactionCreationTimeString: String? = nil
-            if let offerCancellationTransactionCreationTime = offer.offerCancellationTransaction?.timeOfCreation {
-                offerCancellationTransactionCreationTimeString = DateFormatter.createDateString(offerCancellationTransactionCreationTime)
-            }
-            var offerCancellationTransactionCreationBlockNumberInt: Int? = nil
-            if let offerCancellationTransactionCreationBlockNumber = offer.offerCancellationTransaction?.latestBlockNumberAtCreation {
-                offerCancellationTransactionCreationBlockNumberInt = Int(offerCancellationTransactionCreationBlockNumber)
-            }
-            var offerEditingTransactionCreationTimeString: String? = nil
-            if let offerEditingTransactionCreationTime = offer.offerEditingTransaction?.timeOfCreation {
-                offerEditingTransactionCreationTimeString = DateFormatter.createDateString(offerEditingTransactionCreationTime)
-            }
-            var offerEditingTransactionCreationBlockNumberInt: Int? = nil
-            if let offerEditingTransactionCreationBlockNumber = offer.offerEditingTransaction?.latestBlockNumberAtCreation {
-                offerEditingTransactionCreationBlockNumberInt = Int(offerEditingTransactionCreationBlockNumber)
-            }
-            
             let offerForDatabase = DatabaseOffer(
                 id: offer.id.asData().base64EncodedString(),
                 isCreated: offer.isCreated,
@@ -1095,33 +1491,37 @@ class OfferService<_OfferTruthSource, _SwapTruthSource>: OfferNotifiable, OfferM
                 havePublicKey: offer.havePublicKey,
                 isUserMaker: offer.isUserMaker,
                 state: offer.state.asString,
+                approveToOpenState: offer.approvingToOpenState.asString,
+                approveToOpenTransactionHash: nil,
+                approveToOpenTransactionCreationTime: nil,
+                approveToOpenTransactionCreationBlockNumber: nil,
+                openingOfferState: offer.openingOfferState.asString,
+                openingOfferTransactionHash: nil,
+                openingOfferTransactionCreationTime: nil,
+                openingOfferTransactionCreationBlockNumber: nil,
                 cancelingOfferState: offer.cancelingOfferState.asString,
-                offerCancellationTransactionHash: offer.offerCancellationTransaction?.transactionHash,
-                offerCancellationTransactionCreationTime: offerCancellationTransactionCreationTimeString,
-                offerCancellationTransactionCreationBlockNumber: offerCancellationTransactionCreationBlockNumberInt,
+                offerCancellationTransactionHash: nil,
+                offerCancellationTransactionCreationTime: nil,
+                offerCancellationTransactionCreationBlockNumber: nil,
                 editingOfferState: offer.editingOfferState.asString,
-                offerEditingTransactionHash: offer.offerEditingTransaction?.transactionHash,
-                offerEditingTransactionCreationTime: offerEditingTransactionCreationTimeString,
-                offerEditingTransactionCreationBlockNumber: offerEditingTransactionCreationBlockNumberInt
+                offerEditingTransactionHash: nil,
+                offerEditingTransactionCreationTime: nil,
+                offerEditingTransactionCreationBlockNumber: nil
             )
+            logger.notice("handleOfferOpenedEvent: persistently storing  \(offer.id.uuidString)")
             try databaseService.storeOffer(offer: offerForDatabase)
-            logger.notice("handleOfferOpenedEvent: persistently stored offer \(offer.id.uuidString)")
+            logger.notice("handleOfferOpenedEvent: persistently storing settlement methods for \(offer.id.uuidString)")
             var settlementMethodStrings: [(String, String?)] = []
             for settlementMethod in offer.settlementMethods {
-                settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), settlementMethod.privateData))
+                settlementMethodStrings.append(((settlementMethod.onChainData ?? Data()).base64EncodedString(), nil))
             }
             try databaseService.storeOfferSettlementMethods(offerID: offerForDatabase.id, _chainID: offerForDatabase.chainID, settlementMethods: settlementMethodStrings)
-            logger.notice("handleOfferOpenedEvent: persistently stored \(settlementMethodStrings.count) settlement methods for offer \(offer.id.uuidString)")
-            offerOpenedEventRepository.remove(event)
-            guard offerTruthSource != nil else {
-                throw OfferServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleOfferOpenedEvent call")
-            }
-            // Force unwrapping offerTruthSource is safe from here forward because we ensured that it is not nil
+            logger.notice("handleOfferOpenedEvent: adding offer \(offer.id.uuidString) to offerTruthSource")
             DispatchQueue.main.sync {
-                offerTruthSource!.offers[offer.id] = offer
+                offerTruthSource.offers[offer.id] = offer
             }
-            logger.notice("handleOfferOpenedEvent: added offer \(offer.id.uuidString) to offerTruthSource")
         }
+        offerOpenedEventRepository.remove(event)
     }
     
     #warning("TODO: when we support multiple chains, someone could corrupt the interface's knowledge of settlement methods on Chain A by creating another offer with the same ID on Chain B and then changing the settlement methods of the offer on Chain B. If this interface is listening to both, it will detect the OfferEditedEvent from Chain B and then use the settlement methods from the offer on Chain B to update its local Offer object corresponding to the object from Chain A. We should only update settlement methods if the chainID of the OfferEditedEvent matches that of the already-stored offer")

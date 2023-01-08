@@ -19,17 +19,17 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
      */
     var isGettingServiceFeeRate: Bool { get set }
     /**
-     Indicates whether we are currently opening an offer, and if so, the point of the [offer opening process](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) we are currently in.
-     */
-    var openingOfferState: OpeningOfferState { get set }
-    /**
      Attempts to get the current service fee rate and set `serviceFeeRate` equal to the result.
      */
     func updateServiceFeeRate()
     /**
+     Indicates whether we are currently opening an offer, and if so, the point of the [offer opening process](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) we are currently in.
+     */
+    var approvingTransferToOpenOfferState: TokenTransferApprovalState { get set }
+    /**
      The `Error` that occured during the offer creation process, or `nil` if no such error has occured.
      */
-    var openingOfferError: Error? { get set }
+    var approvingTransferToOpenOfferError: Error? { get set }
     /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      
@@ -43,6 +43,7 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
         - direction: The direction of the new offer.
         - settlementMethods: The settlement methods of the new offer.
      */
+    @available(*, deprecated, message: "Use the new offer pipeline with improved transaction state management")
     func openOffer(
         chainID: BigUInt,
         stablecoin: EthereumAddress?,
@@ -52,6 +53,86 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
         securityDepositAmount: Decimal,
         direction: OfferDirection,
         settlementMethods: [SettlementMethod]
+    )
+    
+    /**
+     Attempts to create an `EthereumTransaction` to approve a token transfer in order to open a new offer.
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the token transfer allowance will be created.
+        - stablecoin: The contract address of the stablecoin for which the token transfer allowance will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which token transfer allowance will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - maximumAmount: The maximum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer, for which the token transfer allowance will be created.
+        - direction: The direction of the new offer, for which the token transfer allowance will be created.
+        - settlementMethods: The settlement methods of the new offer, for which the token transfer allowance will be created.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createApproveTokenTransferToOpenOfferTransaction(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod],
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to approve a token transfer in order to open an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the token transfer allowance will be created.
+        - stablecoin: The contract address of the stablecoin for which the token transfer allowance will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which token transfer allowance will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - maximumAmount: The maximum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer, for which the token transfer allowance will be created.
+        - direction: The direction of the new offer, for which the token transfer allowance will be created.
+        - settlementMethods: The settlement methods of the new offer, for which the token transfer allowance will be created.
+        - approveTokenTransferToOpenOfferTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the proper amount (determined by the values of the other arguments) of token specified by `stablecoin`.
+     */
+    func approveTokenTransferToOpenOffer(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod],
+        approveTokenTransferToOpenOfferTransaction: EthereumTransaction?
+    )
+    
+    /**
+     Attempts to create an `EthereumTransaction` that can open `offer` (which should be made by the user of this interface) by  calling [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
+     
+     - Parameters:
+        - offer: The `Offer` to be opened.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createOpenOfferTransaction(
+        offer: Offer,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to open an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) made by the user of this interface.
+     
+     - Parameters:
+        - offer: The `Offer` to be opened.
+        - offerOpeningTransaction: An optional `EthereumTransaction` that can open `offer`.
+     */
+    func openOffer(
+        offer: Offer,
+        offerOpeningTransaction: EthereumTransaction?
     )
     
     /**

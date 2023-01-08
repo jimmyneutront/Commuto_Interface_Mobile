@@ -100,6 +100,30 @@ class Offer: ObservableObject {
      */
     var state: OfferState
     /**
+     If this offer was made by the user of the interface, this indicates whether a token transfer is being approved in order to open the offer, and if so, what part of the token transfer approval process it is in. If this offer was not made by the user of this interface, this property is not used.
+     */
+    @Published var approvingToOpenState = TokenTransferApprovalState.none
+    /**
+     (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occurred during the token transfer approval process in order to open the offer, or `nil` if no such error has occurred.
+     */
+    var approvingToOpenError: Error? = nil
+    /**
+     The `BlockchainTransaction` that has approved a token transfer in order to create this offer, if it was made by the user of this interface, or `nil` if a token transfer to create this offer has not been approved yet, or user of this interface is not the offer maker. Note that this transaction may be: not yet sent to a blockchain node, pending, confirmed and successful, confirmed and failed, or dropped.
+     */
+    var approvingToOpenTransaction: BlockchainTransaction? = nil
+    /**
+     If this offer was made by the user of the interface, this indicates whether the offer is being opened, and if so, what part of the offer opening process it is in. If this offer was not made by the user of this interface, this property is not used.
+     */
+    @Published var openingOfferState = OpeningOfferState.none
+    /**
+     (This property is used only if the maker of this offer is the user of this interface.) The `Error` that occurred during the offer opening process, or `nil` if no such error has occurred.
+     */
+    var openingOfferError: Error? = nil
+    /**
+     The `BlockchainTransaction` that has opened this offer, if it was made by the user of this interface, or `nil` if the offer is not opened yet or if the user of this interface is not the offer maker. Note that this transaction may be: not yet sent to a blockchain node, pending, confirmed and successful, confirmed and failed, or dropped.
+     */
+    var offerOpeningTransaction: BlockchainTransaction? = nil
+    /**
      If this offer was made by the user of the interface, this indicates whether the offer is being canceled, and if so, what part of the offer cancellation process it is in. If this offer was not made by the user of this interface, this property is not used.
      */
     @Published var cancelingOfferState = CancelingOfferState.none

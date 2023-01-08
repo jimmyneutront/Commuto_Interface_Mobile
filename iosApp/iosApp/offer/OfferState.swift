@@ -11,15 +11,27 @@
  */
 enum OfferState {
     /**
-     Indicates that [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) has not yet been called for the corresponding offer.
+     Indicates that the transaction that attempted to call [approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) in order to open the corresponding offer has failed, and a new one has not yet been created.
      */
-    case opening
+    case transferApprovalFailed
     /**
-     Indicates that the transaction to open the corresponding offer has been broadcast.
+     Indicates that this is currently calling [approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) in order to open the corresponding offer.
      */
-    case openOfferTransactionBroadcast
+    case approvingTransfer
     /**
-     Indicates that the [OfferOpened event](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) for the corresponding offer has been detected, so, if the offer's maker is the user of the interface, the public key should now be announced; otherwise this means that we are waiting for the maker to announce their public key.
+     Indicates that the transaction that calls [approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) for the corresponding offer has been sent to a connected blockchain node.
+     */
+    case approveTransferTransactionSent
+    /**
+     Indicates that the transaction that calls [approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) in order to approve a token transfer to allow opening the corresponding offer has been confirmed, and the user must now open the offer.
+     */
+    case awaitingOpening
+    /**
+     Indicates that the transaction to call [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) for the corresponding offer has been sent to a connected blockchain node.
+     */
+    case openOfferTransactionSent
+    /**
+     Indicates that the [OfferOpened](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offeropened) event for the corresponding offer has been detected, so, if the offer's maker is the user of the interface, the public key should now be announced; otherwise this means that we are waiting for the maker to announce their public key.
      */
     case awaitingPublicKeyAnnouncement
     /**
@@ -42,16 +54,22 @@ enum OfferState {
      */
     var indexNumber: Int {
         switch self {
-        case .opening:
+        case .transferApprovalFailed:
             return 0
-        case .openOfferTransactionBroadcast:
+        case .approvingTransfer:
             return 1
-        case .awaitingPublicKeyAnnouncement:
+        case .approveTransferTransactionSent:
             return 2
-        case .offerOpened:
+        case .awaitingOpening:
             return 3
-        case .taken:
+        case .openOfferTransactionSent:
             return 4
+        case .awaitingPublicKeyAnnouncement:
+            return 5
+        case .offerOpened:
+            return 6
+        case .taken:
+            return 7
         case .canceled:
             return -1
         }
@@ -62,10 +80,16 @@ enum OfferState {
      */
     var asString: String {
         switch self {
-        case .opening:
-            return "opening"
-        case .openOfferTransactionBroadcast:
-            return "openOfferTxPublished"
+        case .transferApprovalFailed:
+            return "transferApprovalFailed"
+        case .approvingTransfer:
+            return "approvingTransfer"
+        case .approveTransferTransactionSent:
+            return "approveTransferTransactionSent"
+        case .awaitingOpening:
+            return "awaitingOpening"
+        case .openOfferTransactionSent:
+            return "openOfferTransactionSent"
         case .awaitingPublicKeyAnnouncement:
             return "awaitingPKAnnouncement"
         case .offerOpened:
@@ -87,10 +111,16 @@ enum OfferState {
     static func fromString(_ string: String?) -> OfferState? {
         if string == nil {
             return nil
-        } else if string == "opening" {
-            return .opening
-        } else if string == "openOfferTxPublished" {
-            return .openOfferTransactionBroadcast
+        } else if string == "transferApprovalFailed" {
+            return .transferApprovalFailed
+        } else if string == "approvingTransfer" {
+            return .approvingTransfer
+        } else if string == "approveTransferTransactionSent" {
+            return .approveTransferTransactionSent
+        } else if string == "awaitingOpening" {
+            return .awaitingOpening
+        } else if string == "openOfferTransactionSent" {
+            return .openOfferTransactionSent
         } else if string == "awaitingPKAnnouncement" {
             return .awaitingPublicKeyAnnouncement
         } else if string == "offerOpened" {

@@ -48,6 +48,17 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
     @ObservedObject var settlementMethodTruthSource: SettlementMethod_TruthSource
     
     /**
+     The string that will be displayed in the label of the button that opens the offer. (This will only be displayed if the user is the maker of the offer and the offer has not yet been opened.)
+     */
+    var openingOfferButtonLabel: String {
+        if offer.openingOfferState == .none || offer.openingOfferState == .error {
+            return "Open Offer"
+        } else {
+            return offer.openingOfferState.description
+        }
+    }
+    
+    /**
      The string that will be displayed in the label of the button that cancels the offer.
      */
     var cancelingOfferButtonLabel: String {
@@ -89,14 +100,19 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
     }
     
     /**
-     Indicates whether we are showing the sheet that allows the user to take the offer, if they are not the maker.
+     Indicates whether we are showing the sheet that allows the user to open the offer, if they are the maker and the offer has not yet been opened.
      */
-    @State private var isShowingTakeOfferSheet = false
+    @State private var isShowingOpenOfferSheet = false
     
     /**
      Indicates whether we are showing the sheet that allows the user to cancel the offer, if they are the maker.
      */
     @State private var isShowingCancelOfferSheet = false
+    
+    /**
+     Indicates whether we are showing the sheet that allows the user to take the offer, if they are not the maker.
+     */
+    @State private var isShowingTakeOfferSheet = false
     
     /**
      The string that  will be displayed in the label  of the button that edits the offer.
@@ -213,66 +229,128 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                         )
                         .accentColor(Color.primary)
                         if (offer.isUserMaker) {
-                            // The user is the maker of this offer, so we display buttons for editing and canceling the offer
-                            if offer.editingOfferState == .error {
-                                Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
-                                    .foregroundColor(Color.red)
-                            }
-                            NavigationLink(destination:
-                                            EditOfferView(
-                                                offer: offer,
-                                                offerTruthSource: offerTruthSource,
-                                                settlementMethodTruthSource: settlementMethodTruthSource,
-                                                stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
-                                            )
-                            ) {
-                                Text(editOfferButtonLabel)
-                                    .font(.largeTitle)
-                                    .bold()
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.primary, lineWidth: 3)
-                                    )
-                            }
-                            .accentColor(Color.primary)
-                            if offer.cancelingOfferState == .error {
-                                HStack {
-                                    Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occurred")
+                            if (offer.state == .transferApprovalFailed) {
+                                Text("\(stablecoinInformation?.currencyCode ?? "Stablecoin") Transfer Approval Failed.")
+                            } else if (offer.state == .approvingTransfer) {
+                                Text("Approving \(stablecoinInformation?.currencyCode ?? "Stablecoin") Transfer in order to open Offer.")
+                            } else if (offer.state == .approveTransferTransactionSent) {
+                                Text("Waiting for confirmation that \(stablecoinInformation?.currencyCode ?? "Stablecoin") Transfer Approval succeeded.")
+                            } else if (offer.state == .awaitingOpening) {
+                                if offer.openingOfferState == .none {
+                                    Text("\(stablecoinInformation?.currencyCode ?? "Stablecoin") Transfer Approval succeeded. You must now open the Offer.")
+                                } else if offer.openingOfferState == .error {
+                                    Text(offer.openingOfferError?.localizedDescription ?? "An unknown error occured")
                                         .foregroundColor(Color.red)
-                                    Spacer()
                                 }
-                            }
-                            Button(
-                                action: {
-                                    // Don't let the user try to cancel the offer if it is already canceled or being canceled
-                                    if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
-                                        isShowingCancelOfferSheet = true
+                                Button(
+                                    action: {
+                                        if offer.openingOfferState == .none || offer.openingOfferState == .error {
+                                            isShowingOpenOfferSheet = true
+                                        }
+                                    },
+                                    label: {
+                                        Text(openingOfferButtonLabel)
+                                            .font(.largeTitle)
+                                            .bold()
+                                            .padding(10)
+                                            .frame(maxWidth: .infinity)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .stroke(cancelingOfferButtonColor, lineWidth: 3)
+                                            )
                                     }
-                                },
-                                label: {
-                                    Text(cancelingOfferButtonLabel)
+                                )
+                                .accentColor(cancelingOfferButtonColor)
+                                .sheet(isPresented: $isShowingOpenOfferSheet, content: {
+                                    TransactionGasDetailsView(
+                                        isShowingSheet: $isShowingOpenOfferSheet,
+                                        title: "Open Offer",
+                                        buttonLabel: "OpenOffer",
+                                        buttonAction: { createdTransaction in
+                                            offerTruthSource.openOffer(
+                                                offer: offer,
+                                                offerOpeningTransaction: createdTransaction
+                                            )
+                                        },
+                                        runOnAppearance: { openOfferTransactionBinding, transactionCreationErrorBinding in
+                                            if offer.openingOfferState == .none || offer.openingOfferState == .error {
+                                                offerTruthSource.createOpenOfferTransaction(
+                                                    offer: offer,
+                                                    createdTransactionHandler: { createdTransaction in
+                                                        openOfferTransactionBinding.wrappedValue = createdTransaction
+                                                    },
+                                                    errorHandler: { error in
+                                                        transactionCreationErrorBinding.wrappedValue = error
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                })
+                            } else if (offer.state == .openOfferTransactionSent) {
+                                Text("Waiting for confirmation that Offer has been opened.")
+                            } else {
+                                // The user is the maker of this offer, so we display buttons for editing and canceling the offer
+                                if offer.editingOfferState == .error {
+                                    Text("Error Editing Offer: " + (offer.editingOfferError?.localizedDescription ?? "An unknown error occured"))
+                                        .foregroundColor(Color.red)
+                                }
+                                NavigationLink(destination:
+                                                EditOfferView(
+                                                    offer: offer,
+                                                    offerTruthSource: offerTruthSource,
+                                                    settlementMethodTruthSource: settlementMethodTruthSource,
+                                                    stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+                                                )
+                                ) {
+                                    Text(editOfferButtonLabel)
                                         .font(.largeTitle)
                                         .bold()
                                         .padding(10)
                                         .frame(maxWidth: .infinity)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 10)
-                                                .stroke(cancelingOfferButtonColor, lineWidth: 3)
+                                                .stroke(Color.primary, lineWidth: 3)
                                         )
                                 }
-                            )
-                            .accentColor(cancelingOfferButtonColor)
-                            .sheet(isPresented: $isShowingCancelOfferSheet) {
-                                CancelOfferView(
-                                    offer: offer,
-                                    isShowingCancelOfferSheet: $isShowingCancelOfferSheet,
-                                    offerTruthSource: offerTruthSource
+                                .accentColor(Color.primary)
+                                if offer.cancelingOfferState == .error {
+                                    HStack {
+                                        Text(offer.cancelingOfferError?.localizedDescription ?? "An unknown error occurred")
+                                            .foregroundColor(Color.red)
+                                        Spacer()
+                                    }
+                                }
+                                Button(
+                                    action: {
+                                        // Don't let the user try to cancel the offer if it is already canceled or being canceled
+                                        if offer.cancelingOfferState == .none || offer.cancelingOfferState == .error {
+                                            isShowingCancelOfferSheet = true
+                                        }
+                                    },
+                                    label: {
+                                        Text(cancelingOfferButtonLabel)
+                                            .font(.largeTitle)
+                                            .bold()
+                                            .padding(10)
+                                            .frame(maxWidth: .infinity)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .stroke(cancelingOfferButtonColor, lineWidth: 3)
+                                            )
+                                    }
                                 )
+                                .accentColor(cancelingOfferButtonColor)
+                                .sheet(isPresented: $isShowingCancelOfferSheet) {
+                                    CancelOfferView(
+                                        offer: offer,
+                                        isShowingCancelOfferSheet: $isShowingCancelOfferSheet,
+                                        offerTruthSource: offerTruthSource
+                                    )
+                                }
                             }
                         } else if (offer.state == .offerOpened) {
-                            // The user is not the maker of this offer, so we display a button for canceling the offer
+                            // The user is not the maker of this offer, so we display a button for taking the offer
                             if offer.takingOfferState == .error {
                                 Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
                                     .foregroundColor(Color.red)

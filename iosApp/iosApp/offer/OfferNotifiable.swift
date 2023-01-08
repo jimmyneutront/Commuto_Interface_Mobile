@@ -18,6 +18,14 @@ protocol OfferNotifiable {
         - error: A `BlockchainTransactionError` describing why the on-chain transaction has failed.
      */
     func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws
+    
+    /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of an `ApprovalEvent`.
+     
+     - Parameter event: The `ApprovalEvent` of which the structure or class adopting this protocol is being notified and should handle in the implementation of  this function.
+     */
+    func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws
+    
     /**
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of an `OfferOpenedEvent`.
      

@@ -14,6 +14,7 @@ import web3swift
  A `UIOfferTruthSource` implementation used for previewing user interfaces.
  */
 class PreviewableOfferTruthSource: UIOfferTruthSource {
+    
     /**
      Initializes a new `PreviewableOfferTruthSource` with sample offers.
      */
@@ -42,14 +43,34 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     func updateServiceFeeRate() {}
     
     /**
-     Indicates whether we are currently opening an offer, and if so, the point of the [offer opening process](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) we are currently in.
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
-    var openingOfferState: OpeningOfferState = .none
-
+    var approvingTransferToOpenOfferState: TokenTransferApprovalState = .none
+    
     /**
-     The `Error` that occured during the offer creation process, or `nil` if no such error has occured.
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
-    var openingOfferError: Error?
+    var approvingTransferToOpenOfferError: Error?
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func createApproveTokenTransferToOpenOfferTransaction(chainID: BigUInt, stablecoin: EthereumAddress?, stablecoinInformation: StablecoinInformation?, minimumAmount: Decimal, maximumAmount: Decimal, securityDepositAmount: Decimal, direction: OfferDirection, settlementMethods: [SettlementMethod], createdTransactionHandler: @escaping (EthereumTransaction) -> Void, errorHandler: @escaping (Error) -> Void) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func approveTokenTransferToOpenOffer(chainID: BigUInt, stablecoin: EthereumAddress?, stablecoinInformation: StablecoinInformation?, minimumAmount: Decimal, maximumAmount: Decimal, securityDepositAmount: Decimal, direction: OfferDirection, settlementMethods: [SettlementMethod], approveTokenTransferToOpenOfferTransaction: EthereumTransaction?) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func createOpenOfferTransaction(offer: Offer, createdTransactionHandler: @escaping (EthereumTransaction) -> Void, errorHandler: @escaping (Error) -> Void) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func openOffer(offer: Offer, offerOpeningTransaction: EthereumTransaction?) {}
     
     /**
      Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.

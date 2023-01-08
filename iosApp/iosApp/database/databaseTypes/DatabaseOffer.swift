@@ -75,6 +75,38 @@ struct DatabaseOffer: Equatable {
      */
     let state: String
     /**
+     The `approveToOpenState` property of an `Offer` as a `String`.
+     */
+    let approveToOpenState: String
+    /**
+     The hash of the transaction that approved the token transfer in order to open this `Offer` as a hexadecimal `String`, or `nil` if no such transaction exists.
+     */
+    let approveToOpenTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `approveToOpenTransactionHash` was created by this interface in ISO 8601 format in UTC, or `nil` if no such transaction exists.
+     */
+    let approveToOpenTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `approveToOpenTransactionHash` was created by this interface, or `nil` if no such transaction exists.
+     */
+    let approveToOpenTransactionCreationBlockNumber: Int?
+    /**
+     The `openingOfferState` property of an `Offer` as a `String`.
+     */
+    let openingOfferState: String
+    /**
+     The hash of the transaction that opened this `Offer` as a hexadecimal `String`, or `nil` if no such transaction exists.
+     */
+    let openingOfferTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `openingOfferTransactionHash` was created by this interface in ISO 8601 format in UTC, or `nil` if no such transaction exists.
+     */
+    let openingOfferTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `openingOfferTransactionHash` was created by this interface, or `nil` if no such transaction exists.
+     */
+    let openingOfferTransactionCreationBlockNumber: Int?
+    /**
      The `cancelingOfferState` property of an `Offer` as a `String`.
      */
     let cancelingOfferState: String

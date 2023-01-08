@@ -249,7 +249,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
-     Attempts to create an `EthereumTransaction` that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+     Attempts to create an `EthereumTransaction` that will call [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent) for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this interface is the buyer.
      
      On the global `DispatchQueue`, this calls `validateSwapForReportingPaymentSent`, and then `BlockchainService.createReportPaymentSentTransaction`, passing the `Swap.id` and `Swap.chainID` properties of `swap`, and pipes the result to the seal of the `Promise` this returns.
      
@@ -694,7 +694,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleFailedTransactionCall for \(transaction.transactionHash)")
         }
         switch transaction.type {
-        case .cancelOffer, .editOffer:
+        case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer:
             throw SwapServiceError.invalidValueError(desc: "handleFailedTransaction: received an offer-related transaction \(transaction.transactionHash)")
         case .reportPaymentSent:
             guard let swap = swapTruthSource.swaps.first(where: { id, swap in

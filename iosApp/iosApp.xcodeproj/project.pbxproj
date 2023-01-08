@@ -30,6 +30,11 @@
 		6D18F1BE289EEDF1002B667C /* SettlementMethodValidationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BD289EEDF1002B667C /* SettlementMethodValidationError.swift */; };
 		6D18F1C0289F7890002B667C /* EditingOfferState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D18F1BF289F7890002B667C /* EditingOfferState.swift */; };
 		6D1914DB278B6DC7004A4329 /* MatrixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1914DA278B6DC6004A4329 /* MatrixTests.swift */; };
+		6D1AD60D2967BC6C00AA4507 /* TokenTransferApprovalState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1AD60C2967BC6C00AA4507 /* TokenTransferApprovalState.swift */; };
+		6D1AD60F2967CD4000AA4507 /* CommutoEventParserResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1AD60E2967CD4000AA4507 /* CommutoEventParserResult.swift */; };
+		6D1AD6122967CFB300AA4507 /* ApprovalEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1AD6112967CFB300AA4507 /* ApprovalEvent.swift */; };
+		6D1AD61429686EF100AA4507 /* TokenTransferApprovalPurpose.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1AD61329686EF100AA4507 /* TokenTransferApprovalPurpose.swift */; };
+		6D1AD61629689F5B00AA4507 /* OpenOfferValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1AD61529689F5B00AA4507 /* OpenOfferValidator.swift */; };
 		6D1D5D1028B6F18600A48282 /* SwapMessageNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1D5D0F28B6F18600A48282 /* SwapMessageNotifiable.swift */; };
 		6D1D5D1228B6F33500A48282 /* TestOfferMessageNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1D5D1128B6F33500A48282 /* TestOfferMessageNotifiable.swift */; };
 		6D1D5D1428B6F3B600A48282 /* TestSwapMessageNotifiable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1D5D1328B6F3B600A48282 /* TestSwapMessageNotifiable.swift */; };
@@ -196,6 +201,11 @@
 		6D18F1BD289EEDF1002B667C /* SettlementMethodValidationError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementMethodValidationError.swift; sourceTree = "<group>"; };
 		6D18F1BF289F7890002B667C /* EditingOfferState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingOfferState.swift; sourceTree = "<group>"; };
 		6D1914DA278B6DC6004A4329 /* MatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixTests.swift; sourceTree = "<group>"; };
+		6D1AD60C2967BC6C00AA4507 /* TokenTransferApprovalState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenTransferApprovalState.swift; sourceTree = "<group>"; };
+		6D1AD60E2967CD4000AA4507 /* CommutoEventParserResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommutoEventParserResult.swift; sourceTree = "<group>"; };
+		6D1AD6112967CFB300AA4507 /* ApprovalEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalEvent.swift; sourceTree = "<group>"; };
+		6D1AD61329686EF100AA4507 /* TokenTransferApprovalPurpose.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenTransferApprovalPurpose.swift; sourceTree = "<group>"; };
+		6D1AD61529689F5B00AA4507 /* OpenOfferValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenOfferValidator.swift; sourceTree = "<group>"; };
 		6D1D5D0F28B6F18600A48282 /* SwapMessageNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapMessageNotifiable.swift; sourceTree = "<group>"; };
 		6D1D5D1128B6F33500A48282 /* TestOfferMessageNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestOfferMessageNotifiable.swift; sourceTree = "<group>"; };
 		6D1D5D1328B6F3B600A48282 /* TestSwapMessageNotifiable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSwapMessageNotifiable.swift; sourceTree = "<group>"; };
@@ -413,6 +423,15 @@
 			path = messages;
 			sourceTree = "<group>";
 		};
+		6D1AD6102967CFA600AA4507 /* erc20 */ = {
+			isa = PBXGroup;
+			children = (
+				6D1AD6112967CFB300AA4507 /* ApprovalEvent.swift */,
+				6D1AD61329686EF100AA4507 /* TokenTransferApprovalPurpose.swift */,
+			);
+			path = erc20;
+			sourceTree = "<group>";
+		};
 		6D22581B28674CF50001A90E /* database */ = {
 			isa = PBXGroup;
 			children = (
@@ -466,6 +485,7 @@
 				6D774231289CCCEA0068C862 /* CancelingOfferState.swift */,
 				6D18F1BF289F7890002B667C /* EditingOfferState.swift */,
 				6DB0907D28A5FCE70005A702 /* TakingOfferState.swift */,
+				6D1AD60C2967BC6C00AA4507 /* TokenTransferApprovalState.swift */,
 			);
 			path = offer;
 			sourceTree = "<group>";
@@ -662,6 +682,7 @@
 		6DDFAFA2284AAC3D004BC95F /* events */ = {
 			isa = PBXGroup;
 			children = (
+				6D1AD6102967CFA600AA4507 /* erc20 */,
 				6DDFAFA3284AAC42004BC95F /* commutoswap */,
 			);
 			path = events;
@@ -697,6 +718,7 @@
 				6D7D3CE028847D9A0004F7F2 /* EthereumAddressExtensions.swift */,
 				6DDE936C293C5AFB008017DF /* BlockchainTransaction.swift */,
 				6DDE936E293C5D42008017DF /* BlockchainTransactionType.swift */,
+				6D1AD60E2967CD4000AA4507 /* CommutoEventParserResult.swift */,
 			);
 			path = blockchain;
 			sourceTree = "<group>";
@@ -725,6 +747,7 @@
 				6DB0907B28A5EFA90005A702 /* NewSwapDataValidationError.swift */,
 				6D17513A29663DED00A4B77E /* CancelOfferValidator.swift */,
 				6D93D76A29666E4C002697D5 /* EditOfferValidator.swift */,
+				6D1AD61529689F5B00AA4507 /* OpenOfferValidator.swift */,
 			);
 			path = validation;
 			sourceTree = "<group>";
@@ -1066,6 +1089,7 @@
 				6D9AAC7828B2F7C1000E7640 /* SwapService.swift in Sources */,
 				6D1272D128942B7C00393128 /* PublicKeyAnnouncementCreator.swift in Sources */,
 				6DF801D328A2D18800DB6227 /* CurrentTab.swift in Sources */,
+				6D1AD61429686EF100AA4507 /* TokenTransferApprovalPurpose.swift in Sources */,
 				6D17513B29663DED00A4B77E /* CancelOfferValidator.swift in Sources */,
 				6DEE9AE4288AFC6200EF07D8 /* OfferDataValidationError.swift in Sources */,
 				6DDEC04C28EE4D2100CA3200 /* EditingSettlementMethodState.swift in Sources */,
@@ -1091,6 +1115,7 @@
 				6D53F19128E9CCAF00353068 /* SettlementMethodViewModel.swift in Sources */,
 				6D774232289CCCEA0068C862 /* CancelingOfferState.swift in Sources */,
 				6DEE9AE0288AE20D00EF07D8 /* NewOfferDataValidator.swift in Sources */,
+				6D1AD61629689F5B00AA4507 /* OpenOfferValidator.swift in Sources */,
 				6D70A5CC28669543003FEDF3 /* BlockchainEventRepository.swift in Sources */,
 				6DB0907A28A5E7200005A702 /* NewSwapDataValidator.swift in Sources */,
 				6D91C97B27533EBB00D85654 /* DatabaseService.swift in Sources */,
@@ -1113,6 +1138,7 @@
 				6DEE9AE2288AE39E00EF07D8 /* ValidatedNewOfferData.swift in Sources */,
 				6D4877AE28E718D300212504 /* PrivateData.swift in Sources */,
 				6D9AAC8328B3F9D6000E7640 /* TakerInformationMessageParser.swift in Sources */,
+				6D1AD60D2967BC6C00AA4507 /* TokenTransferApprovalState.swift in Sources */,
 				6D9D547D28451183007D1093 /* OffersView.swift in Sources */,
 				6D16AF22289AFD570016EDDB /* ServiceFeeAmountView.swift in Sources */,
 				6D9AAC8528B3FF76000E7640 /* TakerInformationMessage.swift in Sources */,
@@ -1163,6 +1189,7 @@
 				6D91C9812753FA2900D85654 /* DatabasePublicKey.swift in Sources */,
 				6DB0907C28A5EFA90005A702 /* NewSwapDataValidationError.swift in Sources */,
 				6D692C7528A752CD00774864 /* FoundationExtensions.swift in Sources */,
+				6D1AD6122967CFB300AA4507 /* ApprovalEvent.swift in Sources */,
 				6D6F190D287E02DC00B9BCA1 /* SettlementMethod.swift in Sources */,
 				6D18F1C0289F7890002B667C /* EditingOfferState.swift in Sources */,
 				6D9291CA284BA082002B9E43 /* P2PService.swift in Sources */,
@@ -1170,6 +1197,7 @@
 				6D096CE92872121700A36764 /* OfferView.swift in Sources */,
 				6D955395284AC41E00D96E97 /* OfferTakenEvent.swift in Sources */,
 				6DA19783284A8CAD00D2D073 /* CommutoSwapProvider.swift in Sources */,
+				6D1AD60F2967CD4000AA4507 /* CommutoEventParserResult.swift in Sources */,
 				6D18F1BE289EEDF1002B667C /* SettlementMethodValidationError.swift in Sources */,
 				6D18F1B5289ECCFB002B667C /* EditOfferView.swift in Sources */,
 				6D8AF7AA2759BAF0007BD4E3 /* SymmetricKey.swift in Sources */,

@@ -15,7 +15,11 @@ class TestOfferService: OfferNotifiable {
     /**
      Does nothing, required to adopt `OfferNotifiable`. Should not be used.
      */
-    func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
+    func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) {}
+    /**
+     Does nothing, required to adopt `OfferNotifiable`. Should not be used.
+     */
+    func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
     /**
      Does nothing, required to adopt `OfferNotifiable`. Should not be used.
      */

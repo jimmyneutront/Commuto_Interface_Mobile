@@ -53,27 +53,27 @@ class OffersViewModel: UIOfferTruthSource {
     @Published var isGettingServiceFeeRate: Bool = false
     
     /**
-     Indicates whether we are currently opening an offer, and if so, the point of the [offer opening process](https://github.com/jimmyneutront/commuto-whitepaper/blob/main/commuto-interface-specification.txt) we are currently in.
+     Indicates whether we are currently approving a token transfer in order to open an offer, and if so, the point of the token transfer approval process that we are currently in.
      */
-    @Published var openingOfferState = OpeningOfferState.none
+    @Published var approvingTransferToOpenOfferState = TokenTransferApprovalState.none
     
     /**
-     The `Error` that occured during the offer creation process, or `nil` if no such error has occured.
+     The `Error` that occured during the token transfer approval process, or `nil` if no such error has occured.
      */
-    var openingOfferError: Error? = nil
+    var approvingTransferToOpenOfferError: Error? = nil
     
     /**
      Sets `openingOfferState` on the main `DispatchQueue`.
      
      - Parameter state: The new value to which `openingOfferState` will be set.
      */
+    #warning("TODO: Remove this once old openOffer method is removed")
     private func setOpeningOfferState(state: OpeningOfferState) {
         DispatchQueue.main.async {
-            self.openingOfferState = state
+            //self.openingOfferState = state
         }
     }
     
-    #warning("TODO: Remove this once old cancelOffer method is removed")
     /**
      Sets the `cancelingOfferState` property of the `Offer` in `offers` with the specified `offerID` on the main `DispatchQueue`.
      
@@ -81,13 +81,13 @@ class OffersViewModel: UIOfferTruthSource {
         - offerID: The ID of the `Offer` of which to set the `cancelingOfferState`.
         - state: The value to which the `Offer`'s `cancelingOfferState` will be set.
      */
+    #warning("TODO: Remove this once old cancelOffer method is removed")
     private func setCancelingOfferState(offerID: UUID, state: CancelingOfferState) {
         DispatchQueue.main.async {
             self.offers[offerID]?.cancelingOfferState = state
         }
     }
     
-    #warning("TODO: Remove this once old editOffer method is removed")
     /**
      Sets the `editingOfferState` property of the `Offer` in `offers` with the specified `offerID` on the main `DispatchQueue`.
      
@@ -95,6 +95,7 @@ class OffersViewModel: UIOfferTruthSource {
         - offerID: The ID of the `Offer` of which to set the `editingOfferState`.
         - state: The value to which the `Offer`'s `editingOfferState` will be set.
      */
+    #warning("TODO: Remove this once old editOffer method is removed")
     private func setEditingOfferState(offerID: UUID, state: EditingOfferState) {
         DispatchQueue.main.async {
             self.offers[offerID]?.editingOfferState = state
@@ -134,6 +135,165 @@ class OffersViewModel: UIOfferTruthSource {
     }
     
     /**
+     Attempts to create an `EthereumTransaction` to approve a token transfer in order to open a new offer.
+     
+     This passes all parameters except `createdTransactionHandler` or `errorHandler` to `OfferService.createApproveTokenTransferToOpenOfferTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the token transfer allowance will be created.
+        - stablecoin: The contract address of the stablecoin for which the token transfer allowance will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which token transfer allowance will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - maximumAmount: The maximum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer, for which the token transfer allowance will be created.
+        - direction: The direction of the new offer, for which the token transfer allowance will be created.
+        - settlementMethods: The settlement methods of the new offer, for which the token transfer allowance will be created.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createApproveTokenTransferToOpenOfferTransaction(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod],
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createApproveToOpenTransaction: creating...")
+                offerService.createApproveTokenTransferToOpenOfferTransaction(
+                    chainID: chainID,
+                    stablecoin: stablecoin,
+                    stablecoinInformation: stablecoinInformation,
+                    minimumAmount: minimumAmount,
+                    maximumAmount: maximumAmount,
+                    securityDepositAmount: securityDepositAmount,
+                    direction: direction,
+                    settlementMethods: settlementMethods
+                ).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
+     Attempts to approve a token transfer in order to open an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     This clears the `approvingTransferToOpenOfferError` property and sets `approvingTransferToOpenOfferState` to `TokenTransferApprovalState.validating`, and then passes all data to `offerService`'s `OfferService.approveTokenTransferToOpenOffer` function. When this function returns, this sets `approvingTransferToOpenOfferState` to `TokenTransferApprovalState.awaitingTransactionConfirmation`.
+     
+     - Parameters:
+        - chainID: The ID of the blockchain on which the token transfer allowance will be created.
+        - stablecoin: The contract address of the stablecoin for which the token transfer allowance will be created.
+        - stablecoinInformation: A `StablecoinInformation` about the stablecoin for which token transfer allowance will be created.
+        - minimumAmount: The minimum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - maximumAmount: The maximum `Decimal` amount of the new offer, for which the token transfer allowance will be created.
+        - securityDepositAmount: The security deposit `Decimal` amount for the new offer, for which the token transfer allowance will be created.
+        - direction: The direction of the new offer, for which the token transfer allowance will be created.
+        - settlementMethods: The settlement methods of the new offer, for which the token transfer allowance will be created.
+        - approveTokenTransferToOpenOfferTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the proper amount (determined by the values of the other arguments) of token specified by `stablecoin`.
+     */
+    func approveTokenTransferToOpenOffer(
+        chainID: BigUInt,
+        stablecoin: EthereumAddress?,
+        stablecoinInformation: StablecoinInformation?,
+        minimumAmount: Decimal,
+        maximumAmount: Decimal,
+        securityDepositAmount: Decimal,
+        direction: OfferDirection,
+        settlementMethods: [SettlementMethod],
+        approveTokenTransferToOpenOfferTransaction: EthereumTransaction?
+    ) {
+        self.approvingTransferToOpenOfferError = nil
+        self.approvingTransferToOpenOfferState = .validating
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("approveTokenTransferToOpenOffer: approving...")
+        }
+        offerService.approveTokenTransferToOpenOffer(
+            chainID: chainID,
+            stablecoin: stablecoin,
+            stablecoinInformation: stablecoinInformation,
+            minimumAmount: minimumAmount,
+            maximumAmount: maximumAmount,
+            securityDepositAmount: securityDepositAmount,
+            direction: direction,
+            settlementMethods: settlementMethods,
+            approveTokenTransferToOpenOfferTransaction: approveTokenTransferToOpenOfferTransaction
+        ).done(on: DispatchQueue.main) { _ in
+            self.logger.notice("approveTokenTransferToOpenOffer: successfully sent transaction")
+            self.approvingTransferToOpenOfferState = .awaitingTransactionConfirmation
+        }.catch(on: DispatchQueue.main) { error in
+            self.logger.error("approveTokenTransferToOpenOffer: got error during call. Error: \(error.localizedDescription)")
+            self.approvingTransferToOpenOfferError = error
+            self.approvingTransferToOpenOfferState = .error
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` that can open `offer` (which should be made by the user of this interface) by  calling [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
+     
+     This passes `offer` to `OfferService.createOpenOfferTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - offer: The `Offer` to be opened.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createOpenOfferTransaction(
+        offer: Offer,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createOpenOfferTransaction: creating for \(offer.id.uuidString)")
+                offerService.createOpenOfferTransaction(offer: offer).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
+     Attempts to open an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) made by the user of this interface.
+     
+     This clears the offer-opening-related `Error` of `offer` and sets `offer`'s `Offer.openingOfferState` to `OpeningOfferState.validating`, and then passes all data to `offerService`'s `OfferService.openOffer` function.
+     
+     - Parameters:
+        - offer: The `Offer` to be opened.
+        - offerOpeningTransaction: An optional `EthereumTransaction` that can open `offer`.
+     */
+    func openOffer(
+        offer: Offer,
+        offerOpeningTransaction: EthereumTransaction?
+    ) {
+        offer.openingOfferError = nil
+        offer.openingOfferState = .validating
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("openOffer: opening offer \(offer.id.uuidString)")
+        }
+        offerService.openOffer(offer: offer, offerOpeningTransaction: offerOpeningTransaction)
+            .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                self.logger.notice("openOffer: successfully sent transaction for \(offer.id.uuidString)")
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+                self.logger.error("openOffer: got error during call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+                DispatchQueue.main.sync {
+                    offer.openingOfferError = error
+                    offer.openingOfferState = .error
+                }
+            }
+    }
+    
+    /**
      Attempts to open a new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      
      First, this validates the data for the new offer using `validateNewOfferData`, and then passes the validated data to `offerService.openOffer`. This also passes several closures to `offerService.openOffer`, which will call `setOpeningOfferState` with the current state of the offer opening process.
@@ -150,6 +310,7 @@ class OffersViewModel: UIOfferTruthSource {
      
      - Throws: An `OfferDataValidationError` if this is unable to get the current service fee rate. Note that this offer aren't thrown, but is instead passed to  `seal.reject`.
      */
+    @available(*, deprecated, message: "Use cancelOffer with new transaction pipeline")
     func openOffer(
         chainID: BigUInt,
         stablecoin: EthereumAddress?,
@@ -187,19 +348,19 @@ class OffersViewModel: UIOfferTruthSource {
             }
         }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] validatedNewOfferData -> Promise<Void> in
             logger.notice("openOffer: opening new offer with validated data")
-            setOpeningOfferState(state: .creating)
+            //setOpeningOfferState(state: .creating)
             return offerService.openOffer(
                 offerData: validatedNewOfferData,
-                afterObjectCreation: { self.setOpeningOfferState(state: .storing) },
-                afterPersistentStorage: { self.setOpeningOfferState(state: .approving) },
-                afterTransferApproval: { self.setOpeningOfferState(state: .opening) }
+                afterObjectCreation: { /*self.setOpeningOfferState(state: .storing)*/ },
+                afterPersistentStorage: { /*self.setOpeningOfferState(state: .approving)*/ },
+                afterTransferApproval: { /*self.setOpeningOfferState(state: .opening)*/ }
             )
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
             logger.notice("openOffer: successfully opened offer")
             setOpeningOfferState(state: .completed)
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
             logger.error("openOffer: got error during openOffer call. Error: \(error.localizedDescription)")
-            openingOfferError = error
+            //openingOfferError = error
             setOpeningOfferState(state: .error)
         }
     }

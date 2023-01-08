@@ -491,6 +491,93 @@ class BlockchainService {
     }
     
     /**
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the user's account to call the [approve](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) function of an ERC20 contract, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     
+     - Parameters:
+        - tokenAddress: The address of the ERC20 contract to call.
+        - spender: The address that will be given permission to spend some of the user's balance of `tokenAddress` tokens.
+        - amount: The amount of the user's `tokenAddress` tokens that `spender` will be allowed to spend.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will allow `spender` to spend `amount` of the user's `tokenAddress` tokens.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the user's address is `nil`, if we get `nil` while creating the ERC20 token contract object, or if we get `nil` while creating the transaction. Since this function returns a `Promise`, these errors will not be thrown but rather passed to the seal rejection call.
+     */
+    func createApproveTransferTransaction(tokenAddress: EthereumAddress, spender: EthereumAddress, amount: BigUInt) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async {
+                var options = TransactionOptions()
+                options.type = .eip1559
+                guard let address = self.ethKeyStore.getAddress() else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting user's address while creating approve transaction for amount \(String(amount)) of tokens at contract \(tokenAddress.address) to \(spender.address)"))
+                    return
+                }
+                options.from = address
+                options.maxPriorityFeePerGas = .automatic
+                options.maxFeePerGas = .automatic
+                options.nonce = .pending
+                guard let tokenContract = EthereumContract(Web3.Utils.erc20ABI, at: tokenAddress) else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating token contract object"))
+                    return
+                }
+                let writeTransaction = self.createWriteTransaction(method: "approve", parameters: [spender, amount] as [AnyObject], extraData: Data(), transactionOptions: options, contract: tokenContract)
+                guard let writeTransaction = writeTransaction else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating approve transaction for amount \(String(amount)) of tokens at contract \(tokenAddress.address) to \(spender.address)"))
+                    return
+                }
+                var writeTransactionParameters = writeTransaction.transaction.parameters
+                writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+                writeTransaction.transaction.parameters = writeTransactionParameters
+                do {
+                    seal.fulfill(try writeTransaction.assemble())
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }
+    }
+    
+    /**
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the user's account to call Commuto Swap's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     
+     - Parameters:
+        - offerID: The ID of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be opened.
+        - offerStruct: The OfferStruct containing the data of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be opened.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will open an offer using the data supplied in `offerStruct` with the ID specified by `offerID`.
+     
+     - Throws: `BlockchainServiceError.unexpectedNilError` if the user's address is nil, or if we get nil while creating the transaction. Since this function returns a `Promise`, these errors will not be thrown but rather passed to the seal rejection call.
+     */
+    func createOpenOfferTransaction(offerID: UUID, offerStruct: OfferStruct) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async {
+                var options = TransactionOptions()
+                options.type = .eip1559
+                guard let address = self.ethKeyStore.getAddress() else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting user's address while creating openOffer transaction for \(offerID.uuidString)"))
+                    return
+                }
+                options.from = address
+                options.maxPriorityFeePerGas = .automatic
+                options.maxFeePerGas = .automatic
+                options.nonce = .pending
+                let writeTransaction = self.createWriteTransaction(method: "openOffer", parameters: [offerID.asData(), offerStruct.toOfferDataArray()] as [AnyObject], extraData: Data(), transactionOptions: options, contract: self.commutoSwapEthereumContract)
+                guard let writeTransaction = writeTransaction else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating openOffer transaction for \(offerID.uuidString)"))
+                    return
+                }
+                var writeTransactionParameters = writeTransaction.transaction.parameters
+                writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+                writeTransaction.transaction.parameters = writeTransactionParameters
+                do {
+                    seal.fulfill(try writeTransaction.assemble())
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }
+    }
+    
+    /**
      Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the users account to call CommutoSwap's [cancelOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#cancel-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
      
      - Parameters:
@@ -922,7 +1009,7 @@ class BlockchainService {
     /**
      Gets the current chain ID, and iterates through all transactions in `block`  in search of [CommutoSwap](https://github.com/jimmyneutront/commuto-protocol/blob/main/CommutoSwap.sol) events. If the hash of a transaction is present in `transactionsToMonitor`, then we get the transaction. If it has failed, we notifiy the proper failure handler. If it has not failed, then we parse it for events and add the resulting events to a list that will contain all events emitted in this block. In either case, we then remove the transaction hash from `transactionsToMonitor`. If the hash of a transaction is not present in `transactionsToMonitor`, then we parse it for events and add the resulting events to the list that will contain all events emitted in this block. Then this iterates through all remaining monitored transactions. If this finds transations that have been dropped or have been pending for more than 24 hours, this removes them from `transactionsToMonitor` and calls the apropriate failure handler. Then this calls `BlockchainService`'s `handleEvents(...)` function, passing said list of events and the current chain ID. (Specifically, the events are web3swift `EventParserResultProtocols`.)
      
-     Currently, this requires a hacky web3swift fix in order to work. In [this commit](https://github.com/web3swift-team/web3swift/commit/aa076ba96bbfcac98b8821029d67d76bce67065f#), a bug was introduced that skips the decoding of log bloom filters when decoding a response from the [eth_getTransactionHash]() endpoint. This bug causes all returned `TransactionReceipt` objects to have nil `logBloom` properties, meaning that event decoding is completely broken. The hacky fix is re-adding log bloom decoding code to the `TransactionReceipt` constructor.
+     Currently, this requires a hacky web3swift fix in order to work. In [this commit](https://github.com/web3swift-team/web3swift/commit/aa076ba96bbfcac98b8821029d67d76bce67065f#), a bug was introduced that skips the decoding of log bloom filters when decoding a response from the [eth_getTransactionByHash](https://ethereum.github.io/execution-apis/api-documentation/) endpoint. This bug causes all returned `TransactionReceipt` objects to have nil `logBloom` properties, meaning that event decoding is completely broken. The hacky fix is re-adding log bloom decoding code to the `TransactionReceipt` constructor.
      
      - Note: In order to parse a block, the `EventParserProtocol`s created in this function must query a network node for full transaction receipts.
      
@@ -995,7 +1082,7 @@ class BlockchainService {
                     logger.warning("parseBlock: monitored tx \(transactionHashString) of type \(monitoredTransaction.type.asString) failed, calling failure handler")
                     let error = BlockchainTransactionError.init(errorDescription: "Transaction \(transactionHashString) is confirmed, but failed for unknown reason.")
                     switch monitoredTransaction.type {
-                    case .cancelOffer, .editOffer:
+                    case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: error)
                     case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: error)
@@ -1004,6 +1091,24 @@ class BlockchainService {
                     logger.notice("parseBlock: parsing monitored tx \(transactionHashString) of type \(monitoredTransaction.type.asString) for events")
                     // The tranaction has not failed, so we parse it for the proper event
                     switch monitoredTransaction.type {
+                    case .approveTokenTransferToOpenOffer:
+                        guard let erc20Contract = EthereumContract(Web3.Utils.erc20ABI) else {
+                            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating ERC20 EthereumContract while handling monitored transaction \(transactionHashString) of type \(monitoredTransaction.type.asString)")
+                        }
+                        guard let erc20ApprovalParser = web3.web3contract.EventParser(web3: w3, eventName: "Approval", contract: erc20Contract) else {
+                            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating ERC20 EventParser while handling monitored transaction \(transactionHashString) of type \(monitoredTransaction.type.asString)")
+                        }
+                        let eventsInTransaction = try erc20ApprovalParser.parseTransactionByHash(transactionHash)
+                        let results = eventsInTransaction.compactMap { event -> CommutoEventParserResult in
+                            var eventName = event.eventName
+                            if eventName == "Approval" {
+                                eventName = "Approval_forOpeningOffer"
+                            }
+                            return CommutoEventParserResult(eventName: eventName, transactionReceipt: event.transactionReceipt, contractAddress: event.contractAddress, decodedResult: event.decodedResult, eventLog: event.eventLog)
+                        }
+                        events.append(contentsOf: results)
+                    case .openOffer:
+                        events.append(contentsOf: try offerOpenedEventParser.parseTransactionByHash(transactionHash))
                     case .cancelOffer:
                         events.append(contentsOf: try offerCanceledEventParser.parseTransactionByHash(transactionHash))
                     case .editOffer:
@@ -1053,7 +1158,7 @@ class BlockchainService {
                     logger.notice("parseBlock: removing from transactionsToMonitor and handling failed monitored tx \(monitoredTransaction.transactionHash) of type \(monitoredTransaction.type.asString) for reason: \(monitoredTransactionError.errorDescription ?? "Unknown reason")")
                     transactionsToMonitor[monitoredTransaction.transactionHash] = nil
                     switch monitoredTransaction.type {
-                    case .cancelOffer, .editOffer:
+                    case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
                     case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
@@ -1075,7 +1180,13 @@ class BlockchainService {
     private func handleEvents(_ results: [EventParserResultProtocol], chainID: BigUInt) throws {
         logger.info("handleEvents: handling \(results.count) events")
         for result in results {
-            if result.eventName == "OfferOpened" {
+            if result.eventName == "Approval_forOpeningOffer" {
+                guard let event = ApprovalEvent(result, purpose: .openOffer, chainID: chainID) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "got nil while creating ApprovalEvent from EventParserResultProtocol")
+                }
+                logger.info("handleEvents: handling Approval_forOpeningOffer event")
+                try offerService.handleTokenTransferApprovalEvent(event)
+            } else if result.eventName == "OfferOpened" {
                 guard let event = OfferOpenedEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferOpened event from EventParserResultProtocol")
                 }

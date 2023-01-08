@@ -11,37 +11,49 @@
  */
 enum OpeningOfferState {
     /**
-     Indicates that we are not currently opening a new offer.
+     Indicates that we are NOT currently opening the corresponding offer.
      */
     case none
     /**
-     Indicates that we are currently validating the user's submitted data for the new offer.
+     Indicates that we are currently checking whether the corresponding offer can be opened.
      */
     case validating
     /**
-     Indicates that we are currently creating a new key pair, ID, and `Offer` object for the new offer.
+     Indicates that we are currently sending the transaction that will open the corresponding offer.
      */
-    case creating
+    case sendingTransaction
     /**
-     Indicates that we are currently saving the new offer in persistent storage.
+     Indicates that we have sent the transaction that will open the corresponding offer, and we are waiting for it to be confirmed.
      */
-    case storing
+    case awaitingTransactionConfirmation
     /**
-     Indicates that we are currently approving the token transfer for opening the new offer.
-     */
-    case approving
-    /**
-     Indicates that we are currently calling CommutoSwap's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function for the new offer.
-     */
-    case opening
-    /**
-     Indicates that we have successfully opened the new offer.
+     Indicates that we have opened the corresponding offer, and the transaction that did so has been confirmed
      */
     case completed
     /**
-     Indicates that we encountered an exception during offer creation.
+     Indicates that we encountered an error while opening the corresponding offer.
      */
     case error
+    
+    /**
+     Returns a `String` corresponding to a particular case of `OpeningOfferState`.
+     */
+    var asString: String {
+        switch self {
+        case .none:
+            return "none"
+        case .validating:
+            return "validating"
+        case .sendingTransaction:
+            return "sendingTransaction"
+        case .awaitingTransactionConfirmation:
+            return "awaitingTransactionConfirmation"
+        case .completed:
+            return "completed"
+        case .error:
+            return "error"
+        }
+    }
     
     /**
      A human-readable string describing the current state.
@@ -49,19 +61,15 @@ enum OpeningOfferState {
     var description: String {
         switch self {
         case .none: // Note: This should not be used
-            return "Press Open Offer to open the offer"
+            return "Press Open Offer to open the offer."
         case .validating:
             return "Validating offer data..."
-        case .creating:
-            return "Creating a new key pair, offer ID and offer object..."
-        case .storing:
-            return "Saving the new offer..."
-        case .approving:
-            return "Approving token transfer..."
-        case .opening:
-            return "Opening the new offer..."
+        case .sendingTransaction:
+            return "Opening the Offer..."
+        case .awaitingTransactionConfirmation:
+            return "Waiting for confirmation..."
         case .completed:
-            return "Offer successfully opened"
+            return "Offer successfully opened."
         case .error:
             return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed
         }
