@@ -14,9 +14,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.commuto.interfacemobile.android.offer.OfferDirection
-import com.commuto.interfacemobile.android.offer.OpeningOfferState
+import com.commuto.interfacemobile.android.offer.TokenTransferApprovalState
 import com.commuto.interfacemobile.android.settlement.SettlementMethod
 import com.commuto.interfacemobile.android.ui.DisclosureComposable
+import com.commuto.interfacemobile.android.ui.SheetComposable
 import com.commuto.interfacemobile.android.ui.StablecoinInformation
 import com.commuto.interfacemobile.android.ui.StablecoinInformationRepository
 import com.commuto.interfacemobile.android.ui.settlement.PreviewableSettlementMethodTruthSource
@@ -97,6 +98,12 @@ fun OpenOfferComposable(
      * The [SettlementMethod]s that the user has selected.
      */
     val selectedSettlementMethods = remember { mutableStateListOf<SettlementMethod>() }
+
+    /**
+     * Indicates whether this is showing the sheet that allows the user to approve the token transfer in order to open
+     * the offer.
+     */
+    val isShowingApproveTransferSheet = remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -266,53 +273,114 @@ fun OpenOfferComposable(
         We don't want to display a description of the offer opening process state if an offer isn't being opened. We
         also don't want to do this if we encounter an exception; we should display the actual exception message instead.
          */
-        if (offerTruthSource.openingOfferState.value != OpeningOfferState.NONE &&
-            offerTruthSource.openingOfferState.value != OpeningOfferState.EXCEPTION) {
+        if (offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState.VALIDATING ||
+            offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState.SENDING_TRANSACTION
+        ) {
             Text(
-                text = offerTruthSource.openingOfferState.value.description,
+                text = "Approving $stablecoinCurrencyCode Transfer in Order to Open Offer",
                 style =  MaterialTheme.typography.h6,
             )
         }
-        if (offerTruthSource.openingOfferState.value == OpeningOfferState.EXCEPTION) {
+        if (offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState
+                .AWAITING_TRANSACTION_CONFIRMATION) {
             Text(
-                text = offerTruthSource.openingOfferException?.message ?: "An unknown exception occurred",
+                text = "Awaiting Confirmation of Transfer Approval. Please Find Your New Offer in the Offers List.",
+                style =  MaterialTheme.typography.h6,
+            )
+        } else if (offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState.EXCEPTION) {
+            Text(
+                text = offerTruthSource.approvingTransferToOpenOfferException?.message ?: ("An unknown exception " +
+                        "occurred"),
                 style =  MaterialTheme.typography.h6,
                 color = Color.Red
             )
         }
-        if (offerTruthSource.openingOfferState.value == OpeningOfferState.NONE ||
-            offerTruthSource.openingOfferState.value == OpeningOfferState.EXCEPTION) {
-            Button(
-                onClick = {
-                    offerTruthSource.openOffer(
+        val approveTransferButtonColor = when (offerTruthSource.approvingTransferToOpenOfferState.value)  {
+            TokenTransferApprovalState.NONE, TokenTransferApprovalState.EXCEPTION -> Color.Black
+            else -> Color.Gray
+        }
+        Button(
+            onClick = {
+                if (offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState.NONE ||
+                    offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState.EXCEPTION) {
+                    isShowingApproveTransferSheet.value = true
+                }
+            },
+            content = {
+                val approveTransferButtonLabel = when (offerTruthSource.approvingTransferToOpenOfferState.value)  {
+                    TokenTransferApprovalState.NONE, TokenTransferApprovalState.EXCEPTION ->
+                        "Approve Transfer to Open Offer"
+                    TokenTransferApprovalState.AWAITING_TRANSACTION_CONFIRMATION ->
+                        "Awaiting Confirmation of Transfer Approval"
+                    else -> "Approving Transfer"
+                }
+                Text(
+                    text = approveTransferButtonLabel,
+                    style = MaterialTheme.typography.h4,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            },
+            border = BorderStroke(3.dp, approveTransferButtonColor),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor =  Color.Transparent,
+                contentColor = approveTransferButtonColor,
+            ),
+            elevation = null,
+            modifier = Modifier.width(400.dp),
+        )
+    }
+    SheetComposable(
+        isPresented = isShowingApproveTransferSheet,
+        content = { closeSheet ->
+            TransactionGasDetailsComposable(
+                closeSheet = closeSheet,
+                title = "Approve Token Transfer",
+                buttonLabel = "Approve Token Transfer",
+                buttonAction = { createdTransaction ->
+                    offerTruthSource.approveTokenTransferToOpenOffer(
                         chainID = chainID,
                         stablecoin = selectedStablecoin.value,
-                        stablecoinInformation = stablecoins.getStablecoinInformation(chainID, selectedStablecoin.value),
+                        stablecoinInformation = stablecoins.getStablecoinInformation(
+                            chainID = chainID,
+                            contractAddress = selectedStablecoin.value,
+                        ),
                         minimumAmount = minimumAmount.value,
-                        maximumAmount =  maximumAmount.value,
+                        maximumAmount = maximumAmount.value,
                         securityDepositAmount = securityDepositAmount.value,
                         direction = direction.value,
                         settlementMethods = selectedSettlementMethods,
+                        approveTokenTransferToOpenOfferTransaction = createdTransaction,
                     )
                 },
-                content = {
-                    Text(
-                        text = "Open Offer",
-                        style = MaterialTheme.typography.h4,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                },
-                border = BorderStroke(3.dp, Color.Black),
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor =  Color.Transparent,
-                    contentColor = Color.Black,
-                ),
-                elevation = null,
-                modifier = Modifier.width(400.dp),
+                runOnAppearance = { approveTransferTransaction, transactionCreationException ->
+                    if (offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState.NONE ||
+                        offerTruthSource.approvingTransferToOpenOfferState.value == TokenTransferApprovalState
+                            .EXCEPTION
+                    ) {
+                        offerTruthSource.createApproveToOpenTransaction(
+                            stablecoin = selectedStablecoin.value,
+                            stablecoinInformation = stablecoins.getStablecoinInformation(
+                                chainID = chainID,
+                                contractAddress = selectedStablecoin.value,
+                            ),
+                            minimumAmount = minimumAmount.value,
+                            maximumAmount = maximumAmount.value,
+                            securityDepositAmount = securityDepositAmount.value,
+                            direction = direction.value,
+                            settlementMethods = selectedSettlementMethods,
+                            createdTransactionHandler = { createdTransaction ->
+                                approveTransferTransaction.value = createdTransaction
+                            },
+                            exceptionHandler = { exception ->
+                                transactionCreationException.value = exception
+                            }
+                        )
+                    }
+                }
             )
         }
-    }
+    )
 }
 
 /**

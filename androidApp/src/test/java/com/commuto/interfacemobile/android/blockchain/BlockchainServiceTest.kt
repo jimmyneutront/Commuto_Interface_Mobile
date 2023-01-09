@@ -1,6 +1,7 @@
 package com.commuto.interfacemobile.android.blockchain
 
 import com.commuto.interfacemobile.android.blockchain.events.commutoswap.*
+import com.commuto.interfacemobile.android.blockchain.events.erc20.ApprovalEvent
 import com.commuto.interfacemobile.android.database.DatabaseService
 import com.commuto.interfacemobile.android.database.PreviewableDatabaseDriverFactory
 import com.commuto.interfacemobile.android.key.KeyManagerService
@@ -85,6 +86,9 @@ class BlockchainServiceTest {
                 transaction: BlockchainTransaction,
                 exception: BlockchainTransactionException
             ) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
                 throw IllegalStateException("Should not be called")
             }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
@@ -186,6 +190,9 @@ class BlockchainServiceTest {
                 failedTransactionChannel.send(transaction)
                 transactionFailureExceptionChannel.send(exception)
             }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
+                throw IllegalStateException("Should not be called")
+            }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 throw IllegalStateException("Should not be called")
             }
@@ -267,6 +274,9 @@ class BlockchainServiceTest {
             ) {
                 failedTransactionChannel.send(transaction)
                 transactionFailureExceptionChannel.send(exception)
+            }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
+                throw IllegalStateException("Should not be called")
             }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 throw IllegalStateException("Should not be called")
@@ -356,6 +366,9 @@ class BlockchainServiceTest {
             ) {
                 throw IllegalStateException("Should not be called")
             }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
+                throw IllegalStateException("Should not be called")
+            }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
                 offerOpenedEventChannel.send(event)
             }
@@ -443,6 +456,9 @@ class BlockchainServiceTest {
                 transaction: BlockchainTransaction,
                 exception: BlockchainTransactionException
             ) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
                 throw IllegalStateException("Should not be called")
             }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
@@ -557,6 +573,9 @@ class BlockchainServiceTest {
                 transaction: BlockchainTransaction,
                 exception: BlockchainTransactionException
             ) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
                 throw IllegalStateException("Should not be called")
             }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {
@@ -964,6 +983,9 @@ class BlockchainServiceTest {
                 transaction: BlockchainTransaction,
                 exception: BlockchainTransactionException
             ) {
+                throw IllegalStateException("Should not be called")
+            }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
                 throw IllegalStateException("Should not be called")
             }
             override suspend fun handleOfferOpenedEvent(event: OfferOpenedEvent) {

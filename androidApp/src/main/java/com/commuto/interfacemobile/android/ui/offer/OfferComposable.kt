@@ -58,6 +58,12 @@ fun OfferComposable(
     val offer = offerTruthSource.offers[id]
 
     /**
+     * Indicates whether we are showing the sheet that allows the user to open the offer, if they are the maker and the
+     * offer has not yet been opened.
+     */
+    val isShowingOpenOfferSheet = remember { mutableStateOf(false) }
+
+    /**
      * Indicates whether we are showing the sheet that allows the user to take the offer, if they are not the maker.
      */
     val isShowingTakeOfferSheet = remember { mutableStateOf(false) }
@@ -147,7 +153,6 @@ fun OfferComposable(
                     }
                 )
                 if (!offer.isUserMaker) {
-                    // The user is the maker of this offer, so we display buttons for editing and canceling the offer
                     Text(
                         text = "If you take this offer, you will:",
                         style =  MaterialTheme.typography.h6,
@@ -225,86 +230,156 @@ fun OfferComposable(
                     }
                 )
                 if (offer.isUserMaker) {
-                    if (offer.editingOfferState.value == EditingOfferState.EXCEPTION) {
+                    if (offer.state == OfferState.TRANSFER_APPROVAL_FAILED) {
                         Text(
-                            text = offer.editingOfferException?.message ?: "An unknown exception occurred",
-                            style =  MaterialTheme.typography.h6,
-                            color = Color.Red
+                            text = "${stablecoinInformation?.currencyCode ?: "Stablecoin"} Transfer Approval Failed."
+                        )
+                    } else if (offer.state == OfferState.APPROVING_TRANSFER) {
+                        Text(
+                            text = "Approving ${stablecoinInformation?.currencyCode ?: "Stablecoin"} Transfer in " +
+                                    "order to open Offer."
+                        )
+                    } else if (offer.state == OfferState.APPROVE_TRANSFER_TRANSACTION_SENT) {
+                        Text(
+                            text = "Waiting for confirmation that ${stablecoinInformation?.currencyCode ?: 
+                            "Stablecoin"} Transfer Approval succeeded."
+                        )
+                    } else if (offer.state == OfferState.AWAITING_OPENING) {
+                        if (offer.openingOfferState.value == OpeningOfferState.NONE) {
+                            Text(
+                                text = "${stablecoinInformation?.currencyCode ?: "Stablecoin"} Transfer Approval " +
+                                        "succeeded. You must now open the Offer."
+                            )
+                        } else if (offer.openingOfferState.value == OpeningOfferState.EXCEPTION) {
+                            Text(
+                                text = offer.openingOfferException?.message ?: "An unknown exception occurred.",
+                                color = Color.Red,
+                            )
+                        }
+                        val openOfferButtonColor = when (offer.openingOfferState.value) {
+                            OpeningOfferState.NONE, OpeningOfferState.EXCEPTION -> Color.Black
+                            else -> Color.Gray
+                        }
+                        Button(
+                            onClick = {
+                                if (offer.openingOfferState.value == OpeningOfferState.NONE  ||
+                                    offer.openingOfferState.value == OpeningOfferState.EXCEPTION) {
+                                    isShowingOpenOfferSheet.value = true
+                                }
+                            },
+                            content = {
+                                val openOfferButtonText = when(offer.openingOfferState.value) {
+                                    OpeningOfferState.NONE, OpeningOfferState.EXCEPTION -> "Open Offer"
+                                    else -> offer.openingOfferState.value.asString
+                                }
+                                Text(
+                                    text = openOfferButtonText,
+                                    style = MaterialTheme.typography.h4,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            border = BorderStroke(3.dp, openOfferButtonColor),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor =  Color.Transparent,
+                                contentColor = openOfferButtonColor,
+                            ),
+                            elevation = null,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (offer.state == OfferState.OPEN_OFFER_TRANSACTION_SENT) {
+                        Text(
+                            text = "Waiting for confirmation that Offer has been opened."
+                        )
+                    } else {
+                        /*
+                        The user is the maker of this offer, so we display buttons for editing and canceling the offer
+                         */
+                        if (offer.editingOfferState.value == EditingOfferState.EXCEPTION) {
+                            Text(
+                                text = offer.editingOfferException?.message ?: "An unknown exception occurred",
+                                style =  MaterialTheme.typography.h6,
+                                color = Color.Red
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                navController.navigate("EditOfferComposable/$id/${stablecoinInformation
+                                    ?.currencyCode ?: "Unknown Stablecoin"}"
+                                )
+                            },
+                            content = {
+                                val editOfferButtonLabel = if (
+                                    offer.editingOfferState.value == EditingOfferState.NONE ||
+                                    offer.editingOfferState.value == EditingOfferState.EXCEPTION ||
+                                    offer.editingOfferState.value == EditingOfferState.COMPLETED) "Edit Offer" else
+                                    "Editing Offer"
+                                Text(
+                                    text = editOfferButtonLabel,
+                                    style = MaterialTheme.typography.h4,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            border = BorderStroke(3.dp, Color.Black),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor =  Color.Transparent,
+                                contentColor = Color.Black,
+                            ),
+                            elevation = null,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(
+                            modifier = Modifier.height(9.dp)
+                        )
+                        if (offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
+                            Text(
+                                text = offer.cancelingOfferException?.message ?: "An unknown exception occurred",
+                                style =  MaterialTheme.typography.h6,
+                                color = Color.Red
+                            )
+                        }
+                        val cancelOfferButtonColor = when (offer.cancelingOfferState.value) {
+                            CancelingOfferState.NONE, CancelingOfferState.EXCEPTION -> Color.Red
+                            else -> Color.Gray
+                        }
+                        Button(
+                            onClick = {
+                                /*
+                                Don't let the user try to cancel the offer if it is already canceled or being canceled
+                                 */
+                                if (offer.cancelingOfferState.value == CancelingOfferState.NONE  ||
+                                    offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
+                                    isShowingCancelOfferSheet.value = true
+                                }
+                            },
+                            content = {
+                                val cancelOfferButtonText: String = when (offer.cancelingOfferState.value) {
+                                    CancelingOfferState.NONE, CancelingOfferState.EXCEPTION -> "Cancel Offer"
+                                    CancelingOfferState.VALIDATING -> "Validating"
+                                    CancelingOfferState.SENDING_TRANSACTION -> "Sending Offer Cancellation Transaction"
+                                    CancelingOfferState.AWAITING_TRANSACTION_CONFIRMATION -> "Awaiting Transaction " +
+                                            "Confirmation"
+                                    else -> "Offer Canceled"
+                                }
+                                Text(
+                                    text = cancelOfferButtonText,
+                                    style = MaterialTheme.typography.h4,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            border = BorderStroke(3.dp, cancelOfferButtonColor),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor =  Color.Transparent,
+                                contentColor = cancelOfferButtonColor,
+                            ),
+                            elevation = null,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    Button(
-                        onClick = {
-                            navController.navigate("EditOfferComposable/$id/${stablecoinInformation
-                                ?.currencyCode ?: "Unknown Stablecoin"}"
-                            )
-                        },
-                        content = {
-                            val editOfferButtonLabel = if (offer.editingOfferState.value == EditingOfferState.NONE ||
-                                offer.editingOfferState.value == EditingOfferState.EXCEPTION ||
-                                offer.editingOfferState.value == EditingOfferState.COMPLETED) "Edit Offer" else
-                                "Editing Offer"
-                            Text(
-                                text = editOfferButtonLabel,
-                                style = MaterialTheme.typography.h4,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-                        },
-                        border = BorderStroke(3.dp, Color.Black),
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor =  Color.Transparent,
-                            contentColor = Color.Black,
-                        ),
-                        elevation = null,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(
-                        modifier = Modifier.height(9.dp)
-                    )
-                    if (offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
-                        Text(
-                            text = offer.cancelingOfferException?.message ?: "An unknown exception occurred",
-                            style =  MaterialTheme.typography.h6,
-                            color = Color.Red
-                        )
-                    }
-                    val cancelOfferButtonColor = when (offer.cancelingOfferState.value) {
-                        CancelingOfferState.NONE, CancelingOfferState.EXCEPTION -> Color.Red
-                        else -> Color.Gray
-                    }
-                    Button(
-                        onClick = {
-                            // Don't let the user try to cancel the offer if it is already canceled or being canceled
-                            if (offer.cancelingOfferState.value == CancelingOfferState.NONE  ||
-                                offer.cancelingOfferState.value == CancelingOfferState.EXCEPTION) {
-                                isShowingCancelOfferSheet.value = true
-                            }
-                        },
-                        content = {
-                            val cancelOfferButtonText: String = when (offer.cancelingOfferState.value) {
-                                CancelingOfferState.NONE, CancelingOfferState.EXCEPTION -> "Cancel Offer"
-                                CancelingOfferState.VALIDATING -> "Validating"
-                                CancelingOfferState.SENDING_TRANSACTION -> "Sending Offer Cancellation Transaction"
-                                CancelingOfferState.AWAITING_TRANSACTION_CONFIRMATION -> "Awaiting Transaction " +
-                                        "Confirmation"
-                                else -> "Offer Canceled"
-                            }
-                            Text(
-                                text = cancelOfferButtonText,
-                                style = MaterialTheme.typography.h4,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-                        },
-                        border = BorderStroke(3.dp, cancelOfferButtonColor),
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor =  Color.Transparent,
-                            contentColor = cancelOfferButtonColor,
-                        ),
-                        elevation = null,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 } else if (offer.state == OfferState.OFFER_OPENED) {
+                    // The user is not the maker of this offer, so we display a button for taking the offer
                     if (offer.takingOfferState.value == TakingOfferState.EXCEPTION) {
                         Text(
                             text = offer.takingOfferException?.message ?: "An unknown exception occurred",
@@ -344,6 +419,36 @@ fun OfferComposable(
                 }
             }
         }
+        SheetComposable(
+            isPresented = isShowingOpenOfferSheet,
+            content = { closeSheet ->
+                TransactionGasDetailsComposable(
+                    closeSheet = closeSheet,
+                    title = "Open Offer",
+                    buttonLabel = "Open Offer",
+                    buttonAction = { createdTransaction ->
+                        offerTruthSource.openOffer(
+                            offer = offer,
+                            offerOpeningTransaction = createdTransaction,
+                        )
+                    },
+                    runOnAppearance = { closeSwapTransaction, transactionCreationException ->
+                        if (offer.openingOfferState.value == OpeningOfferState.NONE ||
+                            offer.openingOfferState.value == OpeningOfferState.EXCEPTION) {
+                            offerTruthSource.createOpenOfferTransaction(
+                                offer = offer,
+                                createdTransactionHandler = { createdTransaction ->
+                                    closeSwapTransaction.value = createdTransaction
+                                },
+                                exceptionHandler = { exception ->
+                                    transactionCreationException.value = exception
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+        )
         SheetComposable(
             isPresented = isShowingTakeOfferSheet,
             content = { closeSheet ->

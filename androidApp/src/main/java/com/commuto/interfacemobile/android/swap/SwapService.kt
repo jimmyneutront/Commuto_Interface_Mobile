@@ -503,7 +503,7 @@ class SwapService @Inject constructor(
      * Attempts to create a [RawTransaction] that will call
      * [reportPaymentReceived](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-received)
      * for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) for which the user of this
-     * interface is the buyer, with the ID specified by [swapID] and on the blockchain specified by [chainID].
+     * interface is the buyer.
      *
      * On the IO coroutine dispatcher, this calls [validateSwapForReportingPaymentReceived], and then
      * [BlockchainService.createReportPaymentReceivedTransaction], passing the [Swap.id] and [Swap.chainID] properties
@@ -519,8 +519,8 @@ class SwapService @Inject constructor(
      */
     suspend fun createReportPaymentReceivedTransaction(swap: Swap): RawTransaction {
         return withContext(Dispatchers.IO) {
-            validateSwapForReportingPaymentReceived(swap = swap)
             Log.i(logTag, "createReportPaymentReceivedTransaction: creating for ${swap.id}")
+            validateSwapForReportingPaymentReceived(swap = swap)
             blockchainService.createReportPaymentReceivedTransaction(swapID = swap.id, chainID = swap.chainID)
         }
     }
@@ -863,6 +863,7 @@ class SwapService @Inject constructor(
             .asString} with exception ${exception.message}")
         val encoder = Base64.getEncoder()
         when (transaction.type) {
+            BlockchainTransactionType.APPROVE_TOKEN_TRANSFER_TO_OPEN_OFFER, BlockchainTransactionType.OPEN_OFFER,
             BlockchainTransactionType.CANCEL_OFFER, BlockchainTransactionType.EDIT_OFFER -> {
                 throw SwapServiceException(message = "handleFailedTransaction: received an offer-related transaction " +
                         transaction.transactionHash
