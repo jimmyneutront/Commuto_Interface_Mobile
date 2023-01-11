@@ -10,9 +10,14 @@ import BigInt
 import SwiftUI
 
 /**
- Allows the user to specify a stablecoin amount, select a settlement method and take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+ Allows the user to specify a stablecoin amount, select a settlement method and take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer). This should only be used within a sheet.
  */
 struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Offer_TruthSource: UIOfferTruthSource, SettlementMethod_TruthSource: UISettlementMethodTruthSource {
+    
+    /**
+     Indicates whether we are showing the sheet in which this View is displayed.
+     */
+    @Binding var isShowingTakeOfferSheet: Bool
     
     /**
      The `StablecoinInformationRepository` that this `View` uses to get stablecoin name and currency code information.
@@ -41,22 +46,36 @@ struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
     /**
      The amount of stablecoin that the user has indicated they want to buy/sell. If the minimum and maximum amount of the offer this `View` represents are equal, this will not be used.
      */
-    @State var specifiedStablecoinAmount = 0
+    @State private var specifiedStablecoinAmount = 0
     
     /**
      The settlement method (created by the offer maker) by which the user has chosen to send/receive traditional currency payment, or `nil` if the user has not made such a selection.
      */
-    @State var selectedMakerSettlementMethod: SettlementMethod? = nil
+    @State private var selectedMakerSettlementMethod: SettlementMethod? = nil
     /**
      The user's/taker's settlement method corresponding to `selectedMakerSettlementMethod`, containing the user's/taker's private data which will be sent to the maker. Must have the same currency and method value as `selectedMakerSettlementMethod`.
      */
-    @State var selectedTakerSettlementMethod: SettlementMethod? = nil
+    @State private var selectedTakerSettlementMethod: SettlementMethod? = nil
     
     /**
-     Creates the string that will be displayed in the label  of the button that edits the offer.
+     Indicates whether this view should allow the user to submit information and take the offer, display a gas estimate for approving a token transfer in order to take the offer, or display a gas estimate for taking the offer.
+     */
+    @State private var selectedTakeOfferView: SelectedTakeOfferView = .submitInformation
+    
+    /**
+     The key pair created for use by the user/taker, if any.
+     */
+    @State private var createdKeyPairForTaker: KeyPair? = nil
+    
+    /**
+     Creates the string that will be displayed in the label  of the button that takes the offer.
      */
     func createTakeOfferButtonLabel(offer: Offer) -> String {
-        if offer.takingOfferState == .none || offer.takingOfferState == .error {
+        if offer.approvingToTakeState == .none || offer.approvingToTakeState == .error {
+            return "Approve Transfer to Take Offer"
+        } else if offer.approvingToTakeState == .validating || offer.approvingToTakeState == .sendingTransaction || offer.approvingToTakeState == .awaitingTransactionConfirmation {
+            return "Approving Transfer"
+        } else if offer.approvingToTakeState == .completed && (offer.takingOfferState == .none || offer.takingOfferState == .error) {
             return "Take Offer"
         } else if offer.takingOfferState == .completed {
             return "Offer Taken"
@@ -85,98 +104,169 @@ struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                 // If isTaken is true and takingOfferState is .none, then the offer has been taken by someone OTHER than the user of this interface, and therefore we don't show any offer info, just this message. Otherwise, if this offer WAS taken by the user of this interface, we do show offer info, but relabel the "Take Offer" button to indicate that the offer has been taken.
                 Text("This Offer has been taken.")
             } else {
-                let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(
-                    chainID: offer.chainID,
-                    contractAddress: offer.stablecoin
-                )
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading) {
-                        Text("Take Offer")
-                            .font(.title)
-                            .bold()
-                        Text("You are:")
-                            .font(.title2)
-                        Text(createRoleDescription(offerDirection: offer.direction, stablecoinInformation: stablecoinInformation, selectedSettlementMethod: selectedMakerSettlementMethod))
-                            .font(.title)
-                            .bold()
-                        OfferAmountView(
-                            stablecoinInformation: stablecoinInformation,
-                            minimum: offer.amountLowerBound,
-                            maximum: offer.amountUpperBound,
-                            securityDeposit: offer.securityDepositAmount
-                        )
-                        if (offer.amountLowerBound != offer.amountUpperBound) {
-                            Text("Enter an Amount:")
-                            StablecoinAmountField(value: $specifiedStablecoinAmount, formatter: stablecoinFormatter)
-                            ServiceFeeAmountView(
-                                stablecoinInformation: stablecoinInformation,
-                                amount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
-                                serviceFeeRate: offer.serviceFeeRate
-                            )
-                        } else {
-                            ServiceFeeAmountView(
-                                stablecoinInformation: stablecoinInformation,
-                                minimumString: String(offer.serviceFeeRate * offer.amountLowerBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000))),
-                                maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
-                            )
-                        }
-                        Text("Select Settlement Method:")
-                            .font(.title2)
-                        ImmutableSettlementMethodSelector(
-                            settlementMethods: offer.settlementMethods,
-                            selectedSettlementMethod: $selectedMakerSettlementMethod,
-                            stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
-                        )
-                        if selectedMakerSettlementMethod != nil {
-                            Text("Select Your Settlement Method:")
+                switch selectedTakeOfferView {
+                case .submitInformation:
+                    let stablecoinInformation = stablecoinInfoRepo.getStablecoinInformation(
+                        chainID: offer.chainID,
+                        contractAddress: offer.stablecoin
+                    )
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(alignment: .leading) {
+                            Text("Take Offer")
+                                .font(.title)
+                                .bold()
+                            Text("You are:")
                                 .font(.title2)
-                            FilterableSettlementMethodSelector(
-                                settlementMethodTruthSource: settlementMethodTruthSource,
-                                selectedMakerSettlementMethod: $selectedMakerSettlementMethod,
-                                selectedTakerSettlementMethod: $selectedTakerSettlementMethod
+                            Text(createRoleDescription(offerDirection: offer.direction, stablecoinInformation: stablecoinInformation, selectedSettlementMethod: selectedMakerSettlementMethod))
+                                .font(.title)
+                                .bold()
+                            OfferAmountView(
+                                stablecoinInformation: stablecoinInformation,
+                                minimum: offer.amountLowerBound,
+                                maximum: offer.amountUpperBound,
+                                securityDeposit: offer.securityDepositAmount
                             )
-                        }
-                        VStack {
-                            if (offer.takingOfferState != .none && offer.takingOfferState != .error) {
-                                Text(offer.takingOfferState.description)
+                            if offer.amountLowerBound != offer.amountUpperBound {
+                                Text("Enter an Amount:")
+                                StablecoinAmountField(value: $specifiedStablecoinAmount, formatter: stablecoinFormatter)
+                                ServiceFeeAmountView(
+                                    stablecoinInformation: stablecoinInformation,
+                                    amount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                    serviceFeeRate: offer.serviceFeeRate
+                                )
+                            } else {
+                                ServiceFeeAmountView(
+                                    stablecoinInformation: stablecoinInformation,
+                                    minimumString: String(offer.serviceFeeRate * offer.amountLowerBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000))),
+                                    maximumString: String(offer.serviceFeeRate * offer.amountUpperBound / (BigUInt(10).power(stablecoinInformation?.decimal ?? 1) * BigUInt(10000)))
+                                )
+                            }
+                            Text("Select Settlement Method:")
+                                .font(.title2)
+                            ImmutableSettlementMethodSelector(
+                                settlementMethods: offer.settlementMethods,
+                                selectedSettlementMethod: $selectedMakerSettlementMethod,
+                                stablecoinCurrencyCode: stablecoinInformation?.currencyCode ?? "Unknown Stablecoin"
+                            )
+                            if selectedMakerSettlementMethod != nil {
+                                Text("Select Your Settlement Method:")
                                     .font(.title2)
+                                FilterableSettlementMethodSelector(
+                                    settlementMethodTruthSource: settlementMethodTruthSource,
+                                    selectedMakerSettlementMethod: $selectedMakerSettlementMethod,
+                                    selectedTakerSettlementMethod: $selectedTakerSettlementMethod
+                                )
                             }
-                            if offer.takingOfferState == .error {
-                                Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
-                                    .foregroundColor(Color.red)
-                            }
-                            Button(
-                                action: {
-                                    if offer.takingOfferState == .none || offer.takingOfferState == .error {
-                                        offerTruthSource.takeOffer(
-                                            offer: offer,
-                                            takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
-                                            makerSettlementMethod: selectedMakerSettlementMethod,
-                                            takerSettlementMethod: selectedTakerSettlementMethod
-                                        )
+                            VStack {
+                                if offer.approvingToTakeState == .validating || offer.approvingToTakeState == .sendingTransaction {
+                                    Text("Approving \(stablecoinInformation?.currencyCode ?? "Stablecoin") Transfer in Order to Take Offer")
+                                } else if offer.approvingToTakeState == .awaitingTransactionConfirmation {
+                                    Text("Awaiting Confirmation of Transfer Approval")
+                                } else if offer.approvingToTakeState == .error {
+                                    Text(offer.approvingToTakeError?.localizedDescription ?? "An unknown error occured while approving the token transfer")
+                                        .foregroundColor(Color.red)
+                                } else if offer.approvingToTakeState == .completed {
+                                    if offer.takingOfferState == .validating || offer.takingOfferState == .sendingTransaction {
+                                        Text("Taking Offer")
+                                    } else if offer.takingOfferState == .awaitingTransactionConfirmation {
+                                        Text("Awaiting Confirmation that Offer is Taken")
+                                    } else if offer.takingOfferState == .error {
+                                        Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured while taking the Offer")
                                     }
-                                },
-                                label: {
-                                    Text(createTakeOfferButtonLabel(offer: offer))
-                                        .font(.largeTitle)
-                                        .bold()
-                                        .padding(10)
-                                        .frame(maxWidth: .infinity)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(getTakeOfferButtonOutlineColor(offer: offer), lineWidth: 3)
-                                        )
                                 }
-                            )
-                            .accentColor(Color.primary)
+                                Button(
+                                    action: {
+                                        if offer.approvingToTakeState == .none || offer.approvingToTakeState == .error {
+                                            selectedTakeOfferView = .approveTokenTransferGasEstimate
+                                        } else if offer.takingOfferState == .none || offer.takingOfferState == .error {
+                                            selectedTakeOfferView = .takeOfferGasEstimate
+                                        }
+                                    },
+                                    label: {
+                                        Text(createTakeOfferButtonLabel(offer: offer))
+                                            .font(.largeTitle)
+                                            .bold()
+                                            .padding(10)
+                                            .frame(maxWidth: .infinity)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .stroke(getTakeOfferButtonOutlineColor(offer: offer), lineWidth: 3)
+                                            )
+                                    }
+                                )
+                                .accentColor(Color.primary)
+                            }
                         }
+                        .padding()
                     }
-                    .padding()
-                }
-                .onAppear {
-                    // Set up the stablecoin NumberFormatter when this view appears
-                    stablecoinFormatter.numberStyle = .currency
-                    stablecoinFormatter.maximumFractionDigits = 3
+                    .onAppear {
+                        // Set up the stablecoin NumberFormatter when this view appears
+                        stablecoinFormatter.maximumFractionDigits = 3
+                    }
+                case .approveTokenTransferGasEstimate:
+                    TransactionGasDetailsView(
+                        isShowingSheet: $isShowingTakeOfferSheet,
+                        title: "Approve Token Transfer",
+                        buttonLabel: "Approve Token Transfer",
+                        buttonAction: { createdTransaction in
+                            offerTruthSource.approveTokenTransferToTakeOffer(
+                                offer: offer,
+                                takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                makerSettlementMethod: selectedMakerSettlementMethod,
+                                takerSettlementMethod: selectedTakerSettlementMethod,
+                                approveTokenTransferToTakeOfferTransaction: createdTransaction
+                            )
+                        },
+                        runOnAppearance: { approveTransferTransactionBinding, transactionCreationErrorBinding in
+                            if offer.approvingToTakeState == .none || offer.approvingToTakeState == .error {
+                                offerTruthSource.createApproveTokenTransferToTakeOfferTransaction(
+                                    offer: offer,
+                                    takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                    makerSettlementMethod: selectedMakerSettlementMethod,
+                                    takerSettlementMethod: selectedTakerSettlementMethod,
+                                    createdTransactionHandler: { createdTransaction in
+                                        approveTransferTransactionBinding.wrappedValue = createdTransaction
+                                    },
+                                    errorHandler: { error in
+                                        transactionCreationErrorBinding.wrappedValue = error
+                                    }
+                                )
+                            }
+                        }
+                    )
+                case .takeOfferGasEstimate:
+                    TransactionGasDetailsView(
+                        isShowingSheet: $isShowingTakeOfferSheet,
+                        title: "Take Offer",
+                        buttonLabel: "Take Offer",
+                        buttonAction: { createdTransaction in
+                            offerTruthSource.takeOffer(
+                                offer: offer,
+                                takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                makerSettlementMethod: selectedMakerSettlementMethod,
+                                takerSettlementMethod: selectedTakerSettlementMethod,
+                                keyPair: createdKeyPairForTaker,
+                                offerTakingTransaction: createdTransaction
+                            )
+                        },
+                        runOnAppearance: { takeOfferTransactionBinding, transactionCreationErrorBinding in
+                            if offer.takingOfferState == .none || offer.takingOfferState == .error {
+                                offerTruthSource.createTakeOfferTransaction(
+                                    offer: offer,
+                                    takenSwapAmount: NSNumber(floatLiteral: Double(specifiedStablecoinAmount)).decimalValue,
+                                    makerSettlementMethod: selectedMakerSettlementMethod,
+                                    takerSettlementMethod: selectedTakerSettlementMethod,
+                                    createdTransactionAndKeyPairHandler: { createdTransaction, createdKeyPair in
+                                        takeOfferTransactionBinding.wrappedValue = createdTransaction
+                                        $createdKeyPairForTaker.wrappedValue = createdKeyPair
+                                    },
+                                    errorHandler: { error in
+                                        transactionCreationErrorBinding.wrappedValue = error
+                                    }
+                                )
+                            }
+                        }
+                    )
                 }
             }
         } else {
@@ -225,6 +315,26 @@ struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
             }
         }
         return "\(direction) \(stablecoinCurrencyCode)\(currencyPhrase)"
+    }
+    
+    /**
+     Indicates what kind of information this view should display.
+     
+     Indicates whether this view should allow the user to submit information and take the offer, display a gas estimate for approving a token transfer in order to take the offer, or display a gas estimate for taking the offer.
+     */
+    enum SelectedTakeOfferView {
+        /**
+         Indicates that this view should allow the user to submit information and take the offer.
+         */
+        case submitInformation
+        /**
+         Indicates that this view should display a gas estimate for approving a token transfer in order to take the offer.
+         */
+        case approveTokenTransferGasEstimate
+        /**
+         Indicates that this view should display a gas estimate for taking the offer.
+         */
+        case takeOfferGasEstimate
     }
     
 }
@@ -411,8 +521,12 @@ func buildCurrencyDescription(settlementMethod: SettlementMethod) -> String {
  Displays a preview of `TakeOfferView`
  */
 struct TakeOfferView_Previews: PreviewProvider {
+    
+    @State static var isShowingSheet = true
+    
     static var previews: some View {
         TakeOfferView(
+            isShowingTakeOfferSheet: $isShowingSheet,
             offerID: Offer.sampleOfferIds[2],
             offerTruthSource: PreviewableOfferTruthSource(),
             settlementMethodTruthSource: PreviewableSettlementMethodTruthSource()

@@ -118,7 +118,11 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
      The string that  will be displayed in the label  of the button that edits the offer.
      */
     var takeOfferButtonLabel: String {
-        if offer.takingOfferState == .none || offer.takingOfferState == .error {
+        if offer.approvingToTakeState == .none || offer.approvingToTakeState == .error {
+            return "Approve Transfer to Take Offer"
+        } else if offer.approvingToTakeState == .validating || offer.approvingToTakeState == .sendingTransaction || offer.approvingToTakeState == .awaitingTransactionConfirmation {
+            return "Approving Transfer"
+        } else if offer.approvingToTakeState == .completed && (offer.takingOfferState == .none || offer.takingOfferState == .error) {
             return "Take Offer"
         } else if offer.takingOfferState == .completed {
             return "Offer Taken"
@@ -265,7 +269,7 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                                     TransactionGasDetailsView(
                                         isShowingSheet: $isShowingOpenOfferSheet,
                                         title: "Open Offer",
-                                        buttonLabel: "OpenOffer",
+                                        buttonLabel: "Open Offer",
                                         buttonAction: { createdTransaction in
                                             offerTruthSource.openOffer(
                                                 offer: offer,
@@ -351,8 +355,12 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                             }
                         } else if (offer.state == .offerOpened) {
                             // The user is not the maker of this offer, so we display a button for taking the offer
+                            if offer.approvingToTakeState == .error {
+                                Text(offer.approvingToTakeError?.localizedDescription ?? "An unknown error occurred while approving the token transfer.")
+                                    .foregroundColor(Color.red)
+                            }
                             if offer.takingOfferState == .error {
-                                Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured")
+                                Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured while taking the offer.")
                                     .foregroundColor(Color.red)
                             }
                             // We should only display the "Take Offer" button if the user is NOT the maker and if the offer is in the offerOpened state
@@ -375,6 +383,7 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                             .accentColor(Color.primary)
                             .sheet(isPresented: $isShowingTakeOfferSheet) {
                                 TakeOfferView(
+                                    isShowingTakeOfferSheet: $isShowingTakeOfferSheet,
                                     offerID: offer.id,
                                     offerTruthSource: offerTruthSource,
                                     settlementMethodTruthSource: settlementMethodTruthSource

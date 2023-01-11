@@ -65,7 +65,8 @@ struct iOSApp: App {
             .inObjectScope(.container)
         // Provide BlockchainService to OfferService
         container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.blockchainService = container.resolve(BlockchainService.self)!
-        #warning("TODO: Provide BlockchainService to SwapService")
+        // Provide BlockchainService to SwapService
+        container.resolve(SwapService.self)!.blockchainService = container.resolve(BlockchainService.self)!
         // Register the P2PService singleton
         container.register(P2PService.self) { r in
             P2PService(
@@ -79,7 +80,8 @@ struct iOSApp: App {
             .inObjectScope(.container)
         // Provide P2PService to OfferService
         container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.p2pService = container.resolve(P2PService.self)!
-        #warning("TODO: Provide P2PService to SwapService")
+        // Provide P2PService to SwapService
+        container.resolve(SwapService.self)!.p2pService = container.resolve(P2PService.self)!
         // Register the OffersViewModel singleton
         container.register(OffersViewModel.self) { r in
             OffersViewModel(offerService: r.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!)
@@ -92,7 +94,8 @@ struct iOSApp: App {
         container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.offerTruthSource = container.resolve(OffersViewModel.self)!
         // Provide SwapViewModel to OfferService as its swapTruthSource
         container.resolve(OfferService<OffersViewModel, SwapViewModel>.self)!.swapTruthSource = container.resolve(SwapViewModel.self)!
-        #warning("TODO: Provide SwapViewModel to SwapService as its swapTruthSource")
+        // Provide SwapViewModel to SwapService as its swapTruthSource
+        container.resolve(SwapService.self)!.swapTruthSource = container.resolve(SwapViewModel.self)!
         // Register the SettlementMethodViewModel singleton
         container.register(SettlementMethodViewModel.self) { r in SettlementMethodViewModel(settlementMethodService: r.resolve(SettlementMethodService<SettlementMethodViewModel>.self)!) }
             .inObjectScope(.container)
@@ -100,9 +103,9 @@ struct iOSApp: App {
         container.resolve(SettlementMethodService<SettlementMethodViewModel>.self)!.settlementMethodTruthSource = container.resolve(SettlementMethodViewModel.self)
         
         // Begin listening to the blockchain
-        //container.resolve(BlockchainService.self)!.listen()
+        container.resolve(BlockchainService.self)!.listen()
         // Begin listening to the peer-to-peer network
-        //container.resolve(P2PService.self)!.listen()
+        container.resolve(P2PService.self)!.listen()
     }
     
     /**

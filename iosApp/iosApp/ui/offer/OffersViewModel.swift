@@ -547,6 +547,172 @@ class OffersViewModel: UIOfferTruthSource {
     }
     
     /**
+     Attempts to create an `EthereumTransaction` to approve a token transfer in order to take an offer.
+     
+     This passes all parameters (except `createdTransactionHandler` or `errorHandler`) as well as a `StablecoinInformationRepository` to `OfferService.createApproveTokenTrasferToTakeOfferTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createApproveTokenTransferToTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createApproveTokenTransferToTakeOfferTransaction: creating for \(offer.id.uuidString)")
+                #warning("TODO: get proper stablecoin repo here")
+                offerService.createApproveTokenTrasferToTakeOfferTransaction(
+                    offerToTake: offer,
+                    takenSwapAmount: takenSwapAmount,
+                    makerSettlementMethod: makerSettlementMethod,
+                    takerSettlementMethod: takerSettlementMethod,
+                    stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo
+                ).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
+     Attempts to approve a token transfer in order to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     This clears `offer`'s `Offer.approvingToTakeError` property and sets its `Offer.approvingToTakeState` to `TokenTransferApprovalState.validating`, and then passes all data (as well as a `StablecoinInformationRepository`) to `offerService`'s `OfferService.approveTokenTransferToTakeOffer` function. When this function returns, this sets `offer`'s `Offer.approvingToTakeState` to `TokenTransferApprovalState.awaitingTransactionConfirmation`.
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - approveTokenTransferToTakeOfferTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the proper amount (determined by the values of the other arguments) of the token specified by `offer`.
+     */
+    func approveTokenTransferToTakeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        approveTokenTransferToTakeOfferTransaction: EthereumTransaction?
+    ) {
+        offer.approvingToTakeError = nil
+        offer.approvingToTakeState = .validating
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("approveTokenTransferToTakeOffer: approving for \(offer.id)")
+        }
+        #warning("TODO: get proper stablecoin repo here")
+        offerService.approveTokenTransferToTakeOffer(
+            offerToTake: offer,
+            takenSwapAmount: takenSwapAmount,
+            makerSettlementMethod: makerSettlementMethod,
+            takerSettlementMethod: takerSettlementMethod,
+            stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo,
+            approveTokenTransferToTakeOfferTransaction: approveTokenTransferToTakeOfferTransaction
+        ).done(on: DispatchQueue.main) { _ in
+            self.logger.notice("approveTokenTransferToTakeOffer: successfully")
+            offer.approvingToTakeState = .awaitingTransactionConfirmation
+        }.catch(on: DispatchQueue.main) { error in
+            self.logger.error("approveTokenTransferToTakeOffer: got error during call. Error: \(error.localizedDescription)")
+            offer.approvingToTakeError = error
+            offer.approvingToTakeState = .error
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` that can take `offer` (which should NOT be made by the user of this interface) by calling [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer).
+     
+     This passes all passed data (along with a `StablecoinInformationRepository`) and then passes the resulting transaction and key pair to `createdTransactionAndKeyPairHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - createdTransactionAndKeyPairHandler: An escaping closure that will accept and handle the created `EthereumTransaction` and `KeyPair`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionAndKeyPairHandler: @escaping (EthereumTransaction, KeyPair) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<(EthereumTransaction, KeyPair)> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createTakeOfferTransaction: creating for \(offer.id.uuidString)")
+                #warning("TODO: get proper stablecoin repo here")
+                offerService.createTakeOfferTransaction(
+                    offerToTake: offer,
+                    takenSwapAmount: takenSwapAmount,
+                    makerSettlementMethod: makerSettlementMethod,
+                    takerSettlementMethod: takerSettlementMethod,
+                    stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo
+                ).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction, createdKeyPair in
+            createdTransactionAndKeyPairHandler(createdTransaction, createdKeyPair)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
+     Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
+     
+     This clears the offer-taking-related `Error` of `offer` and sets `offer`'s `Offer.takingOfferState` to `TakingOfferState.validating`, and then passes all data to `offerService`'s `OfferService.takeOffer` function.
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - keyPair: An optional `KeyPair`, which serves as the user's/taker's key pair and with which `offerTakingTransaction` should have been created.
+        - offerTakingTransaction: An optional `EthereumTransaction` that can take `offer`.
+     */
+    func takeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        keyPair: KeyPair?,
+        offerTakingTransaction: EthereumTransaction?
+    ) {
+        offer.takingOfferError = nil
+        offer.takingOfferState = .validating
+        DispatchQueue.global(qos: .userInitiated).sync {
+            logger.notice("takeOffer: taking \(offer.id.uuidString)")
+        }
+        offerService.takeOffer(
+            offerToTake: offer,
+            takenSwapAmount: takenSwapAmount,
+            makerSettlementMethod: makerSettlementMethod,
+            takerSettlementMethod: takerSettlementMethod,
+            stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo,
+            takerKeyPair: keyPair, offerTakingTransaction: offerTakingTransaction
+        ).done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+            self.logger.notice("takeOffer successfully sent transaction for \(offer.id.uuidString)")
+        }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
+            self.logger.error("takeOffer: got error during call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
+            DispatchQueue.main.sync {
+                offer.takingOfferError = error
+                offer.takingOfferState = .error
+            }
+        }
+    }
+    
+    /**
      Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      
      - Parameters:

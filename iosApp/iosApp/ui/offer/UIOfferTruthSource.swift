@@ -208,6 +208,84 @@ protocol UIOfferTruthSource: OfferTruthSource, ObservableObject {
     func editOffer(offer: Offer, newSettlementMethods: [SettlementMethod], offerEditingTransaction: EthereumTransaction?)
     
     /**
+     Attempts to create an `EthereumTransaction` to approve a token transfer in order to take an offer.
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createApproveTokenTransferToTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to approve a token transfer in order to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - approveTokenTransferToTakeOfferTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the proper amount (determined by the values of the other arguments) of the token specified by `offer`.
+     */
+    func approveTokenTransferToTakeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        approveTokenTransferToTakeOfferTransaction: EthereumTransaction?
+    )
+    
+    /**
+     Attempts to create an `EthereumTransaction` that can take `offer` (which should NOT be made by the user of this interface) by calling [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer).
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - createdTransactionAndKeyPairHandler: An escaping closure that will accept and handle the created `EthereumTransaction` and `KeyPair`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionAndKeyPairHandler: @escaping (EthereumTransaction, KeyPair) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
+     
+     - Parameters:
+        - offer: The `Offer` to be taken.
+        - takenSwapAmount: The `Decimal` amount of stablecoin that the user wants to buy/sell. If the offer has lower and upper bound amounts that ARE equal, this parameter will be ignored.
+        - makerSettlementMethod: The `SettlementMethod`, belonging to the maker, that the user/taker has selected to send/receive traditional currency payment.
+        - takerSettlementMethod: The `SettlementMethod`, belonging to the user/taker, that the user has selected to send/receive traditional currency payment. This must contain the user's valid private settlement method data, and must have method and currency fields matching `makerSettlementMethod`.
+        - keyPair: An optional `KeyPair`, which serves as the user's/taker's key pair and with which `offerTakingTransaction` should have been created.
+        - offerTakingTransaction: An optional `EthereumTransaction` that can take `offer`.
+     */
+    func takeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        keyPair: KeyPair?,
+        offerTakingTransaction: EthereumTransaction?
+    )
+    
+    /**
      Attempts to take an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer).
      
      - Parameters:

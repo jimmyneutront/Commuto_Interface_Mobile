@@ -115,6 +115,53 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     /**
      Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
      */
+    func createApproveTokenTransferToTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func approveTokenTransferToTakeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        approveTokenTransferToTakeOfferTransaction: EthereumTransaction?
+    ) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func createTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionAndKeyPairHandler: @escaping (EthereumTransaction, KeyPair) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
+    func takeOffer(
+        offer: Offer,
+        takenSwapAmount: Decimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        keyPair: KeyPair?,
+        offerTakingTransaction: EthereumTransaction?
+    ) {}
+    
+    /**
+     Not used since this class is for previewing user interfaces, but required for adoption of `UIOfferTruthSource`.
+     */
     func takeOffer(offer: Offer, takenSwapAmount: Decimal, makerSettlementMethod: SettlementMethod?, takerSettlementMethod: SettlementMethod?) {}
     
 }
