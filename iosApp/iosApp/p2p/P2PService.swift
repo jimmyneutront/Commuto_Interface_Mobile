@@ -245,34 +245,34 @@ class P2PService {
                 // If execution reaches this point, then we have already tried to get every possible unencrypted message from the event being handled. Therefore, we now try to get an encrypted message from the event: We attempt to turn the event content to data via UTF8 encoding, and then we attempt to create a JSON NSDictionary from that Data. If this is successful, we check for a recipient field, and attempt to create an interface ID from the contents of that field. Then we check keyManagerService to determine if we have a key pair with that interface ID. If we do, then we have determined that the event contains an encrypted message sent to us, and we attempt to parse it.
                 guard let messageData = (event.content as? SwitrixMessageEventContent)?.body.data(using: String.Encoding.utf8) else {
                     // If we can't get Data from the event, then we stop handling it and move on
-                    break
+                    continue
                 }
-                guard let message = try JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
+                guard let message = try? JSONSerialization.jsonObject(with: messageData) as? NSDictionary else {
                     // If we can't use JSON serialization to create an NSDictionary from the message data, we stop handling the event and move on
-                    break
+                    continue
                 }
                 guard let recipientInterfaceIDString = message["recipient"] as? String, let recipientInterfaceID = Data(base64Encoded: recipientInterfaceIDString) else {
                     // If the message doesn't have a "recipient" field or if we can't create a recipient interface ID from the contents of the "recipient" field, then we stop handling it and move on
-                    break
+                    continue
                 }
                 guard let recipientKeyPair = try keyManagerService.getKeyPair(interfaceId: recipientInterfaceID) else {
                     // If we don't have a key pair with the interface ID specified in the "recipient" field, then we don't have the private key necessary to decrypt the message, (meaning we aren't the intended recipient) so we stop handling it and move on
-                    break
+                    continue
                 }
-                if let takerInformationMessage = try parseTakerInformationMessage(message: message, keyPair: recipientKeyPair) {
+                if let takerInformationMessage = try? parseTakerInformationMessage(message: message, keyPair: recipientKeyPair) {
                     self.logger.notice("parseEvents: got Taker Information Message in event with Matrix event ID \(event.eventId)")
                     try swapService.handleTakerInformationMessage(takerInformationMessage)
                 } else {
                     // If execution reaches this point, then we have already tried to get every possible encrypted message that doesn't require us to have the sender's public key. Therefore we check for a recipient field, and attempt to create an interface ID from the contents of that field, and then check keyManagerService to determine if we have a public key with that interface ID. If we do, then we continue attempting to parse the message. If we do not, we log a warning and break.
                     guard let senderInterfaceIDString = message["sender"] as? String, let senderInterfaceID = Data(base64Encoded: senderInterfaceIDString) else {
                         self.logger.warning("parseEvents: could not get sender interface ID from message in event with Matrix event ID \(event.eventId) sent to this interface")
-                        break
+                        continue
                     }
-                    guard let senderPublicKey = try keyManagerService.getPublicKey(interfaceId: senderInterfaceID) else {
+                    guard let senderPublicKey = try? keyManagerService.getPublicKey(interfaceId: senderInterfaceID) else {
                         self.logger.warning("parseEvents: could not find sender's public key for message sent to this interface in event with Matrix event ID \(event.eventId)")
-                        break
+                        continue
                     }
-                    if let makerInformationMessage = try parseMakerInformationMessage(message: message, keyPair: recipientKeyPair, publicKey: senderPublicKey) {
+                    if let makerInformationMessage = try? parseMakerInformationMessage(message: message, keyPair: recipientKeyPair, publicKey: senderPublicKey) {
                         self.logger.notice("parseEvents: got Maker Information Message in event with Matrix event ID \(event.eventId)")
                         try swapService.handleMakerInformationMessage(makerInformationMessage, senderInterfaceID: senderInterfaceID, recipientInterfaceID: recipientInterfaceID)
                     }
