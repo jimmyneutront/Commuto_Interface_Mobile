@@ -14,6 +14,10 @@ enum TokenTransferApprovalPurpose {
      Indicates that the corresponding token transfer allowance was set in order to open an offer.
      */
     case openOffer
+    /**
+     Indicates that the corresponding token transfer allowance was set in order to take an offer.
+     */
+    case takeOffer
     
     /**
      A human-readable string describing an instance of this type.
@@ -22,6 +26,8 @@ enum TokenTransferApprovalPurpose {
         switch self {
         case .openOffer:
             return "openOffer"
+        case .takeOffer:
+            return "takeOffer"
         }
     }
     

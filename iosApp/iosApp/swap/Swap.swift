@@ -374,7 +374,7 @@ extension Swap {
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
             chainID: BigUInt(31337), // Hardhat blockchain ID
-            state: .takeOfferTransactionBroadcast,
+            state: .takeOfferTransactionSent,
             role: .takerAndSeller
         ),
     ]

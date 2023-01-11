@@ -537,11 +537,11 @@ class BlockchainService {
     }
     
     /**
-     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the user's account to call Commuto Swap's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the user's account to call CommutoSwap's [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
      
      - Parameters:
         - offerID: The ID of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be opened.
-        - offerStruct: The OfferStruct containing the data of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be opened.
+        - offerStruct: The `OfferStruct` containing the data of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be opened.
      
      - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will open an offer using the data supplied in `offerStruct` with the ID specified by `offerID`.
      
@@ -649,6 +649,45 @@ class BlockchainService {
             writeTransaction.transaction.parameters = writeTransactionParameters
             let ethereumTransaction = try writeTransaction.assemble()
             seal.fulfill(ethereumTransaction)
+        }
+    }
+    
+    /**
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the user's account to call CommutoSwap's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     
+     - Parameters:
+        - offerID: The ID of the [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be taken.
+        - swapStruct: The `SwapStruct` containing the data of the new [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) to be taken.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will take the offer specified by `offerID` using the data supplied in `swapStruct`.
+     */
+    func createTakeOfferTransaction(offerID: UUID, swapStruct: SwapStruct) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async {
+                var options = TransactionOptions()
+                options.type = .eip1559
+                guard let address = self.ethKeyStore.getAddress() else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting user's address while creating takeOffer transaction for \(offerID.uuidString)"))
+                    return
+                }
+                options.from = address
+                options.maxPriorityFeePerGas = .automatic
+                options.maxFeePerGas = .automatic
+                options.nonce = .pending
+                let writeTransaction = self.createWriteTransaction(method: "takeOffer", parameters: [offerID.asData(), swapStruct.toSwapDataArray()] as [AnyObject], extraData: Data(), transactionOptions: options, contract: self.commutoSwapEthereumContract)
+                guard let writeTransaction = writeTransaction else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating takeOffer transaction for \(offerID.uuidString)"))
+                    return
+                }
+                var writeTransactionParameters = writeTransaction.transaction.parameters
+                writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+                writeTransaction.transaction.parameters = writeTransactionParameters
+                do {
+                    seal.fulfill(try writeTransaction.assemble())
+                } catch {
+                    seal.reject(error)
+                }
+            }
         }
     }
     
@@ -1082,7 +1121,7 @@ class BlockchainService {
                     logger.warning("parseBlock: monitored tx \(transactionHashString) of type \(monitoredTransaction.type.asString) failed, calling failure handler")
                     let error = BlockchainTransactionError.init(errorDescription: "Transaction \(transactionHashString) is confirmed, but failed for unknown reason.")
                     switch monitoredTransaction.type {
-                    case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer:
+                    case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer, .approveTokenTransferToTakeOffer, .takeOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: error)
                     case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: error)
@@ -1091,28 +1130,16 @@ class BlockchainService {
                     logger.notice("parseBlock: parsing monitored tx \(transactionHashString) of type \(monitoredTransaction.type.asString) for events")
                     // The tranaction has not failed, so we parse it for the proper event
                     switch monitoredTransaction.type {
-                    case .approveTokenTransferToOpenOffer:
-                        guard let erc20Contract = EthereumContract(Web3.Utils.erc20ABI) else {
-                            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating ERC20 EthereumContract while handling monitored transaction \(transactionHashString) of type \(monitoredTransaction.type.asString)")
-                        }
-                        guard let erc20ApprovalParser = web3.web3contract.EventParser(web3: w3, eventName: "Approval", contract: erc20Contract) else {
-                            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating ERC20 EventParser while handling monitored transaction \(transactionHashString) of type \(monitoredTransaction.type.asString)")
-                        }
-                        let eventsInTransaction = try erc20ApprovalParser.parseTransactionByHash(transactionHash)
-                        let results = eventsInTransaction.compactMap { event -> CommutoEventParserResult in
-                            var eventName = event.eventName
-                            if eventName == "Approval" {
-                                eventName = "Approval_forOpeningOffer"
-                            }
-                            return CommutoEventParserResult(eventName: eventName, transactionReceipt: event.transactionReceipt, contractAddress: event.contractAddress, decodedResult: event.decodedResult, eventLog: event.eventLog)
-                        }
-                        events.append(contentsOf: results)
+                    case .approveTokenTransferToOpenOffer, .approveTokenTransferToTakeOffer:
+                        events.append(contentsOf: try parseApprovalTransaction(transactionHash: transactionHash, monitoredTransaction: monitoredTransaction))
                     case .openOffer:
                         events.append(contentsOf: try offerOpenedEventParser.parseTransactionByHash(transactionHash))
                     case .cancelOffer:
                         events.append(contentsOf: try offerCanceledEventParser.parseTransactionByHash(transactionHash))
                     case .editOffer:
                         events.append(contentsOf: try offerEditedEventParser.parseTransactionByHash(transactionHash))
+                    case .takeOffer:
+                        events.append(contentsOf: try offerTakenEventParser.parseTransactionByHash(transactionHash))
                     case .reportPaymentSent:
                         events.append(contentsOf: try paymentSentEventParser.parseTransactionByHash(transactionHash))
                     case .reportPaymentReceived:
@@ -1158,7 +1185,7 @@ class BlockchainService {
                     logger.notice("parseBlock: removing from transactionsToMonitor and handling failed monitored tx \(monitoredTransaction.transactionHash) of type \(monitoredTransaction.type.asString) for reason: \(monitoredTransactionError.errorDescription ?? "Unknown reason")")
                     transactionsToMonitor[monitoredTransaction.transactionHash] = nil
                     switch monitoredTransaction.type {
-                    case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer:
+                    case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer, .approveTokenTransferToTakeOffer, .takeOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
                     case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
@@ -1167,6 +1194,45 @@ class BlockchainService {
             }
         }
         try handleEvents(events, chainID: chainID)
+    }
+    
+    /**
+     Parses a given `BlockchainTransaction` in search of ERC20 [Approve](https://eips.ethereum.org/EIPS/eip-20) events, and returns a corresponding list of `CommutoEventParserResults`.
+     
+     - Parameters:
+        - transactionHash: The hash of the transaction to be parsed.
+        - monitoredTransaction: The `BlockchainTransaction` to be parsed.
+     
+     - Returns: An array of `CommutoEventParserResults` created from all [Approve](https://eips.ethereum.org/EIPS/eip-20) events emitted by the transaction.
+     
+     - Throws `BlockchainServiceError.unexpectedNilError` if this is unable to create an ERC20 `EthereumContract` or an ERC20 Approval event parser.
+     */
+    func parseApprovalTransaction(transactionHash: Data, monitoredTransaction: BlockchainTransaction) throws -> [CommutoEventParserResult] {
+        var transactionHashString = transactionHash.toHexString().lowercased()
+        if !transactionHashString.hasPrefix("0x") {
+            transactionHashString = "0x" + transactionHashString
+        }
+        guard let erc20Contract = EthereumContract(Web3.Utils.erc20ABI) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating ERC20 EthereumContract while handling monitored transaction \(transactionHashString) of type \(monitoredTransaction.type.asString)")
+        }
+        guard let erc20ApprovalParser = web3.web3contract.EventParser(web3: w3, eventName: "Approval", contract: erc20Contract) else {
+            throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating ERC20 EventParser while handling monitored transaction \(transactionHashString) of type \(monitoredTransaction.type.asString)")
+        }
+        let eventsInTransaction = try erc20ApprovalParser.parseTransactionByHash(transactionHash)
+        return eventsInTransaction.compactMap { event -> CommutoEventParserResult? in
+            var eventName = event.eventName
+            if eventName == "Approval" {
+                switch monitoredTransaction.type {
+                case .approveTokenTransferToOpenOffer:
+                    eventName = "Approval_forOpeningOffer"
+                case .approveTokenTransferToTakeOffer:
+                    eventName = "Approval_forTakingOffer"
+                default:
+                    return nil
+                }
+            }
+            return CommutoEventParserResult(eventName: eventName, transactionReceipt: event.transactionReceipt, contractAddress: event.contractAddress, decodedResult: event.decodedResult, eventLog: event.eventLog)
+        }
     }
     
     #warning("TODO: The logger.info calls here should be logger.notice")
@@ -1204,6 +1270,12 @@ class BlockchainService {
                 }
                 try offerService.handleOfferCanceledEvent(event)
                 logger.info("handleEvents: handling OfferCanceled event")
+            } else if result.eventName == "Approval_forTakingOffer" {
+                guard let event = ApprovalEvent(result, purpose: .takeOffer, chainID: chainID) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "got nil while creating ApprovalEvent from EventParserResultProtocol")
+                }
+                logger.info("handleEvents: handling Approval_forTakingOffer event")
+                try offerService.handleTokenTransferApprovalEvent(event)
             } else if result.eventName == "OfferTaken" {
                 guard let event = OfferTakenEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating OfferTaken event from EventParserResultProtocol")

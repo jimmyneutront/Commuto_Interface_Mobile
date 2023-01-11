@@ -287,6 +287,38 @@ class DatabaseService {
      */
     let offerEditingTransactionCreationBlockNumber = Expression<Int?>("offerEditingTransactionCreationBlockNumber")
     /**
+     A database structure representing an `Offer`'s `approveToTakeState` property.
+     */
+    let approveToTakeState = Expression<String>("approveToTakeState")
+    /**
+     A database structure representing the hash of a transaction that approved a token transfer allowance in order to take an `Offer` NOT made by the user of this interface.
+     */
+    let approveToTakeTransactionHash = Expression<String?>("approveToTakeTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that approved a token transfer allowance in order to take an `Offer` NOT made by the user of this interface.
+     */
+    let approveToTakeTransactionCreationTime = Expression<String?>("approveToTakeTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that approved a token transfer allowance in order to take an `Offer` NOT made by the user of this interface.
+     */
+    let approveToTakeTransactionCreationBlockNumber = Expression<Int?>("approveToTakeTransactionCreationBlockNumber")
+    /**
+     A database structure representing an `Offer`'s `takingOfferState` property.
+     */
+    let takingOfferState = Expression<String>("takingOfferState")
+    /**
+     A database structure representing the hash of a transaction that opened an `Offer` taken by the user of this interface.
+     */
+    let takingOfferTransactionHash = Expression<String?>("takingOfferTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that took an `Offer` taken by the user of this interface.
+     */
+    let takingOfferTransactionCreationTime = Expression<String?>("takingOfferTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that took an `Offer` taken by the user of this interface.
+     */
+    let takingOfferTransactionCreationBlockNumber = Expression<Int?>("takingOfferTransactionCreationBlockNumber")
+    /**
      A database structure representing a `Swaps`'s `state` property.
      */
     let swapState = Expression<String>("state")
@@ -385,6 +417,14 @@ class DatabaseService {
             t.column(offerEditingTransactionHash)
             t.column(offerEditingTransactionCreationTime)
             t.column(offerEditingTransactionCreationBlockNumber)
+            t.column(approveToTakeState)
+            t.column(approveToTakeTransactionHash)
+            t.column(approveToTakeTransactionCreationTime)
+            t.column(approveToTakeTransactionCreationBlockNumber)
+            t.column(takingOfferState)
+            t.column(takingOfferTransactionHash)
+            t.column(takingOfferTransactionCreationTime)
+            t.column(takingOfferTransactionCreationBlockNumber)
         })
         try connection.run(offerSettlementMethods.create { t in
             t.column(id)
@@ -500,7 +540,15 @@ class DatabaseService {
                     editingOfferState <- offer.editingOfferState,
                     offerEditingTransactionHash <- offer.offerEditingTransactionHash,
                     offerEditingTransactionCreationTime <- offer.offerEditingTransactionCreationTime,
-                    offerEditingTransactionCreationBlockNumber <- offer.offerEditingTransactionCreationBlockNumber
+                    offerEditingTransactionCreationBlockNumber <- offer.offerEditingTransactionCreationBlockNumber,
+                    approveToTakeState <- offer.approveToTakeState,
+                    approveToTakeTransactionHash <- offer.approveToTakeTransactionHash,
+                    approveToTakeTransactionCreationTime <- offer.approveToTakeTransactionCreationTime,
+                    approveToTakeTransactionCreationBlockNumber <- offer.approveToTakeTransactionCreationBlockNumber,
+                    takingOfferState <- offer.takingOfferState,
+                    takingOfferTransactionHash <- offer.takingOfferTransactionHash,
+                    takingOfferTransactionCreationTime <- offer.takingOfferTransactionCreationTime,
+                    takingOfferTransactionCreationBlockNumber <- offer.takingOfferTransactionCreationBlockNumber
                 ))
                 logger.notice("storeOffer: stored offer with B64 ID \(offer.id)")
             } catch SQLite.Result.error(let message, _, _) where message == "UNIQUE constraint failed: Offer.id" {
@@ -689,6 +737,80 @@ class DatabaseService {
     }
     
     /**
+     Updates a persistently stored `DatabaseOffer`'s `approveToTakeState` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToTakeState` field.
+     */
+    func updateOfferApproveToTakeState(offerID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(approveToTakeState <- state))
+        }
+        logger.notice("updateOfferApproveToTakeState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `approveToTakeTransactionHash`, `approveToTakeTransactionCreationTime`, and `approveToTakeTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToTakeTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToTakeTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `approveToTakeTransactionCreationBlockNumber` field.
+     */
+    func updateOfferApproveToTakeData(offerID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID)
+                .update(
+                    approveToTakeTransactionHash <- transactionHash,
+                    approveToTakeTransactionCreationTime <- transactionCreationTime,
+                    approveToTakeTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateOfferApproveToTakeData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `takingOfferState` field.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `takingOfferState` field.
+     */
+    func updateTakingOfferState(offerID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID).update(takingOfferState <- state))
+        }
+        logger.notice("updateTakingOfferState: set value to \(state) for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseOffer`'s `takingOfferTransactionHash`, `takingOfferTransactionCreationTime`, and `takingOfferTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - offerID: The ID of the offer to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `takingOfferTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `takingOfferTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseOffer`'s `takingOfferTransactionCreationBlockNumber` field.
+     */
+    func updateTakingOfferData(offerID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(offers.filter(id == offerID && chainID == _chainID)
+                .update(
+                    takingOfferTransactionHash <- transactionHash,
+                    takingOfferTransactionCreationTime <- transactionCreationTime,
+                    takingOfferTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateTakingOfferData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for offer with B64 ID \(offerID), if present")
+    }
+    
+    /**
      Removes every `DatabaseOffer` with an offer ID equal to `offerID` and a chain ID equal to `chainID` from persistent storage.
      
      - Parameters:
@@ -759,7 +881,15 @@ class DatabaseService {
                 editingOfferState: result[0][editingOfferState],
                 offerEditingTransactionHash: result[0][offerEditingTransactionHash],
                 offerEditingTransactionCreationTime: result[0][offerEditingTransactionCreationTime],
-                offerEditingTransactionCreationBlockNumber: result[0][offerEditingTransactionCreationBlockNumber]
+                offerEditingTransactionCreationBlockNumber: result[0][offerEditingTransactionCreationBlockNumber],
+                approveToTakeState: result[0][approveToTakeState],
+                approveToTakeTransactionHash: result[0][approveToTakeTransactionHash],
+                approveToTakeTransactionCreationTime: result[0][approveToTakeTransactionCreationTime],
+                approveToTakeTransactionCreationBlockNumber: result[0][approveToTakeTransactionCreationBlockNumber],
+                takingOfferState: result[0][takingOfferState],
+                takingOfferTransactionHash: result[0][takingOfferTransactionHash],
+                takingOfferTransactionCreationTime: result[0][takingOfferTransactionCreationTime],
+                takingOfferTransactionCreationBlockNumber: result[0][takingOfferTransactionCreationBlockNumber]
             )
         } else {
             logger.notice("getOffer: no offer found with B64 ID \(_id)")

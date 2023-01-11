@@ -239,7 +239,7 @@ struct OfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View where Of
                                 if offer.openingOfferState == .none {
                                     Text("\(stablecoinInformation?.currencyCode ?? "Stablecoin") Transfer Approval succeeded. You must now open the Offer.")
                                 } else if offer.openingOfferState == .error {
-                                    Text(offer.openingOfferError?.localizedDescription ?? "An unknown error occured")
+                                    Text(offer.openingOfferError?.localizedDescription ?? "An unknown error occurred")
                                         .foregroundColor(Color.red)
                                 }
                                 Button(

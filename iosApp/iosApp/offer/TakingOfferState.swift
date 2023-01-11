@@ -15,37 +15,45 @@ enum TakingOfferState {
      */
     case none
     /**
-     Indicates that we are currently validating user-submitted data for taking the corresponding offer.
+     Indicates that we are currently checking whether the corresponding offer can be taken.
      */
     case validating
     /**
-     Indicates that we are currently checking if the offer is open and not taken.
+     Indicates that we are currently sending the transaction that will take the corresponding offer.
      */
-    case checking
+    case sendingTransaction
     /**
-     Indicates that we are currently creating a new key pair and `Swap` object for the new swap.
+     Indicates that we have sent the transaction that will take the corresponding offer, and we are waiting for it to be confirmed.
      */
-    case creating
+    case awaitingTransactionConfirmation
     /**
-     Indicates that we are currently saving the new swap in persistent storage.
-     */
-    case storing
-    /**
-     Indicates that we are currently approving the token transfer to take the corresponding offer.
-     */
-    case approving
-    /**
-     Indicates that we are currently calling CommutoSwap's [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) function for the new offer.
-     */
-    case taking
-    /**
-     Indicates that we have taken the corresponding offer.
+     Indicates that we have taken the corresponding offe, and the transaction that did so has been confirmed..
      */
     case completed
     /**
      Indicates that we encountered an error while taking the corresponding offer.
      */
     case error
+    
+    /**
+     Returns a `String` corresponding to a particular case of `TakingOfferState`.
+     */
+    var asString: String {
+        switch self {
+        case .none:
+            return "none"
+        case .validating:
+            return "validating"
+        case .sendingTransaction:
+            return "sendingTransaction"
+        case .awaitingTransactionConfirmation:
+            return "awaitingTransactionConfirmation"
+        case .completed:
+            return "completed"
+        case .error:
+            return "error"
+        }
+    }
     
     /**
      A human readable string describing the current state.
@@ -56,18 +64,12 @@ enum TakingOfferState {
             return "Press Take Offer to take the offer"
         case .validating:
             return "Validating swap data..."
-        case .checking:
-            return "Checking offer availability..."
-        case .creating:
-            return "Creating a new key pair and swap object..."
-        case .storing:
-            return "Saving the new swap..."
-        case .approving:
-            return "Approving token transfer..."
-        case .taking:
-            return "Taking the offer..."
+        case .sendingTransaction:
+            return "Taking the Offer..."
+        case .awaitingTransactionConfirmation:
+            return "Waiting for confirmation..."
         case .completed:
-            return "Offer successfully taken"
+            return "Offer successfully taken."
         case .error:
             return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed.
         }

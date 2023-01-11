@@ -138,4 +138,36 @@ struct DatabaseOffer: Equatable {
      The number of the latest block at the time when the transaction with the hash specified by `offerEditingTransactionHash` was created by this interface, or `nil` if no such transaction exists.
      */
     let offerEditingTransactionCreationBlockNumber: Int?
+    /**
+     The `approveToTakeState` property of an `Offer` as a `String`.
+     */
+    let approveToTakeState: String
+    /**
+     The hash of the transaction that approved the token transfer in order to take this `Offer` as a hexadecimal `String`, or `nil` if no such transaction exists.
+     */
+    let approveToTakeTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `approveToTakeTransactionHash` was created by this interface in ISO 8601 format in UTC, or `nil` if no such transaction exists.
+     */
+    let approveToTakeTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `approveToTakeTransactionHash` was created by this interface, or `nil` if no such transaction exists.
+     */
+    let approveToTakeTransactionCreationBlockNumber: Int?
+    /**
+     The `takingOfferState` property of an `Offer` as a `String`.
+     */
+    let takingOfferState: String
+    /**
+     The hash of the transaction that opened this `Offer` as a hexadecimal `String`, or `nil` if no such transaction exists.
+     */
+    let takingOfferTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `takingOfferTransactionHash` was created by this interface in ISO 8601 format in UTC, or `nil` if no such transaction exists.
+     */
+    let takingOfferTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `takingOfferTransactionHash` was created by this interface, or `nil` if no such transaction exists.
+     */
+    let takingOfferTransactionCreationBlockNumber: Int?
 }

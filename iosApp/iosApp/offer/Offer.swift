@@ -152,13 +152,29 @@ class Offer: ObservableObject {
      */
     var offerEditingTransaction: BlockchainTransaction? = nil
     /**
+     If this offer was NOT made by the user of the interface, this indicates whether a token transfer is being approved in order to take the offer, and if so, what part of the token transfer approval process it is in. If this offer was made by the user of this interface, this property is not used.
+     */
+    @Published var approvingToTakeState = TokenTransferApprovalState.none
+    /**
+     (This property is used only if the maker of this offer is NOT the user of this interface and if the user of this interface is attempting/has attempted to take this offer.) The `Error` that occurred during the token transfer approval process in order to take the offer, or `nil` if no such error has occurred.
+     */
+    var approvingToTakeError: Error? = nil
+    /**
+     The `BlockchainTransaction` that has approved a token transfer in order to take this offer, if the user of this interface is attempting/has attempted to take it, or `nil` if the user's token transfer to take this offer has not been approved yet, if user of this interface is the offer maker, or if the user of this interface is NOT the offer taker. Note that this transaction may be: not yet sent to a blockchain node, pending, confirmed and successful, confirmed and failed, or dropped.
+     */
+    var approvingToTakeTransaction: BlockchainTransaction? = nil
+    /**
      (This property is used only if the maker of this offer is NOT the user of this interface.) This indicates whether we are currently taking this offer, and if so, what part of the offer taking process we are in.
      */
     @Published var takingOfferState = TakingOfferState.none
     /**
-     (This property is used only if the maker of this offer is NOT the user of this interface.)  The `Error` that we encountered during the offer editing process, or `nil` of no such error has occured.
+     (This property is used only if the taker of this offer is the user of this interface.)  The `Error` that we encountered during the offer taking process, or `nil` of no such error has occured.
      */
     var takingOfferError: Error? = nil
+    /**
+     The `BlockchainTransaction` that has taken this offer, if it was taken by the user of this interface, or `nil` if if the user of this offer is not the taker of this offer.
+     */
+    var takingOfferTransaction: BlockchainTransaction? = nil
     
     /**
      Creates an `Offer` using data obtained from a call to [getOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#get-offer).

@@ -91,7 +91,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         }
         logger.notice("sendTakerInformationMessage: user is taker in \(swapID.uuidString), sending message")
         try databaseService.updateSwapState(swapID: swapID.asData().base64EncodedString(), chainID: String(chainID), state: SwapState.awaitingTakerInformation.asString)
-        DispatchQueue.main.async {
+        DispatchQueue.main.sync {
             swap.state = .awaitingTakerInformation
         }
         // The user of this interface has taken the swap. Since taking a swap is not allowed unless we have a copy of the maker's public key, we should have said public key in storage.
@@ -112,7 +112,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         try p2pService.sendTakerInformation(makerPublicKey: makerPublicKey, takerKeyPair: takerKeyPair, swapID: swapID, paymentDetails: swap.takerPrivateSettlementMethodData)
         logger.notice("sendTakerInformationMessage: sent for \(swapID.uuidString)")
         try databaseService.updateSwapState(swapID: swapID.asData().base64EncodedString(), chainID: String(chainID), state: SwapState.awaitingMakerInformation.asString)
-        DispatchQueue.main.async {
+        DispatchQueue.main.sync {
             swap.state = .awaitingMakerInformation
         }
         // We have sent a taker info message for this swap, so we return true
@@ -694,7 +694,7 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             throw SwapServiceError.unexpectedNilError(desc: "swapTruthSource was nil during handleFailedTransactionCall for \(transaction.transactionHash)")
         }
         switch transaction.type {
-        case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer:
+        case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer, .approveTokenTransferToTakeOffer, .takeOffer:
             throw SwapServiceError.invalidValueError(desc: "handleFailedTransaction: received an offer-related transaction \(transaction.transactionHash)")
         case .reportPaymentSent:
             guard let swap = swapTruthSource.swaps.first(where: { id, swap in

@@ -10,7 +10,7 @@ import BigInt
 import web3swift
 
 /**
- This represents an [Approval](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) event emitted by an ERC20 contract.
+ Represents an [Approval](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) event emitted by an ERC20 contract.
  */
 struct ApprovalEvent {
     /**
@@ -34,7 +34,7 @@ struct ApprovalEvent {
      */
     let transactionHash: String
     /**
-     The ID of the blockchain on which this event was emitted
+     The ID of the blockchain on which this event was emitted.
      */
     let chainID: BigUInt
     

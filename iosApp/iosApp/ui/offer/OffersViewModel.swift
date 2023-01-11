@@ -165,9 +165,8 @@ class OffersViewModel: UIOfferTruthSource {
     ) {
         Promise<EthereumTransaction> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
-                logger.notice("createApproveToOpenTransaction: creating...")
+                logger.notice("createApproveTokenTransferToOpenOfferTransaction: creating...")
                 offerService.createApproveTokenTransferToOpenOfferTransaction(
-                    chainID: chainID,
                     stablecoin: stablecoin,
                     stablecoinInformation: stablecoinInformation,
                     minimumAmount: minimumAmount,
@@ -198,7 +197,7 @@ class OffersViewModel: UIOfferTruthSource {
         - securityDepositAmount: The security deposit `Decimal` amount for the new offer, for which the token transfer allowance will be created.
         - direction: The direction of the new offer, for which the token transfer allowance will be created.
         - settlementMethods: The settlement methods of the new offer, for which the token transfer allowance will be created.
-        - approveTokenTransferToOpenOfferTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the proper amount (determined by the values of the other arguments) of token specified by `stablecoin`.
+        - approveTokenTransferToOpenOfferTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the proper amount (determined by the values of the other arguments) of the token specified by `stablecoin`.
      */
     func approveTokenTransferToOpenOffer(
         chainID: BigUInt,
@@ -237,7 +236,7 @@ class OffersViewModel: UIOfferTruthSource {
     }
     
     /**
-     Attempts to create an `EthereumTransaction` that can open `offer` (which should be made by the user of this interface) by  calling [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
+     Attempts to create an `EthereumTransaction` that can open `offer` (which should be made by the user of this interface) by calling [openOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#open-offer).
      
      This passes `offer` to `OfferService.createOpenOfferTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
      
@@ -279,7 +278,7 @@ class OffersViewModel: UIOfferTruthSource {
         offer.openingOfferError = nil
         offer.openingOfferState = .validating
         DispatchQueue.global(qos: .userInitiated).sync {
-            logger.notice("openOffer: opening offer \(offer.id.uuidString)")
+            logger.notice("openOffer: opening \(offer.id.uuidString)")
         }
         offerService.openOffer(offer: offer, offerOpeningTransaction: offerOpeningTransaction)
             .done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
@@ -331,7 +330,6 @@ class OffersViewModel: UIOfferTruthSource {
                 }
                 do {
                     let validatedOfferData = try validateNewOfferData(
-                        chainID: chainID,
                         stablecoin: stablecoin,
                         stablecoinInformation: stablecoinInformation,
                         minimumAmount: minimumAmount,
@@ -582,14 +580,14 @@ class OffersViewModel: UIOfferTruthSource {
             }
         }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] validatedNewSwapData -> Promise<Void> in
             logger.notice("takeOffer: taking \(offer.id.uuidString) with validated data")
-            setTakingOfferState(offerID: offer.id, state: .checking)
+            //setTakingOfferState(offerID: offer.id, state: .checking)
             return offerService.takeOffer(
                 offerToTake: offer,
                 swapData: validatedNewSwapData,
-                afterAvailabilityCheck: { self.setTakingOfferState(offerID: offer.id, state: .creating) },
-                afterObjectCreation: { self.setTakingOfferState(offerID: offer.id, state: .storing) },
-                afterPersistentStorage: { self.setTakingOfferState(offerID: offer.id, state: .approving) },
-                afterTransferApproval: { self.setTakingOfferState(offerID: offer.id, state: .taking) }
+                afterAvailabilityCheck: { /*self.setTakingOfferState(offerID: offer.id, state: .creating)*/ },
+                afterObjectCreation: { /*self.setTakingOfferState(offerID: offer.id, state: .storing)*/ },
+                afterPersistentStorage: { /*self.setTakingOfferState(offerID: offer.id, state: .approving)*/ },
+                afterTransferApproval: { /*self.setTakingOfferState(offerID: offer.id, state: .taking)*/ }
             )
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
             logger.notice("takeOffer: successfully took offer \(offer.id.uuidString)")

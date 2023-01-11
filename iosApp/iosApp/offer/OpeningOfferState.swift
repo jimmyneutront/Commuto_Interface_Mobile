@@ -27,7 +27,7 @@ enum OpeningOfferState {
      */
     case awaitingTransactionConfirmation
     /**
-     Indicates that we have opened the corresponding offer, and the transaction that did so has been confirmed
+     Indicates that we have opened the corresponding offer, and the transaction that did so has been confirmed.
      */
     case completed
     /**

@@ -11,13 +11,17 @@
  */
 enum SwapState {
     /**
-     Indicates that [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) has not yet been called for the offer corresponding to the associated swap.
+     Indicates that the transaction that attempted to call [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) to take the corresponding offer has failed, and a new one has not yet been created.
+     */
+    case takeOfferTransactionFailed
+    /**
+     Indicates that [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) has not yet been successfully called for the offer corresponding to the associated swap.
      */
     case taking
     /**
-     Indicates that the transaction to take the offer corresponding to the associated swap has been broadcast.
+     Indicates that the transaction to call [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer) for the corresponding offer has been sent to a connected blockchain node.
      */
-    case takeOfferTransactionBroadcast
+    case takeOfferTransactionSent
     /**
      Indicates that the swap has been taken on-chain, and now the swap taker must send their settlement method information and public key to the maker.
      */
@@ -68,10 +72,12 @@ enum SwapState {
      */
     var asString: String {
         switch self {
+        case .takeOfferTransactionFailed:
+            return "takeOfferTxFailed"
         case .taking:
             return "taking"
-        case .takeOfferTransactionBroadcast:
-            return "takeOfferTxBrdcst"
+        case .takeOfferTransactionSent:
+            return "takeOfferTxSent"
         case .awaitingTakerInformation:
             return "awaitingTakerInfo"
         case .awaitingMakerInformation:
@@ -107,10 +113,12 @@ enum SwapState {
     static func fromString(_ string: String?) -> SwapState? {
         if string == nil {
             return nil
+        } else if string == "takeOfferTxFailed" {
+            return .takeOfferTransactionFailed
         } else if string == "taking" {
             return .taking
-        } else if string == "takeOfferTxBrdcst" {
-            return .takeOfferTransactionBroadcast
+        } else if string == "takeOfferTxSent" {
+            return .takeOfferTransactionSent
         } else if string  == "awaitingTakerInfo" {
             return .awaitingTakerInformation
         } else if string == "awaitingMakerInfo" {

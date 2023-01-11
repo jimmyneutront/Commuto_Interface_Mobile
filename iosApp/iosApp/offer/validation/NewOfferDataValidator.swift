@@ -22,7 +22,6 @@ import web3swift
  - the settlement methods supplied by the user are valid (determined via a call to `validateSettlementMethods`)
  
 - Parameters:
-    - chainID: The ID of the blockchain on which the offer should be created.
     - stablecoin: The contract address of the stablecoin selected by the user, or `nil` if the user has not selected a stablecoin.
     - stablecoinInformation: The `StablecoinInformation` for the stablecoin selected by the user, or `nil` if the user has not selected a stablecoin.
     - minimumAmount: The minimum stablecoin amount to be exchanged, as specified by the user.
@@ -37,7 +36,6 @@ import web3swift
  - Throws: An `OfferDataValidationError` if this is not able to ensure any of the conditions in the list above. The descriptions of the errors thrown by this function are human-readable and can be displayed to the user so that they can correct any problems.
  */
 func validateNewOfferData(
-    chainID: BigUInt,
     stablecoin: EthereumAddress?,
     stablecoinInformation: StablecoinInformation?,
     minimumAmount: Decimal,

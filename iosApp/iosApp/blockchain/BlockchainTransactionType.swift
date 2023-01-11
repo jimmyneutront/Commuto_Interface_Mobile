@@ -27,6 +27,14 @@ enum BlockchainTransactionType {
      */
     case editOffer
     /**
+     Indicates that a `BlockchainTransaction` approves a token transfer by calling [approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) in order to take an open [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer)
+     */
+    case approveTokenTransferToTakeOffer
+    /**
+     Indicates that a `BlockchainTransaction` takes an [Offer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#offer) by calling [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer).
+     */
+    case takeOffer
+    /**
      Indicates that a `BlockchainTransaction` reports that payment has been sent for a swap by calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent)
      */
     case reportPaymentSent
@@ -52,6 +60,10 @@ enum BlockchainTransactionType {
             return "cancelOffer"
         case .editOffer:
             return "editOffer"
+        case .takeOffer:
+            return "takeOffer"
+        case .approveTokenTransferToTakeOffer:
+            return "approveTokenTransferToTakeOffer"
         case .reportPaymentSent:
             return "reportPaymentSent"
         case .reportPaymentReceived:

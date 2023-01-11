@@ -374,9 +374,11 @@ struct SwapStateView: View {
      */
     var stateDescription: String {
         switch swapState {
+        case .takeOfferTransactionFailed:
+            return "An Error occured while Taking the Offer."
         case .taking:
             return "Taking Offer..."
-        case .takeOfferTransactionBroadcast:
+        case .takeOfferTransactionSent:
             return "Awaiting confirmation that offer is taken"
         case .awaitingTakerInformation:
             switch userRole {

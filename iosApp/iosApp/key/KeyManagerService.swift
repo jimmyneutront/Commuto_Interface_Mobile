@@ -37,23 +37,32 @@ class KeyManagerService {
     var databaseService: DatabaseService
     
     /**
-     Generates an 2048-bit RSA key pair and computes the key pair's interface ID, which is the SHA-256 hash of the PKCS#1 byte array encoded representation of the public key.
+     Generates a 2048-bit RSA key pair and computes the key pair's interface ID, which is the SHA-256 hash of the PKCS#1 byte array encoded representation of the public key.
      
-     - Parameter storeResult: Indicates whether the generated key pair should be stored persistently using `DatabaseService`. This will usually be left as true, but testing code may set it as false.
+     - Parameter storeResult: Indicates whether the generated key pair should be stored persistently.
      
      - Returns: A `KeyPair`, the private key of which is a 2048-bit RSA private key, and the interface ID of which is the SHA-256 hash of the PKCS#1 encoded byte representation of the `KeyPair`'s public key.
      */
     func generateKeyPair(storeResult: Bool = true) throws -> KeyPair {
         let keyPair = try KeyPair()
         if storeResult {
-            let interfaceIdB64Str = keyPair.interfaceId.base64EncodedString()
-            let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
-            let privKeyB64Str = try keyPair.privKeyToPkcs1Bytes().base64EncodedString()
-            try databaseService.storeKeyPair(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str, privateKey: privKeyB64Str)
-            logger.info("generateKeyPair: stored new key pair with interface id \(interfaceIdB64Str)")
+            try storeKeyPair(keyPair: keyPair)
         }
         logger.info("generateKeyPair: returning new key pair \(keyPair.interfaceId.base64EncodedString())")
         return keyPair
+    }
+    
+    /**
+     Persistently stores a given `KeyPair` using `DatabaseService`.
+     
+     - Parameter keyPair: The `KeyPair` to be stored.
+     */
+    func storeKeyPair(keyPair: KeyPair) throws {
+        let interfaceIdB64Str = keyPair.interfaceId.base64EncodedString()
+        let pubKeyB64Str = try keyPair.pubKeyToPkcs1Bytes().base64EncodedString()
+        let privKeyB64Str = try keyPair.privKeyToPkcs1Bytes().base64EncodedString()
+        try databaseService.storeKeyPair(interfaceId: interfaceIdB64Str, publicKey: pubKeyB64Str, privateKey: privKeyB64Str)
+        logger.info("storeKeyPair: stored new key pair with interface id \(interfaceIdB64Str)")
     }
     
     /**

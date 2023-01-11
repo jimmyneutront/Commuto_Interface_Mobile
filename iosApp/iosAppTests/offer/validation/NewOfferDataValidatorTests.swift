@@ -23,7 +23,6 @@ class NewOfferDataValidatorTests: XCTestCase {
         var settlementMethod = SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA")
         settlementMethod.privateData = String(decoding: try! JSONEncoder().encode(PrivateSEPAData(accountHolder: "account_holder", bic: "bic", iban: "iban", address: "address")), as: UTF8.self)
         let validatedData = try! validateNewOfferData(
-            chainID: BigUInt.zero,
             stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!,
             stablecoinInformation: StablecoinInformation(currencyCode: "DAI", name: "Dai", decimal: 18),
             minimumAmount: NSNumber(floatLiteral: 100.0).decimalValue,
@@ -59,7 +58,6 @@ class NewOfferDataValidatorTests: XCTestCase {
         var settlementMethod = SettlementMethod(currency: "EUR", price: "0.98", method: "SEPA")
         settlementMethod.privateData = String(decoding: try! JSONEncoder().encode(PrivateSEPAData(accountHolder: "account_holder", bic: "bic", iban: "iban", address: "address")), as: UTF8.self)
         let validatedData = try! validateNewOfferData(
-            chainID: BigUInt.zero,
             stablecoin: EthereumAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F")!,
             stablecoinInformation: StablecoinInformation(currencyCode: "DAI", name: "Dai", decimal: 18),
             minimumAmount: NSNumber(floatLiteral: 100.0).decimalValue,
