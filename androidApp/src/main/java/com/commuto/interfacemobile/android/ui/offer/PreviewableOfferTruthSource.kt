@@ -3,6 +3,7 @@ package com.commuto.interfacemobile.android.ui.offer
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import com.commuto.interfacemobile.android.key.keys.KeyPair
 import com.commuto.interfacemobile.android.offer.Offer
 import com.commuto.interfacemobile.android.offer.OfferDirection
 import com.commuto.interfacemobile.android.offer.TokenTransferApprovalState
@@ -167,6 +168,57 @@ class PreviewableOfferTruthSource: UIOfferTruthSource {
     override fun editOffer(
         offer: Offer,
         newSettlementMethods: List<SettlementMethod>
+    ) {}
+
+    /**
+     * Does nothing since this class is only used for previewing user interfaces, but is required for implementing
+     * [UIOfferTruthSource]
+     */
+    override fun createApproveTokenTransferToTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: BigDecimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionHandler: (RawTransaction) -> Unit,
+        exceptionHandler: (Exception) -> Unit
+    ) {}
+
+    /**
+     * Does nothing since this class is only used for previewing user interfaces, but is required for implementing
+     * [UIOfferTruthSource]
+     */
+    override fun approveTokenTransferToTakeOffer(
+        offer: Offer,
+        takenSwapAmount: BigDecimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        approveTokenTransferToOpenOfferTransaction: RawTransaction?
+    ) {}
+
+    /**
+     * Does nothing since this class is only used for previewing user interfaces, but is required for implementing
+     * [UIOfferTruthSource]
+     */
+    override fun createTakeOfferTransaction(
+        offer: Offer,
+        takenSwapAmount: BigDecimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        createdTransactionAndKeyPairHandler: (RawTransaction, KeyPair) -> Unit,
+        exceptionHandler: (Exception) -> Unit
+    ) {}
+
+    /**
+     * Does nothing since this class is only used for previewing user interfaces, but is required for implementing
+     * [UIOfferTruthSource]
+     */
+    override fun takeOffer(
+        offer: Offer,
+        takenSwapAmount: BigDecimal,
+        makerSettlementMethod: SettlementMethod?,
+        takerSettlementMethod: SettlementMethod?,
+        keyPair: KeyPair?,
+        offerTakingTransaction: RawTransaction?,
     ) {}
 
     /**
