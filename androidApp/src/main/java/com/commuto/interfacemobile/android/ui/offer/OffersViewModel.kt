@@ -28,8 +28,7 @@ import javax.inject.Singleton
  *
  * @property logTag The tag passed to [Log] calls.
  * @property offerService The [OfferService] responsible for adding and removing [Offer]s from the list of open offers
- * as they are created, canceled and
- * taken.
+ * as they are created, canceled and taken.
  * @property offers A mutable state map of [UUID]s to [Offer]s that acts as a single source of truth for all
  * offer-related data.
  * @property serviceFeeRate The current
@@ -39,7 +38,7 @@ import javax.inject.Singleton
  * @property approvingTransferToOpenOfferState Indicates whether we are currently approving a token transfer in order to
  * open an offer, and if so, the point of the token transfer approval process that we are currently in.
  * @property approvingTransferToOpenOfferException The [Exception] that occurred during the token transfer approval
- * process, or `null` if no such error has occurred.
+ * process, or `null` if no such exception has occurred.
  */
 @Singleton
 class OffersViewModel @Inject constructor(private val offerService: OfferService): ViewModel(), UIOfferTruthSource {
@@ -236,7 +235,7 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
      * @param settlementMethods The settlement methods of the new offer, for which the token transfer allowance will be
      * created.
      * @param approveTokenTransferToOpenOfferTransaction An optional [RawTransaction] that can create a token transfer
-     * allowance of the proper amount (determined by the values of the other arguments) of token specified by
+     * allowance of the proper amount (determined by the values of the other arguments) of the token specified by
      * [stablecoin].
      */
     override fun approveTokenTransferToOpenOffer(
@@ -322,7 +321,7 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
         offer.openingOfferException = null
         offer.openingOfferState.value = OpeningOfferState.VALIDATING
         viewModelScope.launch {
-            Log.i(logTag, "openOffer: opening offer ${offer.id}")
+            Log.i(logTag, "openOffer: opening ${offer.id}")
             try {
                 offerService.openOffer(
                     offer = offer,
@@ -644,33 +643,37 @@ class OffersViewModel @Inject constructor(private val offerService: OfferService
                     selectedTakerSettlementMethod = takerSettlementMethod,
                     stablecoinInformationRepository = StablecoinInformationRepository.hardhatStablecoinInfoRepo
                 )
-                setTakingOfferState(offerID = offer.id, state = TakingOfferState.CHECKING)
+                //setTakingOfferState(offerID = offer.id, state = TakingOfferState.CHECKING)
                 offerService.takeOffer(
                     offerToTake = offer,
                     swapData = validatedSwapData,
                     afterAvailabilityCheck = {
+                        /*
                         setTakingOfferState(
                             offerID = offer.id,
                             state = TakingOfferState.CREATING,
-                        )
+                        )*/
                     },
                     afterObjectCreation = {
+                        /*
                         setTakingOfferState(
                             offerID = offer.id,
                             state = TakingOfferState.STORING,
-                        )
+                        )*/
                     },
                     afterPersistentStorage = {
+                        /*
                         setTakingOfferState(
                             offerID = offer.id,
                             state = TakingOfferState.APPROVING,
-                        )
+                        )*/
                     },
                     afterTransferApproval = {
+                        /*
                         setTakingOfferState(
                             offerID = offer.id,
                             state = TakingOfferState.TAKING,
-                        )
+                        )*/
                     }
                 )
                 Log.i(logTag, "takeOffer: successfully took offer ${offer.id}")
