@@ -778,6 +778,48 @@ class BlockchainService {
     }
     
     /**
+     Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the user's account to call CommutoSwap's [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
+     
+     - Parameters:
+        - id: The ID of the [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) to be
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` as described above, that will fill the swap specified by `id`.
+     
+     - Throws: A `BlockchainServiceError.unexpectedNilError` if the user's address is `nil` or if the created transaction is `nil`.
+     */
+    func createFillSwapTransaction(id: UUID) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                var options = TransactionOptions()
+                options.type = .eip1559
+                guard let address = ethKeyStore.getAddress() else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while getting user's address while creating fillSwap transaction for \(id.uuidString)"))
+                    return
+                }
+                options.from = address
+                options.maxPriorityFeePerGas = .automatic
+                options.maxFeePerGas = .automatic
+                options.nonce = .pending
+                
+                let writeTransaction = createWriteTransaction(method: "fillSwap", parameters: [id.asData()] as [AnyObject], extraData: Data(), transactionOptions: options, contract: commutoSwapEthereumContract)
+                guard let writeTransaction = writeTransaction else {
+                    seal.reject(BlockchainServiceError.unexpectedNilError(desc: "Unexpectedly got nil while creating fillSwap transaction for \(id.uuidString)"))
+                    return
+                }
+                var writeTransactionParameters = writeTransaction.transaction.parameters
+                writeTransactionParameters.maxFeePerGas = Web3.Utils.parseToBigUInt("100.0", units: .eth)
+                writeTransaction.transaction.parameters = writeTransactionParameters
+                do {
+                    let ethereumTransaction = try writeTransaction.assemble()
+                    seal.fulfill(ethereumTransaction)
+                } catch {
+                    seal.reject(error)
+                }
+            }
+        }
+    }
+    
+    /**
      Creates and returns (wrapped in a `Promise`) an EIP1559 `EthereumTransaction` from the users account to call CommutoSwap's [closeSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#close-swap) function, with estimated gas limit, max priority fee per gas, max fee per gas, and with a nonce determined from all currently known transactions, including those that are still pending.
      
      - Parameters:
@@ -1123,14 +1165,14 @@ class BlockchainService {
                     switch monitoredTransaction.type {
                     case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer, .approveTokenTransferToTakeOffer, .takeOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: error)
-                    case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
+                    case .approveTokenTransferToFillSwap, .fillSwap, .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: error)
                     }
                 } else {
                     logger.notice("parseBlock: parsing monitored tx \(transactionHashString) of type \(monitoredTransaction.type.asString) for events")
                     // The tranaction has not failed, so we parse it for the proper event
                     switch monitoredTransaction.type {
-                    case .approveTokenTransferToOpenOffer, .approveTokenTransferToTakeOffer:
+                    case .approveTokenTransferToOpenOffer, .approveTokenTransferToTakeOffer, .approveTokenTransferToFillSwap:
                         events.append(contentsOf: try parseApprovalTransaction(transactionHash: transactionHash, monitoredTransaction: monitoredTransaction))
                     case .openOffer:
                         events.append(contentsOf: try offerOpenedEventParser.parseTransactionByHash(transactionHash))
@@ -1140,6 +1182,8 @@ class BlockchainService {
                         events.append(contentsOf: try offerEditedEventParser.parseTransactionByHash(transactionHash))
                     case .takeOffer:
                         events.append(contentsOf: try offerTakenEventParser.parseTransactionByHash(transactionHash))
+                    case .fillSwap:
+                        events.append(contentsOf: try swapFilledEventParser.parseTransactionByHash(transactionHash))
                     case .reportPaymentSent:
                         events.append(contentsOf: try paymentSentEventParser.parseTransactionByHash(transactionHash))
                     case .reportPaymentReceived:
@@ -1187,7 +1231,7 @@ class BlockchainService {
                     switch monitoredTransaction.type {
                     case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer, .approveTokenTransferToTakeOffer, .takeOffer:
                         try offerService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
-                    case .reportPaymentSent, .reportPaymentReceived, .closeSwap:
+                    case .approveTokenTransferToFillSwap, .fillSwap, .reportPaymentSent, .reportPaymentReceived, .closeSwap:
                         try swapService.handleFailedTransaction(monitoredTransaction, error: monitoredTransactionError)
                     }
                 }
@@ -1197,7 +1241,7 @@ class BlockchainService {
     }
     
     /**
-     Parses a given `BlockchainTransaction` in search of ERC20 [Approve](https://eips.ethereum.org/EIPS/eip-20) events, and returns a corresponding list of `CommutoEventParserResults`.
+     Parses a given `BlockchainTransaction` in search of ERC20 [Approve](https://eips.ethereum.org/EIPS/eip-20) events, and returns a corresponding list of `CommutoEventParserResult`s.
      
      - Parameters:
         - transactionHash: The hash of the transaction to be parsed.
@@ -1227,6 +1271,8 @@ class BlockchainService {
                     eventName = "Approval_forOpeningOffer"
                 case .approveTokenTransferToTakeOffer:
                     eventName = "Approval_forTakingOffer"
+                case .approveTokenTransferToFillSwap:
+                    eventName = "Approval_forFillingSwap"
                 default:
                     return nil
                 }
@@ -1288,6 +1334,12 @@ class BlockchainService {
                 }
                 logger.info("handleEvents: handling ServiceFeeRateChanged event")
                 try offerService.handleServiceFeeRateChangedEvent(event)
+            } else if result.eventName == "Approval_forFillingSwap" {
+                guard let event = ApprovalEvent(result, purpose: .fillSwap, chainID: chainID) else {
+                    throw BlockchainServiceError.unexpectedNilError(desc: "got nil while creating ApprovalEvent from EventParserResultProtocol")
+                }
+                logger.info("handleEvents: handling Approval_forFillingSwap event")
+                try swapService.handleTokenTransferApprovalEvent(event)
             } else if result.eventName == "SwapFilled" {
                 guard let event = SwapFilledEvent(result, chainID: chainID) else {
                     throw BlockchainServiceError.unexpectedNilError(desc: "Got nil while creating SwapFilled event from EventParserResultProtocol")

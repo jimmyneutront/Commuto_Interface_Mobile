@@ -177,15 +177,239 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _, filledSwap in
                 logger.notice("fillSwap: filled \(filledSwap.id.uuidString)")
                 let swapIDString = filledSwap.id.asData().base64EncodedString()
-                try databaseService.updateSwapState(swapID: swapIDString, chainID: String(filledSwap.chainID), state: SwapState.fillSwapTransactionBroadcast.asString)
+                // try databaseService.updateSwapState(swapID: swapIDString, chainID: String(filledSwap.chainID), state: SwapState.fillSwapTransactionBroadcast.asString)
                 try databaseService.updateSwapRequiresFill(swapID: swapIDString, chainID: String(filledSwap.chainID), requiresFill: false)
                 // This is not a @Published property, so we can update it from a background thread
                 filledSwap.requiresFill = false
             }.done(on: DispatchQueue.main) { _, filledSwap in
-                filledSwap.state = .fillSwapTransactionBroadcast
+                // filledSwap.state = .fillSwapTransactionBroadcast
                 seal.fulfill(())
             }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
                 self.logger.error("fillSwap: encountered error during call for \(swapToFill.id.uuidString): \(error.localizedDescription)")
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` [approve](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) on an ERC20 contract in order to fill a maker-as-seller swap made by the user of this interface.
+     
+     On the global `DispatchQueue`, this calls `validateSwapForFilling` and then calls `BlockchainService.createAPproveTransferTransaction`, passing the stablecoin contract address, the CommutoSwap contract address and the taken swap amount, and pipes the result to the seal of the `Promise` this returns.
+     
+     - Parameter swapToFill: The `Swap` to be filled, for which this is creating a token transfer approval transaction
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of approving a token transfer of the taken swap amount of `swapToFill`.
+     
+     - Throws: A `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown, but will be passed to `seal.reject`.
+     */
+    func createApproveTokenTransferToFillSwapTransaction(swapToFill: Swap) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createApproveTokenTransferToFillSwapTransaction: creating for \(swapToFill.id) for amount \(String(swapToFill.takenSwapAmount))")
+                do {
+                    try validateSwapForFilling(swap: swapToFill)
+                } catch {
+                    seal.reject(error)
+                }
+                guard let blockchainService = blockchainService else {
+                    seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during createApproveTokenTransferToFillSwapTransaction call"))
+                    return
+                }
+                blockchainService.createApproveTransferTransaction(tokenAddress: swapToFill.stablecoin, spender: blockchainService.commutoSwapAddress, amount: swapToFill.takenSwapAmount).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
+     Attempts to call [approve](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) on an ERC20 contract in order to fill a maker-as-seller swap for which the user of this interface is the maker.
+     
+     On the global `DispatchQueue`, this calls `validateSwapForFilling`, and then creates another `EthereumTransaction` to approve a transfer equal to `swapToFill`'s taken swap amount, and then ensures that the data of this transaction matches the data of `approveTokenTransferToFillSwapTransaction`. (If they do not match, then `approveTokenTransferToFillSwapTransaction` was not created with the data supplied to this function.) Then this signs `approveTokenTransferToFillSwapTransaction` and creates  a `BlockchainTransaction` to wrap it. Then this persistently stores the token transfer approval data for said `BlockchainTransaction` and persistently updates the token transfer approval state of `swapToFill` to `TokenTransferApprovalState.sendingTransaction`. Then, on the main `DispatchQueue`, this updates the `Swap.approvingToFillState` property of `swapToFill` to `TokenTransferApprovalState.sendingTransaction` and sets the `Swap.approvingToFillTransaction` property of `swapToFill` to said `BlockchainTransaction`. Then, on the global `DispatchQueue`, this calls `BlockchainService.sendTransaction`, passing said `BlockchainTransaction`. When this call returns, this persistently updates the approving to fill state of `swapToTake` to `TokenTransferApprovalState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this updates the `Swap.approvingToFillState` property of `swapToFill` to `TokenTransferApprovalState.awaitingTransactionConfirmation`.
+     
+     - Parameters:
+        - swapToFill: The swap that will be filled, for which this is approving a token transfer.
+        - approveTokenTransferToFillSwapTransaction: An optional `EthereumTransaction` that can approve a token transfer for the proper amount.
+     
+     - Returns: An empty `Promise` that will be fulfilled when the token transfer is approved.
+     
+     - Throws: A `SwapServiceError.unexpectedNilError` if `blockchainService` is `nil` or if `approveTokenTransferToFillSwapTransaction` is `nil` or a `SwapServiceError.nonmatchingDataError` if the data of `approveTokenTransferToFillSwapTransaction` does not match that of the transaction this function creates using the supplied arguments. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
+     */
+    func approveTokenTransferToFillSwap(
+        swapToFill: Swap,
+        approveTokenTransferToFillSwapTransaction: EthereumTransaction?
+    ) -> Promise<Void> {
+        return Promise { seal in
+            Promise<EthereumTransaction>() { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("approveTokenTransferToFillSwap: validating for \(swapToFill.id.uuidString)")
+                    do {
+                        try validateSwapForFilling(swap: swapToFill)
+                    } catch {
+                        seal.reject(error)
+                    }
+                    logger.notice("approveTokenTransferToFillSwap: recreating EthereumTransaction to approve transfer of \(String(swapToFill.takenSwapAmount)) tokens at contract \(swapToFill.stablecoin.address) for \(swapToFill.id.uuidString)")
+                    guard let blockchainService = blockchainService else {
+                        seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during approveTokenTransferToFillSwap call for \(swapToFill.id.uuidString)"))
+                        return
+                    }
+                    return blockchainService.createApproveTransferTransaction(tokenAddress: swapToFill.stablecoin, spender: blockchainService.commutoSwapAddress, amount: swapToFill.takenSwapAmount).pipe(to: seal.resolve)
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] recreatedTransaction -> Promise<BlockchainTransaction> in
+                guard let blockchainService = blockchainService else {
+                    throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during approveTokenTransferToFillSwap call for \(swapToFill.id.uuidString)")
+                }
+                guard var approveTokenTransferToFillSwapTransaction = approveTokenTransferToFillSwapTransaction else {
+                    throw SwapServiceError.unexpectedNilError(desc: "Transaction was nil during approveTokenTransferToFillSwap call for \(swapToFill.id.uuidString)")
+                }
+                guard recreatedTransaction.data == approveTokenTransferToFillSwapTransaction.data else {
+                    throw SwapServiceError.nonmatchingDataError(desc: "Data of approveTokenTransferToFillSwap did not match that of transaction created with supplied data for \(swapToFill.id.uuidString)")
+                }
+                logger.notice("approveTokenTransferToFillSwap: signing transaction for \(swapToFill.id.uuidString)")
+                try blockchainService.signTransaction(&approveTokenTransferToFillSwapTransaction)
+                let blockchainTransactionForApprovingTransfer = try BlockchainTransaction(transaction: approveTokenTransferToFillSwapTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .approveTokenTransferToFillSwap)
+                let dateString = DateFormatter.createDateString(blockchainTransactionForApprovingTransfer.timeOfCreation)
+                logger.notice("approveTokenTransferToFillSwap: persistently storing approve transfer data for \(swapToFill.id.uuidString), including tx hash \(blockchainTransactionForApprovingTransfer.transactionHash)")
+                try databaseService.updateSwapApproveToFillData(swapID: swapToFill.id.asData().base64EncodedString(), _chainID: String(swapToFill.chainID), transactionHash: blockchainTransactionForApprovingTransfer.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForApprovingTransfer.latestBlockNumberAtCreation))
+                logger.notice("approveTokenTransferToFillSwap: persistently updating approvingToFillState for \(swapToFill.id.uuidString) to sendingTransaction")
+                try databaseService.updateSwapApproveToFillState(swapID: swapToFill.id.asData().base64EncodedString(), _chainID: String(swapToFill.chainID), state: TokenTransferApprovalState.sendingTransaction.asString)
+                logger.notice("approveTokenTransferToFillSwap: updating approvingToFillState for \(swapToFill.id.uuidString) to sendingTransaction and storing tx \(blockchainTransactionForApprovingTransfer.transactionHash) in swap")
+                return Promise.value(blockchainTransactionForApprovingTransfer)
+            }.get(on: DispatchQueue.main) { blockchainTransactionForApprovingTransfer in
+                swapToFill.approvingToFillState = .sendingTransaction
+                swapToFill.approvingToFillTransaction = blockchainTransactionForApprovingTransfer
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("approveTokenTransferToFillSwap: persistently updating approvingToFillState of \(swapToFill.id.uuidString) to awaitingTransactionConfirmation")
+                try databaseService.updateSwapApproveToFillState(swapID: swapToFill.id.asData().base64EncodedString(), _chainID: String(swapToFill.chainID), state: TokenTransferApprovalState.awaitingTransactionConfirmation.asString)
+                logger.notice("approveTokenTransferToFillSwap: updating approvingToFillState to awaitingTransactionConfirmation for \(swapToFill.id.uuidString)")
+            }.get(on: DispatchQueue.main) { _ in
+                swapToFill.approvingToFillState = .awaitingTransactionConfirmation
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("approveTokenTransferToFillSwap: encountered error, setting approvingToFillState of \(swapToFill.id.uuidString) to error and setting approvingToFill error: \(error.localizedDescription)")
+                // It's OK that we don't handle database errors here, because if such an error occurs and the approving to fill state isn't updated to error, then when the app restarts, we will check the approving to fill transaction, and then discover and handle the error then.
+                do {
+                    try databaseService.updateSwapApproveToFillState(swapID: swapToFill.id.asData().base64EncodedString(), _chainID: String(swapToFill.chainID), state: TokenTransferApprovalState.error.asString)
+                } catch {}
+                swapToFill.approvingToFillError = error
+                DispatchQueue.main.async {
+                    swapToFill.approvingToFillState = .error
+                }
+                seal.reject(error)
+            }
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` that will fill a maker-as-seller [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) made by the user of this interface.
+     
+     This calls `validateSwapForFilling`, and then calls `BlockchainService.createFillSwapTransaction`, passing the `Swap.id` property of `offer`.
+     
+     - Parameter offer: The `Swap` to be opened.
+     
+     - Returns: A `Promise` wrapped around an `EthereumTransaction` capable of filling `swap`.
+     
+     - Throws: An `OfferServiceError.unexpectedNilError` of `blockchainService` is `nil`. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
+     */
+    func createFillSwapTransaction(swap: Swap) -> Promise<EthereumTransaction> {
+        return Promise { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createFillSwapTransaction: creating for \(swap.id.uuidString)")
+                do {
+                    try validateSwapForFilling(swap: swap)
+                } catch {
+                    seal.reject(error)
+                }
+                guard let blockchainService = blockchainService else {
+                    seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during createFillSwapTransaction call for \(swap.id.uuidString)"))
+                    return
+                }
+                blockchainService.createFillSwapTransaction(id: swap.id).pipe(to: seal.resolve)
+            }
+        }
+    }
+    
+    /**
+     Attempts to fill a maker-as-seller [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap) made by the user of this interface.
+     
+     On the global `DispatchQueue`, this calls `validateSwapForFilling`, and then creates another `EthereumTransaction` to fill `swap` and ensures that the data of this transaction matches the data of `swapFillingTransaction`. (If they do not match, then `swapFillingTransaction` was not created with the data contained in `swap`.) Then this signs `swapFillingTransaction` and creates a `BlockchainTransaction` to wrap it. then this persistently stores the swap filling data for said `BlockchainTransaction`, and persistently updates the swap filling state of `swap` to `FillingSwapState.sendingTransaction`. Then, on the main `DispatchQueue`, this updates the `Swap.fillingSwapState` property of `swap` to `FillingSwapState.sendingTransaction` and sets the `Swap.swapFillingTransaction` property of `swap` to said `BlockchainTransaction`. Then, on the global `DispatchQueue`, this calls `BlockchainService.sendTransaction`, passing said `BlockchainTransaction`. When this call returns, this persistently updates the state of `swap` to `SwapState.fillSwapTransactionSent` and the swap filling state of `Swap` to `SwapFillingState.awaitingTransactionConfirmation`. Then, on the main `DispatchQueue`, this updates the `Swap.state` property of `swap` to `SwapState.fillSwapTransactionSent` and the `Swap.fillingSwapState` property of `swap` to `FillingSwapState.awaitingTransactionConfirmation`.
+     
+     If this catches an error, it persistently updates the filling swap state of `swap` to `FillingSwapState.exception`, sets the `Swap.fillingSwapError` property of `swap` to the caught error, and then, on the main `DispatchQueue`, sets the `Swap.fillingSwapState` property of `swap` to `FillingSwapState.error`.
+     
+     - Parameters:
+        - swap: The `Swap` to fill.
+        - swapFillingTransaction: An optional `EthereumTransaction` that can fill `swap`.
+     
+     - Returns: An empty `Promise` that will be fulfilled when `swap` is filled.
+     
+     - Throws: A `SwapServiceError.unexpectedNilError` if `swapFillingTransaction` is `nil` or if `blockchainService` is `nil`, or an `OfferServiceError.nonmatchingDataError` if the data of `swapFillingTransaction` does not match that of the transaction this function creates using `swap`. Note that because this function returns a `Promise`, this error will not actually be thrown but will be passed to `seal.reject`.
+     */
+    func fillSwap(swap: Swap, swapFillingTransaction: EthereumTransaction?) -> Promise<Void> {
+        return Promise { seal in
+            Promise<EthereumTransaction> { seal in
+                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                    logger.notice("fillSwap: filling \(swap.id.uuidString)")
+                    do {
+                        try validateSwapForFilling(swap: swap)
+                    } catch {
+                        seal.reject(error)
+                    }
+                    logger.notice("fillSwap: recreating EthereumTransaction to fill \(swap.id.uuidString) to ensure swapFillingTransaction was created with the contents of swap")
+                    guard let blockchainService = blockchainService else {
+                        seal.reject(SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during fillSwap call for \(swap.id.uuidString)"))
+                        return
+                    }
+                    blockchainService.createFillSwapTransaction(id: swap.id).pipe(to: seal.resolve)
+                }
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] recreatedTransaction -> Promise<BlockchainTransaction> in
+                guard var swapFillingTransaction = swapFillingTransaction else {
+                    throw SwapServiceError.unexpectedNilError(desc: "Transaction was nil during fillSwap call for \(swap.id.uuidString)")
+                }
+                guard recreatedTransaction.data == swapFillingTransaction.data else {
+                    throw SwapServiceError.unexpectedNilError(desc: "Data of swapFillingTransaction did not match that of transaction created with swap \(swap.id.uuidString)")
+                }
+                guard let blockchainService = blockchainService else {
+                    throw SwapServiceError.unexpectedNilError(desc: "blockchainService was nil during fillSwap call for \(swap.id.uuidString)")
+                }
+                logger.notice("fillSwap: signing transaction for \(swap.id.uuidString)")
+                try blockchainService.signTransaction(&swapFillingTransaction)
+                let blockchainTransactionForSwapFilling = try BlockchainTransaction(transaction: swapFillingTransaction, latestBlockNumberAtCreation: blockchainService.newestBlockNum, type: .fillSwap)
+                let dateString = DateFormatter.createDateString(blockchainTransactionForSwapFilling.timeOfCreation)
+                logger.notice("fillSwap: persistently storing swap filling data for \(swap.id.uuidString), including tx hash \(blockchainTransactionForSwapFilling.transactionHash)")
+                try databaseService.updateFillingSwapData(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), transactionHash: blockchainTransactionForSwapFilling.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(blockchainTransactionForSwapFilling.latestBlockNumberAtCreation))
+                logger.notice("fillSwap: persistently updating fillingSwapState for \(swap.id.uuidString) to \(FillingSwapState.sendingTransaction.asString)")
+                try databaseService.updateFillingSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: FillingSwapState.sendingTransaction.asString)
+                logger.notice("fillSwap: updating fillingSwapState to sendingTransaction and storing tx \(blockchainTransactionForSwapFilling.transactionHash) in \(swap.id.uuidString)")
+                return Promise.value(blockchainTransactionForSwapFilling)
+            }.get(on: DispatchQueue.main) { blockchainTransactionForSwapFilling in
+                swap.swapFillingTransaction = blockchainTransactionForSwapFilling
+                swap.fillingSwapState = .sendingTransaction
+            }.then(on: DispatchQueue.global(qos: .userInitiated)) { [self] swapFillingBlockchainTransaction -> Promise<TransactionSendingResult> in
+                logger.notice("fillSwap: sending \(swapFillingBlockchainTransaction.transactionHash) for \(swap.id.uuidString)")
+                guard let blockchainService = blockchainService else {
+                    throw OfferServiceError.unexpectedNilError(desc: "blockchainService was nil during fillSwap call for \(swap.id.uuidString)")
+                }
+                return blockchainService.sendTransaction(swapFillingBlockchainTransaction)
+            }.get(on: DispatchQueue.global(qos: .userInitiated)) { [self] _ in
+                logger.notice("fillSwap: persistently updating state of \(swap.id.uuidString) to \(SwapState.fillSwapTransactionSent.asString)")
+                try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.fillSwapTransactionSent.asString)
+                logger.notice("fillSwap: persistently updating fillingSwapState of \(swap.id.uuidString) to awaitingTransactionConfirmation")
+                try databaseService.updateFillingSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: FillingSwapState.awaitingTransactionConfirmation.asString)
+                logger.notice("fillSwap: updating state to \(SwapState.fillSwapTransactionSent.asString) and fillingSwapState to awaitingTransactionConfirmation for \(swap.id.uuidString)")
+            }.get(on: DispatchQueue.main) { _ in
+                swap.state = SwapState.fillSwapTransactionSent
+                swap.fillingSwapState = .awaitingTransactionConfirmation
+            }.done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+                seal.fulfill(())
+            }.catch(on: DispatchQueue.global(qos: .userInitiated)) { [self] error in
+                logger.error("fillSwap: encountered error while filling \(swap.id.uuidString), setting fillingSwapState to error: \(error.localizedDescription)")
+                // It's OK that we don't handle database errors here, because if such an error occurs and the filling swap state isn't updated to error, then when the app restarts, we will check the swap filling transaction, and then discover and handle the error then.
+                do {
+                    try databaseService.updateFillingSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: FillingSwapState.error.asString)
+                } catch {}
+                swap.fillingSwapError = error
+                DispatchQueue.main.async {
+                    swap.fillingSwapState = .error
+                }
                 seal.reject(error)
             }
         }
@@ -676,6 +900,10 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     /**
      The function called by `BlockchainService` in order to notify `SwapService` that a monitored swap-related `BlockchainTransaction` has failed (either has been confirmed and failed, or has been dropped.)
      
+     If `transaction` is of type `BlockchainTransactionType.approveTokenTransferToFillSwap`, then this finds the swap with the corresponding approving to fill transaction hash, persistently updates its approving to fill state to `TokenTransferApprovalState.error`, and on the main `DispatchQueue` sets its `Swap.approvingToFillError` to `error` and updates its `Swap.approvingToFillState` property to `TokenTransferApprovalState.error`.
+     
+     If `transaction` is of type `BlockchainTransactionType.fillSwap`, then this finds the swap with the corresponding swap filling transaction hash, persistently updates its state to `SwapState.awaitingFilling`, persistently updates its swap filling state to `FillingSwapState.error` and on the main `DispatchQueue` sets the `Swap.state` property to `SwapState.awaitingFilling`, the `Swap.fillingSwapError` property to `error`, and the `Swap.fillingSwapState` to `FillingSwapState.error`.
+     
      If `transaction` is of type `BlockchainTransactionType.reportPaymentSent`, then this finds the swap with the corresponding reporting payment sent transaction hash, persistently updates its reporting payment sent state to `ReportingPaymentSentState.error` and its state to `SwapState.awaitingPaymentSent`, and on the main `DispatchQueue` sets its `Swap.reportingPaymentSentError` to `error`, updates its `Swap.reportingPaymentSentState` property to `ReportingPaymentSentState.error`, and updates its `Swap.state` property to `SwapState.awaitingPaymentSent`.
      
      If `transaction` is of type `BlockchainTransactionType.reportPaymentReceived`, then this finds the swap with the corresponding reporting payment received transaction hash, persistently updates its reporting payment received state to `ReportingPaymentReceivedState.error` and its state to `SwapState.awaitingPaymentReceived`, and on the main `DispatchQueue` sets its `Swap.reportingPaymentReceivedError` to `error`, updates its `Swap.reportingPaymentReceivedState` property to `ReportingPaymentReceivedState.error`, and updates its `Swap.state` property to `SwapState.awaitingPaymentReceived`.
@@ -696,6 +924,36 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
         switch transaction.type {
         case .approveTokenTransferToOpenOffer, .openOffer, .cancelOffer, .editOffer, .approveTokenTransferToTakeOffer, .takeOffer:
             throw SwapServiceError.invalidValueError(desc: "handleFailedTransaction: received an offer-related transaction \(transaction.transactionHash)")
+        case .approveTokenTransferToFillSwap:
+            guard let swap = swapTruthSource.swaps.first(where: { id, swap in
+                swap.approvingToFillTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: swap with approve to fill transaction \(transaction.transactionHash) not found in swapTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found swap \(swap.id.uuidString) on \(swap.chainID) with approve to fill transaction \(transaction.transactionHash), updating approvingToFillState to error in persistent storage")
+            try databaseService.updateSwapApproveToFillState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: TokenTransferApprovalState.error.asString)
+            logger.warning("handleFailedTransaction: setting approvingToFillError and updating approvingToFillState to error for \(swap.id.uuidString)")
+            DispatchQueue.main.sync {
+                swap.approvingToFillError = error
+                swap.approvingToFillState = .error
+            }
+        case .fillSwap:
+            guard let swap = swapTruthSource.swaps.first(where: { id, swap in
+                swap.swapFillingTransaction?.transactionHash == transaction.transactionHash
+            })?.value else {
+                logger.warning("handleFailedTransaction: swap with swap filling transaction \(transaction.transactionHash) not found in swapTruthSource")
+                return
+            }
+            logger.warning("handleFailedTransaction: found swap \(swap.id.uuidString) on \(swap.chainID) with swap filling transaction \(transaction.transactionHash), updating state to \(SwapState.awaitingFilling.asString) and fillingSwapState to \(FillingSwapState.error.asString) in persistent storage")
+            try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(swap.chainID), state: SwapState.awaitingFilling.asString)
+            try databaseService.updateFillingSwapState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(swap.chainID), state: FillingSwapState.error.asString)
+            logger.warning("handleFailedTransaction: setting state to \(SwapState.awaitingFilling.asString), setting fillingSwapError and updating fillingSwapState to \(FillingSwapState.error.asString) for \(swap.id.uuidString)")
+            DispatchQueue.main.sync {
+                swap.state = SwapState.awaitingFilling
+                swap.fillingSwapError = error
+                swap.fillingSwapState = FillingSwapState.error
+            }
         case .reportPaymentSent:
             guard let swap = swapTruthSource.swaps.first(where: { id, swap in
                 swap.reportPaymentSentTransaction?.transactionHash == transaction.transactionHash
@@ -851,6 +1109,14 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             chainID: String(newSwap.chainID),
             state: newSwap.state.asString,
             role: newSwap.role.asString,
+            approveToFillState: newSwap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: newSwap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: newSwap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1012,9 +1278,42 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
     }
     
     /**
+     The function called by `BlockchainService` to notify `SwapService` of an `ApprovalEvent`.
+     
+     If the purpose of `ApprovalEvent` is `TokenTransferApprovalPurpose.fillSwap`, this gets the swap with the corresponding approving to fill transaction hash, persistently updates its approving to fill state to `TokenTransferApprovalState.completed`, and then on the main `DispatchQueue` sets its `Swap.approvingToFillState` to `TokenTransferApprovalState.completed`.
+     
+     - Parameter event: The `ApprovalEvent` of which `SwapService` is being notified.
+     
+     - Throws: `SwapServiceError.unexpectedNilError` if `swapTruthSource` is `nil`, or a `SwapServiceError.invalidValueError` if `event` has an offer-related purpose.
+     */
+    func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {
+        logger.notice("handleTokenTransferApprovalEvent: handling event with tx hash \(event.transactionHash) and purpose \(event.purpose.asString)")
+        guard let swapTruthSource = swapTruthSource else {
+            throw SwapServiceError.unexpectedNilError(desc: "offerTruthSource was nil during handleTokenTransferApprovalEvent call for event with tx id \(event.transactionHash)")
+        }
+        switch event.purpose {
+        case .openOffer, .takeOffer:
+            throw SwapServiceError.invalidValueError(desc: "handleTokenTransferApprovalEvent: received a offer-related event of purpose \(event.purpose.asString) with tx hash \(event.transactionHash)")
+        case .fillSwap:
+            guard let swap = swapTruthSource.swaps.first(where: { id, swap in
+                swap.approvingToFillTransaction?.transactionHash == event.transactionHash
+            })?.value else {
+                logger.warning("handleTokenTransferApprovalEvent: swap with approving to fill transaction \(event.transactionHash) not found in swapTruthSource")
+                return
+            }
+            logger.notice("handleTokenTransferApprovalEvent: found swap \(swap.id.uuidString) with approvingToFill tx hash \(event.transactionHash), persistently updating approvingToFillState to \(TokenTransferApprovalState.completed.asString)")
+            try databaseService.updateSwapApproveToFillState(swapID: swap.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: TokenTransferApprovalState.completed.asString)
+            logger.notice("handleTokenTransferApprovalEvent: updating approvingToFillState to \(TokenTransferApprovalState.completed.asString) for \(swap.id.uuidString)")
+            DispatchQueue.main.sync {
+                swap.approvingToFillState = .completed
+            }
+        }
+    }
+    
+    /**
      The function called by `BlockchainService` to notify `SwapService` of a `SwapFilledEvent`.
      
-     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a swap, it ensures that the chain ID of the swap and the chain ID of `event` match. Then, if the role of the swap is `makerAndBuyer` or `takerAndSeller`, it logs a warning, since `SwapFilledEvent`s should not be emitted for such swaps. Otherwise, the role is `makerAndSeller` or `takerAndBuyer`, and this persistently sets the state of the swap to `awitingPaymentSent` and requiresFill to `false`, and then does the same to the `Swap` object on the main `DispatchQueue`.
+     Once notified, `SwapService` checks in `swapTruthSource` for a `Swap` with the ID specified in `event`. If it finds such a `Swap`, it ensures that the chain ID of the `Swap` and the chain ID of `event` match. Then it checks whether the swap is a maker-as-seller swap, and then whether the user is the maker and seller in the `Swap`. If both of these conditions are met, then this checks if the swap has a non-`nil` transaction for calling [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap). If it does, then this compares the hash of that transaction and the transaction hash contained in `event` If the two do not match, this sets a flag indicating that the swap filling transaction must be updated. If the swap does not have such a transaction, this flag is also set. If the user is not the maker and seller (and thus must be the buyer and taker, since this function will have already returned in other cases) in the `Swap`, this flag is also set. If this flag is set, then this updates the `Swap`, both in `swapTruthSource` and in persistent storage, with a new `BlockchainTransaction` containing the hash specified in `event`. Then, regardless of whether this flag is set, this persistently sets the `Swap.requiresFill` property of the `Swap` to `false`, persistently updates the `Swap.state` property of the `Swap` to `SwapState.awaitingPaymentSent`, and then, on the main `DispatchQueue`, sets the `Swap.requiresFill` property of the `Swap` to `false` and sets the `Swap.state` property of the `Swap` to `SwapState.awaitingPaymentSent`. Then, no longer on the main `DispatchQueue`, if the user is the maker and seller in this `Swap`, this updates the `Swap.fillingSwapState` of the `Swap` to `FillingSwapState.completed`, both in persistent storage and in the `Swap` itself.
      
      - Parameter event: The `SwapFilledEvent` of which `SwapService` is being notified.
      
@@ -1034,15 +1333,51 @@ class SwapService: SwapNotifiable, SwapMessageNotifiable {
             case .makerAndBuyer, .takerAndSeller:
                 // If we are the maker of and buyer in or taker of and seller in the swap, no SwapFilled event should be emitted for that swap
                 logger.warning("handleSwapFilledEvent: unexpectedly got event for \(event.id.uuidString) with role \(swap.role.asString)")
+                return
             case .makerAndSeller, .takerAndBuyer:
                 logger.notice("handleSwapFilledEvent: handing for \(event.id.uuidString) as \(swap.role.asString)")
-                // We have gotten confirmation that the fillSwap transaction has been confirmed, so we update the state of the swap to indicate that we are waiting for the buyer to send traditional currency payment
-                let swapIDB64String = event.id.asData().base64EncodedString()
-                try databaseService.updateSwapRequiresFill(swapID: swapIDB64String, chainID: String(event.chainID), requiresFill: false)
-                try databaseService.updateSwapState(swapID: swapIDB64String, chainID: String(event.chainID), state: SwapState.awaitingPaymentSent.asString)
-                swap.requiresFill = false
+                var mustUpdateSwapFilledTransaction = false
+                if swap.role == .makerAndSeller {
+                    if let swapFillingTransaction = swap.swapFillingTransaction {
+                        if swapFillingTransaction.transactionHash == event.transactionHash {
+                            logger.notice("handleSwapFilledEvent: tx hash \(event.transactionHash) of event matches that for swap \(swap.id.uuidString): \(swapFillingTransaction.transactionHash)")
+                        } else {
+                            logger.warning("handleSwapFilledEvent: tx hash \(event.transactionHash) of event does not match that for swap \(event.id.uuidString): \(swapFillingTransaction.transactionHash), updating with new transaction hash")
+                            mustUpdateSwapFilledTransaction = true
+                        }
+                    } else {
+                        logger.warning("handleSwapFilledEvent: swap \(event.id.uuidString) for which user is maker and seller has no swap filling transaction, updating with transaction hash \(event.transactionHash)")
+                        mustUpdateSwapFilledTransaction = true
+                    }
+                } else {
+                    logger.info("handleSwapFilledEvent: user is taker and buyer for \(event.id.uuidString), updating with transaction hash \(event.transactionHash)")
+                    mustUpdateSwapFilledTransaction = true
+                }
+                if mustUpdateSwapFilledTransaction {
+                    let swapFillingTransaction = BlockchainTransaction(transactionHash: event.transactionHash, timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .fillSwap)
+                    DispatchQueue.main.sync {
+                        swap.swapFillingTransaction = swapFillingTransaction
+                    }
+                    logger.info("handleSwapFilledEvent: persistently storing tx data, including hash \(event.transactionHash) for \(event.id.uuidString)")
+                    let dateString = DateFormatter.createDateString(swapFillingTransaction.timeOfCreation)
+                    try  databaseService.updateFillingSwapData(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), transactionHash: swapFillingTransaction.transactionHash, transactionCreationTime: dateString, latestBlockNumberAtCreationTime: Int(swapFillingTransaction.latestBlockNumberAtCreation))
+                }
+                logger.notice("handleSwapFilledEvent: persistently setting requiresFill property of \(event.id.uuidString) to false")
+                try databaseService.updateSwapRequiresFill(swapID: swap.id.asData().base64EncodedString(), chainID: String(event.chainID), requiresFill: false)
+                logger.notice("handleSwapFilledEvent: persistently updating state of \(event.id.uuidString) to \(SwapState.awaitingPaymentSent.asString)")
+                try databaseService.updateSwapState(swapID: swap.id.asData().base64EncodedString(), chainID: String(event.chainID), state: SwapState.awaitingPaymentSent.asString)
+                logger.notice("handleSwapFilledEvent: setting requiresFill property of \(event.id.uuidString) to false and setting state of \(SwapState.awaitingPaymentSent.asString)")
                 DispatchQueue.main.async {
+                    swap.requiresFill = false
                     swap.state = .awaitingPaymentSent
+                }
+                if swap.role == .makerAndSeller {
+                    logger.notice("handleSwapFilledEvent: user is maker and seller for \(event.id.uuidString) so persistently updating fillingSwapState to \(FillingSwapState.completed.asString)")
+                    try databaseService.updateFillingSwapState(swapID: event.id.asData().base64EncodedString(), _chainID: String(event.chainID), state: FillingSwapState.completed.asString)
+                    logger.notice("handleSwapFilledEvent: updating fillingSwapState to \(FillingSwapState.completed.asString)")
+                    DispatchQueue.main.sync {
+                        swap.fillingSwapState = .completed
+                    }
                 }
             }
         } else {

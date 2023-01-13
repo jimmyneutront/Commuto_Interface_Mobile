@@ -34,6 +34,12 @@ enum SwapServiceError: LocalizedError {
      - Parameter desc: A `String` that provides information about the context in which the error was thrown.
      */
     case nonmatchingChainIDError(desc: String)
+    /**
+     Thrown when two pieces of data that should match do not match.
+     
+     - Parameter desc: A `String` that provides information about the context in which the error was thrown.
+     */
+    case nonmatchingDataError(desc: String)
     
     /**
      A description providing information about the context in which the error was thrown.
@@ -47,6 +53,8 @@ enum SwapServiceError: LocalizedError {
         case .transactionWillRevertError(let desc):
             return desc
         case .nonmatchingChainIDError(let desc):
+            return desc
+        case .nonmatchingDataError(let desc):
             return desc
         }
     }

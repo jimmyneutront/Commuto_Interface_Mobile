@@ -124,13 +124,29 @@ class Swap: ObservableObject {
      */
     let role: SwapRole
     /**
-     (This property is used only if the user of this interface is the maker of this swap and is selling stablecoin.) This indicates whether we are currently filling this swap, and if so, what part of the swap filling process we are in.
+     If this swap is a maker-and-seller swap and was made by the user of this interface, this indicates whether a token transfer is being approved in order to fill the swap, and if so, what part of the token transfer approval process it is in. Otherwise, this property is not used.
+     */
+    @Published var approvingToFillState = TokenTransferApprovalState.none
+    /**
+     (This property is used only if this swap is a maker-and-seller swap and was made by the user of this interface.) The `Error` that occured during the token transfer approval process in order to fill the swap, or `nil` if no such error has occured.
+     */
+    var approvingToFillError: Error? = nil
+    /**
+     (This property is used only if this swap is a maker-and-seller swap and was made by the user of this interface.) The `BlockchainTransaction` that has approved a token transfer in order to fill this swap. Note that this transaction may be: not yet sent to a blockchain node, pending, confirmed and successful, confirmed and failed, or dropped.
+     */
+    var approvingToFillTransaction: BlockchainTransaction? = nil
+    /**
+     (This property is used only if this swap is a maker-and-seller swap and was made by the user of this interface.) This indicates whether we are currently filling this swap, and if so, what part of the swap filling process we are in.
      */
     @Published var fillingSwapState = FillingSwapState.none
     /**
-     (This property is used only if the user of this interface is the maker of this swap and is selling stablecoin.) The `Error` that we encountered during the swap filling process, or `nil` of no such error has occurred.
+     (This property is used only if this swap is a maker-and-seller swap and was made by the user of this interface.) The `Error` that we encountered during the swap filling process, or `nil` of no such error has occurred.
      */
     var fillingSwapError: Error? = nil
+    /**
+     The `BlockchainTransaction` that called [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) in order to fill this swap. Note that this transaction may be: not yet sent to a blockchain node, pending, confirmed and successful, confirmed and failed, or dropped.
+     */
+    var swapFillingTransaction: BlockchainTransaction? = nil
     /**
      (This property is used only if the user of this interface is the buyer in this swap.) This indicates whether we are currently reporting that we have sent fiat payment to the seller in this swap by calling [reportPaymentSent](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#report-payment-sent), and if so, what part of the payment-sent-reporting process we are in.
      */

@@ -22,6 +22,10 @@ class SwapFilledEvent {
      */
     let chainID: BigUInt
     /**
+     The hash of the transaction that emitted this event, as a lowercae hex string with a "0x" prefix.
+     */
+    let transactionHash: String
+    /**
      Creates a new `SwapFilledEvent` given a web3swift `EventParserResultProtocol` containing information from a [SwapFilled](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swapfilled) event, or returns `nil` if the passed `EventParserResultProtocol` doesn't contain information from a SwapFilled event.
      */
     init?(_ result: EventParserResultProtocol, chainID: BigUInt) {
@@ -30,13 +34,21 @@ class SwapFilledEvent {
         }
         id = resultID
         self.chainID = chainID
+        guard var transactionHash = result.transactionReceipt?.transactionHash.toHexString().lowercased() else {
+            return nil
+        }
+        if !transactionHash.starts(with: "0x") {
+            transactionHash = "0x" + transactionHash
+        }
+        self.transactionHash = transactionHash
     }
     /**
      Creates a new `SwapFilledEvent` with the given `id` and `chainID`.
      */
-    init(id: UUID, chainID: BigUInt) {
+    init(id: UUID, chainID: BigUInt, transactionHash: String) {
         self.id = id
         self.chainID = chainID
+        self.transactionHash = transactionHash
     }
     
 }

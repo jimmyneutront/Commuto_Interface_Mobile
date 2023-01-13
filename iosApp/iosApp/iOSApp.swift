@@ -103,9 +103,9 @@ struct iOSApp: App {
         container.resolve(SettlementMethodService<SettlementMethodViewModel>.self)!.settlementMethodTruthSource = container.resolve(SettlementMethodViewModel.self)
         
         // Begin listening to the blockchain
-        container.resolve(BlockchainService.self)!.listen()
+        //container.resolve(BlockchainService.self)!.listen()
         // Begin listening to the peer-to-peer network
-        container.resolve(P2PService.self)!.listen()
+        //container.resolve(P2PService.self)!.listen()
     }
     
     /**

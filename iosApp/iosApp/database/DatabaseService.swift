@@ -327,7 +327,39 @@ class DatabaseService {
      */
     let swapRole = Expression<String>("role")
     /**
-     A database structure representing an `Swap`'s `reportPaymentSentState` property.
+     A database structure representing a `Swap`'s `approveToFillState` property.
+     */
+    let approveToFillState = Expression<String>("approveToFillState")
+    /**
+     A database structure representing the hash of a transaction that called [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for a maker-as-seller swap involving the user of this interface. This will be `nil` for swaps that are not maker-as-seller.
+     */
+    let approveToFillTransactionHash = Expression<String?>("approveToFillTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that called [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for a maker-as-seller swap involving user of this interface. This may not be accurate for swaps in which the user is the taker/buyer, and will be `nil` for swaps that are not maker-as-seller.
+     */
+    let approveToFillTransactionCreationTime = Expression<String?>("approveToFillTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that called [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for a maker-as-seller swap involving user of this interface. This may not be accurate for swaps in which the user is the seller, and will be `nil` for swaps that are not maker-as-seller.
+     */
+    let approveToFillTransactionCreationBlockNumber = Expression<Int?>("approveToFillTransactionCreationBlockNumber")
+    /**
+     A database structure representing a `Swap`'s `fillingSwapState` property.
+     */
+    let fillingSwapState = Expression<String>("fillingSwapState")
+    /**
+     A database structure representing the hash of a transaction that filled a maker-as-seller `Swap`.
+     */
+    let fillingSwapTransactionHash = Expression<String?>("fillingSwapTransactionHash")
+    /**
+     A database structure representing the creation time of a transaction that filled a maker-as-seller `Swap`.
+     */
+    let fillingSwapTransactionCreationTime = Expression<String?>("fillingSwapTransactionCreationTime")
+    /**
+     A database structure representing the latest block number at creation time of a transaction that filled a maker-as-seller `Swap`.
+     */
+    let fillingSwapTransactionCreationBlockNumber = Expression<Int?>("fillingSwapTransactionCreationBlockNumber")
+    /**
+     A database structure representing a `Swap`'s `reportPaymentSentState` property.
      */
     let reportPaymentSentState = Expression<String>("reportPaymentSentState")
     /**
@@ -343,7 +375,7 @@ class DatabaseService {
      */
     let reportPaymentSentTransactionCreationBlockNumber = Expression<Int?>("reportPaymentSentTransactionCreationBlockNumber")
     /**
-     A database structure representing an `Swap`'s `reportPaymentReceivedState` property.
+     A database structure representing a `Swap`'s `reportPaymentReceivedState` property.
      */
     let reportPaymentReceivedState = Expression<String>("reportPaymentReceivedState")
     /**
@@ -359,7 +391,7 @@ class DatabaseService {
      */
     let reportPaymentReceivedTransactionCreationBlockNumber = Expression<Int?>("reportPaymentReceivedTransactionCreationBlockNumber")
     /**
-     A database structure representing an `Swap`'s `closeSwapState` property.
+     A database structure representing a `Swap`'s `closeSwapState` property.
      */
     let closeSwapState = Expression<String>("closeSwapState")
     /**
@@ -479,6 +511,14 @@ class DatabaseService {
             t.column(chainID)
             t.column(swapState)
             t.column(swapRole)
+            t.column(approveToFillState)
+            t.column(approveToFillTransactionHash)
+            t.column(approveToFillTransactionCreationTime)
+            t.column(approveToFillTransactionCreationBlockNumber)
+            t.column(fillingSwapState)
+            t.column(fillingSwapTransactionHash)
+            t.column(fillingSwapTransactionCreationTime)
+            t.column(fillingSwapTransactionCreationBlockNumber)
             t.column(reportPaymentSentState)
             t.column(reportPaymentSentTransactionHash)
             t.column(reportPaymentSentTransactionCreationTime)
@@ -1286,6 +1326,14 @@ class DatabaseService {
                     chainID <- swap.chainID,
                     swapState <- swap.state,
                     swapRole <- swap.role,
+                    approveToFillState <- swap.approveToFillState,
+                    approveToFillTransactionHash <- swap.approveToFillTransactionHash,
+                    approveToFillTransactionCreationTime <- swap.approveToFillTransactionCreationTime,
+                    approveToFillTransactionCreationBlockNumber <- swap.approveToFillTransactionCreationBlockNumber,
+                    fillingSwapState <- swap.fillingSwapState,
+                    fillingSwapTransactionHash <- swap.fillingSwapTransactionHash,
+                    fillingSwapTransactionCreationTime <- swap.fillingSwapTransactionCreationTime,
+                    fillingSwapTransactionCreationBlockNumber <- swap.fillingSwapTransactionCreationBlockNumber,
                     reportPaymentSentState <- swap.reportPaymentSentState,
                     reportPaymentSentTransactionHash <- swap.reportPaymentSentTransactionCreationTime,
                     reportPaymentSentTransactionCreationTime <- swap.reportPaymentSentTransactionCreationTime,
@@ -1422,6 +1470,80 @@ class DatabaseService {
             try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(swapState <- state))
         }
         logger.notice("updateSwapState: set value to \(state) for swap with B64 ID \(swapID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseSwap`'s `approveToFillState` field.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `approveToFillState` field.
+     */
+    func updateSwapApproveToFillState(swapID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(approveToFillState <- state))
+        }
+        logger.notice("updateSwapApproveToFillState: set value to \(state) for offer with B64 ID \(swapID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseSwap`'s `approveToFillTransactionHash`, `approveToFillTransactionCreationTime`, and `approveToFillTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the offer to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `approveToFillTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `approveToFillTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseFill`'s `approveToFillTransactionCreationBlockNumber` field.
+     */
+    func updateSwapApproveToFillData(swapID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID)
+                .update(
+                    approveToFillTransactionHash <- transactionHash,
+                    approveToFillTransactionCreationTime <- transactionCreationTime,
+                    approveToFillTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateOfferApproveToFillData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for swap with B64 ID \(swapID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseSwap`'s `fillingSwapState` field.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - state: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `fillingSwapState` field.
+     */
+    func updateFillingSwapState(swapID: String, _chainID: String, state: String) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID).update(fillingSwapState <- state))
+        }
+        logger.notice("updateFillingSwapState: set value to \(state) for swap with B64 ID \(swapID), if present")
+    }
+    
+    /**
+     Updates a persistently stored `DatabaseSwap`'s `fillingSwapTransactionHash`, `fillingSwapTransactionCreationTime`, and `fillingSwapTransactionCreationBlockNumber` fields.
+     
+     - Parameters:
+        - swapID: The ID of the swap to be updated, as a Base64-`String` of bytes.
+        - chainID: The chain ID of the swap to be updated, as a `String`.
+        - transactionHash: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `fillingSwapTransactionHash` field.
+        - transactionCreationTime: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `fillingSwapTransactionCreationTime` field.
+        - latestBlockNumberAtCreationTime: The new value that will be assigned to the persistently stored `DatabaseSwap`'s `fillingSwapTransactionCreationBlockNumber` field.
+     */
+    func updateFillingSwapData(swapID: String, _chainID: String, transactionHash: String?, transactionCreationTime: String?, latestBlockNumberAtCreationTime: Int?) throws {
+        _ = try databaseQueue.sync {
+            try connection.run(swaps.filter(id == swapID && chainID == _chainID)
+                .update(
+                    fillingSwapTransactionHash <- transactionHash,
+                    fillingSwapTransactionCreationTime <- transactionCreationTime,
+                    fillingSwapTransactionCreationBlockNumber <- latestBlockNumberAtCreationTime
+                ))
+        }
+        logger.notice("updateFillingSwapData: set values to \(transactionHash ?? "nil"), \(transactionCreationTime ?? "nil"), and \(latestBlockNumberAtCreationTime.map(String.init) ?? "nil") for swap with B64 ID \(swapID), if present")
     }
     
     /**
@@ -1606,6 +1728,14 @@ class DatabaseService {
                 chainID: result[0][chainID],
                 state: result[0][swapState],
                 role: result[0][swapRole],
+                approveToFillState: result[0][approveToFillState],
+                approveToFillTransactionHash: result[0][approveToFillTransactionHash],
+                approveToFillTransactionCreationTime: result[0][approveToFillTransactionCreationTime],
+                approveToFillTransactionCreationBlockNumber: result[0][approveToFillTransactionCreationBlockNumber],
+                fillingSwapState: result[0][fillingSwapState],
+                fillingSwapTransactionHash: result[0][fillingSwapTransactionHash],
+                fillingSwapTransactionCreationTime: result[0][fillingSwapTransactionCreationTime],
+                fillingSwapTransactionCreationBlockNumber: result[0][fillingSwapTransactionCreationBlockNumber],
                 reportPaymentSentState: result[0][reportPaymentSentState],
                 reportPaymentSentTransactionHash: result[0][reportPaymentSentTransactionHash],
                 reportPaymentSentTransactionCreationTime: result[0][reportPaymentSentTransactionCreationTime],

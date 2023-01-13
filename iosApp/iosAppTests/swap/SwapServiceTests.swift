@@ -7,6 +7,7 @@
 //
 
 import BigInt
+import PromiseKit
 import Switrix
 import web3swift
 import XCTest
@@ -17,6 +18,250 @@ import XCTest
  Tests for `SwapService`
  */
 class SwapServiceTests: XCTestCase {
+    
+    /**
+     Ensure `SwapService` properly handles failed transactions that approve token transfers in order to fill maker-as-seller swaps.
+     */
+    func testHandleFailedApproveToFillTransaction() {
+        let swapID = UUID()
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let swapTruthSource = TestSwapTruthSource()
+        
+        let swap = try! Swap(
+            isCreated: true,
+            requiresFill: true,
+            id: swapID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            makerInterfaceID: Data(),
+            taker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            takerInterfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            takenSwapAmount: BigUInt.zero,
+            serviceFeeAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            direction: .sell,
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
+            protocolVersion: BigUInt.zero,
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: BigUInt.zero,
+            chainID: BigUInt(31337),
+            state: SwapState.awaitingFilling,
+            role: SwapRole.makerAndSeller
+        )
+        swap.approvingToFillState = .awaitingTransactionConfirmation
+        let approvingToFillTransaction = BlockchainTransaction(transactionHash: "a_transaction_hash_here", timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .approveTokenTransferToFillSwap)
+        swap.approvingToFillTransaction = approvingToFillTransaction
+        swapTruthSource.swaps[swapID] = swap
+        let swapForDatabase = DatabaseSwap(
+            id: swap.id.asData().base64EncodedString(),
+            isCreated: swap.isCreated,
+            requiresFill: swap.requiresFill,
+            maker: swap.maker.addressData.toHexString(),
+            makerInterfaceID: swap.makerInterfaceID.base64EncodedString(),
+            taker: swap.taker.addressData.toHexString(),
+            takerInterfaceID: swap.takerInterfaceID.base64EncodedString(),
+            stablecoin: swap.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(swap.amountLowerBound),
+            amountUpperBound: String(swap.amountUpperBound),
+            securityDepositAmount: String(swap.securityDepositAmount),
+            takenSwapAmount: String(swap.takenSwapAmount),
+            serviceFeeAmount: String(swap.serviceFeeAmount),
+            serviceFeeRate: String(swap.serviceFeeRate),
+            onChainDirection: String(swap.onChainDirection),
+            onChainSettlementMethod: swap.onChainSettlementMethod.base64EncodedString(),
+            makerPrivateSettlementMethodData: swap.makerPrivateSettlementMethodData,
+            takerPrivateSettlementMethodData: nil,
+            protocolVersion: String(swap.protocolVersion),
+            isPaymentSent: swap.isPaymentSent,
+            isPaymentReceived: swap.isPaymentReceived,
+            hasBuyerClosed: swap.hasBuyerClosed,
+            hasSellerClosed: swap.hasSellerClosed,
+            onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
+            chainID: String(swap.chainID),
+            state: swap.state.asString,
+            role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
+            reportPaymentSentState: swap.reportingPaymentSentState.asString,
+            reportPaymentSentTransactionHash: nil,
+            reportPaymentSentTransactionCreationTime: nil,
+            reportPaymentSentTransactionCreationBlockNumber: nil,
+            reportPaymentReceivedState: swap.reportingPaymentReceivedState.asString,
+            reportPaymentReceivedTransactionHash: nil,
+            reportPaymentReceivedTransactionCreationTime: nil,
+            reportPaymentReceivedTransactionCreationBlockNumber: nil,
+            closeSwapState: swap.closingSwapState.asString,
+            closeSwapTransactionHash: nil,
+            closeSwapTransactionCreationTime: nil,
+            closeSwapTransactionCreationBlockNumber: nil
+        )
+        try! databaseService.storeSwap(swap: swapForDatabase)
+        
+        let swapService = SwapService(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        swapService.swapTruthSource = swapTruthSource
+        let failureHandledExpectation = XCTestExpectation(description: "Fulfilled when failed transaction has been handled")
+        
+        DispatchQueue.global(qos: .default).async {
+            try! swapService.handleFailedTransaction(approvingToFillTransaction, error: BlockchainTransactionError(errorDescription: "tx failed"))
+            failureHandledExpectation.fulfill()
+        }
+        
+        wait(for: [failureHandledExpectation], timeout: 30.0)
+        XCTAssertEqual(TokenTransferApprovalState.error, swap.approvingToFillState)
+        XCTAssertNotNil(swap.approvingToFillError)
+        let swapInDatabase = try! databaseService.getSwap(id: swapID.asData().base64EncodedString())
+        XCTAssertEqual(TokenTransferApprovalState.error.asString, swapInDatabase?.approveToFillState)
+        
+    }
+    
+    /**
+     Ensure `SwapService` properly handles failed swap filling transactions.
+     */
+    func testHandleFailedSwapFillingTransaction() {
+        let swapID = UUID()
+        
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        let swapTruthSource = TestSwapTruthSource()
+        
+        let swap = try! Swap(
+            isCreated: true,
+            requiresFill: true,
+            id: swapID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            makerInterfaceID: Data(),
+            taker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            takerInterfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            takenSwapAmount: BigUInt.zero,
+            serviceFeeAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            direction: .sell,
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
+            protocolVersion: BigUInt.zero,
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: BigUInt.zero,
+            chainID: BigUInt(31337),
+            state: SwapState.fillSwapTransactionSent,
+            role: SwapRole.makerAndSeller
+        )
+        swap.fillingSwapState = .awaitingTransactionConfirmation
+        let swapFillingTransaction = BlockchainTransaction(transactionHash: "a_transaction_hash_here", timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .fillSwap)
+        swap.swapFillingTransaction = swapFillingTransaction
+        swapTruthSource.swaps[swapID] = swap
+        let swapForDatabase = DatabaseSwap(
+            id: swap.id.asData().base64EncodedString(),
+            isCreated: swap.isCreated,
+            requiresFill: swap.requiresFill,
+            maker: swap.maker.addressData.toHexString(),
+            makerInterfaceID: swap.makerInterfaceID.base64EncodedString(),
+            taker: swap.taker.addressData.toHexString(),
+            takerInterfaceID: swap.takerInterfaceID.base64EncodedString(),
+            stablecoin: swap.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(swap.amountLowerBound),
+            amountUpperBound: String(swap.amountUpperBound),
+            securityDepositAmount: String(swap.securityDepositAmount),
+            takenSwapAmount: String(swap.takenSwapAmount),
+            serviceFeeAmount: String(swap.serviceFeeAmount),
+            serviceFeeRate: String(swap.serviceFeeRate),
+            onChainDirection: String(swap.onChainDirection),
+            onChainSettlementMethod: swap.onChainSettlementMethod.base64EncodedString(),
+            makerPrivateSettlementMethodData: swap.makerPrivateSettlementMethodData,
+            takerPrivateSettlementMethodData: nil,
+            protocolVersion: String(swap.protocolVersion),
+            isPaymentSent: swap.isPaymentSent,
+            isPaymentReceived: swap.isPaymentReceived,
+            hasBuyerClosed: swap.hasBuyerClosed,
+            hasSellerClosed: swap.hasSellerClosed,
+            onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
+            chainID: String(swap.chainID),
+            state: swap.state.asString,
+            role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
+            reportPaymentSentState: swap.reportingPaymentSentState.asString,
+            reportPaymentSentTransactionHash: nil,
+            reportPaymentSentTransactionCreationTime: nil,
+            reportPaymentSentTransactionCreationBlockNumber: nil,
+            reportPaymentReceivedState: swap.reportingPaymentReceivedState.asString,
+            reportPaymentReceivedTransactionHash: nil,
+            reportPaymentReceivedTransactionCreationTime: nil,
+            reportPaymentReceivedTransactionCreationBlockNumber: nil,
+            closeSwapState: swap.closingSwapState.asString,
+            closeSwapTransactionHash: nil,
+            closeSwapTransactionCreationTime: nil,
+            closeSwapTransactionCreationBlockNumber: nil
+        )
+        try! databaseService.storeSwap(swap: swapForDatabase)
+        
+        let swapService = SwapService(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        swapService.swapTruthSource = swapTruthSource
+        let failureHandledExpectation = XCTestExpectation(description: "Fulfilled when failed transaction has been handled")
+        
+        DispatchQueue.global(qos: .default).async {
+            try! swapService.handleFailedTransaction(swapFillingTransaction, error: BlockchainTransactionError(errorDescription: "tx failed"))
+            failureHandledExpectation.fulfill()
+        }
+        
+        wait(for: [failureHandledExpectation], timeout: 30.0)
+        XCTAssertEqual(SwapState.awaitingFilling, swap.state)
+        XCTAssertEqual(FillingSwapState.error, swap.fillingSwapState)
+        XCTAssertNotNil(swap.fillingSwapError)
+        let swapInDatabase = try! databaseService.getSwap(id: swapID.asData().base64EncodedString())
+        XCTAssertEqual(SwapState.awaitingFilling.asString, swapInDatabase?.state)
+        XCTAssertEqual(FillingSwapState.error.asString, swapInDatabase?.fillingSwapState)
+        
+    }
     
     /**
      Ensure `SwapService` handles failed reporting payment sent transactions properly.
@@ -95,6 +340,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -209,6 +462,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -323,6 +584,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -452,6 +721,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -730,6 +1007,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -866,6 +1151,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -910,7 +1203,7 @@ class SwapServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `SwapService.fillSwap` and `BlockchainService.fillSwap` function properly.
+     Ensures that `SwapService.createApproveTokenTransferToFillSwapTransaction`, `BlockchainService.createApproveTransferTransaction`, `SwapService.approveTokenTransferToFillSwap`, `SwapService.createFillSwapTransaction`, `BlockchainService.createFillSwapTransaction`, `SwapService.fillSwap`, and `BlockchainService.sendTransaction` function properly.
      */
     func testFillSwap() {
         
@@ -959,6 +1252,9 @@ class SwapServiceTests: XCTestCase {
             keyManagerService: keyManagerService
         )
         
+        let swapTruthSource = TestSwapTruthSource()
+        swapService.swapTruthSource = swapTruthSource
+        
         let errorHandler = TestBlockchainErrorHandler()
         
         let blockchainService = BlockchainService(
@@ -1004,6 +1300,7 @@ class SwapServiceTests: XCTestCase {
             state: SwapState.awaitingFilling,
             role: SwapRole.makerAndSeller
         )
+        swapTruthSource.swaps[swapID] = swap
         let swapForDatabase = DatabaseSwap(
             id: swap.id.asData().base64EncodedString(),
             isCreated: swap.isCreated,
@@ -1032,6 +1329,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1047,47 +1352,46 @@ class SwapServiceTests: XCTestCase {
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
-        let expectation = XCTestExpectation(description: "Fulfilled after fillSwap is executed")
+        let fillingExpectation = XCTestExpectation(description: "Fulfilled when swapService.fillSwap")
         
-        swapService.fillSwap(swapToFill: swap).done {
-            expectation.fulfill()
+        swapService.createApproveTokenTransferToFillSwapTransaction(swapToFill: swap).then { transaction in
+            swapService.approveTokenTransferToFillSwap(swapToFill: swap, approveTokenTransferToFillSwapTransaction: transaction)
+        }.then { () -> Promise<EthereumTransaction> in
+            swap.approvingToFillState = .completed
+            return swapService.createFillSwapTransaction(swap: swap)
+        }.then { transaction in
+            swapService.fillSwap(swap: swap, swapFillingTransaction: transaction)
+        }.done {
+            fillingExpectation.fulfill()
         }.cauterize()
         
-        wait(for: [expectation], timeout: 20.0)
+        wait(for: [fillingExpectation], timeout: 20.0)
         
-        XCTAssertEqual(SwapState.fillSwapTransactionBroadcast, swap.state)
-        XCTAssertFalse(swap.requiresFill)
+        XCTAssertEqual(SwapState.fillSwapTransactionSent, swap.state)
         
         let swapInDatabase = try! databaseService.getSwap(id: swap.id.asData().base64EncodedString())
-        XCTAssertEqual(SwapState.fillSwapTransactionBroadcast.asString, swapInDatabase?.state)
-        XCTAssertFalse(swapInDatabase!.requiresFill)
+        XCTAssertEqual(SwapState.fillSwapTransactionSent.asString, swapInDatabase?.state)
+        
+        let swapOnChain = try! blockchainService.getSwap(id: swapID)
+        XCTAssertFalse(swapOnChain!.requiresFill)
         
     }
     
     /**
-     Ensure that `SwapService` handles `SwapFilledEvent`s properly.
+     Ensure that `SwapService` handles `SwapFilledEvent`s properly for swaps in which the user is the maker and the seller.
      */
-    func testHandleSwapFilledEvent() {
+    func testHandleSwapFilledEventForUserIsMakerAndSeller() {
+        // The ID of the swap being filled
+        let swapID = UUID()
+        
         // Set up DatabaseService and KeyManagerService
         let databaseService = try! DatabaseService()
         try! databaseService.createTables()
         let keyManagerService = KeyManagerService(databaseService: databaseService)
         
-        // The ID of the swap being filled
-        let swapID = UUID()
-        
-        // The SwapFilled event to be handled
-        let event = SwapFilledEvent(id: swapID, chainID: BigUInt(31337))
-        
-        let swapService = SwapService(
-            databaseService: databaseService,
-            keyManagerService: keyManagerService
-        )
-        
         // Create swap, add it to swapTruthSource, and save it persistently
         let swapTruthSource = TestSwapTruthSource()
-        // Provide swapTruthSource to swapService
-        swapService.swapTruthSource = swapTruthSource
+        
         let swap = try! Swap(
             isCreated: true,
             requiresFill: true,
@@ -1119,8 +1423,139 @@ class SwapServiceTests: XCTestCase {
             hasSellerClosed: false,
             onChainDisputeRaiser: BigUInt.zero,
             chainID: BigUInt(31337),
-            state: SwapState.fillSwapTransactionBroadcast,
+            state: SwapState.fillSwapTransactionSent,
             role: SwapRole.makerAndSeller
+        )
+        swap.fillingSwapState = .awaitingTransactionConfirmation
+        let swapFillingTransaction = BlockchainTransaction(transactionHash: "a_transaction_hash_here", timeOfCreation: Date(), latestBlockNumberAtCreation: 0, type: .fillSwap)
+        swap.swapFillingTransaction = swapFillingTransaction
+        swapTruthSource.swaps[swapID] = swap
+        let swapForDatabase = DatabaseSwap(
+            id: swap.id.asData().base64EncodedString(),
+            isCreated: swap.isCreated,
+            requiresFill: swap.requiresFill,
+            maker: swap.maker.addressData.toHexString(),
+            makerInterfaceID: swap.makerInterfaceID.base64EncodedString(),
+            taker: swap.taker.addressData.toHexString(),
+            takerInterfaceID: swap.takerInterfaceID.base64EncodedString(),
+            stablecoin: swap.stablecoin.addressData.toHexString(),
+            amountLowerBound: String(swap.amountLowerBound),
+            amountUpperBound: String(swap.amountUpperBound),
+            securityDepositAmount: String(swap.securityDepositAmount),
+            takenSwapAmount: String(swap.takenSwapAmount),
+            serviceFeeAmount: String(swap.serviceFeeAmount),
+            serviceFeeRate: String(swap.serviceFeeRate),
+            onChainDirection: String(swap.onChainDirection),
+            onChainSettlementMethod: swap.onChainSettlementMethod.base64EncodedString(),
+            makerPrivateSettlementMethodData: nil,
+            takerPrivateSettlementMethodData: nil,
+            protocolVersion: String(swap.protocolVersion),
+            isPaymentSent: swap.isPaymentSent,
+            isPaymentReceived: swap.isPaymentReceived,
+            hasBuyerClosed: swap.hasBuyerClosed,
+            hasSellerClosed: swap.hasSellerClosed,
+            onChainDisputeRaiser: String(swap.onChainDisputeRaiser),
+            chainID: String(swap.chainID),
+            state: swap.state.asString,
+            role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
+            reportPaymentSentState: swap.reportingPaymentSentState.asString,
+            reportPaymentSentTransactionHash: nil,
+            reportPaymentSentTransactionCreationTime: nil,
+            reportPaymentSentTransactionCreationBlockNumber: nil,
+            reportPaymentReceivedState: swap.reportingPaymentReceivedState.asString,
+            reportPaymentReceivedTransactionHash: nil,
+            reportPaymentReceivedTransactionCreationTime: nil,
+            reportPaymentReceivedTransactionCreationBlockNumber: nil,
+            closeSwapState: swap.closingSwapState.asString,
+            closeSwapTransactionHash: nil,
+            closeSwapTransactionCreationTime: nil,
+            closeSwapTransactionCreationBlockNumber: nil
+        )
+        try! databaseService.storeSwap(swap: swapForDatabase)
+        
+        let swapService = SwapService(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        swapService.swapTruthSource = swapTruthSource
+        
+        let swapFilledEvent = SwapFilledEvent(id: swapID, chainID: BigUInt(31337), transactionHash: "0xa_transaction_hash_here")
+        let swapFilledEventHandledExpectation = XCTestExpectation(description: "Fulfilled when event has been handled")
+        
+        // Call handleSwapFilledEvent on background DispatchQueue so that the closures it runs on the main DispatchQueue are executed in time for us to test their results
+        DispatchQueue.global().async {
+            try! swapService.handleSwapFilledEvent(swapFilledEvent)
+            swapFilledEventHandledExpectation.fulfill()
+        }
+        
+        // Wait for our assertions to be executed
+        wait(for: [swapFilledEventHandledExpectation], timeout: 10.0)
+        XCTAssertEqual(SwapState.awaitingPaymentSent, swap.state)
+        XCTAssertFalse(swap.requiresFill)
+        XCTAssertEqual(FillingSwapState.completed, swap.fillingSwapState)
+        let swapInDatabase = try! databaseService.getSwap(id: swapForDatabase.id)
+        XCTAssertEqual(SwapState.awaitingPaymentSent.asString, swapInDatabase!.state)
+        XCTAssertFalse(swapInDatabase!.requiresFill)
+        XCTAssertEqual(FillingSwapState.completed.asString, swapInDatabase?.fillingSwapState)
+            
+    }
+    
+    /**
+     Ensure that `SwapService` handles `SwapFilledEvent`s properly for swaps in which the user is the taker and the buyer.
+     */
+    func testHandleSwapFilledEventForUserIsTakerAndBuyer() {
+        // The ID of the swap being filled
+        let swapID = UUID()
+        
+        // Set up DatabaseService and KeyManagerService
+        let databaseService = try! DatabaseService()
+        try! databaseService.createTables()
+        let keyManagerService = KeyManagerService(databaseService: databaseService)
+        
+        // Create swap, add it to swapTruthSource, and save it persistently
+        let swapTruthSource = TestSwapTruthSource()
+        
+        let swap = try! Swap(
+            isCreated: true,
+            requiresFill: true,
+            id: swapID,
+            maker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            makerInterfaceID: Data(),
+            taker: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            takerInterfaceID: Data(),
+            stablecoin: EthereumAddress("0x0000000000000000000000000000000000000000")!,
+            amountLowerBound: BigUInt.zero,
+            amountUpperBound: BigUInt.zero,
+            securityDepositAmount: BigUInt.zero,
+            takenSwapAmount: BigUInt.zero,
+            serviceFeeAmount: BigUInt.zero,
+            serviceFeeRate: BigUInt.zero,
+            direction: .sell,
+            onChainSettlementMethod:
+                """
+                {
+                    "f": "USD",
+                    "p": "1.00",
+                    "m": "SWIFT"
+                }
+                """.data(using: .utf8)!,
+            protocolVersion: BigUInt.zero,
+            isPaymentSent: false,
+            isPaymentReceived: false,
+            hasBuyerClosed: false,
+            hasSellerClosed: false,
+            onChainDisputeRaiser: BigUInt.zero,
+            chainID: BigUInt(31337),
+            state: SwapState.awaitingFilling,
+            role: SwapRole.takerAndBuyer
         )
         swapTruthSource.swaps[swapID] = swap
         let swapForDatabase = DatabaseSwap(
@@ -1151,6 +1586,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1166,29 +1609,30 @@ class SwapServiceTests: XCTestCase {
         )
         try! databaseService.storeSwap(swap: swapForDatabase)
         
-        let expectation = XCTestExpectation(description: "Fulfilled after handleSwapFilledEvent and test assertions are executed")
+        let swapService = SwapService(
+            databaseService: databaseService,
+            keyManagerService: keyManagerService
+        )
+        swapService.swapTruthSource = swapTruthSource
+        
+        let swapFilledEvent = SwapFilledEvent(id: swapID, chainID: BigUInt(31337), transactionHash: "0xa_transaction_hash_here")
+        let swapFilledEventHandledExpectation = XCTestExpectation(description: "Fulfilled when event has been handled")
         
         // Call handleSwapFilledEvent on background DispatchQueue so that the closures it runs on the main DispatchQueue are executed in time for us to test their results
         DispatchQueue.global().async {
-            try! swapService.handleSwapFilledEvent(event)
-            
-            // We run this in the main DispatchQueue because queues are FIFO and this must be run after the closures that handleSwapFilledEvent passes to DispatchQueue.main.async are executed
-            DispatchQueue.main.async {
-                // Ensure that SwapService updates swap state and requiresFill in swapTruthSource
-                XCTAssertEqual(SwapState.awaitingPaymentSent, swap.state)
-                XCTAssertFalse(swap.requiresFill)
-                
-                // Ensure that SwapService persistently updates swap state and requiresFill
-                let swapInDatabase = try! databaseService.getSwap(id: swapForDatabase.id)
-                XCTAssertEqual(SwapState.awaitingPaymentSent.asString, swapInDatabase!.state)
-                XCTAssertFalse(swapInDatabase!.requiresFill)
-                
-                expectation.fulfill()
-            }
+            try! swapService.handleSwapFilledEvent(swapFilledEvent)
+            swapFilledEventHandledExpectation.fulfill()
         }
         
         // Wait for our assertions to be executed
-        wait(for: [expectation], timeout: 10.0)
+        wait(for: [swapFilledEventHandledExpectation], timeout: 10.0)
+        XCTAssertEqual(SwapState.awaitingPaymentSent, swap.state)
+        XCTAssertFalse(swap.requiresFill)
+        XCTAssertEqual("0xa_transaction_hash_here", swap.swapFillingTransaction?.transactionHash)
+        let swapInDatabase = try! databaseService.getSwap(id: swapForDatabase.id)
+        XCTAssertEqual(SwapState.awaitingPaymentSent.asString, swapInDatabase!.state)
+        XCTAssertFalse(swapInDatabase!.requiresFill)
+        XCTAssertEqual("0xa_transaction_hash_here", swapInDatabase?.fillingSwapTransactionHash)
             
     }
     
@@ -1315,6 +1759,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1437,6 +1889,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1567,6 +2027,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1733,6 +2201,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1855,6 +2331,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1985,6 +2469,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -2151,6 +2643,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -2273,6 +2773,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -2404,6 +2912,14 @@ class SwapServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,

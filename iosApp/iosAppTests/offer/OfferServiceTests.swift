@@ -681,6 +681,14 @@ class OfferServiceTests: XCTestCase {
             chainID: String(swap.chainID),
             state: swap.state.asString,
             role: swap.role.asString,
+            approveToFillState: swap.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swap.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swap.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,
@@ -1727,6 +1735,7 @@ class OfferServiceTests: XCTestCase {
             }
             func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             func handleNewSwap(takenOffer: Offer) throws {}
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {}
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
             func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
@@ -1896,6 +1905,7 @@ class OfferServiceTests: XCTestCase {
                 self.swapID = takenOffer.id
                 self.chainID = takenOffer.chainID
             }
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {}
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
             func handlePaymentReceivedEvent(_ event: PaymentReceivedEvent) throws {}
@@ -3052,7 +3062,7 @@ class OfferServiceTests: XCTestCase {
     }
     
     /**
-     Ensures that `OfferService.takeOffer`, `BlockchainService.approveTokenTransfer` and `BlockchainService.takeOffer` function properly.
+     Ensures that `OfferService.createApproveTokenTransferToTakeOfferTransaction`, `BlockchainService.createApproveTransferTransaction`, `OfferService.approveTokenTransferToTakeOffer`, `OfferService.createTakeOfferTransaction`, `BlockchainService.createTakeOfferTransaction`, `OfferService.openOffer`, and `BlockchainService.sendTransaction` function properly.
      */
     func testTakeOffer() {
         
@@ -3187,8 +3197,8 @@ class OfferServiceTests: XCTestCase {
         )
         try! databaseService.storeOffer(offer: offerForDatabase)
         
-        let offerInDatabaseBeforeCancellation = try! databaseService.getOffer(id: offer.id.asData().base64EncodedString())
-        XCTAssertEqual(offerForDatabase, offerInDatabaseBeforeCancellation)
+        let offerInDatabaseBeforeTaking = try! databaseService.getOffer(id: offer.id.asData().base64EncodedString())
+        XCTAssertEqual(offerForDatabase, offerInDatabaseBeforeTaking)
         
         let takingExpectation = XCTestExpectation(description: "Fulfilled when offerService.takeOffer returns")
         
@@ -3325,6 +3335,14 @@ class OfferServiceTests: XCTestCase {
             chainID: String(swapInTruthSource.chainID),
             state: swapInTruthSource.state.asString,
             role: "takerAndSeller",
+            approveToFillState: swapInTruthSource.approvingToFillState.asString,
+            approveToFillTransactionHash: nil,
+            approveToFillTransactionCreationTime: nil,
+            approveToFillTransactionCreationBlockNumber: nil,
+            fillingSwapState: swapInTruthSource.fillingSwapState.asString,
+            fillingSwapTransactionHash: nil,
+            fillingSwapTransactionCreationTime: nil,
+            fillingSwapTransactionCreationBlockNumber: nil,
             reportPaymentSentState: swapInTruthSource.reportingPaymentSentState.asString,
             reportPaymentSentTransactionHash: nil,
             reportPaymentSentTransactionCreationTime: nil,

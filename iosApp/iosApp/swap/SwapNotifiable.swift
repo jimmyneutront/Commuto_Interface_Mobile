@@ -40,6 +40,13 @@ protocol SwapNotifiable {
     func handleNewSwap(takenOffer: Offer) throws
     
     /**
+     The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of an `ApprovalEvent`.
+     
+     - Parameter event: The `ApprovalEvent` of which the structure or class adopting this protocol is being notified and should handle in the implementation of  this function.
+     */
+    func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws
+    
+    /**
      The function called by `BlockchainService` in order to notify the structure or class adopting this protocol of a `SwapFilledEvent`.
      */
     func handleSwapFilledEvent(_ event: SwapFilledEvent) throws

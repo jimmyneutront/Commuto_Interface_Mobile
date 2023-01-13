@@ -116,6 +116,38 @@ struct DatabaseSwap: Equatable {
      */
     let role: String
     /**
+     The `approveToFillState` property of a `Swap` as a `String`.
+     */
+    let approveToFillState: String
+    /**
+     The hash of the transaction that approved the token transfer in order to fill this swap (if it is a maker-as-seller swap) as a hexadecimal `String`, or `nil` if no such transaction exists (or if the user of this interface is not the maker and seller.)
+     */
+    let approveToFillTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `approveToFillTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the maker and seller, this will be `nil`.
+     */
+    let approveToFillTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `approveToFillTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the maker and seller, this will be `nil`.
+     */
+    let approveToFillTransactionCreationBlockNumber: Int?
+    /**
+     The `fillingSwapState` property of a `Swap` as a `String`.
+     */
+    let fillingSwapState: String
+    /**
+     The hash of the transaction that called [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) as a `String`, or `nil` if no such transaction exists.
+     */
+    let fillingSwapTransactionHash: String?
+    /**
+     The time at which the transaction with the hash specified by `fillingSwapTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the maker and seller, this may not be accurate.
+     */
+    let fillingSwapTransactionCreationTime: String?
+    /**
+     The number of the latest block at the time when the transaction with the hash specified by `fillingSwapTransactionHash` was created, or `nil` if no such transaction exists. If the user of this interface is not the maker and seller, this may not be accurate.
+     */
+    let fillingSwapTransactionCreationBlockNumber: Int?
+    /**
      The `reportPaymentSentState` property of a `Swap` as a `String`.
      */
     let reportPaymentSentState: String

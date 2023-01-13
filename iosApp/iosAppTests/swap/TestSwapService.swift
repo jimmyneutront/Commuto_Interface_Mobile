@@ -27,6 +27,10 @@ class TestSwapService: SwapNotifiable {
      */
     func handleNewSwap(takenOffer: Offer) throws {}
     /**
+     Does nothing, required to adopt `OfferNotifiable`. Should not be used.
+     */
+    func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) {}
+    /**
      Does nothing, required to adopt `SwapNotifiable`. Should not be used.
      */
     func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}

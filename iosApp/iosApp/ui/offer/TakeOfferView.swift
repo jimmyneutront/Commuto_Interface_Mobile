@@ -163,7 +163,7 @@ struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                                 } else if offer.approvingToTakeState == .awaitingTransactionConfirmation {
                                     Text("Awaiting Confirmation of Transfer Approval")
                                 } else if offer.approvingToTakeState == .error {
-                                    Text(offer.approvingToTakeError?.localizedDescription ?? "An unknown error occured while approving the token transfer")
+                                    Text(offer.approvingToTakeError?.localizedDescription ?? "An unknown error occurred while approving the token transfer")
                                         .foregroundColor(Color.red)
                                 } else if offer.approvingToTakeState == .completed {
                                     if offer.takingOfferState == .validating || offer.takingOfferState == .sendingTransaction {
@@ -171,7 +171,7 @@ struct TakeOfferView<Offer_TruthSource, SettlementMethod_TruthSource>: View wher
                                     } else if offer.takingOfferState == .awaitingTransactionConfirmation {
                                         Text("Awaiting Confirmation that Offer is Taken")
                                     } else if offer.takingOfferState == .error {
-                                        Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occured while taking the Offer")
+                                        Text(offer.takingOfferError?.localizedDescription ?? "An unknown error occurred while taking the Offer")
                                     }
                                 }
                                 Button(

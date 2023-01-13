@@ -99,14 +99,14 @@ class SwapViewModel: UISwapTruthSource {
     func fillSwap(
         swap: Swap
     ) {
-        setFillingSwapState(swap: swap, state: .checking)
+        //setFillingSwapState(swap: swap, state: .checking)
         Promise<Void> { seal in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 logger.notice("fillSwap: filling \(swap.id.uuidString)")
                 swapService.fillSwap(
                     swapToFill: swap,
-                    afterPossibilityCheck: { self.setFillingSwapState(swap: swap, state: .approving) },
-                    afterTransferApproval: { self.setFillingSwapState(swap: swap, state: .filling) }
+                    afterPossibilityCheck: { /*self.setFillingSwapState(swap: swap, state: .approving)*/ },
+                    afterTransferApproval: { /*self.setFillingSwapState(swap: swap, state: .filling)*/ }
                 ).pipe(to: seal.resolve)
             }
         }.done(on: DispatchQueue.global(qos: .userInitiated)) { [self] in

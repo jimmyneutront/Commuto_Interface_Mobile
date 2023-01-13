@@ -15,25 +15,45 @@ enum FillingSwapState {
      */
     case none
     /**
-     Indicates that we are currently checking if we can fill the swap.
+     Indicates that we are currently checking if we can call [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for the swap.
      */
-    case checking
+    case validating
     /**
-     Indicates that we are currently approving the token transfer to fill the corresponding swap.
+     Indicates that we are currently sending the transaction that will call [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for the corresponding swap.
      */
-    case approving
+    case sendingTransaction
     /**
-     Indicates that we are currently calling CommutoSwap's [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) function for the swap.
+     Indicates that we have sent the transaction that will call [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for the corresponding swap, and we are waiting for it to be confirmed.
      */
-    case filling
+    case awaitingTransactionConfirmation
     /**
-     Indicates that we have filled the corresponding swap.
+     Indicates that we have called [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for the corresponding swap, and that the transaction to do so has been confirmed.
      */
     case completed
     /**
-     Indicates that we encountered an error while filling the corresponding swap.
+     Indicates that we encountered an error while calling [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap) for the corresponding swap.
      */
     case error
+    
+    /**
+     Returns a `String` corresponding to a particular case of `FillingSwapState`. This is primarily used for database storage.
+     */
+    var asString: String {
+        switch self {
+        case .none:
+            return "none"
+        case .validating:
+            return "validating"
+        case .sendingTransaction:
+            return "sendingTransaction"
+        case .awaitingTransactionConfirmation:
+            return "awaitingTransactionConfirmation"
+        case .completed:
+            return "completed"
+        case .error:
+            return "error"
+        }
+    }
     
     /**
      A human readable string describing the current state.
@@ -41,15 +61,15 @@ enum FillingSwapState {
     var description: String {
         switch self {
         case .none: // Note: This should not be used.
-            return "Press Fill Swap to fill the swap"
-        case .checking:
-            return "Checking that the swap can be filled..."
-        case .approving:
-            return "Approving token transfer..."
-        case .filling:
-            return "Filling the swap..."
+            return "Press Fill Swap to fill the Swap"
+        case .validating:
+            return "Checking that the Swap can be filled..."
+        case .sendingTransaction:
+            return "Filling Swap..."
+        case .awaitingTransactionConfirmation:
+            return "Waiting for confirmation"
         case .completed:
-            return "Swap successfully filled."
+            return "Successfully filled swap."
         case .error:
             return "An error occurred." // Note: This should not be used; instead, the actual error message should be displayed.
         }

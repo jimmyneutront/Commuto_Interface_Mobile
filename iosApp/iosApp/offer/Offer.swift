@@ -168,11 +168,11 @@ class Offer: ObservableObject {
      */
     @Published var takingOfferState = TakingOfferState.none
     /**
-     (This property is used only if the taker of this offer is the user of this interface.)  The `Error` that we encountered during the offer taking process, or `nil` of no such error has occured.
+     (This property is used only if the taker of this offer is the user of this interface.)  The `Error` that we encountered during the offer taking process, or `nil` of no such error has occurred.
      */
     var takingOfferError: Error? = nil
     /**
-     The `BlockchainTransaction` that has taken this offer, if it was taken by the user of this interface, or `nil` if if the user of this offer is not the taker of this offer.
+     The `BlockchainTransaction` that has taken this offer, if it was taken by the user of this interface, or `nil` if the user of this offer is not the taker of this offer.
      */
     var takingOfferTransaction: BlockchainTransaction? = nil
     

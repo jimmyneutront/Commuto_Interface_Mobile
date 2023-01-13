@@ -717,6 +717,8 @@ class BlockchainServiceTest: XCTestCase {
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {}
+            
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {
                 swapFilledEvent = event
                 swapFilledExpectation.fulfill()
@@ -799,6 +801,8 @@ class BlockchainServiceTest: XCTestCase {
             func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             
             func handleNewSwap(takenOffer: Offer) throws {}
+            
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
@@ -883,6 +887,8 @@ class BlockchainServiceTest: XCTestCase {
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {}
+            
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
@@ -966,6 +972,8 @@ class BlockchainServiceTest: XCTestCase {
             
             func handleNewSwap(takenOffer: Offer) throws {}
             
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {}
+            
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
             func handlePaymentSentEvent(_ event: PaymentSentEvent) throws {}
@@ -1048,6 +1056,8 @@ class BlockchainServiceTest: XCTestCase {
             func handleFailedTransaction(_ transaction: BlockchainTransaction, error: BlockchainTransactionError) throws {}
             
             func handleNewSwap(takenOffer: Offer) throws {}
+            
+            func handleTokenTransferApprovalEvent(_ event: ApprovalEvent) throws {}
             
             func handleSwapFilledEvent(_ event: SwapFilledEvent) throws {}
             
