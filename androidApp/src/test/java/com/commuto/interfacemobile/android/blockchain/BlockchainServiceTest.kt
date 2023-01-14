@@ -656,6 +656,7 @@ class BlockchainServiceTest {
                 exception: BlockchainTransactionException
             ) {}
             override suspend fun handleNewSwap(takenOffer: Offer) {}
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {
                 swapFilledEventChannel.send(event)
             }
@@ -724,6 +725,7 @@ class BlockchainServiceTest {
                 exception: BlockchainTransactionException
             ) {}
             override suspend fun handleNewSwap(takenOffer: Offer) {}
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {
                 paymentSentEventChannel.send(event)
@@ -792,6 +794,7 @@ class BlockchainServiceTest {
                 exception: BlockchainTransactionException
             ) {}
             override suspend fun handleNewSwap(takenOffer: Offer) {}
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {
@@ -863,6 +866,7 @@ class BlockchainServiceTest {
                 exception: BlockchainTransactionException
             ) {}
             override suspend fun handleNewSwap(takenOffer: Offer) {}
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
@@ -934,6 +938,7 @@ class BlockchainServiceTest {
                 exception: BlockchainTransactionException
             ) {}
             override suspend fun handleNewSwap(takenOffer: Offer) {}
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}

@@ -773,6 +773,14 @@ class OfferServiceTests {
             chainID = swap.chainID.toString(),
             state = swap.state.value.asString,
             role = swap.role.asString,
+            approveToFillState = swap.approvingToFillState.value.asString,
+            approveToFillTransactionHash = null,
+            approveToFillTransactionCreationTime = null,
+            approveToFillTransactionCreationBlockNumber = null,
+            fillingSwapState = swap.fillingSwapState.value.asString,
+            fillingSwapTransactionHash = null,
+            fillingSwapTransactionCreationTime = null,
+            fillingSwapTransactionCreationBlockNumber = null,
             reportPaymentSentState = swap.reportingPaymentSentState.value.asString,
             reportPaymentSentTransactionHash = null,
             reportPaymentSentTransactionCreationTime = null,
@@ -1832,6 +1840,7 @@ class OfferServiceTests {
                 exception: BlockchainTransactionException
             ) {}
             override suspend fun handleNewSwap(takenOffer: Offer) {}
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
@@ -2001,6 +2010,7 @@ class OfferServiceTests {
                 this.swapID = takenOffer.id
                 this.chainID = takenOffer.chainID
             }
+            override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {}
             override suspend fun handleSwapFilledEvent(event: SwapFilledEvent) {}
             override suspend fun handlePaymentSentEvent(event: PaymentSentEvent) {}
             override suspend fun handlePaymentReceivedEvent(event: PaymentReceivedEvent) {}
@@ -3607,6 +3617,14 @@ class OfferServiceTests {
             chainID = swapInTruthSource.chainID.toString(),
             state = swapInTruthSource.state.value.asString,
             role = "takerAndSeller",
+            approveToFillState = swapInTruthSource.approvingToFillState.value.asString,
+            approveToFillTransactionHash = null,
+            approveToFillTransactionCreationTime = null,
+            approveToFillTransactionCreationBlockNumber = null,
+            fillingSwapState = swapInTruthSource.fillingSwapState.value.asString,
+            fillingSwapTransactionHash = null,
+            fillingSwapTransactionCreationTime = null,
+            fillingSwapTransactionCreationBlockNumber = null,
             reportPaymentSentState = swapInTruthSource.reportingPaymentSentState.value.asString,
             reportPaymentSentTransactionHash = null,
             reportPaymentSentTransactionCreationTime = null,
@@ -3621,31 +3639,6 @@ class OfferServiceTests {
             closeSwapTransactionCreationBlockNumber = null,
         )
         assertEquals(expectedSwapInDatabase, swapInDatabase)
-        /*
-        assertEquals(expectedSwapInDatabase.id, swapInDatabase!!.id)
-        assertEquals(expectedSwapInDatabase.isCreated, swapInDatabase.isCreated)
-        assertEquals(expectedSwapInDatabase.requiresFill, swapInDatabase.requiresFill)
-        assertEquals(expectedSwapInDatabase.maker, swapInDatabase.maker)
-        assertEquals(expectedSwapInDatabase.taker, swapInDatabase.taker)
-        assertEquals(expectedSwapInDatabase.stablecoin, swapInDatabase.stablecoin)
-        assertEquals(expectedSwapInDatabase.amountLowerBound, swapInDatabase.amountLowerBound)
-        assertEquals(expectedSwapInDatabase.amountUpperBound, swapInDatabase.amountUpperBound)
-        assertEquals(expectedSwapInDatabase.securityDepositAmount, swapInDatabase.securityDepositAmount)
-        assertEquals(expectedSwapInDatabase.takenSwapAmount, swapInDatabase.takenSwapAmount)
-        assertEquals(expectedSwapInDatabase.serviceFeeAmount, swapInDatabase.serviceFeeAmount)
-        assertEquals(expectedSwapInDatabase.serviceFeeRate, swapInDatabase.serviceFeeRate)
-        assertEquals(expectedSwapInDatabase.onChainDirection, swapInDatabase.onChainDirection)
-        assertEquals(expectedSwapInDatabase.settlementMethod, swapInDatabase.settlementMethod)
-        assertEquals(expectedSwapInDatabase.takerPrivateData, swapInDatabase.takerPrivateData)
-        assertEquals(expectedSwapInDatabase.protocolVersion, swapInDatabase.protocolVersion)
-        assertEquals(expectedSwapInDatabase.isPaymentSent, swapInDatabase.isPaymentSent)
-        assertEquals(expectedSwapInDatabase.isPaymentReceived, swapInDatabase.isPaymentReceived)
-        assertEquals(expectedSwapInDatabase.hasBuyerClosed, swapInDatabase.hasBuyerClosed)
-        assertEquals(expectedSwapInDatabase.hasSellerClosed, swapInDatabase.hasSellerClosed)
-        assertEquals(expectedSwapInDatabase.disputeRaiser, swapInDatabase.disputeRaiser)
-        assertEquals(expectedSwapInDatabase.chainID, swapInDatabase.chainID)
-        assertEquals(expectedSwapInDatabase.state, swapInDatabase.state)
-        assertEquals(expectedSwapInDatabase.role, swapInDatabase.role)*/
 
     }
 

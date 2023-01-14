@@ -96,24 +96,27 @@ class SwapViewModel @Inject constructor(private val swapService: SwapService): V
     override fun fillSwap(swap: Swap) {
         viewModelScope.launch {
             try {
+                /*
                 setFillingSwapState(
                     swap = swap,
                     state = FillingSwapState.CHECKING
-                )
+                )*/
                 logger.info("fillSwap: filling ${swap.id}")
                 swapService.fillSwap(
                     swapToFill = swap,
                     afterPossibilityCheck = {
+                        /*
                         setFillingSwapState(
                             swap = swap,
                             state = FillingSwapState.APPROVING
-                        )
+                        )*/
                     },
                     afterTransferApproval = {
+                        /*
                         setFillingSwapState(
                             swap = swap,
                             state = FillingSwapState.FILLING
-                        )
+                        )*/
                     }
                 )
                 logger.info("fillSwap: successfully filled ${swap.id}")

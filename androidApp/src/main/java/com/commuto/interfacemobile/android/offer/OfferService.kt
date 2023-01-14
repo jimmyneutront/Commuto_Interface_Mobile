@@ -314,7 +314,7 @@ class OfferService (
      * This calls [getServiceFeeRateAsync] and then, on the IO coroutine dispatcher, this calls [validateNewOfferData],
      * and uses the resulting ValidatedOfferData to calculate the transfer amount that must be approved. Then it calls
      * [BlockchainService.createApproveTransferTransaction], passing the stablecoin contract address, the address of the
-     * CommutoSwap contract, and the calculated transfer amount, and returns the result.
+     * CommutoSwap contract and the calculated transfer amount, and returns the result.
      *
      * @param stablecoin The contract address of the stablecoin for which the token transfer allowance will be created.
      * @param stablecoinInformation A [StablecoinInformation] about the stablecoin for which token transfer allowance
@@ -665,6 +665,17 @@ class OfferService (
      * opening state of [Offer] to [OpeningOfferState.AWAITING_TRANSACTION_CONFIRMATION]. Then, on the main coroutine
      * dispatcher, this updates the [Offer.state] property of [offer] to [OfferState.OPEN_OFFER_TRANSACTION_SENT] and
      * the [Offer.openingOfferState] property of [offer] to [OpeningOfferState.AWAITING_TRANSACTION_CONFIRMATION].
+     *
+     * If this catches an exception, it persistently updates the opening offer state of [offer] to
+     * [OpeningOfferState.EXCEPTION], sets the [Offer.openingOfferException] property of [offer] to the caught
+     * exception, and then, on the main coroutine dispatcher, sets the [Offer.openingOfferState] property of [offer] to
+     * [OpeningOfferState.EXCEPTION].
+     *
+     * @param offer The [Offer] to open.
+     * @param offerOpeningTransaction An optional [RawTransaction] that can open [offer].
+     *
+     * @throws [OfferServiceException] if [offerOpeningTransaction] is `null` or if the data of
+     * [offerOpeningTransaction] does not match that of the transaction this function creates using [offer].
      */
     suspend fun openOffer(offer: Offer, offerOpeningTransaction: RawTransaction?) {
         withContext(Dispatchers.IO) {
@@ -744,8 +755,8 @@ class OfferService (
                     state = OpeningOfferState.AWAITING_TRANSACTION_CONFIRMATION.asString,
                 )
                 Log.i(logTag, "openOffer: updating state to ${OfferState.OPEN_OFFER_TRANSACTION_SENT.asString} " +
-                        "and openingOfferState to ${OpeningOfferState.AWAITING_TRANSACTION_CONFIRMATION} for offer " +
-                        "${offer.id}")
+                        "and openingOfferState to ${OpeningOfferState.AWAITING_TRANSACTION_CONFIRMATION} for ${offer
+                            .id}")
                 withContext(Dispatchers.Main) {
                     offer.state = OfferState.OPEN_OFFER_TRANSACTION_SENT
                     offer.openingOfferState.value = OpeningOfferState.AWAITING_TRANSACTION_CONFIRMATION
@@ -1362,7 +1373,7 @@ class OfferService (
      * @param approveTokenTransferToTakeOfferTransaction An optional [RawTransaction] that can approve a token transfer
      * for the proper amount.
      *
-     * @throws []OfferServiceException] if [offerToTake] is not in the [OfferState.OFFER_OPENED] state, if
+     * @throws [OfferServiceException] if [offerToTake] is not in the [OfferState.OFFER_OPENED] state, if
      * [approveTokenTransferToTakeOfferTransaction] is `null`, or if the data of
      * [approveTokenTransferToTakeOfferTransaction] does not match that of the transaction this function creates using
      * the supplied arguments.
@@ -1475,10 +1486,11 @@ class OfferService (
                 Log.i(logTag, "approveTokenTransferToTakeOffer: updating approvingToTakeState to " +
                         "awaitingTransactionConfirmation for ${offerToTake.id}")
                 withContext(Dispatchers.Main) {
-                    offerToTake.approvingToTakeState.value = TokenTransferApprovalState.AWAITING_TRANSACTION_CONFIRMATION
+                    offerToTake.approvingToTakeState.value = TokenTransferApprovalState
+                        .AWAITING_TRANSACTION_CONFIRMATION
                 }
             } catch (exception: Exception) {
-                Log.i(logTag, "approveTokenTransferToTakeOffer: encountered exception", exception)
+                Log.e(logTag, "approveTokenTransferToTakeOffer: encountered exception", exception)
                 throw exception
             }
         }
@@ -1504,6 +1516,9 @@ class OfferService (
      * must have method and currency fields matching [makerSettlementMethod].
      * @param stablecoinInformationRepository A [StablecoinInformationRepository] containing information for the
      * stablecoin address-chain ID pair specified by [offerToTake].
+     *
+     * @return A a pair containing a [RawTransaction] capable of taking [offerToTake] with the supplied data, along with
+     * a [KeyPair] belonging to the user/taker, from which the taker's interface ID is obtained.
      */
     suspend fun createTakeOfferTransaction(
         offerToTake: Offer,
@@ -1672,6 +1687,14 @@ class OfferService (
                     chainID = newSwap.chainID.toString(),
                     state = newSwap.state.value.asString,
                     role = newSwap.role.asString,
+                    approveToFillState = newSwap.approvingToFillState.value.asString,
+                    approveToFillTransactionHash = null,
+                    approveToFillTransactionCreationTime = null,
+                    approveToFillTransactionCreationBlockNumber = null,
+                    fillingSwapState = newSwap.fillingSwapState.value.asString,
+                    fillingSwapTransactionHash = null,
+                    fillingSwapTransactionCreationTime = null,
+                    fillingSwapTransactionCreationBlockNumber = null,
                     reportPaymentSentState = newSwap.reportingPaymentSentState.value.asString,
                     reportPaymentSentTransactionHash = null,
                     reportPaymentSentTransactionCreationTime = null,
@@ -2026,6 +2049,14 @@ class OfferService (
                     chainID = newSwap.chainID.toString(),
                     state = newSwap.state.value.asString,
                     role = newSwap.role.asString,
+                    approveToFillState = newSwap.approvingToFillState.value.asString,
+                    approveToFillTransactionHash = null,
+                    approveToFillTransactionCreationTime = null,
+                    approveToFillTransactionCreationBlockNumber = null,
+                    fillingSwapState = newSwap.fillingSwapState.value.asString,
+                    fillingSwapTransactionHash = null,
+                    fillingSwapTransactionCreationTime = null,
+                    fillingSwapTransactionCreationBlockNumber = null,
                     reportPaymentSentState = newSwap.reportingPaymentSentState.value.toString(),
                     reportPaymentSentTransactionHash = null,
                     reportPaymentSentTransactionCreationTime = null,
@@ -2374,6 +2405,7 @@ class OfferService (
                         .transactionHash} not found in offerTruthSource")
                 }
             }
+            BlockchainTransactionType.APPROVE_TOKEN_TRANSFER_TO_FILL_SWAP, BlockchainTransactionType.FILL_SWAP,
             BlockchainTransactionType.REPORT_PAYMENT_SENT, BlockchainTransactionType.REPORT_PAYMENT_RECEIVED,
             BlockchainTransactionType.CLOSE_SWAP -> {
                 throw OfferServiceException(message = "handleFailedTransaction: received a swap-related transaction " +
@@ -2398,6 +2430,8 @@ class OfferService (
      * [Offer.approvingToTakeState] to [TokenTransferApprovalState.COMPLETED].
      *
      * @param event The [ApprovalEvent] of which [OfferService] is being notified.
+     *
+     * @throws [OfferServiceException] if [event] has a swap-related purpose.
      */
     override suspend fun handleTokenTransferApprovalEvent(event: ApprovalEvent) {
         Log.i(logTag, "handleTokenTransferApprovalEvent: handling event with tx hash ${event.transactionHash} " +
@@ -2464,6 +2498,10 @@ class OfferService (
                         offer.approvingToTakeState.value = TokenTransferApprovalState.COMPLETED
                     }
                 }
+            }
+            TokenTransferApprovalPurpose.FILL_SWAP -> {
+                throw OfferServiceException(message = "handleTokenTransferApprovalEvent: received a swap-related " +
+                        "event of purpose ${event.purpose.asString} with tx hash ${event.transactionHash}")
             }
         }
     }
