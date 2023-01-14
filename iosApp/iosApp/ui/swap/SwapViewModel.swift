@@ -96,6 +96,7 @@ class SwapViewModel: UISwapTruthSource {
      
      - Parameter swap: The `Swap` to fill.
      */
+    @available(*, deprecated, message: "Use new transaction pipeline")
     func fillSwap(
         swap: Swap
     ) {
@@ -116,6 +117,114 @@ class SwapViewModel: UISwapTruthSource {
             logger.error("fillSwap: got error during fillSwap call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
             swap.fillingSwapError = error
             setFillingSwapState(swap: swap, state: .error)
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` to approve a token transfer in order to fill a swap.
+     
+     This passes `swap` to `SwapService.createFillSwapTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`,
+     
+     - Parameter swap: The `Swap` to be filled.
+     */
+    func createApproveTokenTransferToFillSwapTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createApproveTokenTransferToTakeOfferTransaction: creating for \(swap.id.uuidString)")
+                swapService.createFillSwapTransaction(swap: swap).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
+     Attempts to approve a token transfer in order to fill a swap.
+     
+     This clears `swap`'s `Swap.approvingToFillError` property and sets its `Swap.approvingToFillState` to `TokenTransferApprovalState.validating`, and then passes all data to `swapService`'s `SwapService.approveTokenTransferToFillSwap` function. When this function returns, this sets `swap`'s `SwapService.approvingToFillState` to `TokenTransferApprovalState.awaitingTransactionConfirmation`.
+     
+     - Parameters:
+        - swap: The `Swap` to be filled.
+        - approveTokenTransferToFillSwapTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the taken swap amount of the token specified by `swap`.
+     */
+    func approveTokenTransferToFillSwap(
+        swap: Swap,
+        approveTokenTransferToFillSwapTransaction: EthereumTransaction?
+    ) {
+        swap.approvingToFillError = nil
+        swap.approvingToFillState = .validating
+        logger.notice("approveTokenTransferToFillSwap: approving for \(swap.id.uuidString)")
+        swapService.approveTokenTransferToFillSwap(
+            swapToFill: swap,
+            approveTokenTransferToFillSwapTransaction: approveTokenTransferToFillSwapTransaction
+        ).done(on: DispatchQueue.main) { _ in
+            self.logger.notice("approveTokenTransferToFillSwap: successfully approved transfer for \(swap.id.uuidString)")
+            swap.approvingToFillState = .awaitingTransactionConfirmation
+        }.catch(on: DispatchQueue.main) { error in
+            self.logger.notice("approveTokenTransferToFillSwap: got error during call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
+            swap.approvingToFillError = error
+            swap.approvingToFillState = .error
+        }
+    }
+    
+    /**
+     Attempts to create an `EthereumTransaction` that can fill `swap` (which should be a maker-as-seller swap made by the user of this interface) by calling [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap).
+     
+     This passes `swap` to `swapService`'s `SwapService.createFillSwapTransaction` and then passes the resulting transaction to `createdTransactionHandler` or error to `errorHandler`.
+     
+     - Parameters:
+        - swap: The `Swap` to be filled.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createFillSwapTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    ) {
+        Promise<EthereumTransaction> { seal in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                logger.notice("createFillSwapTransaction: creating for \(swap.id.uuidString)")
+                swapService.createFillSwapTransaction(swap: swap).pipe(to: seal.resolve)
+            }
+        }.done(on: DispatchQueue.main) { createdTransaction in
+            createdTransactionHandler(createdTransaction)
+        }.catch(on: DispatchQueue.main) { error in
+            errorHandler(error)
+        }
+    }
+    
+    /**
+     Attempts to fill a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+     
+     This clears the swap-filling-related `Error` of `swap` and sets `swap`'s `Swap.fillingSwapState` to `FillingSwapState.validating`, and then passes all data to `swapService`'s `SwapService.fillSwap` function.
+     
+     - Parameters:
+        - swap: The `Swap` to be filled.
+        - swapFillingTransaction: An optional `EthereumTransaction` can fill `swap`.
+     */
+    func fillSwap(
+        swap: Swap,
+        swapFillingTransaction: EthereumTransaction?
+    ) {
+        swap.fillingSwapError = nil
+        swap.fillingSwapState = .validating
+        logger.notice("fillSwap: filling \(swap.id.uuidString)")
+        swapService.fillSwap(
+            swap: swap,
+            swapFillingTransaction: swapFillingTransaction
+        ).done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
+            self.logger.notice("fillSwap: successfully sent transaction for \(swap.id.uuidString)")
+        }.catch(on: DispatchQueue.main) { error in
+            self.logger.error("fillSwap: got error during call for \(swap.id.uuidString). Error: \(error.localizedDescription)")
+            swap.fillingSwapError = error
+            swap.fillingSwapState = .error
         }
     }
     

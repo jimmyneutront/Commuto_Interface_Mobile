@@ -631,7 +631,7 @@ class OffersViewModel: UIOfferTruthSource {
     /**
      Attempts to create an `EthereumTransaction` that can take `offer` (which should NOT be made by the user of this interface) by calling [takeOffer](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#take-offer).
      
-     This passes all passed data (along with a `StablecoinInformationRepository`) and then passes the resulting transaction and key pair to `createdTransactionAndKeyPairHandler` or error to `errorHandler`.
+     This passes all passed data (along with a `StablecoinInformationRepository`) to `offerService`'s `OfferService.createTakeOfferTransaction` and then passes the resulting transaction and key pair to `createdTransactionAndKeyPairHandler` or error to `errorHandler`.
      
      - Parameters:
         - offer: The `Offer` to be taken.
@@ -702,7 +702,7 @@ class OffersViewModel: UIOfferTruthSource {
             stablecoinInformationRepository: StablecoinInformationRepository.hardhatStablecoinInfoRepo,
             takerKeyPair: keyPair, offerTakingTransaction: offerTakingTransaction
         ).done(on: DispatchQueue.global(qos: .userInitiated)) { _ in
-            self.logger.notice("takeOffer successfully sent transaction for \(offer.id.uuidString)")
+            self.logger.notice("takeOffer: successfully sent transaction for \(offer.id.uuidString)")
         }.catch(on: DispatchQueue.global(qos: .userInitiated)) { error in
             self.logger.error("takeOffer: got error during call for \(offer.id.uuidString). Error: \(error.localizedDescription)")
             DispatchQueue.main.sync {

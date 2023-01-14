@@ -132,7 +132,8 @@ struct SwapView<TruthSource>: View where TruthSource: UISwapTruthSource {
                 )
                 ActionButton(
                     swap: swap,
-                    swapTruthSource: swapTruthSource
+                    swapTruthSource: swapTruthSource,
+                    stablecoinInformation: stablecoinInformation
                 )
                 Button(
                     action: {},
@@ -450,6 +451,21 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
     @ObservedObject var swapTruthSource: TruthSource
     
     /**
+     An optional `StablecoinInformation` for the swap's stablecoin.
+     */
+    var stablecoinInformation: StablecoinInformation?
+    
+    /**
+     Indicates whether we are showing the sheet that allows the user to approve a token transfer in order to fill the swap, if they are the maker and seller.
+     */
+    @State private var isShowingApproveToFillSheet = false
+    
+    /**
+     Indicates whether we are showing the sheet that allows the user to fill the swap, if they are the maker and seller.
+     */
+    @State private var isShowingFillSwapSheet = false
+    
+    /**
      Indicates whether we are showing the sheet that allows the user to report that they have sent payment, if they are the buyer.
      */
     @State private var isShowingReportPaymentSentSheet = false
@@ -466,31 +482,103 @@ struct ActionButton<TruthSource>: View where TruthSource: UISwapTruthSource {
     
     var body: some View {
         if (swap.state == .awaitingFilling) && swap.role == .makerAndSeller {
-            // If the swap state is awaitingFilling and we are the maker and seller, then we display the "Fill Swap" button
-            if swap.fillingSwapState != .none && swap.fillingSwapState != .error {
-                Text(swap.fillingSwapState.description)
-                    .font(.title2)
-            }
-            if swap.fillingSwapState == .error {
-                Text(swap.fillingSwapError?.localizedDescription ?? "An unknown error occured")
+            // If the swap state is awaitingFilling and we are the maker and seller, then we display the "Approve To Fill/Fill Swap" button
+            if swap.approvingToFillState == .validating || swap.approvingToFillState == .sendingTransaction {
+                Text("Approving \(stablecoinInformation?.currencyCode ?? "Stablecoin") Transfer in Order to Fill Swap")
+            } else if swap.approvingToFillState == .awaitingTransactionConfirmation {
+                Text("Awaiting Confirmation of Transfer Approval")
+            } else if swap.approvingToFillState == .error {
+                Text(swap.approvingToFillError?.localizedDescription ?? "An unknown error occured while approving the token transer")
                     .foregroundColor(Color.red)
+            } else if swap.approvingToFillState == .completed {
+                if swap.fillingSwapState == .validating || swap.fillingSwapState == .sendingTransaction {
+                    Text("Filling Swap")
+                } else if swap.fillingSwapState == .awaitingTransactionConfirmation {
+                    Text("Awaiting Confirmation that Swap is Filled")
+                } else if swap.fillingSwapState == .error {
+                    Text(swap.fillingSwapError?.localizedDescription ?? "An unknown error occurred while filling the Swap")
+                }
             }
             actionButtonBuilder(
                 action: {
-                    if (swap.fillingSwapState == .none || swap.fillingSwapState == .error) {
-                        swapTruthSource.fillSwap(swap: swap)
+                    if swap.approvingToFillState == .none || swap.approvingToFillState == .error {
+                        isShowingApproveToFillSheet = true
+                    } else if swap.approvingToFillState == .completed {
+                        if swap.fillingSwapState == .none || swap.fillingSwapState == .error {
+                            isShowingFillSwapSheet = true
+                        }
                     }
                 },
                 labelText: {
-                    if swap.fillingSwapState == .none || swap.fillingSwapState == .error {
-                        return "Fill Swap"
-                    } else if swap.fillingSwapState == .completed {
-                        return "Swap Filled"
+                    if swap.approvingToFillState == .none || swap.approvingToFillState == .error {
+                        return "Approve Transfer to Fill Swap"
+                    } else if swap.approvingToFillState == .completed {
+                        if swap.fillingSwapState == .none || swap.approvingToFillState == .error {
+                            return "Fill Swap"
+                        } else if swap.fillingSwapState == .completed {
+                            return "Swap Filled"
+                        } else if swap.fillingSwapState == .awaitingTransactionConfirmation {
+                            return "Waiting for Confirmation"
+                        } else {
+                            return "Filling Swap"
+                        }
+                    } else if swap.approvingToFillState == .awaitingTransactionConfirmation {
+                        return "Waiting for Confirmation"
                     } else {
-                        return "Filling Swap"
+                        return "Approving Transfer to Fill Swap"
                     }
                 }()
-            )
+            ).sheet(isPresented: $isShowingApproveToFillSheet) {
+                TransactionGasDetailsView(
+                    isShowingSheet: $isShowingReportPaymentSentSheet,
+                    title: "Approve Token Transfer",
+                    buttonLabel: "Approve Token Transfer",
+                    buttonAction: { createdTransaction in
+                        swapTruthSource.approveTokenTransferToFillSwap(
+                            swap: swap,
+                            approveTokenTransferToFillSwapTransaction: createdTransaction
+                        )
+                    },
+                    runOnAppearance: { approveTokenTransferTransactionBinding, transactionCreationErrorBinding in
+                        if swap.approvingToFillState == .none || swap.approvingToFillState == .error {
+                            swapTruthSource.createApproveTokenTransferToFillSwapTransaction(
+                                swap: swap,
+                                createdTransactionHandler: { createdTransaction in
+                                    approveTokenTransferTransactionBinding.wrappedValue = createdTransaction
+                                },
+                                errorHandler: { error in
+                                    transactionCreationErrorBinding.wrappedValue = error
+                                }
+                            )
+                        }
+                    }
+                )
+            }.sheet(isPresented: $isShowingFillSwapSheet) {
+                TransactionGasDetailsView(
+                    isShowingSheet: $isShowingFillSwapSheet,
+                    title: "Fill Swap",
+                    buttonLabel: "Fill Swap",
+                    buttonAction: { createdTransaction in
+                        swapTruthSource.fillSwap(
+                            swap: swap,
+                            swapFillingTransaction: createdTransaction
+                        )
+                    },
+                    runOnAppearance: { fillSwapTransactionBinding, transactionCreationErrorBinding in
+                        if swap.fillingSwapState == .none || swap.fillingSwapState == .error {
+                            swapTruthSource.createFillSwapTransaction(
+                                swap: swap,
+                                createdTransactionHandler: { createdTransaction in
+                                    fillSwapTransactionBinding.wrappedValue = createdTransaction
+                                },
+                                errorHandler: { error in
+                                    transactionCreationErrorBinding.wrappedValue = error
+                                }
+                            )
+                        }
+                    }
+                )
+            }
         } else if swap.state == .awaitingPaymentSent && (swap.role == .makerAndBuyer || swap.role == .takerAndBuyer) {
             // If the swap state is awaitingPaymentSent and we are the buyer, then we display the "Confirm Payment is Sent" button
             if swap.reportingPaymentSentState != .none && swap.reportingPaymentSentState != .error {

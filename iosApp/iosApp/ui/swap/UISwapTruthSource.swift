@@ -19,7 +19,57 @@ protocol UISwapTruthSource: SwapTruthSource, ObservableObject {
      
      - Parameter swap: The `Swap` to fill.
      */
+    @available(*, deprecated, message: "Use the new offer pipeline with improved transaction state management")
     func fillSwap(swap: Swap)
+    
+    /**
+     Attempts to create an `EthereumTransaction` to approve a token transfer in order to fill a swap.
+     
+     - Parameter swap: The `Swap` to be filled.
+     */
+    func createApproveTokenTransferToFillSwapTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to approve a token transfer in order to fill a swap.
+     
+     - Parameters:
+        - swap: The `Swap` to be filled.
+        - approveTokenTransferToFillSwapTransaction: An optional `EthereumTransaction` that can create a token transfer allowance of the taken swap amount of the token specified by `swap`.
+     */
+    func approveTokenTransferToFillSwap(
+        swap: Swap,
+        approveTokenTransferToFillSwapTransaction: EthereumTransaction?
+    )
+    
+    /**
+     Attempts to create an `EthereumTransaction` that can fill `swap` (which should be a maker-as-seller swap made by the user of this interface) by calling [fillSwap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#fill-swap).
+     
+     - Parameters:
+        - swap: The `Swap` to be filled.
+        - createdTransactionHandler: An escaping closure that will accept and handle the created `EthereumTransaction`.
+        - errorHandler: An escaping closure that will accept and handle any error that occurs during the transaction creation process.
+     */
+    func createFillSwapTransaction(
+        swap: Swap,
+        createdTransactionHandler: @escaping (EthereumTransaction) -> Void,
+        errorHandler: @escaping (Error) -> Void
+    )
+    
+    /**
+     Attempts to fill a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap).
+     
+     - Parameters:
+        - swap: The `Swap` to be filled.
+        - swapFillingTransaction: An optional `EthereumTransaction` can fill `swap`.
+     */
+    func fillSwap(
+        swap: Swap,
+        swapFillingTransaction: EthereumTransaction?
+    )
     
     /**
      Attempts to report that a buyer has sent fiat payment for a [Swap](https://www.commuto.xyz/docs/technical-reference/core-tec-ref#swap). This may only be used by the buyer in `swap`.
